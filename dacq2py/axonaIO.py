@@ -32,6 +32,14 @@ from .spikecalcs import SpikeCalcs
 MAXSPEED = 4.0  # pos data speed filter in m/s
 BOXCAR = 20  # this gives a 400ms smoothing window for pos averaging
 
+empty_headers = {
+	"tetrode" : os.path.join(os.path.dirname(__file__), "tetrode_header.pkl"),
+	"pos" : os.path.join(os.path.dirname(__file__), "pos_header.pkl"),
+	"set" : os.path.join(os.path.dirname(__file__), "set_header.pkl"),
+	"eeg" : os.path.join(os.path.dirname(__file__), "eeg_header.pkl"),
+	"egf" : os.path.join(os.path.dirname(__file__), "egf_header.pkl")
+}
+
 class IO(object):
 	'''Class for reading data from Axona data acquisition system. Also
 	reads .clu files generated from KlustaKwik
