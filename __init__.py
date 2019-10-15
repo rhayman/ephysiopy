@@ -1,10 +1,10 @@
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 import mahotas # this is to get around a weird, possibly python3.6 related issue
 kk_path = '/home/robin/klustakwik/KlustaKwik'
 '''
 Check for the presence of the axona header files which may or may not be there
-If not download them
 '''
+import os
 empty_headers = {
 	"tetrode" : os.path.join(os.path.dirname(__file__), "tetrode_header.pkl"),
 	"pos" : os.path.join(os.path.dirname(__file__), "pos_header.pkl"),
