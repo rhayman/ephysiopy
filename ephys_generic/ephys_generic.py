@@ -439,7 +439,7 @@ class PosCalcsGeneric(object):
         x = xy[0].astype(np.float64)
         y = xy[1].astype(np.float64)
 
-        from dacq2py import smoothdata
+        from ephysiopy.dacq2py import smoothdata
         # TODO: calculate window_len from pos sampling rate
         # 11 is roughly equal to 400ms at 30Hz (window_len needs to be odd)
         sm_x = smoothdata.smooth(x, window_len=11, window='flat')

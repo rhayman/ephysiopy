@@ -3,7 +3,7 @@ try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import xml.etree.ElementTree as ET
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 class ChannelInfo(object):
     def __init__(self):
@@ -13,6 +13,8 @@ class ChannelInfo(object):
         self._param = False
         self._record = False
         self._audio = False
+        self._lowcut = 0
+        self._highcut = 0
     @property
     def name(self):
         return self._name
@@ -49,6 +51,52 @@ class ChannelInfo(object):
     @audio.setter
     def audio(self, val):
         self._audio = bool(val)
+    @property
+    def lowcut(self):
+        return self._lowcut
+    @lowcut.setter
+    def lowcut(self, val):
+        self._lowcut = int(val)
+    @property
+    def highcut(self):
+        return self._highcut
+    @highcut.setter
+    def highcut(self, val):
+        self._highcut = int(val)
+
+class BandpassFilter(object):
+    '''
+    Documents the Bandpass Filter plugin as detailed in the settings.xml file
+    '''
+    def __init__(self):
+        self._nodeId = None
+        self._channels = None # becomes a list of int
+        self._lowcuts = None # becomes list of int
+        self._highcuts = None # ditto
+    @property
+    def nodeId(self):
+        return self._nodeId
+    @nodeId.setter
+    def nodeId(self, val):
+        self._nodeId = val
+    @property
+    def channels(self):
+        return self._channels
+    @channels.setter
+    def channels(self, val):
+        self._channels = [int(v) for v in val]
+    @property
+    def lowcuts(self):
+        return self._lowcuts
+    @lowcuts.setter
+    def lowcuts(self, val):
+        self._lowcuts = [int(v) for v in val]
+    @property
+    def highcuts(self):
+        return self._highcuts
+    @highcuts.setter
+    def highcuts(self, val):
+        self._highcuts = [int(v) for v in val]
 
 class Electrode(object):
     """
@@ -105,7 +153,6 @@ class Electrode(object):
     def subChannelsActive(self, val):
         self._subChannelsActive = [bool(int(v)) for v in val]
 
-
 '''
 Deals with loading some of the details from the settings.xml file
 saved during / after an OE session
@@ -115,7 +162,11 @@ class Settings(object):
         self.filename = filename
         self.tree = None
         self.fpga_nodeId = None
-        self.processors = OrderedDict()
+        '''
+        It's not uncommon to have > 1 of the same type of processor, i.e.
+        2 x bandpass filter to look at LFP and APs. This deals with that...
+        '''
+        self.processors = defaultdict(list)
         self.electrodes = OrderedDict()
         self.tracker_params = {}
         self.stimcontrol_params = {}
@@ -125,13 +176,13 @@ class Settings(object):
         if self.tree is None:
             self.load()
         for elem in self.tree.iter(tag='PROCESSOR'):
-            self.processors[elem.attrib['name']] = elem
-        fpga_items = dict(self.processors['Sources/Rhythm FPGA'].items())
+            self.processors[elem.attrib['name']].append(elem)
+        fpga_items = dict(self.processors['Sources/Rhythm FPGA'][0].items())
         self.fpga_nodeId = fpga_items['NodeId']
     def parsePos(self):
         if len(self.processors) == 0:
             self.parse()
-        children = self.processors['Sources/Pos Tracker'].getchildren()
+        children = self.processors['Sources/Pos Tracker'][0].getchildren()
         for child in children:
             if 'Parameters' in child.tag:
                 self.tracker_params = child.attrib
@@ -141,7 +192,7 @@ class Settings(object):
         if len(self.processors) == 0:
             self.parse()
         electrode_info = OrderedDict()
-        for child in self.processors['Filters/Spike Sorter'].iter():
+        for child in self.processors['Filters/Spike Sorter'][0].iter():
             if 'SpikeSorter' in child.tag:
                 for grandchild in child.iter():
                     if 'ELECTRODE' == grandchild.tag:
@@ -171,17 +222,18 @@ class Settings(object):
     def parseStimControl(self):
         if len(self.processors) == 0:
             self.parse()
-        children = self.processors['Sinks/StimControl'].getchildren()
+        children = self.processors['Sinks/StimControl'][0].getchildren()
         for child in children:
             if 'Parameters' in child.tag:
                 self.stimcontrol_params = child.attrib
         # convert string values to ints
         self.stimcontrol_params = dict([k, int(v)] for k,v in self.stimcontrol_params.items())
+
     def parseChannels(self):
         if len(self.processors) == 0:
             self.parse()
         channel_info = OrderedDict()
-        for chan_info in self.processors['Sources/Rhythm FPGA'].iter():
+        for chan_info in self.processors['Sources/Rhythm FPGA'][0].iter():
             if 'CHANNEL_INFO' in chan_info.tag:
                 for this_chan in chan_info.iter('CHANNEL'):
                     info_obj = ChannelInfo()
@@ -200,3 +252,8 @@ class Settings(object):
                                 info_obj.record = state.get('record')
                             channel_info[i] = info_obj
         self.channel_info = channel_info
+
+    def parseBandpassFilters(self):
+        if len(self.processors) == 0:
+            self.parse()
+        for bpf in self.processors['Filters/Bandpass Filter']:

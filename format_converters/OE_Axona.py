@@ -24,6 +24,7 @@ class OE2Axona(object):
 		self.experiment_name = os.path.basename(self.filename_root) # 'experiment_1.nwb'
 		self.recording_name = None # will become 'recording1' etc
 		self.OE_data = None # will become an instance of OEKiloPhy.OpenEphysNWB
+		self._settings = None # will become an instance of OESettings.Settings
 		# Create a basename for Axona file names e.g.'/home/robin/Data/experiment_1'
 		# that we can append '.pos' or '.eeg' or whatever onto
 		self.axona_root_name = os.path.join(self.dirname, os.path.splitext(self.experiment_name)[0])
@@ -32,14 +33,32 @@ class OE2Axona(object):
 		# it is used to scale the spikes
 		self.gain = 500
 		self.bitvolts = 0.195
+		# if left as None some default values for the next 3 params are loaded from top-level __init__.py
+		# these are only used in self.__filterLFP__
+		self.fs = None
+		self.lfp_lowcut = None
+		self.lfp_highcut = None
 
-	def upsample(self, data, src_rate=30, dst_rate=50, axis=0):
+	def resample(self, data, src_rate=30, dst_rate=50, axis=0):
 		'''
 		Upsamples data using FFT
 		'''
 		denom = np.gcd(dst_rate, src_rate)
 		new_data = signal.resample_poly(data, dst_rate/denom, src_rate/denom, axis)
 		return new_data
+
+	@property
+	def settings(self):
+		'''
+		Loads the settings data from the settings.xml file
+		'''
+		if self._settings is None:
+			self._settings = OESettings.Settings(os.path.join(self.dirname, 'settings.xml'))
+		return self._settings
+
+	@settings.setter
+	def settings(self, value):
+		self._settings = value
 
 	def getOEData(self, filename_root: str, recording_name='recording1')->dict:
 		'''
@@ -79,11 +98,11 @@ class OE2Axona(object):
 		#
 		# Grab the settings of the pos tracker and do some post-processing on the position
 		# data (discard jumpy data, do some smoothing etc)
-		settings = OESettings.Settings(os.path.join(self.dirname, 'settings.xml'))
-		settings.parsePos()
+		# settings = OESettings.Settings(os.path.join(self.dirname, 'settings.xml'))
+		self.settings.parsePos()
 		posProcessor = PosCalcsGeneric(self.OE_data.xy[:,0], self.OE_data.xy[:,1], ppm, True, jumpmax)
 		print("Post-processing position data...")
-		xy, _ = posProcessor.postprocesspos(settings.tracker_params)
+		xy, _ = posProcessor.postprocesspos(self.settings.tracker_params)
 		xy = xy.T
 		# Do the upsampling of both xy and the timestamps
 		print("Beginning export of position data to Axona format...")
@@ -93,13 +112,13 @@ class OE2Axona(object):
 		pos_header = self.AxonaData.getEmptyHeader("pos")
 		for key in pos_header.keys():
 			if 'min_x' in key:
-				pos_header[key] = str(settings.tracker_params['LeftBorder'])
+				pos_header[key] = str(self.settings.tracker_params['LeftBorder'])
 			if 'min_y' in key:
-				pos_header[key] = str(settings.tracker_params['TopBorder'])
+				pos_header[key] = str(self.settings.tracker_params['TopBorder'])
 			if 'max_x' in key:
-				pos_header[key] = str(settings.tracker_params['RightBorder'])
+				pos_header[key] = str(self.settings.tracker_params['RightBorder'])
 			if 'max_y' in key:
-				pos_header[key] = str(settings.tracker_params['BottomBorder'])
+				pos_header[key] = str(self.settings.tracker_params['BottomBorder'])
 		pos_header['duration'] = str(np.ceil(self.last_pos_ts - self.first_pos_ts).astype(np.int))
 		# Rest of this stuff probably won't change so should be defaulted in the loaded file
 		# (see axonaIO.py)
@@ -127,7 +146,25 @@ class OE2Axona(object):
 		self.convertSpikeData(self.OE_data.nwbData['acquisition']['timeseries'][self.recording_name]['spikes'])
 		print("Completed exporting spiking data")
 
-	def convertPosData(self, xy: np.array, xy_ts: np.array):
+	def exportLFP(self, channel: int, lfp_type: str, gain: int):
+		'''
+		Export LFP data to file
+
+		Parameters
+		-----------
+		channel - int
+		lfp_type - str. Legal values are 'egf' or 'eeg'
+		gain - int. Multiplier for the lfp data
+		'''
+		print("Beginning conversion and exporting of LFP data...")
+		if self.settings.fpga_nodeId is None:
+			self.settings.parse()
+		fpgaNode = 'processor' + str(self.settings.fpga_nodeId) + '_' + str(self.settings.fpga_nodeId)
+		data = self.OE_data.nwbData['acquisition']['timeseries'][self.recording_name]['continuous'][fpgaNode]['data'][:, channel]
+		self.makeLFPData(data, eeg_type=lfp_type, gain=gain)
+		print("Completed exporting LFP data to " + lfp_type + " format")
+
+	def convertPosData(self, xy: np.array, xy_ts: np.array) -> np.array:
 		'''
 		Perform the conversion of the array parts of the data
 		NB As well as upsampling the data to the Axona pos sampling rate (50Hz)
@@ -194,7 +231,7 @@ class OE2Axona(object):
 			# Convert to microvolts...
 			new_spiking_data = new_spiking_data * self.bitvolts
 			# And upsample the spikes...
-			new_spiking_data = self.upsample(new_spiking_data, 4, 5, -1)
+			new_spiking_data = self.resample(new_spiking_data, 4, 5, -1)
 			# ... and scale appropriately for Axona and invert as OE seems to be inverted wrt Axona
 			new_spiking_data = new_spiking_data / (self.gain/4/128.0) * (-1)
 			# ... scale them to the gains specified somewhere (not sure where / how to do this yet)
@@ -214,20 +251,67 @@ class OE2Axona(object):
 			print("Exporting tetrode {}".format(i_tetnum))
 			self.writeTetrodeData(i_tetnum, header, new_tetrode_data)
 
-	def makeLFPData(self, hdf5_continuous_data: np.array, channel: int, eeg_type='eeg'):
+	def makeLFPData(self, hdf5_continuous_data: np.array, eeg_type='eeg', gain=1000):
 		'''
-		Downsamples the row denoted by channel in hdf5_continuous_data and saves the result
+		Downsamples the data in hdf5_continuous_data and saves the result
 		as either an egf or eeg file depending on the choice of either eeg_type which can
 		take a value of either 'egf' or 'eeg'
+		gain is the scaling factor
 		'''
 		if eeg_type == 'eeg':
 			dt = self.AxonaData.axona_files['.eeg']
 			header = self.AxonaData.getEmptyHeader("eeg")
-		else if eeg_type == 'egf':
+			header['EEG_samples_per_position'] = '5'
+			header['sample_rate'] = '250.0 hz'
+			header['bytes_per_sample'] = '1'
+			dst_rate = 250
+			sample_key = 'num_EEG_samples'
+		elif eeg_type == 'egf':
 			dt = self.AxonaData.axona_files['.egf']
 			header = self.AxonaData.getEmptyHeader("egf")
-		
+			header['sample_rate'] = '4800 hz'
+			header['bytes_per_sample'] = '2'
+			dst_rate = 4800
+			sample_key = 'num_EGF_samples'
+		header['duration'] = str(int(self.last_pos_ts-self.first_pos_ts))
+		header['sw_version'] = '1.1.0'
+		header['num_chans'] = '1'
 
+		hdf5_continuous_data = hdf5_continuous_data * self.bitvolts
+		lfp_data = self.resample(hdf5_continuous_data, 30000, dst_rate, -1)
+		lfp_data = self.__filterLFP__(lfp_data, dst_rate)
+		lfp_data = lfp_data / gain
+		# cap the values at either end
+		lfp_data[lfp_data < -128] = -128
+		lfp_data[lfp_data > 127] = 127
+		header[sample_key] = str(len(lfp_data))
+		self.writeLFP2AxonaFormat(header, lfp_data, eeg_type)
+
+	def __filterLFP__(self, data: np.array, sample_rate: int):
+		from scipy.signal import firwin, filtfilt
+		if self.fs is None:
+			from ephysiopy import fs
+			self.fs = fs
+		if self.lfp_lowcut is None:
+			from ephysiopy import lfp_lowcut
+			self.lfp_lowcut = lfp_lowcut
+		if self.lfp_highcut is None:
+			from ephysiopy import lfp_highcut
+			self.lfp_highcut = lfp_highcut
+		nyq = sample_rate / 2.
+		lowcut = self.lfp_lowcut / nyq
+		highcut = self.lfp_highcut / nyq
+		if highcut >= 1.0:
+			highcut = 1.0 - np.finfo(float).eps
+		if lowcut <= 0.0:
+			lowcut = np.finfo(float).eps
+		b = firwin(sample_rate+1, [lowcut, highcut], window='black', pass_zero=False)
+		y = filtfilt(b, [1], data.ravel(), padtype='odd')
+		return y
+
+	def writeLFP2AxonaFormat(self, header: dict, data: np.array, eeg_type='eeg'):
+		self.AxonaData.setHeader(self.axona_root_name + "." + eeg_type, header)
+		self.AxonaData.setData(self.axona_root_name + "." + eeg_type, data)
 
 	def writePos2AxonaFormat(self, header:  dict, data: np.array):
 		self.AxonaData.setHeader(self.axona_root_name + ".pos", header)

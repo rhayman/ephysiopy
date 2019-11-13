@@ -237,8 +237,8 @@ class Pos(IO):
 			pass
 		self.posProcessed = False
 		posData = self.getData(filename_root + '.pos')
-		self.nLEDS = 1
-		if setheader is not None:
+		self.nLEDs = 1
+		if self.setheader is not None:
 			self.nLEDs = sum([self.getHeaderVal(self.setheader,'colactive_1'),
 							  self.getHeaderVal(self.setheader,'colactive_2')])
 		if self.nLEDs == 1:
