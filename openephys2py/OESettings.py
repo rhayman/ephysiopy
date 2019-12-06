@@ -170,6 +170,7 @@ class Settings(object):
         self.electrodes = OrderedDict()
         self.tracker_params = {}
         self.stimcontrol_params = {}
+        self.bandpass_params = OrderedDict()
     def load(self):
         self.tree = ET.ElementTree(file=self.filename)
     def parse(self):
@@ -177,8 +178,12 @@ class Settings(object):
             self.load()
         for elem in self.tree.iter(tag='PROCESSOR'):
             self.processors[elem.attrib['name']].append(elem)
-        fpga_items = dict(self.processors['Sources/Rhythm FPGA'][0].items())
-        self.fpga_nodeId = fpga_items['NodeId']
+        # in a try / except because might be Neuropixels probe so no Rhythm FPGA
+        try:
+            fpga_items = dict(self.processors['Sources/Rhythm FPGA'][0].items())
+            self.fpga_nodeId = fpga_items['NodeId']
+        except Exception:
+            pass
     def parsePos(self):
         if len(self.processors) == 0:
             self.parse()
@@ -256,4 +261,22 @@ class Settings(object):
     def parseBandpassFilters(self):
         if len(self.processors) == 0:
             self.parse()
+        bandpass_info = OrderedDict()
         for bpf in self.processors['Filters/Bandpass Filter']:
+            if 'PROCESSOR' in bpf.tag:
+                this_bpf = BandpassFilter()
+                this_bpf.nodeId = bpf.get('NodeId')
+                channels = []
+                for child in bpf.iter('CHANNEL'):
+                    this_chan = ChannelInfo()
+                    this_chan.number = child.get('number')
+                    this_chan.name = child.get('name')
+                    for state in child.iter('SELECTIONSTATE'):
+                        this_chan.param = state.get('param')
+                        this_chan.record = state.get('record')
+                    for params in child.iter('PARAMETERS'):
+                        this_chan.lowcut = params.get('lowcut')
+                        this_chan.highcut = params.get('highcut')
+                    channels.append(this_chan)
+                    bandpass_info[this_bpf.nodeId] = channels
+        self.bandpass_params = bandpass_info

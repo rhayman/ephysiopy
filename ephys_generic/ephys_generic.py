@@ -178,7 +178,7 @@ class SpikeCalcsGeneric(object):
         '''
         Plots all scorrs in a single figure window
         '''
-        from dacq2py import spikecalcs
+        from ephysiopy.dacq2py import spikecalcs
         SpkCalcs = spikecalcs.SpikeCalcs()
         if fig is None:
             fig = plt.figure(figsize=(10,20))
@@ -542,7 +542,7 @@ class MapCalcsGeneric(object):
             else:
                 fig = plt.figure(figsize=(20,10))#, constrained_layout=True)
         if 'sac' in what_to_plot:
-            from dacq2py import gridcell
+            from ephysiopy.dacq2py import gridcell
             S = gridcell.SAC()
             print(gridcell.__file__)
         import matplotlib.gridspec as gridspec
@@ -558,35 +558,35 @@ class MapCalcsGeneric(object):
         for i, cluster in enumerate(self.good_clusters):
             inner = gridspec.GridSpecFromSubplotSpec(inner_nrows,inner_ncols, subplot_spec=outer[i])
             for plot_type_idx, plot_type in enumerate(what_to_plot):
-                if 'path' in plot_type:
-                    ax = fig.add_subplot(inner[plot_type_idx])
-                    self.makeSpikePathPlot(cluster, ax)
-                if 'map' in plot_type:
-                    ax = fig.add_subplot(inner[plot_type_idx])
-                    rmap = self.makeRateMap(cluster, ax)
                 if 'hdir' in plot_type:
                     ax = fig.add_subplot(inner[plot_type_idx],projection='polar')
+                else:
+                    ax = fig.add_subplot(inner[plot_type_idx])
+
+                if 'path' in plot_type:
+                    self.makeSpikePathPlot(cluster, ax)
+                if 'map' in plot_type:
+                    rmap = self.makeRateMap(cluster, ax)
+                if 'hdir' in plot_type:
                     self.makeHDPlot(cluster, ax, add_mrv=True)
                 if 'sac' in plot_type:
-                    ax = fig.add_subplot(inner[plot_type_idx])
                     rmap = self.makeRateMap(cluster)
                     nodwell = ~np.isfinite(rmap[0])
                     sac = S.autoCorr2D(rmap[0], nodwell)
                     d = S.getMeasures(sac)
                     S.show(sac,d,ax)
                 if 'speed' in plot_type:
-                    ax = fig.add_subplot(inner[plot_type_idx])
                     self.makeSpeedVsRatePlot(cluster, 0.0, 40.0, 3.0, ax)
                 if 'sp_hd' in plot_type:
-                    ax = fig.add_subplot(inner[plot_type_idx])
                     self.makeSpeedVsHeadDirectionPlot(cluster, ax)
-                if first_sub_axis in plot_type: # label the first sub-axis only
-                    ax.set_title(cluster, fontweight='bold', size=8)
+                # if first_sub_axis in plot_type: # label the first sub-axis only
+                    # ax = fig.add_subplot(inner[plot_type_idx])
+                ax.set_title(cluster, fontweight='bold', size=8)
         plt.show()
 
     def __iter__(self):
         if 'all' in self.plot_type:
-            from dacq2py import gridcell
+            from ephysiopy.dacq2py import gridcell
             S = gridcell.SAC()
 
         for cluster in self.good_clusters:
@@ -702,7 +702,7 @@ class MapCalcsGeneric(object):
 
             # See if we should add the mean resultant vector (mrv)
             if 'add_mrv' in kwargs.keys():
-                from dacq2py import statscalcs
+                from ephysiopy.dacq2py import statscalcs
                 S = statscalcs.StatsCalcs()
                 angles = self.hdir[self.spk_pos_idx[self.spk_clusters==cluster]]
                 r, th = S.mean_resultant_vector(np.deg2rad(angles))
@@ -726,7 +726,7 @@ class MapCalcsGeneric(object):
         speed_filt = np.ma.MaskedArray(speed)
         speed_filt = np.ma.masked_where(speed_filt < minSpeed, speed_filt)
         speed_filt = np.ma.masked_where(speed_filt > maxSpeed, speed_filt)
-        from dacq2py import spikecalcs
+        from ephysiopy.dacq2py import spikecalcs
         S = spikecalcs.SpikeCalcs();
         x1 = self.spk_pos_idx[self.spk_clusters==cluster]
         spk_sm = S.smoothSpikePosCount(x1, self.pos_ts.shape[0], sigma, None)

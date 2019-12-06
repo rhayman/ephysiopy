@@ -40,7 +40,16 @@ class KiloSortSession(object):
 
     '''
     def __init__(self, fname_root):
+        '''
+        Walk through the path to find the location of the files in case this has been
+        called in another way i.e. binary format a la Neuropixels
+        '''
         self.fname_root = fname_root
+        import os
+        for d, c, f in os.walk(fname_root):
+            for ff in f:
+                if 'spike_times.npy' in ff:
+                    self.fname_root = d
         self.cluster_id = None
         self.spk_clusters = None
         self.spk_times = None
@@ -91,6 +100,7 @@ class OpenEphysNWB(object):
             self.jumpmax = kwargs['jumpmax']
         else:
             self.jumpmax = 100
+        self.isBinary = False
 
     def load(self, session_name=None, recording_name=None, loadraw=False, loadspikes=False, savedat=False):
         '''
@@ -122,7 +132,7 @@ class OpenEphysNWB(object):
         # Position data...
         if self.recording_name is None:
             if recording_name is None:
-                recording_name = 'recording0'
+                recording_name = 'recording1'
             self.recording_name = recording_name
         self.xy = np.array(self.nwbData['acquisition']['timeseries'][self.recording_name]['events']['binary1']['data'])
 
@@ -135,10 +145,7 @@ class OpenEphysNWB(object):
 
         # ...everything else
         try:
-            settings = Settings(os.path.join(self.fname_root, 'settings.xml'))
-            settings.load()
-            settings.parse()
-            self.settings = settings
+            self.__loadSettings__()
             fpgaId = settings.fpga_nodeId
             fpgaNode = 'processor' + str(fpgaId) + '_' + str(fpgaId)
             self.ts = np.array(self.nwbData['acquisition']['timeseries'][self.recording_name]['continuous'][fpgaNode]['timestamps'])
@@ -160,15 +167,72 @@ class OpenEphysNWB(object):
                         data_and_ts_dict['timestamps'] = np.array(self.nwbData['acquisition']['timeseries'][self.recording_name]['spikes'][i_electrode]['timestamps'])
                         data_and_ts_dict['data'] = np.array(self.nwbData['acquisition']['timeseries'][self.recording_name]['spikes'][i_electrode]['data'])
                         electrode_dict[i_electrode] = data_and_ts_dict
-            self.spikeData = electrode_dict
+                self.spikeData = electrode_dict
         except:
             self.ts = self.xy
+
+    def loadBinary(self, pname_root: str, experiment_name='experiment1', recording_name='recording1'):
+        '''
+        Loads data recorded in the OE 'flat' binary format
+        See https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/166789121/Flat+binary+format for more
+
+        Parameters
+        ----------
+        pname_root - str - the top level directory that contains the folder 'experiment1'
+        (usually) and settings.xml
+
+        recording_name - str - pretty obvious but this is also the directory immediately beneath pname_root
+        '''
+        import os
+        import re
+        pos_t_match = re.compile('Pos_Tracker-[0-9][0-9][0-9].[0-9]')
+        APdata_match = re.compile('Neuropix-3a-[0-9][0-9][0-9].[0-9]')
+
+        for d, c, f in os.walk(pname_root):
+            for ff in f:
+                if 'data_array.npy' in ff:
+                    if pos_t_match.search(d):
+                        path2PosData = os.path.join(d)
+                if 'continuous.dat' in ff:
+                    if APdata_match.search(d):
+                        path2APdata = os.path.join(d)
+
+        pos_data = np.load(os.path.join(path2PosData, 'data_array.npy'))
+        self.xy = pos_data[:,0:2]
+        pos_ts = np.load(os.path.join(path2PosData, 'timestamps.npy'))
+        self.xyTS = pos_ts / 30.0 / 1000.0
+        self.isBinary = True
+
+        sample_rate = 30000
+        n_channels = 384
+        trial_length = self.__calcTrialLengthFromBinarySize__(os.path.join(path2APdata, 'continuous.dat'), n_channels, sample_rate)
+        self.ts = np.arange(0, trial_length, 1.0/sample_rate)
+
+    def __loadSettings__(self):
+        '''
+        Loads the settings.xml data taking care of whether nwb or binary format recording
+        '''
+        if self.settings is None:
+            import os
+            settings = Settings(os.path.join(self.fname_root, 'settings.xml'))
+            settings.parse()
+            settings.parsePos()
+            self.settings = settings
+
+
+    def __calcTrialLengthFromBinarySize__(self, path2file:str, n_channels=384, sample_rate=30000):
+        '''
+        Returns the time taken to run the trial (in seconds) based on the size of
+        the binary file on disk
+        '''
+        import os
+        status = os.stat(path2file)
+        return status.st_size / ( 2.0 * n_channels * sample_rate)
 
     def save_ttl(self, out_fname):
         '''
         Saves the ttl data to text file out_fname
         '''
-        import numpy as np
         if ( len(self.ttl_data) > 0 ) and ( len(self.ttl_timestamps) > 0 ):
             data = np.array([self.ttl_data, self.ttl_timestamps])
             if data.shape[0] == 2:
@@ -248,12 +312,9 @@ class OpenEphysNWB(object):
         import matplotlib.pylab as plt
         from ephysiopy.ephys_generic.ephys_generic import PosCalcsGeneric
         import os
-        settings = Settings(os.path.join(self.fname_root, 'settings.xml'))
-        settings.parsePos()
+        self.__loadSettings__()
         posProcessor = PosCalcsGeneric(self.xy[:,0], self.xy[:,1], 300, True, jumpmax)
-        settings = Settings(os.path.join(self.fname_root, 'settings.xml'))
-        settings.parsePos()
-        xy, hdir = posProcessor.postprocesspos(settings.tracker_params)
+        xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
         self.hdir = hdir
         if show:
             plt.plot(xy[0], xy[1])
@@ -285,9 +346,8 @@ class OpenEphysNWB(object):
         from ephysiopy.ephys_generic.ephys_generic import PosCalcsGeneric, MapCalcsGeneric
         posProcessor = PosCalcsGeneric(self.xy[:,0], self.xy[:,1], ppm, jumpmax=self.jumpmax)
         import os
-        settings = Settings(os.path.join(self.fname_root, 'settings.xml'))
-        settings.parsePos()
-        xy, hdir = posProcessor.postprocesspos(settings.tracker_params)
+        self.__loadSettings__()
+        xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
         self.hdir = hdir
         spk_times = (self.kilodata.spk_times.T[0] / 3e4) + self.ts[0]
         mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
@@ -321,9 +381,8 @@ class OpenEphysNWB(object):
         from ephysiopy.ephys_generic.ephys_generic import PosCalcsGeneric, MapCalcsGeneric
         posProcessor = PosCalcsGeneric(self.xy[:,0], self.xy[:,1], ppm, jumpmax=self.jumpmax)
         import os
-        settings = Settings(os.path.join(self.fname_root, 'settings.xml'))
-        settings.parsePos()
-        xy, hdir = posProcessor.postprocesspos(settings.tracker_params)
+        self.__loadSettings__()
+        xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
         self.hdir = hdir
         spk_times = (self.kilodata.spk_times.T[0] / 3e4) + self.ts[0]
         mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
@@ -375,8 +434,8 @@ class OpenEphysNWB(object):
 
     def plotPSTH(self):
         import os
-        settings = Settings(os.path.join(self.fname_root, 'settings.xml'))
-        settings.parseStimControl()
+        self.__loadSettings__()
+        self.settings.parseStimControl()
         if self.kilodata is None:
             self.loadKilo()
         if self.timeAligned == False:

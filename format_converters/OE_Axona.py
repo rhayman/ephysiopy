@@ -92,6 +92,14 @@ class OE2Axona(object):
 			self.OE_data = OE_data
 			return OE_data
 
+	def exportSetFile(self, **kwargs):
+		'''
+		Wrapper for makeSetData below
+		'''
+		print("Exporting set file data...")
+		self.makeSetData(kwargs)
+		print("Done exporting set file.")
+
 	def exportPos(self, ppm=300, jumpmax=100):
 		#
 		# Step 1) Deal with the position data first:
@@ -108,6 +116,8 @@ class OE2Axona(object):
 		print("Beginning export of position data to Axona format...")
 		axona_pos_file_name = self.axona_root_name + ".pos"
 		axona_pos_data = self.convertPosData(xy, self.OE_data.xyTS)
+		# make sure pos data length is same as duration * num_samples
+		axona_pos_data = axona_pos_data[0:int(self.last_pos_ts - self.first_pos_ts)*50]
 		# Create an empty header for the pos data
 		pos_header = self.AxonaData.getEmptyHeader("pos")
 		for key in pos_header.keys():
@@ -119,7 +129,7 @@ class OE2Axona(object):
 				pos_header[key] = str(self.settings.tracker_params['RightBorder'])
 			if 'max_y' in key:
 				pos_header[key] = str(self.settings.tracker_params['BottomBorder'])
-		pos_header['duration'] = str(np.ceil(self.last_pos_ts - self.first_pos_ts).astype(np.int))
+		pos_header['duration'] = str(int(self.last_pos_ts - self.first_pos_ts))
 		# Rest of this stuff probably won't change so should be defaulted in the loaded file
 		# (see axonaIO.py)
 		pos_header['num_colours'] = '4'
@@ -279,6 +289,9 @@ class OE2Axona(object):
 
 		hdf5_continuous_data = hdf5_continuous_data * self.bitvolts
 		lfp_data = self.resample(hdf5_continuous_data, 30000, dst_rate, -1)
+		# make sure data is same length as sample_rate * duration
+		nsamples = int(dst_rate * int(header['duration']))
+		lfp_data = lfp_data[0:nsamples]
 		lfp_data = self.__filterLFP__(lfp_data, dst_rate)
 		lfp_data = lfp_data / gain
 		# cap the values at either end
@@ -286,6 +299,32 @@ class OE2Axona(object):
 		lfp_data[lfp_data > 127] = 127
 		header[sample_key] = str(len(lfp_data))
 		self.writeLFP2AxonaFormat(header, lfp_data, eeg_type)
+
+	def makeSetData(self, **kwargs):
+		header = self.AxonaData.getEmptyHeader("set")
+		# set some reasonable default values
+		from ephysiopy import __version__
+		header['sw_version'] = __version__
+		header['ADC_fullscale_mv'] = '0.195'
+		header['tracker_version'] = '1.1.0'
+		hp_gain = '15000'
+		lp_gain = '5000'
+		for k, v in header.items():
+			if 'gain' in k:
+				header[k] = hp_gain
+			if 'collectMask' in k:
+				header[k] = '0'
+		header['collectMask_1'] = '1'
+		header['collectMask_2'] = '1'
+		header['collectMask_3'] = '1'
+		header['collectMask_4'] = '1'
+		header['colactive_1'] = '1'
+		header['colactive_2'] = '0'
+		header['colactive_3'] = '0'
+		header['colactive_4'] = '0'
+		header['colmap_algorithm'] = '1'
+		header['duration'] = str(int(self.last_pos_ts-self.first_pos_ts))
+		self.writeSetData(header)
 
 	def __filterLFP__(self, data: np.array, sample_rate: int):
 		from scipy.signal import firwin, filtfilt
@@ -320,3 +359,6 @@ class OE2Axona(object):
 	def writeTetrodeData(self, tetnum: str, header: dict, data: np.array):
 		self.AxonaData.setHeader(self.axona_root_name + "." + tetnum, header)
 		self.AxonaData.setData(self.axona_root_name + "." + tetnum, data)
+
+	def writeSetData(self, header: dict):
+		self.AxonaData.setHeader(self.axona_root_name + ".set", header)
