@@ -53,8 +53,8 @@ class IO(object):
 	other_files = {'.pos': [('ts', '>i'), ('pos', '>8h')],
 				   '.eeg': [('eeg', '=b')],
 				   '.eeg2': [('eeg', '=b')],
-				   '.egf': [('eeg', '=2b')],
-				   '.egf2': [('eeg', '=2b')],
+				   '.egf': [('eeg', 'int16')],
+				   '.egf2': [('eeg', 'int16')],
 				   '.inp': [('ts', '>i4'), ('type', '>b'), ('value', '>2b')],
 				   '.log': [('state', 'S3'), ('ts', '>i')],
 				   '.stm': [('ts', '>i')]}
@@ -115,7 +115,7 @@ class IO(object):
 	def getCluCut(self, tet):
 		'''Load a clu file and return as an array of integers'''
 		filename_root = self.filename_root + '.' + 'clu.' + str(tet)
-		dt = np.dtype([('data', '>i')])
+		dt = np.dtype([('data', '<i')])
 		clu_data = np.loadtxt(filename_root, dtype=dt)
 		return clu_data['data'][1::]  # first entry is number of clusters found
 
@@ -614,11 +614,13 @@ class EEG(IO):
 		self.showfigs = 0
 		self.filename_root = filename_root
 		if egf == 0:
+			denom = 128.0 #used below to normalise data
 			if eeg_file == 1:
 				eeg_suffix = '.eeg'
 			else:
 				eeg_suffix = '.eeg' + str(eeg_file)
 		elif egf == 1:
+			denom = 128.0 # used below to normalise data
 			if eeg_file == 1:
 				eeg_suffix = '.egf'
 			else:
@@ -633,10 +635,14 @@ class EEG(IO):
 		else:
 			self.eeg = self.eeg[0:int(self.header['num_EEG_samples'])]
 		if egf == 1:
+			# self.eeg = self.eeg.view(np.int8).reshape(self.eeg.shape+(2,)) # fast!
 			self.eeg = self.eeg[:, 1]
-		self.sample_rate = float(self.getHeaderVal(self.header, 'sample_rate'))
+		self.sample_rate = int(self.getHeaderVal(self.header, 'sample_rate'))
 		set_header = self.getHeader(self.filename_root + '.set')
-		eeg_gain = int(set_header['gain_ch_' + str(int(set_header['EEG_ch_1'])-1)])
+		eeg_ch = int(set_header['EEG_ch_1']) - 1
+		if eeg_ch < 0:
+			eeg_ch = 0
+		eeg_gain = int(set_header['gain_ch_' + str(eeg_ch)])
 		# EEG polarity is determined by the "mode_ch_n" key in the setfile
 		# where n is the channel # for the eeg. The possibles values to these
 		# keys are as follows:
@@ -653,12 +659,12 @@ class EEG(IO):
 		polarity = 1 # ensure it always has a value
 		if eeg_mode == 2:
 			polarity = -1
-		ADC_mv = int(set_header['ADC_fullscale_mv'])
+		ADC_mv = float(set_header['ADC_fullscale_mv'])
 		scaling = (ADC_mv/1000.) * eeg_gain
 		self.scaling = scaling
 		self.gain = eeg_gain
 		self.polarity = polarity
-		self.eeg = (self.eeg / 128.) * scaling * polarity# eeg now in volts
+		self.eeg = (self.eeg / denom) * scaling * polarity# eeg now in microvolts
 		self.EEGphase = None
 		# x1 / x2 are the lower and upper limits of the eeg filter
 		self.x1 = 6

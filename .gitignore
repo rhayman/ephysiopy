@@ -1,0 +1,35 @@
+# Compiled Object files
+*.d
+*.slo
+*.lo
+*.o
+*.obj
+*.pyc
+*.py~
+
+# Compiled binaries/ directories containing them
+bin/
+build/
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app

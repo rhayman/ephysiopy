@@ -158,8 +158,13 @@ Deals with loading some of the details from the settings.xml file
 saved during / after an OE session
 '''
 class Settings(object):
-    def __init__(self, filename):
-        self.filename = filename
+    def __init__(self, pname):
+        self.filename = None
+        import os
+        for d, c, f in os.walk(pname):
+            for ff in f:
+                if 'settings.xml' in ff:
+                    self.filename = os.path.join(d, "settings.xml")
         self.tree = None
         self.fpga_nodeId = None
         '''

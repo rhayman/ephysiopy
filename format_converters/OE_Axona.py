@@ -31,7 +31,8 @@ class OE2Axona(object):
 		self.AxonaData = axonaIO.IO(self.axona_root_name + ".pos") # need to instantiated now for later
 		# THIS IS TEMPORARY AND WILL BE MORE USER-SPECIFIABLE IN THE FUTURE
 		# it is used to scale the spikes
-		self.gain = 500
+		self.hp_gain = 500
+		self.lp_gain = 15000
 		self.bitvolts = 0.195
 		# if left as None some default values for the next 3 params are loaded from top-level __init__.py
 		# these are only used in self.__filterLFP__
@@ -100,7 +101,7 @@ class OE2Axona(object):
 		self.makeSetData(kwargs)
 		print("Done exporting set file.")
 
-	def exportPos(self, ppm=300, jumpmax=100):
+	def exportPos(self, ppm=300, jumpmax=100, as_text=False):
 		#
 		# Step 1) Deal with the position data first:
 		#
@@ -112,6 +113,12 @@ class OE2Axona(object):
 		print("Post-processing position data...")
 		xy, _ = posProcessor.postprocesspos(self.settings.tracker_params)
 		xy = xy.T
+		if as_text is True:
+			print("Beginning export of position data to text format...")
+			pos_file_name = self.axona_root_name + ".txt"
+			np.savetxt(pos_file_name, self.OE_data.xy, fmt='%1.u')
+			print("Completed export of position data")
+			return
 		# Do the upsampling of both xy and the timestamps
 		print("Beginning export of position data to Axona format...")
 		axona_pos_file_name = self.axona_root_name + ".pos"
@@ -172,6 +179,9 @@ class OE2Axona(object):
 		fpgaNode = 'processor' + str(self.settings.fpga_nodeId) + '_' + str(self.settings.fpga_nodeId)
 		data = self.OE_data.nwbData['acquisition']['timeseries'][self.recording_name]['continuous'][fpgaNode]['data'][:, channel]
 		self.makeLFPData(data, eeg_type=lfp_type, gain=gain)
+		# if the set file has been created then update which channel contains the eeg record so
+		# that the gain can be loaded correctly when using dacq2py_util
+
 		print("Completed exporting LFP data to " + lfp_type + " format")
 
 	def convertPosData(self, xy: np.array, xy_ts: np.array) -> np.array:
@@ -243,7 +253,7 @@ class OE2Axona(object):
 			# And upsample the spikes...
 			new_spiking_data = self.resample(new_spiking_data, 4, 5, -1)
 			# ... and scale appropriately for Axona and invert as OE seems to be inverted wrt Axona
-			new_spiking_data = new_spiking_data / (self.gain/4/128.0) * (-1)
+			new_spiking_data = new_spiking_data / (self.hp_gain/4/128.0) * (-1)
 			# ... scale them to the gains specified somewhere (not sure where / how to do this yet)
 			shp = new_spiking_data.shape
 			# then reshape them as Axona wants them a bit differently
@@ -261,12 +271,16 @@ class OE2Axona(object):
 			print("Exporting tetrode {}".format(i_tetnum))
 			self.writeTetrodeData(i_tetnum, header, new_tetrode_data)
 
-	def makeLFPData(self, hdf5_continuous_data: np.array, eeg_type='eeg', gain=1000):
+	def makeLFPData(self, hdf5_continuous_data: np.array, eeg_type='eeg', gain=5000):
 		'''
 		Downsamples the data in hdf5_continuous_data and saves the result
 		as either an egf or eeg file depending on the choice of either eeg_type which can
 		take a value of either 'egf' or 'eeg'
 		gain is the scaling factor
+
+		Parameters
+		----------
+		hdf5_continuous_data - np.array with dtype as np.int16
 		'''
 		if eeg_type == 'eeg':
 			dt = self.AxonaData.axona_files['.eeg']
@@ -287,37 +301,69 @@ class OE2Axona(object):
 		header['sw_version'] = '1.1.0'
 		header['num_chans'] = '1'
 
-		hdf5_continuous_data = hdf5_continuous_data * self.bitvolts
+		# hdf5_continuous_data = hdf5_continuous_data * (self.bitvolts * 1000) / gain
 		lfp_data = self.resample(hdf5_continuous_data, 30000, dst_rate, -1)
 		# make sure data is same length as sample_rate * duration
 		nsamples = int(dst_rate * int(header['duration']))
 		lfp_data = lfp_data[0:nsamples]
 		lfp_data = self.__filterLFP__(lfp_data, dst_rate)
-		lfp_data = lfp_data / gain
-		# cap the values at either end
-		lfp_data[lfp_data < -128] = -128
-		lfp_data[lfp_data > 127] = 127
+		# convert the data format
+		# lfp_data = lfp_data * self.bitvolts # in microvolts
+
+		if eeg_type == 'eeg':
+			# probably BROKEN
+			lfp_data = lfp_data / 32768. # lfp_data starts out as int16 (see Parameters above)
+			lfp_data = lfp_data * gain
+			# cap the values at either end...
+			lfp_data[lfp_data < -128] = -128
+			lfp_data[lfp_data > 127] = 127
+			# and convert to int8
+			lfp_data = lfp_data.astype(np.int8)
+
+		elif eeg_type == 'egf':
+			# probably works
+			# lfp_data = lfp_data / 256.
+			lfp_data = lfp_data.astype(np.int16)
+
 		header[sample_key] = str(len(lfp_data))
 		self.writeLFP2AxonaFormat(header, lfp_data, eeg_type)
 
-	def makeSetData(self, **kwargs):
+	def makeSetData(self, lfp_channel=1, **kwargs):
+		if self.OE_data is None:
+			self.getOEData(self.filename_root) # to get the timestamps for duration key
 		header = self.AxonaData.getEmptyHeader("set")
 		# set some reasonable default values
 		from ephysiopy import __version__
 		header['sw_version'] = __version__
 		header['ADC_fullscale_mv'] = '0.195'
 		header['tracker_version'] = '1.1.0'
-		hp_gain = '15000'
-		lp_gain = '5000'
+
 		for k, v in header.items():
 			if 'gain' in k:
-				header[k] = hp_gain
+				header[k] = str(self.hp_gain)
 			if 'collectMask' in k:
 				header[k] = '0'
-		header['collectMask_1'] = '1'
-		header['collectMask_2'] = '1'
-		header['collectMask_3'] = '1'
-		header['collectMask_4'] = '1'
+			if 'EEG_ch_1' in k:
+				header[k] = str(lfp_channel)
+			if 'mode_ch_' in k:
+				header[k] = '0'
+		# iterate again to make sure lfp gain set correctly
+		for k, v in header.items():
+			if k == 'gain_ch_' + str(lfp_channel):
+				header[k] = str(self.lp_gain)
+
+		# Based on the data in the electrodes dict of the OESettings instance (self.settings - see __init__)
+		# determine which tetrodes we can let Tint load
+		# make sure we've parsed the electrodes
+		self.settings.parseSpikeSorter()
+		if self.settings.electrodes:
+			for k, v in self.settings.electrodes.items():
+				header['collectMask_' + str(k)] = '1'
+		else: # default to 4 tetrodes
+			header['collectMask_1'] = '1'
+			header['collectMask_2'] = '1'
+			header['collectMask_3'] = '1'
+			header['collectMask_4'] = '1'
 		header['colactive_1'] = '1'
 		header['colactive_2'] = '0'
 		header['colactive_3'] = '0'

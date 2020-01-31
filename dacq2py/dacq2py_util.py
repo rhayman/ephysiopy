@@ -2683,8 +2683,6 @@ class Trial(axonaIO.IO, SAC, dict):
 		ax7 = axes[2][1] # bottom-middle
 		ax8 = axes[2][2] # bottom-right
 
-		axes_idx = range(9)
-		axes_idx.remove(4)
 		max_rate = 0
 		for d in zip(dirs_st, dirs_en):
 			self.posFilter = {'dir': (d[0], d[1])}

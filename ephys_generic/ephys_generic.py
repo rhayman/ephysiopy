@@ -372,9 +372,12 @@ class PosCalcsGeneric(object):
 
         '''
         xy = self.xy
-        self.tracker_params = tracker_params
-        xy[xy < 0] = np.ma.masked
+        xy = np.ma.MaskedArray(xy, dtype=np.int32)
+        x_zero = xy[:, 0] < 0
+        y_zero = xy[:, 1] < 0
+        xy[np.logical_or(x_zero, y_zero), :] = np.ma.masked
 
+        self.tracker_params = tracker_params
         if 'LeftBorder' in tracker_params:
             min_x = tracker_params['LeftBorder']
             xy[:, xy[0,:] <= min_x] = np.ma.masked
@@ -392,8 +395,9 @@ class PosCalcsGeneric(object):
         else:
             self.sample_rate = 30
 
+        xy = xy.T
         xy = self.speedfilter(xy)
-        xy = self.interpnans(xy)
+        xy = self.interpnans(xy) # ADJUST THIS SO NP.MASKED ARE INTERPOLATED OVER
         xy = self.smoothPos(xy)
         self.calcSpeed(xy)
 
@@ -408,25 +412,29 @@ class PosCalcsGeneric(object):
         return xy, hdir
 
     def speedfilter(self, xy):
-        maxppmsqd = self.jumpmax ** 2
-        df = np.diff(xy)
-        disp = np.hypot(df[0,:], df[1,:])
+        df = np.diff(xy, axis=0)
+        disp = np.hypot(df[:,0], df[:,1])
         disp = np.insert(disp, -1, 0)
-        xy[:, disp > maxppmsqd] = np.ma.masked
+        xy[disp > self.jumpmax, :] = np.ma.masked
         return xy
 
     def interpnans(self, xy):
-        for i in range(0,len(xy), 2):
-            missing = xy[i:i+2].mask.any(axis=0)
+        for i in range(0,np.shape(xy)[-1],2):
+            missing = xy.mask.any(axis=-1)
             ok = np.logical_not(missing)
-            ok_idx = np.nonzero(np.ravel(ok))[0]#gets the indices of ok poses
-            missing_idx = np.nonzero(np.ravel(missing))[0]#get the indices of missing poses
-            good_data = xy.data[i,ok_idx]
-            good_data1 = xy.data[i+1,ok_idx]
-            xy.data[i,missing_idx] = np.interp(missing_idx,ok_idx,good_data)#,left=np.min(good_data),right=np.max(good_data)
-            xy.data[i+1,missing_idx] = np.interp(missing_idx,ok_idx,good_data1)
+            ok_idx = np.ravel(np.nonzero(np.ravel(ok))[0])#gets the indices of ok poses
+            missing_idx = np.ravel(np.nonzero(np.ravel(missing))[0])#get the indices of missing poses
+            if len(missing_idx) > 0:
+                try:
+                    good_data = np.ravel(xy.data[ok_idx,i])
+                    good_data1 = np.ravel(xy.data[ok_idx,i+1])
+                    xy.data[missing_idx,i] = np.interp(missing_idx,ok_idx,good_data)#,left=np.min(good_data),right=np.max(good_data)
+                    xy.data[missing_idx,i+1] = np.interp(missing_idx,ok_idx,good_data1)
+                except ValueError as e:
+                    pass
+                    # print(e)
         xy.mask = 0
-        print("{} bad/ jumpy positions were interpolated over".format(len(missing_idx)))
+        print("{} bad/ jumpy positions were interpolated over".format(len(missing_idx)))#this is wrong i think
         return xy
 
     def smoothPos(self, xy):
@@ -436,8 +444,8 @@ class PosCalcsGeneric(object):
         '''
         # Extract boundaries of window used in recording
 
-        x = xy[0].astype(np.float64)
-        y = xy[1].astype(np.float64)
+        x = xy[:,0].astype(np.float64)
+        y = xy[:,1].astype(np.float64)
 
         from ephysiopy.dacq2py import smoothdata
         # TODO: calculate window_len from pos sampling rate
