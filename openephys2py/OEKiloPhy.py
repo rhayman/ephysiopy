@@ -74,7 +74,7 @@ class KiloSortSession(object):
         if self.cluster_id is not None:
             self.good_clusters = []
             for id_group in zip(self.cluster_id, self.group):
-                if 'noise' not in id_group[1].decode():
+                if 'noise' not in id_group[1].decode() and 'mua' not in id_group[1].decode():
                     self.good_clusters.append(id_group[0])
 
 
