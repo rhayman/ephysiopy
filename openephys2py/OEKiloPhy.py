@@ -328,9 +328,9 @@ class OpenEphysNPX(OpenEphysBase):
     """docstring for OpenEphysNPX"""
     def __init__(self, pname_root):
         super().__init__(pname_root)
-	self.path2PosData = None
-	self.path2APdata = None
-	self.path2LFPdata = None
+		self.path2PosData = None
+		self.path2APdata = None
+		self.path2LFPdata = None
 
     def load(self, pname_root: str, experiment_name='experiment1', recording_name='recording1'):
         '''
@@ -350,7 +350,7 @@ class OpenEphysNPX(OpenEphysBase):
         import re
         pos_t_match = re.compile('Pos_Tracker-[0-9][0-9][0-9].[0-9]')
         APdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].0')
-	LFPdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].1')
+		LFPdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].1')
 
         for d, c, f in os.walk(pname_root):
             for ff in f:
@@ -358,7 +358,7 @@ class OpenEphysNPX(OpenEphysBase):
                     self.path2PosData = os.path.join(d)
                 if 'continuous.dat' in ff:
                     if APdata_match.search(d):
-                        self.path2APdata = os.path.join(d)
+						self.path2APdata = os.path.join(d)
 					if LFPdata_match.search(d):
 						self.path2LFPdata = os.path.join(d)
 
