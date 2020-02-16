@@ -328,6 +328,9 @@ class OpenEphysNPX(OpenEphysBase):
     """docstring for OpenEphysNPX"""
     def __init__(self, pname_root):
         super().__init__(pname_root)
+		self.path2PosData = None
+		self.path2APdata = None
+		self.path2LFPdata = None
 
     def load(self, pname_root: str, experiment_name='experiment1', recording_name='recording1'):
         '''
@@ -341,30 +344,33 @@ class OpenEphysNPX(OpenEphysBase):
 
         recording_name - str - pretty obvious but this is also the directory immediately beneath pname_root
         '''
+		self.isBinary = True
         import os
         import re
         pos_t_match = re.compile('Pos_Tracker-[0-9][0-9][0-9].[0-9]')
         APdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].0')
+		LFPdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].1')
 
         for d, c, f in os.walk(pname_root):
             for ff in f:
                 if 'data_array.npy' in ff:
-                    path2PosData = os.path.join(d)
+                    self.path2PosData = os.path.join(d)
                 if 'continuous.dat' in ff:
                     if APdata_match.search(d):
-                        path2APdata = os.path.join(d)
+                        self.path2APdata = os.path.join(d)
+					if LFPdata_match.search(d):
+						self.path2LFPdata = os.path.join(d)
 
-        pos_data = np.load(os.path.join(path2PosData, 'data_array.npy'))
-        self.xy = pos_data[:,0:2]
-        pos_ts = np.load(os.path.join(path2PosData, 'timestamps.npy'))
-        self.xyTS = pos_ts / 30.0 / 1000.0
-        self.isBinary = True
-
+		if self.path2PosData is not None:
+			pos_data = np.load(os.path.join(self.path2PosData, 'data_array.npy'))
+			self.xy = pos_data[:,0:2]
+			pos_ts = np.load(os.path.join(self.path2PosData, 'timestamps.npy'))
+			self.xyTS = pos_ts / 30.0 / 1000.0
+        
         sample_rate = 30000
         n_channels = 384
-        trial_length = self.__calcTrialLengthFromBinarySize__(os.path.join(path2APdata, 'continuous.dat'), n_channels, sample_rate)
+        trial_length = self.__calcTrialLengthFromBinarySize__(os.path.join(self.path2APdata, 'continuous.dat'), n_channels, sample_rate)
         self.ts = np.arange(0, trial_length, 1.0/sample_rate)
-
 
     def __calcTrialLengthFromBinarySize__(self, path2file:str, n_channels=384, sample_rate=30000):
         '''
