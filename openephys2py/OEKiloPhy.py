@@ -348,8 +348,8 @@ class OpenEphysNPX(OpenEphysBase):
 		self.isBinary = True
         import os
         import re
-        pos_t_match = re.compile('Pos_Tracker-[0-9][0-9][0-9].[0-9]')
-        APdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].0')
+		pos_t_match = re.compile('Pos_Tracker-[0-9][0-9][0-9].[0-9]')
+		APdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].0')
 		LFPdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].1')
 
         for d, c, f in os.walk(pname_root):
