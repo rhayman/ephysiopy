@@ -334,6 +334,7 @@ class OpenEphysNPX(OpenEphysBase):
 
     def load(self, pname_root: str, experiment_name='experiment1', recording_name='recording1'):
         '''
+		
         Loads data recorded in the OE 'flat' binary format
         See https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/166789121/Flat+binary+format for more
 
