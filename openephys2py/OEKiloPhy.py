@@ -172,8 +172,10 @@ class OpenEphysBase(object):
                         'both' - both of the above
                         'all' - both spikes on path, ratemap & SAC plotted
                         can also be a list
-        Valid kwargs only 'ppm' at the moment - this is an integer denoting pixels per metre:
+        Valid kwargs: 'ppm' - this is an integer denoting pixels per metre:
                                                 lower values = more bins in ratemap / SAC
+				'clusters' - int or list of ints describing which clusters to plot
+				i.e. this overwrites the 'good_clusters' value in self.kilodata
         '''
         if self.kilodata is None:
             self.loadKilo()
@@ -191,7 +193,13 @@ class OpenEphysBase(object):
         self.hdir = hdir
         spk_times = (self.kilodata.spk_times.T[0] / 3e4) + self.ts[0]
         mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
-        mapiter.good_clusters = self.kilodata.good_clusters
+        if 'clusters' in kwargs:
+			if type(kwargs['clusters']) == int:
+				mapiter.good_clusters = [kwargs['clusters']]
+			else:
+				maptier.good_clusters = kwargs['clusters']
+		else:
+        	mapiter.good_clusters = self.kilodata.good_clusters
         mapiter.spk_clusters = self.kilodata.spk_clusters
         self.mapiter = mapiter
         mapiter.plotAll()
@@ -207,8 +215,10 @@ class OpenEphysBase(object):
                         'both' - both of the above
                         'all' - both spikes on path, ratemap & SAC plotted
                         can also be a list
-        Valid kwargs only 'ppm' at the moment - this is an integer denoting pixels per metre:
+        Valid kwargs: 'ppm' - this is an integer denoting pixels per metre:
                                                 lower values = more bins in ratemap / SAC
+				'clusters' - int or list of ints describing which clusters to plot
+				i.e. this overwrites the 'good_clusters' value in self.kilodata
         '''
         if self.kilodata is None:
             self.loadKilo()
@@ -226,7 +236,13 @@ class OpenEphysBase(object):
         self.hdir = hdir
         spk_times = (self.kilodata.spk_times.T[0] / 3e4) + self.ts[0]
         mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
-        mapiter.good_clusters = self.kilodata.good_clusters
+		if 'clusters' in kwargs:
+			if type(kwargs['clusters']) == int:
+				mapiter.good_clusters = [kwargs['clusters']]
+			else:
+				maptier.good_clusters = kwargs['clusters']
+		else:
+        	mapiter.good_clusters = self.kilodata.good_clusters
         mapiter.spk_clusters = self.kilodata.spk_clusters
         self.mapiter = mapiter
         # mapiter.plotAll()
