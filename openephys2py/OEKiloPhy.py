@@ -368,9 +368,9 @@ class OpenEphysNPX(OpenEphysBase):
 			pos_ts = np.load(os.path.join(self.path2PosData, 'timestamps.npy'))
 			self.xyTS = pos_ts / 30.0 / 1000.0
         
-        sample_rate = 30000
+        ap_sample_rate = 30000
         n_channels = 384
-        trial_length = self.__calcTrialLengthFromBinarySize__(os.path.join(self.path2APdata, 'continuous.dat'), n_channels, sample_rate)
+        trial_length = self.__calcTrialLengthFromBinarySize__(os.path.join(self.path2APdata, 'continuous.dat'), n_channels, ap_sample_rate)
         self.ts = np.arange(0, trial_length, 1.0/sample_rate)
 
     def __calcTrialLengthFromBinarySize__(self, path2file:str, n_channels=384, sample_rate=30000):
@@ -381,6 +381,31 @@ class OpenEphysNPX(OpenEphysBase):
         import os
         status = os.stat(path2file)
         return status.st_size / ( 2.0 * n_channels * sample_rate)
+	
+	def plotSpectrogramByDepth(self, nchannels=384, nseconds=100, maxFreq=125, **kwargs):
+		import os
+		lfp_file = os.path.join(self.path2LFPdata, 'continuous.dat')
+		status = os.stat(lfp_file)
+		nsamples = int(status.st_size / 2 / nchannels)
+		mmap = np.memmap(lfp_file, np.int16, 'r', 0, (nsamples,nchans))
+		# Load the channel map NB assumes this is in the AP data location and that kilosort was run there
+		channel_map = np.load(os.path.join(self.path2APdata, 'channel_map.npy'))
+		lfp_sample_rate = 2500
+		data = np.array(mmap[channel_map, 0:nseconds*lfp_sample_rate])
+		from ephysiopy.ephys_generic.ephys_generic import EEGCalcsGeneric
+		E = EEGCalcsGeneric(data[0, :], lfp_sample_rate)
+		E.calcEEGPowerSpectrum()
+		spec_data = np.zeros(data.shape[0], len(E.sm_power[0::50]))
+		for chan in data.shape[0]:
+			E = EEGCalcsGeneric(data[chan, :], lfp_sample_rate)
+			E.calcEEGPowerSpectrum()
+			spec_data[chan, :] = E.sm_power[0:50]
+		
+		x, y = np.meshgrid(E.freqs[0::50], channel_map)
+		plt.pcolormesh(x, y, spec_data, edgecolors='face')
+		ax = plt.gca()
+		ax.set_xlim(maxFreq)
+		plt.show()
 
     def plotPos(self, jumpmax=None, show=True):
         super().plotPos(jumpmax, show)
