@@ -1,4 +1,4 @@
-__version__ = '1.1.3'
+__version__ = '1.3.6'
 import mahotas # this is to get around a weird, possibly python3.6 related issue
 kk_path = '/home/robin/klustakwik/KlustaKwik'
 # used to bandpass filter the continuous raw openephys data when converting to

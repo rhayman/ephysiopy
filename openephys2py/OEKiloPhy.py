@@ -64,8 +64,11 @@ class KiloSortSession(object):
 			self.cluster_id, self.group = np.loadtxt(os.path.join(self.fname_root, 'cluster_groups.csv'), unpack=True, skiprows=1, dtype=dtype)
 		if os.path.exists(os.path.join(self.fname_root, 'cluster_group.tsv')):
 			self.cluster_id, self.group = np.loadtxt(os.path.join(self.fname_root, 'cluster_group.tsv'), unpack=True, skiprows=1, dtype=dtype)
-		self.spk_clusters = np.load(os.path.join(self.fname_root, 'spike_clusters.npy'))
-		self.spk_times    = np.load(os.path.join(self.fname_root, 'spike_times.npy'))
+		dtype = {'names': ('cluster_id', 'KSLabel'), 'formats': ('i4', 'S10')}
+		if os.path.exists(os.path.join(self.fname_root, 'cluster_KSLabel.tsv')):
+			self.cluster_id, self.group = np.loadtxt(os.path.join(self.fname_root, 'cluster_KSLabel.tsv'), unpack=True, skiprows=1, dtype=dtype)
+		self.spk_clusters = np.squeeze(np.load(os.path.join(self.fname_root, 'spike_clusters.npy')))
+		self.spk_times    = np.squeeze(np.load(os.path.join(self.fname_root, 'spike_times.npy')))
 
 	def removeNoiseClusters(self):
 		'''
@@ -90,6 +93,7 @@ class OpenEphysBase(object):
 		self.rawData = None
 		self.xy = None
 		self.xyTS = None
+		self.recording_start_time = 0
 		self.ts = None
 		self.ttl_data = None
 		self.ttl_timestamps = None
@@ -191,7 +195,7 @@ class OpenEphysBase(object):
 		self.__loadSettings__()
 		xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
 		self.hdir = hdir
-		spk_times = (self.kilodata.spk_times.T[0] / 3e4) + self.ts[0]
+		spk_times = (self.kilodata.spk_times.T / 3e4) + self.recording_start_time
 		mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
 		if 'clusters' in kwargs:
 			if type(kwargs['clusters']) == int:
@@ -234,13 +238,13 @@ class OpenEphysBase(object):
 		self.__loadSettings__()
 		xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
 		self.hdir = hdir
-		spk_times = (self.kilodata.spk_times.T[0] / 3e4) + self.ts[0]
+		spk_times = (self.kilodata.spk_times.T / 3e4) + self.recording_start_time
 		mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
 		if 'clusters' in kwargs:
 			if type(kwargs['clusters']) == int:
 				mapiter.good_clusters = [kwargs['clusters']]
 			else:
-				maptier.good_clusters = kwargs['clusters']
+				mapiter.good_clusters = kwargs['clusters']
 		else:
 			mapiter.good_clusters = self.kilodata.good_clusters
 		mapiter.spk_clusters = self.kilodata.spk_clusters
@@ -332,9 +336,8 @@ class OpenEphysNPX(OpenEphysBase):
 		self.path2APdata = None
 		self.path2LFPdata = None
 
-	def load(self, pname_root: str, experiment_name='experiment1', recording_name='recording1'):
+	def load(self, pname_root=None, experiment_name='experiment1', recording_name='recording1'):
 		'''
-		
 		Loads data recorded in the OE 'flat' binary format
 		See https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/166789121/Flat+binary+format for more
 
@@ -351,6 +354,11 @@ class OpenEphysNPX(OpenEphysBase):
 		pos_t_match = re.compile('Pos_Tracker-[0-9][0-9][0-9].[0-9]')
 		APdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].0')
 		LFPdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].1')
+		sync_message_file = None
+		self.recording_start_time = None
+
+		if pname_root is None:
+			pname_root = self.pname_root
 
 		for d, c, f in os.walk(pname_root):
 			for ff in f:
@@ -361,6 +369,8 @@ class OpenEphysNPX(OpenEphysBase):
 						self.path2APdata = os.path.join(d)
 					if LFPdata_match.search(d):
 						self.path2LFPdata = os.path.join(d)
+				if 'sync_messages.txt' in ff:
+					sync_message_file = os.path.join(d, 'sync_messages.txt')
 
 		if self.path2PosData is not None:
 			pos_data = np.load(os.path.join(self.path2PosData, 'data_array.npy'))
@@ -371,7 +381,21 @@ class OpenEphysNPX(OpenEphysBase):
 		ap_sample_rate = 30000
 		n_channels = 384
 		trial_length = self.__calcTrialLengthFromBinarySize__(os.path.join(self.path2APdata, 'continuous.dat'), n_channels, ap_sample_rate)
-		self.ts = np.arange(0, trial_length, 1.0/sample_rate)
+		# Load the start time from the sync_messages file
+		if sync_message_file is not None:
+			with open(sync_message_file, 'r') as f:
+				sync_strs = f.read()
+			sync_lines = sync_strs.split('\n')
+			for line in sync_lines:
+				if 'subProcessor: 0' in line:
+					idx = line.find('start time: ')
+					start_val = line[idx + len('start time: '):-1]
+					tmp = start_val.split('@')
+					recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
+		else:
+			recording_start_time = self.xyTS[0]
+		self.recording_start_time = recording_start_time
+		self.ts = np.arange(recording_start_time, trial_length+recording_start_time, 1.0 / ap_sample_rate)
 
 	def __calcTrialLengthFromBinarySize__(self, path2file:str, n_channels=384, sample_rate=30000):
 		'''
@@ -387,24 +411,49 @@ class OpenEphysNPX(OpenEphysBase):
 		lfp_file = os.path.join(self.path2LFPdata, 'continuous.dat')
 		status = os.stat(lfp_file)
 		nsamples = int(status.st_size / 2 / nchannels)
-		mmap = np.memmap(lfp_file, np.int16, 'r', 0, (nsamples,nchans))
+		mmap = np.memmap(lfp_file, np.int16, 'r', 0, (nchannels, nsamples), order='F')
 		# Load the channel map NB assumes this is in the AP data location and that kilosort was run there
-		channel_map = np.load(os.path.join(self.path2APdata, 'channel_map.npy'))
+		channel_map = np.squeeze(np.load(os.path.join(self.path2APdata, 'channel_map.npy')))
 		lfp_sample_rate = 2500
 		data = np.array(mmap[channel_map, 0:nseconds*lfp_sample_rate])
 		from ephysiopy.ephys_generic.ephys_generic import EEGCalcsGeneric
 		E = EEGCalcsGeneric(data[0, :], lfp_sample_rate)
 		E.calcEEGPowerSpectrum()
-		spec_data = np.zeros(data.shape[0], len(E.sm_power[0::50]))
-		for chan in data.shape[0]:
+		spec_data = np.zeros(shape=(data.shape[0], len(E.sm_power[0::50])))
+		for chan in range(data.shape[0]):
 			E = EEGCalcsGeneric(data[chan, :], lfp_sample_rate)
 			E.calcEEGPowerSpectrum()
-			spec_data[chan, :] = E.sm_power[0:50]
+			spec_data[chan, :] = E.sm_power[0::50]
 
 		x, y = np.meshgrid(E.freqs[0::50], channel_map)
-		plt.pcolormesh(x, y, spec_data, edgecolors='face')
-		ax = plt.gca()
-		ax.set_xlim(maxFreq)
+		import matplotlib.colors as colors
+		from matplotlib.pyplot import cm
+		from mpl_toolkits.axes_grid1 import make_axes_locatable
+		fig, spectoAx = plt.subplots()
+		spectoAx.pcolormesh(x, y, spec_data, edgecolors='face', cmap='RdBu',norm=colors.LogNorm())
+		spectoAx.set_xlim(0, maxFreq)
+		spectoAx.set_ylim(channel_map[0], channel_map[-1])
+		spectoAx.set_xlabel('Frequency (Hz)')
+		spectoAx.set_ylabel('Channel')
+		divider = make_axes_locatable(spectoAx)
+		channel_spectoAx = divider.append_axes("top", 1.2, pad = 0.1, sharex=spectoAx)
+		meanfreq_powerAx = divider.append_axes("right", 1.2, pad = 0.1, sharey=spectoAx)
+		plt.setp(channel_spectoAx.get_xticklabels() + meanfreq_powerAx.get_yticklabels(), visible=False)
+
+		cols = iter(cm.rainbow(np.linspace(0,1,(384//60)+1)))
+		for i in range(0, 384, 60):
+			c = next(cols)
+			channel_spectoAx.plot(E.freqs[0::50], 10*np.log10(spec_data[i, :]), c=c)
+
+		freq_inc = 6
+		lower_freqs = np.arange(1, maxFreq-freq_inc, freq_inc)
+		upper_freqs = np.arange(1+freq_inc, maxFreq, freq_inc)
+		cols = iter(cm.nipy_spectral(np.linspace(0,1,len(upper_freqs))))
+		for freqs in zip(lower_freqs, upper_freqs):
+			freq_mask = np.logical_and(E.freqs[0::50]>freqs[0], E.freqs[0::50]<freqs[1])
+			mean_power = np.mean(10*np.log10(spec_data[:, freq_mask]),-1)
+			c = next(cols)
+			meanfreq_powerAx.plot(mean_power, channel_map, c=c)
 		plt.show()
 
 	def plotPos(self, jumpmax=None, show=True):
