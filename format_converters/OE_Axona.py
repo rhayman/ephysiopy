@@ -37,8 +37,14 @@ class OE2Axona(object):
 		# if left as None some default values for the next 3 params are loaded from top-level __init__.py
 		# these are only used in self.__filterLFP__
 		self.fs = None
+		# if lfp_channel is set to None then the .set file will reflect that no EEG was recorded
+		# this should mean that you can load data into Tint without a .eeg file
+		self.lfp_channel = 1
 		self.lfp_lowcut = None
 		self.lfp_highcut = None
+		# set the tetrodes to record from
+		# defaults to 1 through 4 - see self.makeSetData below
+		self.tetrodes = ['1','2','3','4']
 
 	def resample(self, data, src_rate=30, dst_rate=50, axis=0):
 		'''
@@ -54,7 +60,7 @@ class OE2Axona(object):
 		Loads the settings data from the settings.xml file
 		'''
 		if self._settings is None:
-			self._settings = OESettings.Settings(os.path.join(self.dirname, 'settings.xml'))
+			self._settings = OESettings.Settings(self.dirname)
 		return self._settings
 
 	@settings.setter
@@ -75,7 +81,7 @@ class OE2Axona(object):
 			root_filename = os.path.splitext(self.experiment_name)[0]
 			OE_data = OEKiloPhy.OpenEphysNWB(self.dirname)
 			print("Loading nwb data...")
-			OE_data.load(session_name=self.experiment_name, recording_name=recording_name, loadspikes=True, loadraw=False)
+			OE_data.load(pname_root=self.dirname, session_name=self.experiment_name, recording_name=recording_name, loadspikes=True, loadraw=False)
 			print("Loaded nwb data from: {}".format(filename_root))
 			# It's likely that spikes have been collected after the last position sample
 			# due to buffering issues I can't be bothered to resolve. Get the last pos
@@ -344,13 +350,15 @@ class OE2Axona(object):
 			if 'collectMask' in k:
 				header[k] = '0'
 			if 'EEG_ch_1' in k:
-				header[k] = str(lfp_channel)
+				if lfp_channel is not None:
+					header[k] = str(lfp_channel)
 			if 'mode_ch_' in k:
 				header[k] = '0'
 		# iterate again to make sure lfp gain set correctly
 		for k, v in header.items():
-			if k == 'gain_ch_' + str(lfp_channel):
-				header[k] = str(self.lp_gain)
+			if lfp_channel is not None:
+				if k == 'gain_ch_' + str(lfp_channel):
+					header[k] = str(self.lp_gain)
 
 		# Based on the data in the electrodes dict of the OESettings instance (self.settings - see __init__)
 		# determine which tetrodes we can let Tint load
@@ -359,11 +367,10 @@ class OE2Axona(object):
 		if self.settings.electrodes:
 			for k, v in self.settings.electrodes.items():
 				header['collectMask_' + str(k)] = '1'
-		else: # default to 4 tetrodes
-			header['collectMask_1'] = '1'
-			header['collectMask_2'] = '1'
-			header['collectMask_3'] = '1'
-			header['collectMask_4'] = '1'
+		if self.lfp_channel is not None:
+			for chan in self.tetrodes:
+				key = 'collectMask_' + str(chan)
+				header[key] = '1'
 		header['colactive_1'] = '1'
 		header['colactive_2'] = '0'
 		header['colactive_3'] = '0'

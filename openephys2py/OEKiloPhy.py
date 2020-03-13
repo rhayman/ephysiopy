@@ -199,9 +199,10 @@ class OpenEphysBase(object):
 		mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
 		if 'clusters' in kwargs:
 			if type(kwargs['clusters']) == int:
-				mapiter.good_clusters = [kwargs['clusters']]
+				mapiter.good_clusters = np.intersect1d([kwargs['clusters']], self.kilodata.good_clusters)
+
 			else:
-				maptier.good_clusters = kwargs['clusters']
+				mapiter.good_clusters = np.intersect1d(kwargs['clusters'], self.kilodata.good_clusters)
 		else:
 			mapiter.good_clusters = self.kilodata.good_clusters
 		mapiter.spk_clusters = self.kilodata.spk_clusters
@@ -223,6 +224,8 @@ class OpenEphysBase(object):
 												lower values = more bins in ratemap / SAC
 				'clusters' - int or list of ints describing which clusters to plot
 				i.e. this overwrites the 'good_clusters' value in self.kilodata
+				'save_grid_summary_location' - bool; if present the dictionary returned from
+				gridcell.SAC.getMeasures is saved for each cluster - this is passed to MapCalcsGeneric
 		'''
 		if self.kilodata is None:
 			self.loadKilo()
@@ -242,9 +245,10 @@ class OpenEphysBase(object):
 		mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
 		if 'clusters' in kwargs:
 			if type(kwargs['clusters']) == int:
-				mapiter.good_clusters = [kwargs['clusters']]
+				mapiter.good_clusters = np.intersect1d([kwargs['clusters']], self.kilodata.good_clusters)
+
 			else:
-				mapiter.good_clusters = kwargs['clusters']
+				mapiter.good_clusters = np.intersect1d(kwargs['clusters'], self.kilodata.good_clusters)
 		else:
 			mapiter.good_clusters = self.kilodata.good_clusters
 		mapiter.spk_clusters = self.kilodata.spk_clusters
@@ -430,7 +434,7 @@ class OpenEphysNPX(OpenEphysBase):
 		from matplotlib.pyplot import cm
 		from mpl_toolkits.axes_grid1 import make_axes_locatable
 		fig, spectoAx = plt.subplots()
-		spectoAx.pcolormesh(x, y, spec_data, edgecolors='face', cmap='RdBu',norm=colors.LogNorm())
+		spectoAx.pcolormesh(x, y, spec_data, edgecolors='face', cmap='bone',norm=colors.LogNorm())
 		spectoAx.set_xlim(0, maxFreq)
 		spectoAx.set_ylim(channel_map[0], channel_map[-1])
 		spectoAx.set_xlabel('Frequency (Hz)')
@@ -440,20 +444,29 @@ class OpenEphysNPX(OpenEphysBase):
 		meanfreq_powerAx = divider.append_axes("right", 1.2, pad = 0.1, sharey=spectoAx)
 		plt.setp(channel_spectoAx.get_xticklabels() + meanfreq_powerAx.get_yticklabels(), visible=False)
 
-		cols = iter(cm.rainbow(np.linspace(0,1,(384//60)+1)))
-		for i in range(0, 384, 60):
+		mn_power = np.mean(spec_data, 0)
+		cols = iter(cm.rainbow(np.linspace(0,1,(nchannels//60)+1)))
+		for i in range(0, spec_data.shape[0], 60):
 			c = next(cols)
-			channel_spectoAx.plot(E.freqs[0::50], 10*np.log10(spec_data[i, :]), c=c)
+			channel_spectoAx.plot(E.freqs[0::50], 10*np.log10(spec_data[i, :]/mn_power), c=c, label=str(i))
+
+		channel_spectoAx.set_ylabel('Channel power(dB)')
+		channel_spectoAx.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left', mode='expand',
+			fontsize='x-small', ncol=4)
 
 		freq_inc = 6
 		lower_freqs = np.arange(1, maxFreq-freq_inc, freq_inc)
 		upper_freqs = np.arange(1+freq_inc, maxFreq, freq_inc)
 		cols = iter(cm.nipy_spectral(np.linspace(0,1,len(upper_freqs))))
+		mn_power = np.mean(spec_data, 1)
 		for freqs in zip(lower_freqs, upper_freqs):
 			freq_mask = np.logical_and(E.freqs[0::50]>freqs[0], E.freqs[0::50]<freqs[1])
-			mean_power = np.mean(10*np.log10(spec_data[:, freq_mask]),-1)
+			mean_power = 10*np.log10(np.mean(spec_data[:, freq_mask],1)/mn_power)
 			c = next(cols)
-			meanfreq_powerAx.plot(mean_power, channel_map, c=c)
+			meanfreq_powerAx.plot(mean_power, channel_map, c=c, label=str(freqs[0]) + " - " + str(freqs[1]))
+		meanfreq_powerAx.set_xlabel('Mean freq. band power(dB)')
+		meanfreq_powerAx.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left', mode='expand',
+			fontsize='x-small', ncol=1)
 		plt.show()
 
 	def plotPos(self, jumpmax=None, show=True):
@@ -524,7 +537,7 @@ class OpenEphysNWB(OpenEphysBase):
 		import os
 		if session_name is None:
 			session_name = 'experiment_1.nwb'
-		self.nwbData = h5py.File(os.path.join(pname_root, session_name))
+		self.nwbData = h5py.File(os.path.join(pname_root, session_name), mode='r')
 		# Position data...
 		if self.recording_name is None:
 			if recording_name is None:

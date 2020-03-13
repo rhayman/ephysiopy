@@ -496,6 +496,7 @@ class MapCalcsGeneric(object):
         self.spk_pos_idx = self.__interpSpkPosTimes()
         self.__good_clusters = None
         self.__spk_clusters = None
+        self.save_grid_output_location = None
         if ( 'ppm' in kwargs.keys() ):
             self.__ppm = kwargs['ppm']
         else:
@@ -504,6 +505,8 @@ class MapCalcsGeneric(object):
             self.pos_sample_rate = kwargs['pos_sample_rate']
         else:
             self.pos_sample_rate = 30
+        if 'save_grid_summary_location' in kwargs.keys():
+            self.save_grid_output_location = kwargs['save_grid_summary_location']
 
     def __interpSpkPosTimes(self):
         '''
@@ -640,6 +643,11 @@ class MapCalcsGeneric(object):
                 nodwell = ~np.isfinite(rmap[0])
                 sac = S.autoCorr2D(rmap[0], nodwell)
                 d = S.getMeasures(sac)
+                if self.save_grid_output_location:
+                    d['Cluster'] = cluster
+                    f = open(self.save_grid_output_location, 'w')
+                    f.write(str(d))
+                    f.close()
                 S.show(sac,d,ax2)
                 print("Gridscore: {:.2f}".format(d['gridness']))
                 ax3 = fig.add_subplot(2, 3, 4, projection='polar')

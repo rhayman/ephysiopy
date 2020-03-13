@@ -228,7 +228,7 @@ class SAC(object):
 		else:
 			min_distance = np.ceil(np.min(A_sz / 2) / 8.).astype(int)
 		peaksMask = skimage.feature.peak_local_max(A_tmp, indices=False, min_distance=min_distance,exclude_border=False)
-		peaksLabel = skimage.measure.label(peaksMask, 8)
+		peaksLabel = skimage.measure.label(peaksMask, connectivity=2)
 		if maxima == 'centroid':
 			S = skimage.measure.regionprops(peaksLabel)
 			xyCoordPeaks = np.fliplr(np.array([(x['Centroid'][1],x['Centroid'][0]) for x in S]))
@@ -271,7 +271,7 @@ class SAC(object):
 				# TODO: the above step can fragment a sub-field in poorly formed SACs
 				# need to deal with this...perhaps by only retaining the largest
 				# sub-sub-field
-				labelled_sub_field = skimage.measure.label(fieldsMask[:,:, field-1],8)
+				labelled_sub_field = skimage.measure.label(fieldsMask[:,:, field-1], connectivity=2)
 				sub_props = skimage.measure.regionprops(labelled_sub_field)
 				if len(sub_props) > 1:
 					distFromCentre = []
@@ -353,9 +353,8 @@ class SAC(object):
 			ellipse_angle = None
 			im_centre = None
 		# collect all the following keywords into a dict for output
-		dictKeys = ('gridness','scale', 'orientation', 'gridnessMaskAll','gridnessMask', 'fieldsMask',
-		'fieldsLabel', 'fieldPerim', 'meanRInLabel', 'closestPeaksCoord', 'xyCoordPeaksCentral', 'closestPeaks',
-		'ellipseXY', 'circleXY', 'ellipse_axes', 'ellipse_angle', 'im_centre', 'autoCorrMiddle','rotationArr','rotationCorrVals')
+		dictKeys = ('gridness','scale', 'orientation', 'closestPeaksCoord', 'gridnessMaskAll', 'gridnessMask',
+		'ellipse_axes', 'ellipse_angle', 'im_centre', 'rotationArr','rotationCorrVals')
 		outDict = dict.fromkeys(dictKeys,np.nan)
 		for thiskey in outDict.keys():
 			outDict[thiskey] = locals()[thiskey]# neat trick: locals is a dict that holds all locally scoped variables
