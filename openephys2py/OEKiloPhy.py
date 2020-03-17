@@ -4,6 +4,18 @@
 Created on Tue Sep 12 11:53:10 2017
 
 @author: robin
+
+The main interface for dealing with openephys data recorded in
+either the .nwb or binary format (ie when using neuropixels)
+
+4 classes defined:
+
+KiloSortSession - deals with the output from kilosort or kilosort2
+OpenEphysBase - a not really abstract base class which is the parent (super)
+				class for these two
+	OpenEphysNPX - deals with neuropixels data
+	OpenEphysNWB - deals with data recorded in nwb format
+
 """
 import numpy as np
 import matplotlib.pylab as plt
@@ -57,16 +69,22 @@ class KiloSortSession(object):
 	def load(self):
 		'''
 		Load all the relevant files
+		KSLabel - output from KiloSort - algorithm defined
+		cluster_group - group labels from phy - user defined ('good', 'MUA', 'noise')
 		'''
 		import os
 		dtype = {'names': ('cluster_id', 'group'), 'formats': ('i4', 'S10')}
+		# One of these is from kilosort and the other from kilosort2
+		# and is updated by the user when doing cluster assignment in phy (or whatever)
+		# See comments above this class definition for a bit more info
 		if os.path.exists(os.path.join(self.fname_root, 'cluster_groups.csv')):
 			self.cluster_id, self.group = np.loadtxt(os.path.join(self.fname_root, 'cluster_groups.csv'), unpack=True, skiprows=1, dtype=dtype)
 		if os.path.exists(os.path.join(self.fname_root, 'cluster_group.tsv')):
 			self.cluster_id, self.group = np.loadtxt(os.path.join(self.fname_root, 'cluster_group.tsv'), unpack=True, skiprows=1, dtype=dtype)
 		dtype = {'names': ('cluster_id', 'KSLabel'), 'formats': ('i4', 'S10')}
+		# 'Raw' labels from a kilosort session
 		if os.path.exists(os.path.join(self.fname_root, 'cluster_KSLabel.tsv')):
-			self.cluster_id, self.group = np.loadtxt(os.path.join(self.fname_root, 'cluster_KSLabel.tsv'), unpack=True, skiprows=1, dtype=dtype)
+			self.ks_cluster_id, self.ks_group = np.loadtxt(os.path.join(self.fname_root, 'cluster_KSLabel.tsv'), unpack=True, skiprows=1, dtype=dtype)
 		self.spk_clusters = np.squeeze(np.load(os.path.join(self.fname_root, 'spike_clusters.npy')))
 		self.spk_times    = np.squeeze(np.load(os.path.join(self.fname_root, 'spike_times.npy')))
 
@@ -508,7 +526,7 @@ class OpenEphysNWB(OpenEphysBase):
 		self.recording_name = None # the recording name inside the nwb file ('recording0', 'recording1', etc)
 		self.isBinary = False
 
-	def load(self, pname_root: str, session_name=None, recording_name=None, loadraw=False, loadspikes=False, savedat=False):
+	def load(self, pname_root: None, session_name=None, recording_name=None, loadraw=False, loadspikes=False, savedat=False):
 		'''
 		Loads xy pos from binary part of the hdf5 file and data resulting from
 		a Kilosort session (see KiloSortSession class above)
@@ -535,6 +553,8 @@ class OpenEphysNWB(OpenEphysBase):
 
 		import h5py
 		import os
+		if pname_root is None:
+			pname_root = self.pname_root
 		if session_name is None:
 			session_name = 'experiment_1.nwb'
 		self.nwbData = h5py.File(os.path.join(pname_root, session_name), mode='r')

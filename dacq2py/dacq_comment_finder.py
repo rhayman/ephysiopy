@@ -6,7 +6,7 @@ Created on Wed Sep 19 17:55:43 2012
 """
 
 import os, sys, getopt
-import dacq2py
+from ephysiopy import dacq2py
 
 def main(argv):
     try:

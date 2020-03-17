@@ -1,0 +1,2684 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.7.5" />
+<title>ephysiopy.openephys2py.OEKiloPhy API documentation</title>
+<meta name="description" content="Created on Tue Sep 12 11:53:10 2017 …" />
+<link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
+<link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
+<style>.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{font-weight:bold}#index h4 + ul{margin-bottom:.6em}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>ephysiopy.openephys2py.OEKiloPhy</code></h1>
+</header>
+<section id="section-intro">
+<p>Created on Tue Sep 12 11:53:10 2017</p>
+<p>@author: robin</p>
+<p>The main interface for dealing with openephys data recorded in
+either the .nwb or binary format (ie when using neuropixels)</p>
+<p>4 classes defined:</p>
+<p>KiloSortSession - deals with the output from kilosort or kilosort2
+OpenEphysBase - a not really abstract base class which is the parent (super)
+class for these two
+OpenEphysNPX - deals with neuropixels data
+OpenEphysNWB - deals with data recorded in nwb format</p>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+&#34;&#34;&#34;
+Created on Tue Sep 12 11:53:10 2017
+
+@author: robin
+
+The main interface for dealing with openephys data recorded in
+either the .nwb or binary format (ie when using neuropixels)
+
+4 classes defined:
+
+KiloSortSession - deals with the output from kilosort or kilosort2
+OpenEphysBase - a not really abstract base class which is the parent (super)
+                                class for these two
+        OpenEphysNPX - deals with neuropixels data
+        OpenEphysNWB - deals with data recorded in nwb format
+
+&#34;&#34;&#34;
+import numpy as np
+import matplotlib.pylab as plt
+
+try:
+        import xml.etree.cElementTree as ET
+except ImportError:
+        import xml.etree.ElementTree as ET
+from collections import OrderedDict
+
+try:
+        from .ephysiopy.openephys2py.OESettings import Settings
+except ImportError:
+        from ephysiopy.openephys2py.OESettings import Settings
+&#39;&#39;&#39;
+The results of a kilosort session are a load of .npy files, a .csv file
+and some other stuff
+The .npy files contain things like spike times, cluster ids etc. Importantly
+the .csv file (&#39;cluster_groups.csv&#39;) contains the results (more or less) of
+the SAVED part of the phy template-gui (ie when you click &#34;Save&#34; from the
+Clustering menu): this file consists of a header (&#39;cluster_id&#39; and &#39;group&#39;)
+where &#39;cluster_id&#39; is obvious (and relates to the identity in spk_clusters.npy),
+the &#39;group&#39; is a string that contains things like &#39;noise&#39; or &#39;unsorted&#39; or
+presumably a number or quality measure as determined by the user
+Load all these things to get a restricted list of things to look at...
+&#39;&#39;&#39;
+class KiloSortSession(object):
+        &#39;&#39;&#39;
+        Parameters
+        ----------
+        fname_root : str
+                Should contain all the files from a kilosort session and
+                the .dat file (extracted from the nwb OE session)
+
+        &#39;&#39;&#39;
+        def __init__(self, fname_root):
+                &#39;&#39;&#39;
+                Walk through the path to find the location of the files in case this has been
+                called in another way i.e. binary format a la Neuropixels
+                &#39;&#39;&#39;
+                self.fname_root = fname_root
+                import os
+                for d, c, f in os.walk(fname_root):
+                        for ff in f:
+                                if &#39;spike_times.npy&#39; in ff:
+                                        self.fname_root = d
+                self.cluster_id = None
+                self.spk_clusters = None
+                self.spk_times = None
+
+        def load(self):
+                &#39;&#39;&#39;
+                Load all the relevant files
+                KSLabel - output from KiloSort - algorithm defined
+                cluster_group - group labels from phy - user defined (&#39;good&#39;, &#39;MUA&#39;, &#39;noise&#39;)
+                &#39;&#39;&#39;
+                import os
+                dtype = {&#39;names&#39;: (&#39;cluster_id&#39;, &#39;group&#39;), &#39;formats&#39;: (&#39;i4&#39;, &#39;S10&#39;)}
+                # One of these is from kilosort and the other from kilosort2
+                # and is updated by the user when doing cluster assignment in phy (or whatever)
+                # See comments above this class definition for a bit more info
+                if os.path.exists(os.path.join(self.fname_root, &#39;cluster_groups.csv&#39;)):
+                        self.cluster_id, self.group = np.loadtxt(os.path.join(self.fname_root, &#39;cluster_groups.csv&#39;), unpack=True, skiprows=1, dtype=dtype)
+                if os.path.exists(os.path.join(self.fname_root, &#39;cluster_group.tsv&#39;)):
+                        self.cluster_id, self.group = np.loadtxt(os.path.join(self.fname_root, &#39;cluster_group.tsv&#39;), unpack=True, skiprows=1, dtype=dtype)
+                dtype = {&#39;names&#39;: (&#39;cluster_id&#39;, &#39;KSLabel&#39;), &#39;formats&#39;: (&#39;i4&#39;, &#39;S10&#39;)}
+                # &#39;Raw&#39; labels from a kilosort session
+                if os.path.exists(os.path.join(self.fname_root, &#39;cluster_KSLabel.tsv&#39;)):
+                        self.ks_cluster_id, self.ks_group = np.loadtxt(os.path.join(self.fname_root, &#39;cluster_KSLabel.tsv&#39;), unpack=True, skiprows=1, dtype=dtype)
+                self.spk_clusters = np.squeeze(np.load(os.path.join(self.fname_root, &#39;spike_clusters.npy&#39;)))
+                self.spk_times    = np.squeeze(np.load(os.path.join(self.fname_root, &#39;spike_times.npy&#39;)))
+
+        def removeNoiseClusters(self):
+                &#39;&#39;&#39;
+                Restricts analysis to anything that isn&#39;t listed as &#39;noise&#39; in self.group
+                &#39;&#39;&#39;
+                if self.cluster_id is not None:
+                        self.good_clusters = []
+                        for id_group in zip(self.cluster_id, self.group):
+                                if &#39;noise&#39; not in id_group[1].decode() and &#39;mua&#39; not in id_group[1].decode():
+                                        self.good_clusters.append(id_group[0])
+
+
+class OpenEphysBase(object):
+        &#34;&#34;&#34;
+        Base class for openephys anaylsis with data recorded in either the NWB or binary format
+        &#34;&#34;&#34;
+        def __init__(self, pname_root, **kwargs):
+                super().__init__()
+                self.pname_root = pname_root # top-level directory, typically of form YYYY-MM-DD_HH-MM-SS
+                self.settings = None
+                self.kilodata = None
+                self.rawData = None
+                self.xy = None
+                self.xyTS = None
+                self.recording_start_time = 0
+                self.ts = None
+                self.ttl_data = None
+                self.ttl_timestamps = None
+                self.spikeData = None # a list of np.arrays, nominally containing tetrode data in format nspikes x 4 x 40
+                self.accelerometerData = None # np.array
+                self.settings = None # OESettings.Settings instance
+                if (&#39;jumpmax&#39; in kwargs.keys()):
+                        self.jumpmax = kwargs[&#39;jumpmax&#39;]
+                else:
+                        self.jumpmax = 100
+
+        def loadKilo(self):
+                &#39;&#39;&#39;
+                Loads a kilosort session
+                &#39;&#39;&#39;
+                kilodata = KiloSortSession(self.pname_root) # pname_root gets walked through and over-written with correct location of kiolsort data
+                kilodata.load()
+                kilodata.removeNoiseClusters()
+                self.kilodata = kilodata
+
+        def __loadSettings__(self):
+                &#39;&#39;&#39;
+                Loads the settings.xml data
+                &#39;&#39;&#39;
+                if self.settings is None:
+                        import os
+                        settings = Settings(self.pname_root) # pname_root gets walked through and over-written with correct location of settings.xml
+                        settings.parse()
+                        settings.parsePos()
+                        self.settings = settings
+
+        def __loaddata__(self, **kwargs):
+                self.load(self.pname_root, **kwargs)
+
+        def plotXCorrs(self):
+                if self.kilodata is None:
+                        self.loadKilo()
+                from ephysiopy.ephys_generic.ephys_generic import SpikeCalcsGeneric
+                corriter = SpikeCalcsGeneric(self.kilodata.spk_times)
+                corriter.spk_clusters = self.kilodata.spk_clusters
+                corriter.plotAllXCorrs(self.kilodata.good_clusters)
+
+        def plotPos(self, jumpmax=None, show=True, **kwargs):
+                &#39;&#39;&#39;
+                Plots x vs y position for this trial
+
+                Parameters
+                ------------
+                jumpmax - the max amount the LED is allowed to instantaneously move. int or greater
+                show - boolean - whether to plot the pos or not (default is True)
+
+                Returns
+                ----------
+                xy - a nx2 np.array of xy
+                &#39;&#39;&#39;
+                if jumpmax is None:
+                        jumpmax = self.jumpmax
+                import matplotlib.pylab as plt
+                from ephysiopy.ephys_generic.ephys_generic import PosCalcsGeneric
+
+                self.__loadSettings__()
+                if self.xy is None:
+                        self.__loaddata__(**kwargs)
+                posProcessor = PosCalcsGeneric(self.xy[:,0], self.xy[:,1], ppm=300, cm=True, jumpmax=jumpmax)
+                xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
+                self.hdir = hdir
+                if show:
+                        plt.plot(xy[0], xy[1])
+                        plt.gca().invert_yaxis()
+                        plt.show()
+                return xy
+
+        def plotMaps(self, plot_type=&#39;map&#39;, **kwargs):
+                &#39;&#39;&#39;
+                Parameters
+                ------------
+                plot_type - str - valid strings include:
+                                                &#39;map&#39; - just ratemap plotted
+                                                &#39;path&#39; - just spikes on path
+                                                &#39;both&#39; - both of the above
+                                                &#39;all&#39; - both spikes on path, ratemap &amp; SAC plotted
+                                                can also be a list
+                Valid kwargs: &#39;ppm&#39; - this is an integer denoting pixels per metre:
+                                                                                                lower values = more bins in ratemap / SAC
+                                &#39;clusters&#39; - int or list of ints describing which clusters to plot
+                                i.e. this overwrites the &#39;good_clusters&#39; value in self.kilodata
+                &#39;&#39;&#39;
+                if self.kilodata is None:
+                        self.loadKilo()
+                if ( &#39;ppm&#39; in kwargs.keys() ):
+                        ppm = kwargs[&#39;ppm&#39;]
+                else:
+                        ppm = 400
+                from ephysiopy.ephys_generic.ephys_generic import PosCalcsGeneric, MapCalcsGeneric
+                if self.xy is None:
+                        self.__loaddata__(**kwargs)
+                posProcessor = PosCalcsGeneric(self.xy[:,0], self.xy[:,1], ppm, jumpmax=self.jumpmax)
+                import os
+                self.__loadSettings__()
+                xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
+                self.hdir = hdir
+                spk_times = (self.kilodata.spk_times.T / 3e4) + self.recording_start_time
+                mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
+                if &#39;clusters&#39; in kwargs:
+                        if type(kwargs[&#39;clusters&#39;]) == int:
+                                mapiter.good_clusters = np.intersect1d([kwargs[&#39;clusters&#39;]], self.kilodata.good_clusters)
+
+                        else:
+                                mapiter.good_clusters = np.intersect1d(kwargs[&#39;clusters&#39;], self.kilodata.good_clusters)
+                else:
+                        mapiter.good_clusters = self.kilodata.good_clusters
+                mapiter.spk_clusters = self.kilodata.spk_clusters
+                self.mapiter = mapiter
+                mapiter.plotAll()
+                # [ print(&#34;&#34;) for cluster in mapiter ]
+
+        def plotMapsOneAtATime(self, plot_type=&#39;map&#39;, **kwargs):
+                &#39;&#39;&#39;
+                Parameters
+                ------------
+                plot_type - str - valid strings include:
+                                                &#39;map&#39; - just ratemap plotted
+                                                &#39;path&#39; - just spikes on path
+                                                &#39;both&#39; - both of the above
+                                                &#39;all&#39; - both spikes on path, ratemap &amp; SAC plotted
+                                                can also be a list
+                Valid kwargs: &#39;ppm&#39; - this is an integer denoting pixels per metre:
+                                                                                                lower values = more bins in ratemap / SAC
+                                &#39;clusters&#39; - int or list of ints describing which clusters to plot
+                                i.e. this overwrites the &#39;good_clusters&#39; value in self.kilodata
+                                &#39;save_grid_summary_location&#39; - bool; if present the dictionary returned from
+                                gridcell.SAC.getMeasures is saved for each cluster - this is passed to MapCalcsGeneric
+                &#39;&#39;&#39;
+                if self.kilodata is None:
+                        self.loadKilo()
+                if ( &#39;ppm&#39; in kwargs.keys() ):
+                        ppm = kwargs[&#39;ppm&#39;]
+                else:
+                        ppm = 400
+                from ephysiopy.ephys_generic.ephys_generic import PosCalcsGeneric, MapCalcsGeneric
+                if self.xy is None:
+                        self.__loaddata__(**kwargs)
+                posProcessor = PosCalcsGeneric(self.xy[:,0], self.xy[:,1], ppm, jumpmax=self.jumpmax)
+                import os
+                self.__loadSettings__()
+                xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
+                self.hdir = hdir
+                spk_times = (self.kilodata.spk_times.T / 3e4) + self.recording_start_time
+                mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
+                if &#39;clusters&#39; in kwargs:
+                        if type(kwargs[&#39;clusters&#39;]) == int:
+                                mapiter.good_clusters = np.intersect1d([kwargs[&#39;clusters&#39;]], self.kilodata.good_clusters)
+
+                        else:
+                                mapiter.good_clusters = np.intersect1d(kwargs[&#39;clusters&#39;], self.kilodata.good_clusters)
+                else:
+                        mapiter.good_clusters = self.kilodata.good_clusters
+                mapiter.spk_clusters = self.kilodata.spk_clusters
+                self.mapiter = mapiter
+                # mapiter.plotAll()
+                [ print(&#34;&#34;) for cluster in mapiter ]
+
+        def plotEEGPower(self, channel=0):
+                from ephysiopy.ephys_generic.ephys_generic import EEGCalcsGeneric
+                if self.rawData is None:
+                        print(&#34;Loading raw data...&#34;)
+                        self.load(loadraw=True)
+                from scipy import signal
+                n_samples = np.shape(self.rawData[:,channel])[0]
+                s = signal.resample(self.rawData[:,channel], int(n_samples/3e4) * 500)
+                E = EEGCalcsGeneric(s, 500)
+
+                # E = EEGCalcsGeneric(self.rawData[:,channel], 3e4)
+                E.plotPowerSpectrum()
+
+        def plotSpectrogram(self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250):
+                from ephysiopy.ephys_generic.ephys_generic import EEGCalcsGeneric
+                if self.rawData is None:
+                        print(&#34;Loading raw data...&#34;)
+                        self.load(loadraw=True)
+                # load first 30 seconds by default
+                fs = 3e4
+                E = EEGCalcsGeneric(self.rawData[0:int(3e4*nSeconds),0], fs)
+                nperseg = int(fs * secsPerBin)
+                from scipy import signal
+                freqs, times, Sxx = signal.spectrogram(E.sig, fs, nperseg=nperseg)
+                Sxx_sm = Sxx
+                from ephysiopy.ephys_generic import binning
+                R = binning.RateMap()
+                Sxx_sm = R.blurImage(Sxx, (secsPerBin*2)+1)
+                x, y = np.meshgrid(times, freqs)
+                from matplotlib import colors
+                if ax is None:
+                        plt.figure()
+                        ax = plt.gca()
+                        ax.pcolormesh(x, y, Sxx_sm, edgecolors=&#39;face&#39;, norm=colors.LogNorm())
+                ax.pcolormesh(x, y, Sxx_sm, edgecolors=&#39;face&#39;, norm=colors.LogNorm())
+                ax.set_xlim(times[0], times[-1])
+                ax.set_ylim(ymin, ymax)
+                ax.set_xlabel(&#39;Time(s)&#39;)
+                ax.set_ylabel(&#39;Frequency(Hz)&#39;)
+
+        def plotPSTH(self):
+                import os
+                self.__loadSettings__()
+                self.settings.parseStimControl()
+                if self.kilodata is None:
+                        self.loadKilo()
+                from ephysiopy.ephys_generic.ephys_generic import SpikeCalcsGeneric
+                spk_times = (self.kilodata.spk_times.T[0] / 3e4) + self.ts[0] # in seconds
+                S = SpikeCalcsGeneric(spk_times)
+                S.event_ts = self.ttl_timestamps[2::2] # this is because some of the trials have two weird events logged at about 2-3 minutes in...
+                S.spk_clusters = self.kilodata.spk_clusters
+                S.stim_width = 0.01 # in seconds
+                for x in self.kilodata.good_clusters:
+                        print(next(S.plotPSTH(x)))
+
+        def plotEventEEG(self):
+                from ephysiopy.ephys_generic.ephys_generic import EEGCalcsGeneric
+                if self.rawData is None:
+                        print(&#34;Loading raw data...&#34;)
+                        self.load(loadraw=True)
+                E = EEGCalcsGeneric(self.rawData[:, 0], 3e4)
+                event_ts = self.ttl_timestamps[2::2] # this is because some of the trials have two weird events logged at about 2-3 minutes in...
+                E.plotEventEEG(event_ts)
+
+        def plotWaves(self):
+                if self.kilodata is None:
+                        self.loadKilo()
+                if self.rawData is None:
+                        print(&#34;Loading raw data...&#34;)
+                        self.load(loadraw=True)
+                import os
+                amplitudes = np.load(os.path.join(self.fname_root, &#39;amplitudes.npy&#39;))
+                waveiter = SpkWaveform(self.kilodata.good_clusters, self.kilodata.spk_times, self.kilodata.spk_clusters, amplitudes, self.rawData)
+                for cluster in waveiter:
+                        print(&#34;Cluster {}&#34;.format(cluster))
+
+class OpenEphysNPX(OpenEphysBase):
+        &#34;&#34;&#34;docstring for OpenEphysNPX&#34;&#34;&#34;
+        def __init__(self, pname_root):
+                super().__init__(pname_root)
+                self.path2PosData = None
+                self.path2APdata = None
+                self.path2LFPdata = None
+
+        def load(self, pname_root=None, experiment_name=&#39;experiment1&#39;, recording_name=&#39;recording1&#39;):
+                &#39;&#39;&#39;
+                Loads data recorded in the OE &#39;flat&#39; binary format
+                See https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/166789121/Flat+binary+format for more
+
+                Parameters
+                ----------
+                pname_root - str - the top level directory that contains the folder &#39;experiment1&#39;
+                (usually) and settings.xml
+
+                recording_name - str - pretty obvious but this is also the directory immediately beneath pname_root
+                &#39;&#39;&#39;
+                self.isBinary = True
+                import os
+                import re
+                pos_t_match = re.compile(&#39;Pos_Tracker-[0-9][0-9][0-9].[0-9]&#39;)
+                APdata_match = re.compile(&#39;Neuropix-PXI-[0-9][0-9][0-9].0&#39;)
+                LFPdata_match = re.compile(&#39;Neuropix-PXI-[0-9][0-9][0-9].1&#39;)
+                sync_message_file = None
+                self.recording_start_time = None
+
+                if pname_root is None:
+                        pname_root = self.pname_root
+
+                for d, c, f in os.walk(pname_root):
+                        for ff in f:
+                                if &#39;data_array.npy&#39; in ff:
+                                        self.path2PosData = os.path.join(d)
+                                if &#39;continuous.dat&#39; in ff:
+                                        if APdata_match.search(d):
+                                                self.path2APdata = os.path.join(d)
+                                        if LFPdata_match.search(d):
+                                                self.path2LFPdata = os.path.join(d)
+                                if &#39;sync_messages.txt&#39; in ff:
+                                        sync_message_file = os.path.join(d, &#39;sync_messages.txt&#39;)
+
+                if self.path2PosData is not None:
+                        pos_data = np.load(os.path.join(self.path2PosData, &#39;data_array.npy&#39;))
+                        self.xy = pos_data[:,0:2]
+                        pos_ts = np.load(os.path.join(self.path2PosData, &#39;timestamps.npy&#39;))
+                        self.xyTS = pos_ts / 30.0 / 1000.0
+
+                ap_sample_rate = 30000
+                n_channels = 384
+                trial_length = self.__calcTrialLengthFromBinarySize__(os.path.join(self.path2APdata, &#39;continuous.dat&#39;), n_channels, ap_sample_rate)
+                # Load the start time from the sync_messages file
+                if sync_message_file is not None:
+                        with open(sync_message_file, &#39;r&#39;) as f:
+                                sync_strs = f.read()
+                        sync_lines = sync_strs.split(&#39;\n&#39;)
+                        for line in sync_lines:
+                                if &#39;subProcessor: 0&#39; in line:
+                                        idx = line.find(&#39;start time: &#39;)
+                                        start_val = line[idx + len(&#39;start time: &#39;):-1]
+                                        tmp = start_val.split(&#39;@&#39;)
+                                        recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
+                else:
+                        recording_start_time = self.xyTS[0]
+                self.recording_start_time = recording_start_time
+                self.ts = np.arange(recording_start_time, trial_length+recording_start_time, 1.0 / ap_sample_rate)
+
+        def __calcTrialLengthFromBinarySize__(self, path2file:str, n_channels=384, sample_rate=30000):
+                &#39;&#39;&#39;
+                Returns the time taken to run the trial (in seconds) based on the size of
+                the binary file on disk
+                &#39;&#39;&#39;
+                import os
+                status = os.stat(path2file)
+                return status.st_size / ( 2.0 * n_channels * sample_rate)
+
+        def plotSpectrogramByDepth(self, nchannels=384, nseconds=100, maxFreq=125, **kwargs):
+                import os
+                lfp_file = os.path.join(self.path2LFPdata, &#39;continuous.dat&#39;)
+                status = os.stat(lfp_file)
+                nsamples = int(status.st_size / 2 / nchannels)
+                mmap = np.memmap(lfp_file, np.int16, &#39;r&#39;, 0, (nchannels, nsamples), order=&#39;F&#39;)
+                # Load the channel map NB assumes this is in the AP data location and that kilosort was run there
+                channel_map = np.squeeze(np.load(os.path.join(self.path2APdata, &#39;channel_map.npy&#39;)))
+                lfp_sample_rate = 2500
+                data = np.array(mmap[channel_map, 0:nseconds*lfp_sample_rate])
+                from ephysiopy.ephys_generic.ephys_generic import EEGCalcsGeneric
+                E = EEGCalcsGeneric(data[0, :], lfp_sample_rate)
+                E.calcEEGPowerSpectrum()
+                spec_data = np.zeros(shape=(data.shape[0], len(E.sm_power[0::50])))
+                for chan in range(data.shape[0]):
+                        E = EEGCalcsGeneric(data[chan, :], lfp_sample_rate)
+                        E.calcEEGPowerSpectrum()
+                        spec_data[chan, :] = E.sm_power[0::50]
+
+                x, y = np.meshgrid(E.freqs[0::50], channel_map)
+                import matplotlib.colors as colors
+                from matplotlib.pyplot import cm
+                from mpl_toolkits.axes_grid1 import make_axes_locatable
+                fig, spectoAx = plt.subplots()
+                spectoAx.pcolormesh(x, y, spec_data, edgecolors=&#39;face&#39;, cmap=&#39;bone&#39;,norm=colors.LogNorm())
+                spectoAx.set_xlim(0, maxFreq)
+                spectoAx.set_ylim(channel_map[0], channel_map[-1])
+                spectoAx.set_xlabel(&#39;Frequency (Hz)&#39;)
+                spectoAx.set_ylabel(&#39;Channel&#39;)
+                divider = make_axes_locatable(spectoAx)
+                channel_spectoAx = divider.append_axes(&#34;top&#34;, 1.2, pad = 0.1, sharex=spectoAx)
+                meanfreq_powerAx = divider.append_axes(&#34;right&#34;, 1.2, pad = 0.1, sharey=spectoAx)
+                plt.setp(channel_spectoAx.get_xticklabels() + meanfreq_powerAx.get_yticklabels(), visible=False)
+
+                mn_power = np.mean(spec_data, 0)
+                cols = iter(cm.rainbow(np.linspace(0,1,(nchannels//60)+1)))
+                for i in range(0, spec_data.shape[0], 60):
+                        c = next(cols)
+                        channel_spectoAx.plot(E.freqs[0::50], 10*np.log10(spec_data[i, :]/mn_power), c=c, label=str(i))
+
+                channel_spectoAx.set_ylabel(&#39;Channel power(dB)&#39;)
+                channel_spectoAx.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=&#39;lower left&#39;, mode=&#39;expand&#39;,
+                        fontsize=&#39;x-small&#39;, ncol=4)
+
+                freq_inc = 6
+                lower_freqs = np.arange(1, maxFreq-freq_inc, freq_inc)
+                upper_freqs = np.arange(1+freq_inc, maxFreq, freq_inc)
+                cols = iter(cm.nipy_spectral(np.linspace(0,1,len(upper_freqs))))
+                mn_power = np.mean(spec_data, 1)
+                for freqs in zip(lower_freqs, upper_freqs):
+                        freq_mask = np.logical_and(E.freqs[0::50]&gt;freqs[0], E.freqs[0::50]&lt;freqs[1])
+                        mean_power = 10*np.log10(np.mean(spec_data[:, freq_mask],1)/mn_power)
+                        c = next(cols)
+                        meanfreq_powerAx.plot(mean_power, channel_map, c=c, label=str(freqs[0]) + &#34; - &#34; + str(freqs[1]))
+                meanfreq_powerAx.set_xlabel(&#39;Mean freq. band power(dB)&#39;)
+                meanfreq_powerAx.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=&#39;lower left&#39;, mode=&#39;expand&#39;,
+                        fontsize=&#39;x-small&#39;, ncol=1)
+                plt.show()
+
+        def plotPos(self, jumpmax=None, show=True):
+                super().plotPos(jumpmax, show)
+
+        def plotMaps(self, plot_type=&#39;map&#39;, **kwargs):
+                super().plotMaps(plot_type, **kwargs)
+
+        def plotMapsOneAtATime(self, plot_type=&#39;map&#39;, **kwargs):
+                super().plotMapsOneAtATime(plot_type, **kwargs)
+
+        def plotEEGPower(self, channel=0):
+                super().plotEEGPower(channel)
+
+        def plotSpectrogram(self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250):
+                super().plotSpectrogram(self, nSeconds, secsPerBin, ax, ymin, ymax)
+
+        def plotPSTH(self):
+                super().plotPSTH()
+
+        def plotEventEEG(self):
+                super().plotEventEEG()
+
+        def plotWaves(self):
+                super().plotWaves()
+
+class OpenEphysNWB(OpenEphysBase):
+        &#39;&#39;&#39;
+        Parameters
+        ------------
+        fname_root:- str
+                Should contain the settings.xml file and the .nwb file
+        &#39;&#39;&#39;
+
+        def __init__(self, pname_root, **kwargs):
+                super().__init__(pname_root)
+                self.nwbData = None # handle to the open nwb file (HDF5 file object)
+                self.rawData = None # np.array holding the raw, continuous recording
+                self.recording_name = None # the recording name inside the nwb file (&#39;recording0&#39;, &#39;recording1&#39;, etc)
+                self.isBinary = False
+
+        def load(self, pname_root: None, session_name=None, recording_name=None, loadraw=False, loadspikes=False, savedat=False):
+                &#39;&#39;&#39;
+                Loads xy pos from binary part of the hdf5 file and data resulting from
+                a Kilosort session (see KiloSortSession class above)
+
+                Parameters
+                ----------
+                pname_root : str
+                        The top level directory, typically the one named YYYY-MM-DD_HH-MM-SS
+                        NB In the nwb format this directory contains the experiment_1.nwb and settings.xml files
+                session_name : str
+                        Defaults to experiment_1.nwb
+                recording_name : str
+                        Defaults to recording0
+                loadraw : bool
+                        Defaults to False; if True will load and save the
+                        raw part of the data
+                savedat : bool
+                        Defaults to False; if True will extract the electrode
+                        data part of the hdf file and save as &#39;experiment_1.dat&#39;
+                        NB only works if loadraw is True. Also note that this
+                        currently saves 64 channels worth of data (ie ignores
+                        the 6 accelerometer channels)
+                &#39;&#39;&#39;
+
+                import h5py
+                import os
+                if pname_root is None:
+                        pname_root = self.pname_root
+                if session_name is None:
+                        session_name = &#39;experiment_1.nwb&#39;
+                self.nwbData = h5py.File(os.path.join(pname_root, session_name), mode=&#39;r&#39;)
+                # Position data...
+                if self.recording_name is None:
+                        if recording_name is None:
+                                recording_name = &#39;recording1&#39;
+                        self.recording_name = recording_name
+                self.xy = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;events&#39;][&#39;binary1&#39;][&#39;data&#39;])
+
+                self.xyTS = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;events&#39;][&#39;binary1&#39;][&#39;timestamps&#39;])
+                self.xyTS = self.xyTS - (self.xy[:,2] / 1e6)
+                self.xy = self.xy[:,0:2]
+                # TTL data...
+                self.ttl_data = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;events&#39;][&#39;ttl1&#39;][&#39;data&#39;])
+                self.ttl_timestamps = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;events&#39;][&#39;ttl1&#39;][&#39;timestamps&#39;])
+
+                # ...everything else
+                try:
+                        self.__loadSettings__()
+                        fpgaId = self.settings.fpga_nodeId
+                        fpgaNode = &#39;processor&#39; + str(fpgaId) + &#39;_&#39; + str(fpgaId)
+                        self.ts = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;continuous&#39;][fpgaNode][&#39;timestamps&#39;])
+                        if (loadraw == True):
+                                self.rawData = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;continuous&#39;][fpgaNode][&#39;data&#39;])
+                                self.settings.parseChannels() # to get the neural data channels
+                                self.accelerometerData = self.rawData[:,64:]
+                                self.rawData = self.rawData[:,0:64]
+                                if (savedat == True):
+                                        data2save = self.rawData[:,0:64]
+                                        data2save.tofile(os.path.join(pname_root, &#39;experiment_1.dat&#39;))
+                        if loadspikes == True:
+                                if self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;spikes&#39;]:
+                                        # Create a dictionary containing keys &#39;electrode1&#39;, &#39;electrode2&#39; etc and None for values
+                                        electrode_dict = dict.fromkeys(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;spikes&#39;].keys())
+                                        # Each entry in the electrode dict is itself a dict containing keys &#39;timestamps&#39; and &#39;data&#39;...
+                                        for i_electrode in electrode_dict.keys():
+                                                data_and_ts_dict = {&#39;timestamps&#39;: None, &#39;data&#39;: None}
+                                                data_and_ts_dict[&#39;timestamps&#39;] = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;spikes&#39;][i_electrode][&#39;timestamps&#39;])
+                                                data_and_ts_dict[&#39;data&#39;] = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;spikes&#39;][i_electrode][&#39;data&#39;])
+                                                electrode_dict[i_electrode] = data_and_ts_dict
+                                self.spikeData = electrode_dict
+                except:
+                        self.ts = self.xy
+
+        def save_ttl(self, out_fname):
+                &#39;&#39;&#39;
+                Saves the ttl data to text file out_fname
+                &#39;&#39;&#39;
+                if ( len(self.ttl_data) &gt; 0 ) and ( len(self.ttl_timestamps) &gt; 0 ):
+                        data = np.array([self.ttl_data, self.ttl_timestamps])
+                        if data.shape[0] == 2:
+                                data = data.T
+                        np.savetxt(out_fname, data, delimiter=&#39;\t&#39;)
+
+        def exportPos(self):
+                xy = self.plotPos(show=False)
+                out = np.hstack([xy.T, self.xyTS[:,np.newaxis]])
+                np.savetxt(&#39;position.txt&#39;, out, delimiter=&#39;,&#39;, fmt=[&#39;%3.3i&#39;,&#39;%3.3i&#39;,&#39;%3.3f&#39;])
+
+        def plotPos(self, jumpmax=None, show=True):
+                super().plotPos(jumpmax, show)
+
+        def plotMaps(self, plot_type=&#39;map&#39;, **kwargs):
+                super().plotMaps(plot_type, **kwargs)
+
+        def plotMapsOneAtATime(self, plot_type=&#39;map&#39;, **kwargs):
+                super().plotMapsOneAtATime(plot_type, **kwargs)
+
+        def plotEEGPower(self, channel=0):
+                super().plotEEGPower(channel)
+
+        def plotSpectrogram(self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250):
+                super().plotSpectrogram(self, nSeconds, secsPerBin, ax, ymin, ymax)
+
+        def plotPSTH(self):
+                super().plotPSTH()
+
+        def plotEventEEG(self):
+                super().plotEventEEG()
+
+        def plotWaves(self):
+                super().plotWaves()
+
+class SpkTimeCorrelogram(object):
+        def __init__(self, clusters, spk_times, spk_clusters):
+                from dacq2py import spikecalcs
+                self.SpkCalcs = spikecalcs.SpikeCalcs()
+                self.clusters = clusters
+                self.spk_times = spk_times
+                self.spk_clusters = spk_clusters
+
+        def plotAll(self):
+                fig = plt.figure(figsize=(10,20))
+                nrows = np.ceil(np.sqrt(len(self.clusters))).astype(int)
+                for i, cluster in enumerate(self.clusters):
+                        cluster_idx = np.nonzero(self.spk_clusters == cluster)[0]
+                        cluster_ts = np.ravel(self.spk_times[cluster_idx])
+                        # ts into milliseconds ie OE sample rate / 1000
+                        y = self.SpkCalcs.xcorr(cluster_ts.T / 30.)
+                        ax = fig.add_subplot(nrows,nrows,i+1)
+                        ax.hist(y[y != 0], bins=201, range=[-500, 500], color=&#39;k&#39;, histtype=&#39;stepfilled&#39;)
+                        ax.set_xlabel(&#39;Time(ms)&#39;)
+                        ax.set_xlim(-500,500)
+                        ax.set_xticks((-500, 0, 500))
+                        ax.set_xticklabels((str(-500), &#39;0&#39;, str(500)))
+                        ax.tick_params(axis=&#39;both&#39;, which=&#39;both&#39;, left=False, right=False,
+                                                        bottom=False, top=False)
+                        ax.set_yticklabels(&#39;&#39;)
+                        ax.spines[&#39;right&#39;].set_visible(False)
+                        ax.spines[&#39;top&#39;].set_visible(False)
+                        ax.spines[&#39;left&#39;].set_visible(False)
+                        ax.xaxis.set_ticks_position(&#39;bottom&#39;)
+                        ax.set_title(cluster, fontweight=&#39;bold&#39;, size=8, pad=1)
+                plt.show()
+
+        def __iter__(self):
+                # NOTE:
+                # Will plot clusters in self.clusters in separate figure windows
+                for cluster in self.clusters:
+                        cluster_idx = np.nonzero(self.spk_clusters == cluster)[0]
+                        cluster_ts = np.ravel(self.spk_times[cluster_idx])
+                        # ts into milliseconds ie OE sample rate / 1000
+                        y = self.SpkCalcs.xcorr(cluster_ts.T / 30.)
+                        plt.figure()
+                        ax = plt.gca()
+                        ax.hist(y[y != 0], bins=201, range=[-500, 500], color=&#39;k&#39;, histtype=&#39;stepfilled&#39;)
+                        ax.set_xlabel(&#39;Time(ms)&#39;)
+                        ax.set_xlim(-500,500)
+                        ax.set_xticks((-500, 0, 500))
+                        ax.set_xticklabels((str(-500), &#39;0&#39;, str(500)))
+                        ax.tick_params(axis=&#39;both&#39;, which=&#39;both&#39;, left=&#39;off&#39;, right=&#39;off&#39;,
+                                                        bottom=&#39;off&#39;, top=&#39;off&#39;)
+                        ax.set_yticklabels(&#39;&#39;)
+                        ax.spines[&#39;right&#39;].set_visible(False)
+                        ax.spines[&#39;top&#39;].set_visible(False)
+                        ax.spines[&#39;left&#39;].set_visible(False)
+                        ax.xaxis.set_ticks_position(&#39;bottom&#39;)
+                        ax.set_title(&#39;Cluster &#39; + str(cluster))
+                        plt.show()
+                        yield cluster
+
+class SpkWaveform(object):
+        &#39;&#39;&#39;
+
+        &#39;&#39;&#39;
+        def __init__(self, clusters, spk_times, spk_clusters, amplitudes, raw_data):
+                &#39;&#39;&#39;
+                spk_times in samples
+                &#39;&#39;&#39;
+                self.clusters = clusters
+                self.spk_times = spk_times
+                self.spk_clusters = spk_clusters
+                self.amplitudes = amplitudes
+                self.raw_data = raw_data
+
+        def __iter__(self):
+                # NOTE:
+                # Will plot in a separate figure window for each cluster in self.clusters
+                #
+                # get 500us pre-spike and 1000us post-spike interval
+                # calculate outside for loop
+                pre = int(0.5 * 3e4 / 1000)
+                post = int(1.0 * 3e4 / 1000)
+                nsamples = np.shape(self.raw_data)[0]
+                nchannels = np.shape(self.raw_data)[1]
+                times = np.linspace(-pre, post, pre+post, endpoint=False) / (3e4 / 1000)
+                times = np.tile(np.expand_dims(times,1),nchannels)
+                for cluster in self.clusters:
+                        cluster_idx = np.nonzero(self.spk_clusters == cluster)[0]
+                        nspikes = len(cluster_idx)
+                        data_idx = self.spk_times[cluster_idx]
+                        data_from_idx = (data_idx-pre).astype(int)
+                        data_to_idx = (data_idx+post).astype(int)
+                        raw_waves = np.zeros([nspikes, pre+post, nchannels], dtype=np.int16)
+
+                        for i, idx in enumerate(zip(data_from_idx, data_to_idx)):
+                                if (idx[0][0] &lt; 0):
+                                        raw_waves[i,0:idx[1][0],:] = self.raw_data[0:idx[1][0],:]
+                                elif (idx[1][0] &gt; nsamples):
+                                        raw_waves[i,(pre+post)-((pre+post)-(idx[1][0]-nsamples)):(pre+post),:] = self.raw_data[idx[0][0]:nsamples,:]
+                                else:
+                                        raw_waves[i,:,:] = self.raw_data[idx[0][0]:idx[1][0]]
+
+#            filt_waves = self.butterFilter(raw_waves,300,6000)
+                        mean_filt_waves = np.mean(raw_waves,0)
+                        plt.figure()
+                        ax = plt.gca()
+                        ax.plot(times, mean_filt_waves[:,:])
+                        ax.set_title(&#39;Cluster &#39; + str(cluster))
+                        plt.show()
+                        yield cluster
+        def plotAll(self):
+                # NOTE:
+                # Will plot all clusters in self.clusters in a single figure window
+                fig = plt.figure(figsize=(10,20))
+                nrows = np.ceil(np.sqrt(len(self.clusters))).astype(int)
+                for i, cluster in enumerate(self.clusters):
+                        cluster_idx = np.nonzero(self.spk_clusters == cluster)[0]
+                        nspikes = len(cluster_idx)
+                        data_idx = self.spk_times[cluster_idx]
+                        data_from_idx = (data_idx-pre).astype(int)
+                        data_to_idx = (data_idx+post).astype(int)
+                        raw_waves = np.zeros([nspikes, pre+post, nchannels], dtype=np.int16)
+
+                        for i, idx in enumerate(zip(data_from_idx, data_to_idx)):
+                                if (idx[0][0] &lt; 0):
+                                        raw_waves[i,0:idx[1][0],:] = self.raw_data[0:idx[1][0],:]
+                                elif (idx[1][0] &gt; nsamples):
+                                        raw_waves[i,(pre+post)-((pre+post)-(idx[1][0]-nsamples)):(pre+post),:] = self.raw_data[idx[0][0]:nsamples,:]
+                                else:
+                                        raw_waves[i,:,:] = self.raw_data[idx[0][0]:idx[1][0]]
+
+                        mean_filt_waves = np.mean(raw_waves,0)
+                        ax = fig.add_subplot(nrows,nrows,i+1)
+                        ax.plot(times, mean_filt_waves[:,:])
+                        ax.set_title(cluster, fontweight=&#39;bold&#39;, size=8)
+                plt.show()
+
+        def butterFilter(self, sig, low, high, order=5):
+                nyqlim = 3e4 / 2
+                lowcut = low / nyqlim
+                highcut = high / nyqlim
+                from scipy import signal as signal
+                b, a = signal.butter(order, [lowcut, highcut], btype=&#39;band&#39;)
+                return signal.filtfilt(b, a, sig)</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.KiloSortSession"><code class="flex name class">
+<span>class <span class="ident">KiloSortSession</span></span>
+<span>(</span><span>fname_root)</span>
+</code></dt>
+<dd>
+<section class="desc"><h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>fname_root</code></strong> :&ensp;<code>str</code></dt>
+<dd>Should contain all the files from a kilosort session and
+the .dat file (extracted from the nwb OE session)</dd>
+</dl>
+<p>Walk through the path to find the location of the files in case this has been
+called in another way i.e. binary format a la Neuropixels</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class KiloSortSession(object):
+        &#39;&#39;&#39;
+        Parameters
+        ----------
+        fname_root : str
+                Should contain all the files from a kilosort session and
+                the .dat file (extracted from the nwb OE session)
+
+        &#39;&#39;&#39;
+        def __init__(self, fname_root):
+                &#39;&#39;&#39;
+                Walk through the path to find the location of the files in case this has been
+                called in another way i.e. binary format a la Neuropixels
+                &#39;&#39;&#39;
+                self.fname_root = fname_root
+                import os
+                for d, c, f in os.walk(fname_root):
+                        for ff in f:
+                                if &#39;spike_times.npy&#39; in ff:
+                                        self.fname_root = d
+                self.cluster_id = None
+                self.spk_clusters = None
+                self.spk_times = None
+
+        def load(self):
+                &#39;&#39;&#39;
+                Load all the relevant files
+                KSLabel - output from KiloSort - algorithm defined
+                cluster_group - group labels from phy - user defined (&#39;good&#39;, &#39;MUA&#39;, &#39;noise&#39;)
+                &#39;&#39;&#39;
+                import os
+                dtype = {&#39;names&#39;: (&#39;cluster_id&#39;, &#39;group&#39;), &#39;formats&#39;: (&#39;i4&#39;, &#39;S10&#39;)}
+                # One of these is from kilosort and the other from kilosort2
+                # and is updated by the user when doing cluster assignment in phy (or whatever)
+                # See comments above this class definition for a bit more info
+                if os.path.exists(os.path.join(self.fname_root, &#39;cluster_groups.csv&#39;)):
+                        self.cluster_id, self.group = np.loadtxt(os.path.join(self.fname_root, &#39;cluster_groups.csv&#39;), unpack=True, skiprows=1, dtype=dtype)
+                if os.path.exists(os.path.join(self.fname_root, &#39;cluster_group.tsv&#39;)):
+                        self.cluster_id, self.group = np.loadtxt(os.path.join(self.fname_root, &#39;cluster_group.tsv&#39;), unpack=True, skiprows=1, dtype=dtype)
+                dtype = {&#39;names&#39;: (&#39;cluster_id&#39;, &#39;KSLabel&#39;), &#39;formats&#39;: (&#39;i4&#39;, &#39;S10&#39;)}
+                # &#39;Raw&#39; labels from a kilosort session
+                if os.path.exists(os.path.join(self.fname_root, &#39;cluster_KSLabel.tsv&#39;)):
+                        self.ks_cluster_id, self.ks_group = np.loadtxt(os.path.join(self.fname_root, &#39;cluster_KSLabel.tsv&#39;), unpack=True, skiprows=1, dtype=dtype)
+                self.spk_clusters = np.squeeze(np.load(os.path.join(self.fname_root, &#39;spike_clusters.npy&#39;)))
+                self.spk_times    = np.squeeze(np.load(os.path.join(self.fname_root, &#39;spike_times.npy&#39;)))
+
+        def removeNoiseClusters(self):
+                &#39;&#39;&#39;
+                Restricts analysis to anything that isn&#39;t listed as &#39;noise&#39; in self.group
+                &#39;&#39;&#39;
+                if self.cluster_id is not None:
+                        self.good_clusters = []
+                        for id_group in zip(self.cluster_id, self.group):
+                                if &#39;noise&#39; not in id_group[1].decode() and &#39;mua&#39; not in id_group[1].decode():
+                                        self.good_clusters.append(id_group[0])</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.KiloSortSession.load"><code class="name flex">
+<span>def <span class="ident">load</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Load all the relevant files
+KSLabel - output from KiloSort - algorithm defined
+cluster_group - group labels from phy - user defined ('good', 'MUA', 'noise')</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def load(self):
+        &#39;&#39;&#39;
+        Load all the relevant files
+        KSLabel - output from KiloSort - algorithm defined
+        cluster_group - group labels from phy - user defined (&#39;good&#39;, &#39;MUA&#39;, &#39;noise&#39;)
+        &#39;&#39;&#39;
+        import os
+        dtype = {&#39;names&#39;: (&#39;cluster_id&#39;, &#39;group&#39;), &#39;formats&#39;: (&#39;i4&#39;, &#39;S10&#39;)}
+        # One of these is from kilosort and the other from kilosort2
+        # and is updated by the user when doing cluster assignment in phy (or whatever)
+        # See comments above this class definition for a bit more info
+        if os.path.exists(os.path.join(self.fname_root, &#39;cluster_groups.csv&#39;)):
+                self.cluster_id, self.group = np.loadtxt(os.path.join(self.fname_root, &#39;cluster_groups.csv&#39;), unpack=True, skiprows=1, dtype=dtype)
+        if os.path.exists(os.path.join(self.fname_root, &#39;cluster_group.tsv&#39;)):
+                self.cluster_id, self.group = np.loadtxt(os.path.join(self.fname_root, &#39;cluster_group.tsv&#39;), unpack=True, skiprows=1, dtype=dtype)
+        dtype = {&#39;names&#39;: (&#39;cluster_id&#39;, &#39;KSLabel&#39;), &#39;formats&#39;: (&#39;i4&#39;, &#39;S10&#39;)}
+        # &#39;Raw&#39; labels from a kilosort session
+        if os.path.exists(os.path.join(self.fname_root, &#39;cluster_KSLabel.tsv&#39;)):
+                self.ks_cluster_id, self.ks_group = np.loadtxt(os.path.join(self.fname_root, &#39;cluster_KSLabel.tsv&#39;), unpack=True, skiprows=1, dtype=dtype)
+        self.spk_clusters = np.squeeze(np.load(os.path.join(self.fname_root, &#39;spike_clusters.npy&#39;)))
+        self.spk_times    = np.squeeze(np.load(os.path.join(self.fname_root, &#39;spike_times.npy&#39;)))</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.KiloSortSession.removeNoiseClusters"><code class="name flex">
+<span>def <span class="ident">removeNoiseClusters</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Restricts analysis to anything that isn't listed as 'noise' in self.group</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def removeNoiseClusters(self):
+        &#39;&#39;&#39;
+        Restricts analysis to anything that isn&#39;t listed as &#39;noise&#39; in self.group
+        &#39;&#39;&#39;
+        if self.cluster_id is not None:
+                self.good_clusters = []
+                for id_group in zip(self.cluster_id, self.group):
+                        if &#39;noise&#39; not in id_group[1].decode() and &#39;mua&#39; not in id_group[1].decode():
+                                self.good_clusters.append(id_group[0])</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase"><code class="flex name class">
+<span>class <span class="ident">OpenEphysBase</span></span>
+<span>(</span><span>pname_root, **kwargs)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Base class for openephys anaylsis with data recorded in either the NWB or binary format</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class OpenEphysBase(object):
+        &#34;&#34;&#34;
+        Base class for openephys anaylsis with data recorded in either the NWB or binary format
+        &#34;&#34;&#34;
+        def __init__(self, pname_root, **kwargs):
+                super().__init__()
+                self.pname_root = pname_root # top-level directory, typically of form YYYY-MM-DD_HH-MM-SS
+                self.settings = None
+                self.kilodata = None
+                self.rawData = None
+                self.xy = None
+                self.xyTS = None
+                self.recording_start_time = 0
+                self.ts = None
+                self.ttl_data = None
+                self.ttl_timestamps = None
+                self.spikeData = None # a list of np.arrays, nominally containing tetrode data in format nspikes x 4 x 40
+                self.accelerometerData = None # np.array
+                self.settings = None # OESettings.Settings instance
+                if (&#39;jumpmax&#39; in kwargs.keys()):
+                        self.jumpmax = kwargs[&#39;jumpmax&#39;]
+                else:
+                        self.jumpmax = 100
+
+        def loadKilo(self):
+                &#39;&#39;&#39;
+                Loads a kilosort session
+                &#39;&#39;&#39;
+                kilodata = KiloSortSession(self.pname_root) # pname_root gets walked through and over-written with correct location of kiolsort data
+                kilodata.load()
+                kilodata.removeNoiseClusters()
+                self.kilodata = kilodata
+
+        def __loadSettings__(self):
+                &#39;&#39;&#39;
+                Loads the settings.xml data
+                &#39;&#39;&#39;
+                if self.settings is None:
+                        import os
+                        settings = Settings(self.pname_root) # pname_root gets walked through and over-written with correct location of settings.xml
+                        settings.parse()
+                        settings.parsePos()
+                        self.settings = settings
+
+        def __loaddata__(self, **kwargs):
+                self.load(self.pname_root, **kwargs)
+
+        def plotXCorrs(self):
+                if self.kilodata is None:
+                        self.loadKilo()
+                from ephysiopy.ephys_generic.ephys_generic import SpikeCalcsGeneric
+                corriter = SpikeCalcsGeneric(self.kilodata.spk_times)
+                corriter.spk_clusters = self.kilodata.spk_clusters
+                corriter.plotAllXCorrs(self.kilodata.good_clusters)
+
+        def plotPos(self, jumpmax=None, show=True, **kwargs):
+                &#39;&#39;&#39;
+                Plots x vs y position for this trial
+
+                Parameters
+                ------------
+                jumpmax - the max amount the LED is allowed to instantaneously move. int or greater
+                show - boolean - whether to plot the pos or not (default is True)
+
+                Returns
+                ----------
+                xy - a nx2 np.array of xy
+                &#39;&#39;&#39;
+                if jumpmax is None:
+                        jumpmax = self.jumpmax
+                import matplotlib.pylab as plt
+                from ephysiopy.ephys_generic.ephys_generic import PosCalcsGeneric
+
+                self.__loadSettings__()
+                if self.xy is None:
+                        self.__loaddata__(**kwargs)
+                posProcessor = PosCalcsGeneric(self.xy[:,0], self.xy[:,1], ppm=300, cm=True, jumpmax=jumpmax)
+                xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
+                self.hdir = hdir
+                if show:
+                        plt.plot(xy[0], xy[1])
+                        plt.gca().invert_yaxis()
+                        plt.show()
+                return xy
+
+        def plotMaps(self, plot_type=&#39;map&#39;, **kwargs):
+                &#39;&#39;&#39;
+                Parameters
+                ------------
+                plot_type - str - valid strings include:
+                                                &#39;map&#39; - just ratemap plotted
+                                                &#39;path&#39; - just spikes on path
+                                                &#39;both&#39; - both of the above
+                                                &#39;all&#39; - both spikes on path, ratemap &amp; SAC plotted
+                                                can also be a list
+                Valid kwargs: &#39;ppm&#39; - this is an integer denoting pixels per metre:
+                                                                                                lower values = more bins in ratemap / SAC
+                                &#39;clusters&#39; - int or list of ints describing which clusters to plot
+                                i.e. this overwrites the &#39;good_clusters&#39; value in self.kilodata
+                &#39;&#39;&#39;
+                if self.kilodata is None:
+                        self.loadKilo()
+                if ( &#39;ppm&#39; in kwargs.keys() ):
+                        ppm = kwargs[&#39;ppm&#39;]
+                else:
+                        ppm = 400
+                from ephysiopy.ephys_generic.ephys_generic import PosCalcsGeneric, MapCalcsGeneric
+                if self.xy is None:
+                        self.__loaddata__(**kwargs)
+                posProcessor = PosCalcsGeneric(self.xy[:,0], self.xy[:,1], ppm, jumpmax=self.jumpmax)
+                import os
+                self.__loadSettings__()
+                xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
+                self.hdir = hdir
+                spk_times = (self.kilodata.spk_times.T / 3e4) + self.recording_start_time
+                mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
+                if &#39;clusters&#39; in kwargs:
+                        if type(kwargs[&#39;clusters&#39;]) == int:
+                                mapiter.good_clusters = np.intersect1d([kwargs[&#39;clusters&#39;]], self.kilodata.good_clusters)
+
+                        else:
+                                mapiter.good_clusters = np.intersect1d(kwargs[&#39;clusters&#39;], self.kilodata.good_clusters)
+                else:
+                        mapiter.good_clusters = self.kilodata.good_clusters
+                mapiter.spk_clusters = self.kilodata.spk_clusters
+                self.mapiter = mapiter
+                mapiter.plotAll()
+                # [ print(&#34;&#34;) for cluster in mapiter ]
+
+        def plotMapsOneAtATime(self, plot_type=&#39;map&#39;, **kwargs):
+                &#39;&#39;&#39;
+                Parameters
+                ------------
+                plot_type - str - valid strings include:
+                                                &#39;map&#39; - just ratemap plotted
+                                                &#39;path&#39; - just spikes on path
+                                                &#39;both&#39; - both of the above
+                                                &#39;all&#39; - both spikes on path, ratemap &amp; SAC plotted
+                                                can also be a list
+                Valid kwargs: &#39;ppm&#39; - this is an integer denoting pixels per metre:
+                                                                                                lower values = more bins in ratemap / SAC
+                                &#39;clusters&#39; - int or list of ints describing which clusters to plot
+                                i.e. this overwrites the &#39;good_clusters&#39; value in self.kilodata
+                                &#39;save_grid_summary_location&#39; - bool; if present the dictionary returned from
+                                gridcell.SAC.getMeasures is saved for each cluster - this is passed to MapCalcsGeneric
+                &#39;&#39;&#39;
+                if self.kilodata is None:
+                        self.loadKilo()
+                if ( &#39;ppm&#39; in kwargs.keys() ):
+                        ppm = kwargs[&#39;ppm&#39;]
+                else:
+                        ppm = 400
+                from ephysiopy.ephys_generic.ephys_generic import PosCalcsGeneric, MapCalcsGeneric
+                if self.xy is None:
+                        self.__loaddata__(**kwargs)
+                posProcessor = PosCalcsGeneric(self.xy[:,0], self.xy[:,1], ppm, jumpmax=self.jumpmax)
+                import os
+                self.__loadSettings__()
+                xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
+                self.hdir = hdir
+                spk_times = (self.kilodata.spk_times.T / 3e4) + self.recording_start_time
+                mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
+                if &#39;clusters&#39; in kwargs:
+                        if type(kwargs[&#39;clusters&#39;]) == int:
+                                mapiter.good_clusters = np.intersect1d([kwargs[&#39;clusters&#39;]], self.kilodata.good_clusters)
+
+                        else:
+                                mapiter.good_clusters = np.intersect1d(kwargs[&#39;clusters&#39;], self.kilodata.good_clusters)
+                else:
+                        mapiter.good_clusters = self.kilodata.good_clusters
+                mapiter.spk_clusters = self.kilodata.spk_clusters
+                self.mapiter = mapiter
+                # mapiter.plotAll()
+                [ print(&#34;&#34;) for cluster in mapiter ]
+
+        def plotEEGPower(self, channel=0):
+                from ephysiopy.ephys_generic.ephys_generic import EEGCalcsGeneric
+                if self.rawData is None:
+                        print(&#34;Loading raw data...&#34;)
+                        self.load(loadraw=True)
+                from scipy import signal
+                n_samples = np.shape(self.rawData[:,channel])[0]
+                s = signal.resample(self.rawData[:,channel], int(n_samples/3e4) * 500)
+                E = EEGCalcsGeneric(s, 500)
+
+                # E = EEGCalcsGeneric(self.rawData[:,channel], 3e4)
+                E.plotPowerSpectrum()
+
+        def plotSpectrogram(self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250):
+                from ephysiopy.ephys_generic.ephys_generic import EEGCalcsGeneric
+                if self.rawData is None:
+                        print(&#34;Loading raw data...&#34;)
+                        self.load(loadraw=True)
+                # load first 30 seconds by default
+                fs = 3e4
+                E = EEGCalcsGeneric(self.rawData[0:int(3e4*nSeconds),0], fs)
+                nperseg = int(fs * secsPerBin)
+                from scipy import signal
+                freqs, times, Sxx = signal.spectrogram(E.sig, fs, nperseg=nperseg)
+                Sxx_sm = Sxx
+                from ephysiopy.ephys_generic import binning
+                R = binning.RateMap()
+                Sxx_sm = R.blurImage(Sxx, (secsPerBin*2)+1)
+                x, y = np.meshgrid(times, freqs)
+                from matplotlib import colors
+                if ax is None:
+                        plt.figure()
+                        ax = plt.gca()
+                        ax.pcolormesh(x, y, Sxx_sm, edgecolors=&#39;face&#39;, norm=colors.LogNorm())
+                ax.pcolormesh(x, y, Sxx_sm, edgecolors=&#39;face&#39;, norm=colors.LogNorm())
+                ax.set_xlim(times[0], times[-1])
+                ax.set_ylim(ymin, ymax)
+                ax.set_xlabel(&#39;Time(s)&#39;)
+                ax.set_ylabel(&#39;Frequency(Hz)&#39;)
+
+        def plotPSTH(self):
+                import os
+                self.__loadSettings__()
+                self.settings.parseStimControl()
+                if self.kilodata is None:
+                        self.loadKilo()
+                from ephysiopy.ephys_generic.ephys_generic import SpikeCalcsGeneric
+                spk_times = (self.kilodata.spk_times.T[0] / 3e4) + self.ts[0] # in seconds
+                S = SpikeCalcsGeneric(spk_times)
+                S.event_ts = self.ttl_timestamps[2::2] # this is because some of the trials have two weird events logged at about 2-3 minutes in...
+                S.spk_clusters = self.kilodata.spk_clusters
+                S.stim_width = 0.01 # in seconds
+                for x in self.kilodata.good_clusters:
+                        print(next(S.plotPSTH(x)))
+
+        def plotEventEEG(self):
+                from ephysiopy.ephys_generic.ephys_generic import EEGCalcsGeneric
+                if self.rawData is None:
+                        print(&#34;Loading raw data...&#34;)
+                        self.load(loadraw=True)
+                E = EEGCalcsGeneric(self.rawData[:, 0], 3e4)
+                event_ts = self.ttl_timestamps[2::2] # this is because some of the trials have two weird events logged at about 2-3 minutes in...
+                E.plotEventEEG(event_ts)
+
+        def plotWaves(self):
+                if self.kilodata is None:
+                        self.loadKilo()
+                if self.rawData is None:
+                        print(&#34;Loading raw data...&#34;)
+                        self.load(loadraw=True)
+                import os
+                amplitudes = np.load(os.path.join(self.fname_root, &#39;amplitudes.npy&#39;))
+                waveiter = SpkWaveform(self.kilodata.good_clusters, self.kilodata.spk_times, self.kilodata.spk_clusters, amplitudes, self.rawData)
+                for cluster in waveiter:
+                        print(&#34;Cluster {}&#34;.format(cluster))</code></pre>
+</details>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX">OpenEphysNPX</a></li>
+<li><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB">OpenEphysNWB</a></li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.loadKilo"><code class="name flex">
+<span>def <span class="ident">loadKilo</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Loads a kilosort session</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def loadKilo(self):
+        &#39;&#39;&#39;
+        Loads a kilosort session
+        &#39;&#39;&#39;
+        kilodata = KiloSortSession(self.pname_root) # pname_root gets walked through and over-written with correct location of kiolsort data
+        kilodata.load()
+        kilodata.removeNoiseClusters()
+        self.kilodata = kilodata</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotEEGPower"><code class="name flex">
+<span>def <span class="ident">plotEEGPower</span></span>(<span>self, channel=0)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotEEGPower(self, channel=0):
+        from ephysiopy.ephys_generic.ephys_generic import EEGCalcsGeneric
+        if self.rawData is None:
+                print(&#34;Loading raw data...&#34;)
+                self.load(loadraw=True)
+        from scipy import signal
+        n_samples = np.shape(self.rawData[:,channel])[0]
+        s = signal.resample(self.rawData[:,channel], int(n_samples/3e4) * 500)
+        E = EEGCalcsGeneric(s, 500)
+
+        # E = EEGCalcsGeneric(self.rawData[:,channel], 3e4)
+        E.plotPowerSpectrum()</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotEventEEG"><code class="name flex">
+<span>def <span class="ident">plotEventEEG</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotEventEEG(self):
+        from ephysiopy.ephys_generic.ephys_generic import EEGCalcsGeneric
+        if self.rawData is None:
+                print(&#34;Loading raw data...&#34;)
+                self.load(loadraw=True)
+        E = EEGCalcsGeneric(self.rawData[:, 0], 3e4)
+        event_ts = self.ttl_timestamps[2::2] # this is because some of the trials have two weird events logged at about 2-3 minutes in...
+        E.plotEventEEG(event_ts)</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMaps"><code class="name flex">
+<span>def <span class="ident">plotMaps</span></span>(<span>self, plot_type='map', **kwargs)</span>
+</code></dt>
+<dd>
+<section class="desc"><h2 id="parameters">Parameters</h2>
+<p>plot_type - str - valid strings include:
+'map' - just ratemap plotted
+'path' - just spikes on path
+'both' - both of the above
+'all' - both spikes on path, ratemap &amp; SAC plotted
+can also be a list
+Valid kwargs: 'ppm' - this is an integer denoting pixels per metre:
+lower values = more bins in ratemap / SAC
+'clusters' - int or list of ints describing which clusters to plot
+i.e. this overwrites the 'good_clusters' value in self.kilodata</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotMaps(self, plot_type=&#39;map&#39;, **kwargs):
+        &#39;&#39;&#39;
+        Parameters
+        ------------
+        plot_type - str - valid strings include:
+                                        &#39;map&#39; - just ratemap plotted
+                                        &#39;path&#39; - just spikes on path
+                                        &#39;both&#39; - both of the above
+                                        &#39;all&#39; - both spikes on path, ratemap &amp; SAC plotted
+                                        can also be a list
+        Valid kwargs: &#39;ppm&#39; - this is an integer denoting pixels per metre:
+                                                                                        lower values = more bins in ratemap / SAC
+                        &#39;clusters&#39; - int or list of ints describing which clusters to plot
+                        i.e. this overwrites the &#39;good_clusters&#39; value in self.kilodata
+        &#39;&#39;&#39;
+        if self.kilodata is None:
+                self.loadKilo()
+        if ( &#39;ppm&#39; in kwargs.keys() ):
+                ppm = kwargs[&#39;ppm&#39;]
+        else:
+                ppm = 400
+        from ephysiopy.ephys_generic.ephys_generic import PosCalcsGeneric, MapCalcsGeneric
+        if self.xy is None:
+                self.__loaddata__(**kwargs)
+        posProcessor = PosCalcsGeneric(self.xy[:,0], self.xy[:,1], ppm, jumpmax=self.jumpmax)
+        import os
+        self.__loadSettings__()
+        xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
+        self.hdir = hdir
+        spk_times = (self.kilodata.spk_times.T / 3e4) + self.recording_start_time
+        mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
+        if &#39;clusters&#39; in kwargs:
+                if type(kwargs[&#39;clusters&#39;]) == int:
+                        mapiter.good_clusters = np.intersect1d([kwargs[&#39;clusters&#39;]], self.kilodata.good_clusters)
+
+                else:
+                        mapiter.good_clusters = np.intersect1d(kwargs[&#39;clusters&#39;], self.kilodata.good_clusters)
+        else:
+                mapiter.good_clusters = self.kilodata.good_clusters
+        mapiter.spk_clusters = self.kilodata.spk_clusters
+        self.mapiter = mapiter
+        mapiter.plotAll()</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMapsOneAtATime"><code class="name flex">
+<span>def <span class="ident">plotMapsOneAtATime</span></span>(<span>self, plot_type='map', **kwargs)</span>
+</code></dt>
+<dd>
+<section class="desc"><h2 id="parameters">Parameters</h2>
+<p>plot_type - str - valid strings include:
+'map' - just ratemap plotted
+'path' - just spikes on path
+'both' - both of the above
+'all' - both spikes on path, ratemap &amp; SAC plotted
+can also be a list
+Valid kwargs: 'ppm' - this is an integer denoting pixels per metre:
+lower values = more bins in ratemap / SAC
+'clusters' - int or list of ints describing which clusters to plot
+i.e. this overwrites the 'good_clusters' value in self.kilodata
+'save_grid_summary_location' - bool; if present the dictionary returned from
+gridcell.SAC.getMeasures is saved for each cluster - this is passed to MapCalcsGeneric</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotMapsOneAtATime(self, plot_type=&#39;map&#39;, **kwargs):
+        &#39;&#39;&#39;
+        Parameters
+        ------------
+        plot_type - str - valid strings include:
+                                        &#39;map&#39; - just ratemap plotted
+                                        &#39;path&#39; - just spikes on path
+                                        &#39;both&#39; - both of the above
+                                        &#39;all&#39; - both spikes on path, ratemap &amp; SAC plotted
+                                        can also be a list
+        Valid kwargs: &#39;ppm&#39; - this is an integer denoting pixels per metre:
+                                                                                        lower values = more bins in ratemap / SAC
+                        &#39;clusters&#39; - int or list of ints describing which clusters to plot
+                        i.e. this overwrites the &#39;good_clusters&#39; value in self.kilodata
+                        &#39;save_grid_summary_location&#39; - bool; if present the dictionary returned from
+                        gridcell.SAC.getMeasures is saved for each cluster - this is passed to MapCalcsGeneric
+        &#39;&#39;&#39;
+        if self.kilodata is None:
+                self.loadKilo()
+        if ( &#39;ppm&#39; in kwargs.keys() ):
+                ppm = kwargs[&#39;ppm&#39;]
+        else:
+                ppm = 400
+        from ephysiopy.ephys_generic.ephys_generic import PosCalcsGeneric, MapCalcsGeneric
+        if self.xy is None:
+                self.__loaddata__(**kwargs)
+        posProcessor = PosCalcsGeneric(self.xy[:,0], self.xy[:,1], ppm, jumpmax=self.jumpmax)
+        import os
+        self.__loadSettings__()
+        xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
+        self.hdir = hdir
+        spk_times = (self.kilodata.spk_times.T / 3e4) + self.recording_start_time
+        mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
+        if &#39;clusters&#39; in kwargs:
+                if type(kwargs[&#39;clusters&#39;]) == int:
+                        mapiter.good_clusters = np.intersect1d([kwargs[&#39;clusters&#39;]], self.kilodata.good_clusters)
+
+                else:
+                        mapiter.good_clusters = np.intersect1d(kwargs[&#39;clusters&#39;], self.kilodata.good_clusters)
+        else:
+                mapiter.good_clusters = self.kilodata.good_clusters
+        mapiter.spk_clusters = self.kilodata.spk_clusters
+        self.mapiter = mapiter
+        # mapiter.plotAll()
+        [ print(&#34;&#34;) for cluster in mapiter ]</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotPSTH"><code class="name flex">
+<span>def <span class="ident">plotPSTH</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotPSTH(self):
+        import os
+        self.__loadSettings__()
+        self.settings.parseStimControl()
+        if self.kilodata is None:
+                self.loadKilo()
+        from ephysiopy.ephys_generic.ephys_generic import SpikeCalcsGeneric
+        spk_times = (self.kilodata.spk_times.T[0] / 3e4) + self.ts[0] # in seconds
+        S = SpikeCalcsGeneric(spk_times)
+        S.event_ts = self.ttl_timestamps[2::2] # this is because some of the trials have two weird events logged at about 2-3 minutes in...
+        S.spk_clusters = self.kilodata.spk_clusters
+        S.stim_width = 0.01 # in seconds
+        for x in self.kilodata.good_clusters:
+                print(next(S.plotPSTH(x)))</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotPos"><code class="name flex">
+<span>def <span class="ident">plotPos</span></span>(<span>self, jumpmax=None, show=True, **kwargs)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Plots x vs y position for this trial</p>
+<h2 id="parameters">Parameters</h2>
+<p>jumpmax - the max amount the LED is allowed to instantaneously move. int or greater
+show - boolean - whether to plot the pos or not (default is True)</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>xy</code> - <code>a</code> <code>nx2</code> <code>np.array</code> of <code>xy</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotPos(self, jumpmax=None, show=True, **kwargs):
+        &#39;&#39;&#39;
+        Plots x vs y position for this trial
+
+        Parameters
+        ------------
+        jumpmax - the max amount the LED is allowed to instantaneously move. int or greater
+        show - boolean - whether to plot the pos or not (default is True)
+
+        Returns
+        ----------
+        xy - a nx2 np.array of xy
+        &#39;&#39;&#39;
+        if jumpmax is None:
+                jumpmax = self.jumpmax
+        import matplotlib.pylab as plt
+        from ephysiopy.ephys_generic.ephys_generic import PosCalcsGeneric
+
+        self.__loadSettings__()
+        if self.xy is None:
+                self.__loaddata__(**kwargs)
+        posProcessor = PosCalcsGeneric(self.xy[:,0], self.xy[:,1], ppm=300, cm=True, jumpmax=jumpmax)
+        xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
+        self.hdir = hdir
+        if show:
+                plt.plot(xy[0], xy[1])
+                plt.gca().invert_yaxis()
+                plt.show()
+        return xy</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotSpectrogram"><code class="name flex">
+<span>def <span class="ident">plotSpectrogram</span></span>(<span>self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotSpectrogram(self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250):
+        from ephysiopy.ephys_generic.ephys_generic import EEGCalcsGeneric
+        if self.rawData is None:
+                print(&#34;Loading raw data...&#34;)
+                self.load(loadraw=True)
+        # load first 30 seconds by default
+        fs = 3e4
+        E = EEGCalcsGeneric(self.rawData[0:int(3e4*nSeconds),0], fs)
+        nperseg = int(fs * secsPerBin)
+        from scipy import signal
+        freqs, times, Sxx = signal.spectrogram(E.sig, fs, nperseg=nperseg)
+        Sxx_sm = Sxx
+        from ephysiopy.ephys_generic import binning
+        R = binning.RateMap()
+        Sxx_sm = R.blurImage(Sxx, (secsPerBin*2)+1)
+        x, y = np.meshgrid(times, freqs)
+        from matplotlib import colors
+        if ax is None:
+                plt.figure()
+                ax = plt.gca()
+                ax.pcolormesh(x, y, Sxx_sm, edgecolors=&#39;face&#39;, norm=colors.LogNorm())
+        ax.pcolormesh(x, y, Sxx_sm, edgecolors=&#39;face&#39;, norm=colors.LogNorm())
+        ax.set_xlim(times[0], times[-1])
+        ax.set_ylim(ymin, ymax)
+        ax.set_xlabel(&#39;Time(s)&#39;)
+        ax.set_ylabel(&#39;Frequency(Hz)&#39;)</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotWaves"><code class="name flex">
+<span>def <span class="ident">plotWaves</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotWaves(self):
+        if self.kilodata is None:
+                self.loadKilo()
+        if self.rawData is None:
+                print(&#34;Loading raw data...&#34;)
+                self.load(loadraw=True)
+        import os
+        amplitudes = np.load(os.path.join(self.fname_root, &#39;amplitudes.npy&#39;))
+        waveiter = SpkWaveform(self.kilodata.good_clusters, self.kilodata.spk_times, self.kilodata.spk_clusters, amplitudes, self.rawData)
+        for cluster in waveiter:
+                print(&#34;Cluster {}&#34;.format(cluster))</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotXCorrs"><code class="name flex">
+<span>def <span class="ident">plotXCorrs</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotXCorrs(self):
+        if self.kilodata is None:
+                self.loadKilo()
+        from ephysiopy.ephys_generic.ephys_generic import SpikeCalcsGeneric
+        corriter = SpikeCalcsGeneric(self.kilodata.spk_times)
+        corriter.spk_clusters = self.kilodata.spk_clusters
+        corriter.plotAllXCorrs(self.kilodata.good_clusters)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX"><code class="flex name class">
+<span>class <span class="ident">OpenEphysNPX</span></span>
+<span>(</span><span>pname_root)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>docstring for OpenEphysNPX</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class OpenEphysNPX(OpenEphysBase):
+        &#34;&#34;&#34;docstring for OpenEphysNPX&#34;&#34;&#34;
+        def __init__(self, pname_root):
+                super().__init__(pname_root)
+                self.path2PosData = None
+                self.path2APdata = None
+                self.path2LFPdata = None
+
+        def load(self, pname_root=None, experiment_name=&#39;experiment1&#39;, recording_name=&#39;recording1&#39;):
+                &#39;&#39;&#39;
+                Loads data recorded in the OE &#39;flat&#39; binary format
+                See https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/166789121/Flat+binary+format for more
+
+                Parameters
+                ----------
+                pname_root - str - the top level directory that contains the folder &#39;experiment1&#39;
+                (usually) and settings.xml
+
+                recording_name - str - pretty obvious but this is also the directory immediately beneath pname_root
+                &#39;&#39;&#39;
+                self.isBinary = True
+                import os
+                import re
+                pos_t_match = re.compile(&#39;Pos_Tracker-[0-9][0-9][0-9].[0-9]&#39;)
+                APdata_match = re.compile(&#39;Neuropix-PXI-[0-9][0-9][0-9].0&#39;)
+                LFPdata_match = re.compile(&#39;Neuropix-PXI-[0-9][0-9][0-9].1&#39;)
+                sync_message_file = None
+                self.recording_start_time = None
+
+                if pname_root is None:
+                        pname_root = self.pname_root
+
+                for d, c, f in os.walk(pname_root):
+                        for ff in f:
+                                if &#39;data_array.npy&#39; in ff:
+                                        self.path2PosData = os.path.join(d)
+                                if &#39;continuous.dat&#39; in ff:
+                                        if APdata_match.search(d):
+                                                self.path2APdata = os.path.join(d)
+                                        if LFPdata_match.search(d):
+                                                self.path2LFPdata = os.path.join(d)
+                                if &#39;sync_messages.txt&#39; in ff:
+                                        sync_message_file = os.path.join(d, &#39;sync_messages.txt&#39;)
+
+                if self.path2PosData is not None:
+                        pos_data = np.load(os.path.join(self.path2PosData, &#39;data_array.npy&#39;))
+                        self.xy = pos_data[:,0:2]
+                        pos_ts = np.load(os.path.join(self.path2PosData, &#39;timestamps.npy&#39;))
+                        self.xyTS = pos_ts / 30.0 / 1000.0
+
+                ap_sample_rate = 30000
+                n_channels = 384
+                trial_length = self.__calcTrialLengthFromBinarySize__(os.path.join(self.path2APdata, &#39;continuous.dat&#39;), n_channels, ap_sample_rate)
+                # Load the start time from the sync_messages file
+                if sync_message_file is not None:
+                        with open(sync_message_file, &#39;r&#39;) as f:
+                                sync_strs = f.read()
+                        sync_lines = sync_strs.split(&#39;\n&#39;)
+                        for line in sync_lines:
+                                if &#39;subProcessor: 0&#39; in line:
+                                        idx = line.find(&#39;start time: &#39;)
+                                        start_val = line[idx + len(&#39;start time: &#39;):-1]
+                                        tmp = start_val.split(&#39;@&#39;)
+                                        recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
+                else:
+                        recording_start_time = self.xyTS[0]
+                self.recording_start_time = recording_start_time
+                self.ts = np.arange(recording_start_time, trial_length+recording_start_time, 1.0 / ap_sample_rate)
+
+        def __calcTrialLengthFromBinarySize__(self, path2file:str, n_channels=384, sample_rate=30000):
+                &#39;&#39;&#39;
+                Returns the time taken to run the trial (in seconds) based on the size of
+                the binary file on disk
+                &#39;&#39;&#39;
+                import os
+                status = os.stat(path2file)
+                return status.st_size / ( 2.0 * n_channels * sample_rate)
+
+        def plotSpectrogramByDepth(self, nchannels=384, nseconds=100, maxFreq=125, **kwargs):
+                import os
+                lfp_file = os.path.join(self.path2LFPdata, &#39;continuous.dat&#39;)
+                status = os.stat(lfp_file)
+                nsamples = int(status.st_size / 2 / nchannels)
+                mmap = np.memmap(lfp_file, np.int16, &#39;r&#39;, 0, (nchannels, nsamples), order=&#39;F&#39;)
+                # Load the channel map NB assumes this is in the AP data location and that kilosort was run there
+                channel_map = np.squeeze(np.load(os.path.join(self.path2APdata, &#39;channel_map.npy&#39;)))
+                lfp_sample_rate = 2500
+                data = np.array(mmap[channel_map, 0:nseconds*lfp_sample_rate])
+                from ephysiopy.ephys_generic.ephys_generic import EEGCalcsGeneric
+                E = EEGCalcsGeneric(data[0, :], lfp_sample_rate)
+                E.calcEEGPowerSpectrum()
+                spec_data = np.zeros(shape=(data.shape[0], len(E.sm_power[0::50])))
+                for chan in range(data.shape[0]):
+                        E = EEGCalcsGeneric(data[chan, :], lfp_sample_rate)
+                        E.calcEEGPowerSpectrum()
+                        spec_data[chan, :] = E.sm_power[0::50]
+
+                x, y = np.meshgrid(E.freqs[0::50], channel_map)
+                import matplotlib.colors as colors
+                from matplotlib.pyplot import cm
+                from mpl_toolkits.axes_grid1 import make_axes_locatable
+                fig, spectoAx = plt.subplots()
+                spectoAx.pcolormesh(x, y, spec_data, edgecolors=&#39;face&#39;, cmap=&#39;bone&#39;,norm=colors.LogNorm())
+                spectoAx.set_xlim(0, maxFreq)
+                spectoAx.set_ylim(channel_map[0], channel_map[-1])
+                spectoAx.set_xlabel(&#39;Frequency (Hz)&#39;)
+                spectoAx.set_ylabel(&#39;Channel&#39;)
+                divider = make_axes_locatable(spectoAx)
+                channel_spectoAx = divider.append_axes(&#34;top&#34;, 1.2, pad = 0.1, sharex=spectoAx)
+                meanfreq_powerAx = divider.append_axes(&#34;right&#34;, 1.2, pad = 0.1, sharey=spectoAx)
+                plt.setp(channel_spectoAx.get_xticklabels() + meanfreq_powerAx.get_yticklabels(), visible=False)
+
+                mn_power = np.mean(spec_data, 0)
+                cols = iter(cm.rainbow(np.linspace(0,1,(nchannels//60)+1)))
+                for i in range(0, spec_data.shape[0], 60):
+                        c = next(cols)
+                        channel_spectoAx.plot(E.freqs[0::50], 10*np.log10(spec_data[i, :]/mn_power), c=c, label=str(i))
+
+                channel_spectoAx.set_ylabel(&#39;Channel power(dB)&#39;)
+                channel_spectoAx.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=&#39;lower left&#39;, mode=&#39;expand&#39;,
+                        fontsize=&#39;x-small&#39;, ncol=4)
+
+                freq_inc = 6
+                lower_freqs = np.arange(1, maxFreq-freq_inc, freq_inc)
+                upper_freqs = np.arange(1+freq_inc, maxFreq, freq_inc)
+                cols = iter(cm.nipy_spectral(np.linspace(0,1,len(upper_freqs))))
+                mn_power = np.mean(spec_data, 1)
+                for freqs in zip(lower_freqs, upper_freqs):
+                        freq_mask = np.logical_and(E.freqs[0::50]&gt;freqs[0], E.freqs[0::50]&lt;freqs[1])
+                        mean_power = 10*np.log10(np.mean(spec_data[:, freq_mask],1)/mn_power)
+                        c = next(cols)
+                        meanfreq_powerAx.plot(mean_power, channel_map, c=c, label=str(freqs[0]) + &#34; - &#34; + str(freqs[1]))
+                meanfreq_powerAx.set_xlabel(&#39;Mean freq. band power(dB)&#39;)
+                meanfreq_powerAx.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=&#39;lower left&#39;, mode=&#39;expand&#39;,
+                        fontsize=&#39;x-small&#39;, ncol=1)
+                plt.show()
+
+        def plotPos(self, jumpmax=None, show=True):
+                super().plotPos(jumpmax, show)
+
+        def plotMaps(self, plot_type=&#39;map&#39;, **kwargs):
+                super().plotMaps(plot_type, **kwargs)
+
+        def plotMapsOneAtATime(self, plot_type=&#39;map&#39;, **kwargs):
+                super().plotMapsOneAtATime(plot_type, **kwargs)
+
+        def plotEEGPower(self, channel=0):
+                super().plotEEGPower(channel)
+
+        def plotSpectrogram(self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250):
+                super().plotSpectrogram(self, nSeconds, secsPerBin, ax, ymin, ymax)
+
+        def plotPSTH(self):
+                super().plotPSTH()
+
+        def plotEventEEG(self):
+                super().plotEventEEG()
+
+        def plotWaves(self):
+                super().plotWaves()</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase">OpenEphysBase</a></li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.load"><code class="name flex">
+<span>def <span class="ident">load</span></span>(<span>self, pname_root=None, experiment_name='experiment1', recording_name='recording1')</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Loads data recorded in the OE 'flat' binary format
+See <a href="https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/166789121/Flat+binary+format">https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/166789121/Flat+binary+format</a> for more</p>
+<h2 id="parameters">Parameters</h2>
+<p>pname_root - str - the top level directory that contains the folder 'experiment1'
+(usually) and settings.xml</p>
+<p>recording_name - str - pretty obvious but this is also the directory immediately beneath pname_root</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def load(self, pname_root=None, experiment_name=&#39;experiment1&#39;, recording_name=&#39;recording1&#39;):
+        &#39;&#39;&#39;
+        Loads data recorded in the OE &#39;flat&#39; binary format
+        See https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/166789121/Flat+binary+format for more
+
+        Parameters
+        ----------
+        pname_root - str - the top level directory that contains the folder &#39;experiment1&#39;
+        (usually) and settings.xml
+
+        recording_name - str - pretty obvious but this is also the directory immediately beneath pname_root
+        &#39;&#39;&#39;
+        self.isBinary = True
+        import os
+        import re
+        pos_t_match = re.compile(&#39;Pos_Tracker-[0-9][0-9][0-9].[0-9]&#39;)
+        APdata_match = re.compile(&#39;Neuropix-PXI-[0-9][0-9][0-9].0&#39;)
+        LFPdata_match = re.compile(&#39;Neuropix-PXI-[0-9][0-9][0-9].1&#39;)
+        sync_message_file = None
+        self.recording_start_time = None
+
+        if pname_root is None:
+                pname_root = self.pname_root
+
+        for d, c, f in os.walk(pname_root):
+                for ff in f:
+                        if &#39;data_array.npy&#39; in ff:
+                                self.path2PosData = os.path.join(d)
+                        if &#39;continuous.dat&#39; in ff:
+                                if APdata_match.search(d):
+                                        self.path2APdata = os.path.join(d)
+                                if LFPdata_match.search(d):
+                                        self.path2LFPdata = os.path.join(d)
+                        if &#39;sync_messages.txt&#39; in ff:
+                                sync_message_file = os.path.join(d, &#39;sync_messages.txt&#39;)
+
+        if self.path2PosData is not None:
+                pos_data = np.load(os.path.join(self.path2PosData, &#39;data_array.npy&#39;))
+                self.xy = pos_data[:,0:2]
+                pos_ts = np.load(os.path.join(self.path2PosData, &#39;timestamps.npy&#39;))
+                self.xyTS = pos_ts / 30.0 / 1000.0
+
+        ap_sample_rate = 30000
+        n_channels = 384
+        trial_length = self.__calcTrialLengthFromBinarySize__(os.path.join(self.path2APdata, &#39;continuous.dat&#39;), n_channels, ap_sample_rate)
+        # Load the start time from the sync_messages file
+        if sync_message_file is not None:
+                with open(sync_message_file, &#39;r&#39;) as f:
+                        sync_strs = f.read()
+                sync_lines = sync_strs.split(&#39;\n&#39;)
+                for line in sync_lines:
+                        if &#39;subProcessor: 0&#39; in line:
+                                idx = line.find(&#39;start time: &#39;)
+                                start_val = line[idx + len(&#39;start time: &#39;):-1]
+                                tmp = start_val.split(&#39;@&#39;)
+                                recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
+        else:
+                recording_start_time = self.xyTS[0]
+        self.recording_start_time = recording_start_time
+        self.ts = np.arange(recording_start_time, trial_length+recording_start_time, 1.0 / ap_sample_rate)</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.plotEEGPower"><code class="name flex">
+<span>def <span class="ident">plotEEGPower</span></span>(<span>self, channel=0)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotEEGPower(self, channel=0):
+        super().plotEEGPower(channel)</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.plotEventEEG"><code class="name flex">
+<span>def <span class="ident">plotEventEEG</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotEventEEG(self):
+        super().plotEventEEG()</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.plotPSTH"><code class="name flex">
+<span>def <span class="ident">plotPSTH</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotPSTH(self):
+        super().plotPSTH()</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.plotSpectrogram"><code class="name flex">
+<span>def <span class="ident">plotSpectrogram</span></span>(<span>self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotSpectrogram(self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250):
+        super().plotSpectrogram(self, nSeconds, secsPerBin, ax, ymin, ymax)</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.plotSpectrogramByDepth"><code class="name flex">
+<span>def <span class="ident">plotSpectrogramByDepth</span></span>(<span>self, nchannels=384, nseconds=100, maxFreq=125, **kwargs)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotSpectrogramByDepth(self, nchannels=384, nseconds=100, maxFreq=125, **kwargs):
+        import os
+        lfp_file = os.path.join(self.path2LFPdata, &#39;continuous.dat&#39;)
+        status = os.stat(lfp_file)
+        nsamples = int(status.st_size / 2 / nchannels)
+        mmap = np.memmap(lfp_file, np.int16, &#39;r&#39;, 0, (nchannels, nsamples), order=&#39;F&#39;)
+        # Load the channel map NB assumes this is in the AP data location and that kilosort was run there
+        channel_map = np.squeeze(np.load(os.path.join(self.path2APdata, &#39;channel_map.npy&#39;)))
+        lfp_sample_rate = 2500
+        data = np.array(mmap[channel_map, 0:nseconds*lfp_sample_rate])
+        from ephysiopy.ephys_generic.ephys_generic import EEGCalcsGeneric
+        E = EEGCalcsGeneric(data[0, :], lfp_sample_rate)
+        E.calcEEGPowerSpectrum()
+        spec_data = np.zeros(shape=(data.shape[0], len(E.sm_power[0::50])))
+        for chan in range(data.shape[0]):
+                E = EEGCalcsGeneric(data[chan, :], lfp_sample_rate)
+                E.calcEEGPowerSpectrum()
+                spec_data[chan, :] = E.sm_power[0::50]
+
+        x, y = np.meshgrid(E.freqs[0::50], channel_map)
+        import matplotlib.colors as colors
+        from matplotlib.pyplot import cm
+        from mpl_toolkits.axes_grid1 import make_axes_locatable
+        fig, spectoAx = plt.subplots()
+        spectoAx.pcolormesh(x, y, spec_data, edgecolors=&#39;face&#39;, cmap=&#39;bone&#39;,norm=colors.LogNorm())
+        spectoAx.set_xlim(0, maxFreq)
+        spectoAx.set_ylim(channel_map[0], channel_map[-1])
+        spectoAx.set_xlabel(&#39;Frequency (Hz)&#39;)
+        spectoAx.set_ylabel(&#39;Channel&#39;)
+        divider = make_axes_locatable(spectoAx)
+        channel_spectoAx = divider.append_axes(&#34;top&#34;, 1.2, pad = 0.1, sharex=spectoAx)
+        meanfreq_powerAx = divider.append_axes(&#34;right&#34;, 1.2, pad = 0.1, sharey=spectoAx)
+        plt.setp(channel_spectoAx.get_xticklabels() + meanfreq_powerAx.get_yticklabels(), visible=False)
+
+        mn_power = np.mean(spec_data, 0)
+        cols = iter(cm.rainbow(np.linspace(0,1,(nchannels//60)+1)))
+        for i in range(0, spec_data.shape[0], 60):
+                c = next(cols)
+                channel_spectoAx.plot(E.freqs[0::50], 10*np.log10(spec_data[i, :]/mn_power), c=c, label=str(i))
+
+        channel_spectoAx.set_ylabel(&#39;Channel power(dB)&#39;)
+        channel_spectoAx.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=&#39;lower left&#39;, mode=&#39;expand&#39;,
+                fontsize=&#39;x-small&#39;, ncol=4)
+
+        freq_inc = 6
+        lower_freqs = np.arange(1, maxFreq-freq_inc, freq_inc)
+        upper_freqs = np.arange(1+freq_inc, maxFreq, freq_inc)
+        cols = iter(cm.nipy_spectral(np.linspace(0,1,len(upper_freqs))))
+        mn_power = np.mean(spec_data, 1)
+        for freqs in zip(lower_freqs, upper_freqs):
+                freq_mask = np.logical_and(E.freqs[0::50]&gt;freqs[0], E.freqs[0::50]&lt;freqs[1])
+                mean_power = 10*np.log10(np.mean(spec_data[:, freq_mask],1)/mn_power)
+                c = next(cols)
+                meanfreq_powerAx.plot(mean_power, channel_map, c=c, label=str(freqs[0]) + &#34; - &#34; + str(freqs[1]))
+        meanfreq_powerAx.set_xlabel(&#39;Mean freq. band power(dB)&#39;)
+        meanfreq_powerAx.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=&#39;lower left&#39;, mode=&#39;expand&#39;,
+                fontsize=&#39;x-small&#39;, ncol=1)
+        plt.show()</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.plotWaves"><code class="name flex">
+<span>def <span class="ident">plotWaves</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotWaves(self):
+        super().plotWaves()</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase">OpenEphysBase</a></b></code>:
+<ul class="hlist">
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.loadKilo" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.loadKilo">loadKilo</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMaps" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMaps">plotMaps</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMapsOneAtATime" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMapsOneAtATime">plotMapsOneAtATime</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotPos" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotPos">plotPos</a></code></li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB"><code class="flex name class">
+<span>class <span class="ident">OpenEphysNWB</span></span>
+<span>(</span><span>pname_root, **kwargs)</span>
+</code></dt>
+<dd>
+<section class="desc"><h2 id="parameters">Parameters</h2>
+<p>fname_root:- str
+Should contain the settings.xml file and the .nwb file</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class OpenEphysNWB(OpenEphysBase):
+        &#39;&#39;&#39;
+        Parameters
+        ------------
+        fname_root:- str
+                Should contain the settings.xml file and the .nwb file
+        &#39;&#39;&#39;
+
+        def __init__(self, pname_root, **kwargs):
+                super().__init__(pname_root)
+                self.nwbData = None # handle to the open nwb file (HDF5 file object)
+                self.rawData = None # np.array holding the raw, continuous recording
+                self.recording_name = None # the recording name inside the nwb file (&#39;recording0&#39;, &#39;recording1&#39;, etc)
+                self.isBinary = False
+
+        def load(self, pname_root: None, session_name=None, recording_name=None, loadraw=False, loadspikes=False, savedat=False):
+                &#39;&#39;&#39;
+                Loads xy pos from binary part of the hdf5 file and data resulting from
+                a Kilosort session (see KiloSortSession class above)
+
+                Parameters
+                ----------
+                pname_root : str
+                        The top level directory, typically the one named YYYY-MM-DD_HH-MM-SS
+                        NB In the nwb format this directory contains the experiment_1.nwb and settings.xml files
+                session_name : str
+                        Defaults to experiment_1.nwb
+                recording_name : str
+                        Defaults to recording0
+                loadraw : bool
+                        Defaults to False; if True will load and save the
+                        raw part of the data
+                savedat : bool
+                        Defaults to False; if True will extract the electrode
+                        data part of the hdf file and save as &#39;experiment_1.dat&#39;
+                        NB only works if loadraw is True. Also note that this
+                        currently saves 64 channels worth of data (ie ignores
+                        the 6 accelerometer channels)
+                &#39;&#39;&#39;
+
+                import h5py
+                import os
+                if pname_root is None:
+                        pname_root = self.pname_root
+                if session_name is None:
+                        session_name = &#39;experiment_1.nwb&#39;
+                self.nwbData = h5py.File(os.path.join(pname_root, session_name), mode=&#39;r&#39;)
+                # Position data...
+                if self.recording_name is None:
+                        if recording_name is None:
+                                recording_name = &#39;recording1&#39;
+                        self.recording_name = recording_name
+                self.xy = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;events&#39;][&#39;binary1&#39;][&#39;data&#39;])
+
+                self.xyTS = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;events&#39;][&#39;binary1&#39;][&#39;timestamps&#39;])
+                self.xyTS = self.xyTS - (self.xy[:,2] / 1e6)
+                self.xy = self.xy[:,0:2]
+                # TTL data...
+                self.ttl_data = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;events&#39;][&#39;ttl1&#39;][&#39;data&#39;])
+                self.ttl_timestamps = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;events&#39;][&#39;ttl1&#39;][&#39;timestamps&#39;])
+
+                # ...everything else
+                try:
+                        self.__loadSettings__()
+                        fpgaId = self.settings.fpga_nodeId
+                        fpgaNode = &#39;processor&#39; + str(fpgaId) + &#39;_&#39; + str(fpgaId)
+                        self.ts = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;continuous&#39;][fpgaNode][&#39;timestamps&#39;])
+                        if (loadraw == True):
+                                self.rawData = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;continuous&#39;][fpgaNode][&#39;data&#39;])
+                                self.settings.parseChannels() # to get the neural data channels
+                                self.accelerometerData = self.rawData[:,64:]
+                                self.rawData = self.rawData[:,0:64]
+                                if (savedat == True):
+                                        data2save = self.rawData[:,0:64]
+                                        data2save.tofile(os.path.join(pname_root, &#39;experiment_1.dat&#39;))
+                        if loadspikes == True:
+                                if self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;spikes&#39;]:
+                                        # Create a dictionary containing keys &#39;electrode1&#39;, &#39;electrode2&#39; etc and None for values
+                                        electrode_dict = dict.fromkeys(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;spikes&#39;].keys())
+                                        # Each entry in the electrode dict is itself a dict containing keys &#39;timestamps&#39; and &#39;data&#39;...
+                                        for i_electrode in electrode_dict.keys():
+                                                data_and_ts_dict = {&#39;timestamps&#39;: None, &#39;data&#39;: None}
+                                                data_and_ts_dict[&#39;timestamps&#39;] = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;spikes&#39;][i_electrode][&#39;timestamps&#39;])
+                                                data_and_ts_dict[&#39;data&#39;] = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;spikes&#39;][i_electrode][&#39;data&#39;])
+                                                electrode_dict[i_electrode] = data_and_ts_dict
+                                self.spikeData = electrode_dict
+                except:
+                        self.ts = self.xy
+
+        def save_ttl(self, out_fname):
+                &#39;&#39;&#39;
+                Saves the ttl data to text file out_fname
+                &#39;&#39;&#39;
+                if ( len(self.ttl_data) &gt; 0 ) and ( len(self.ttl_timestamps) &gt; 0 ):
+                        data = np.array([self.ttl_data, self.ttl_timestamps])
+                        if data.shape[0] == 2:
+                                data = data.T
+                        np.savetxt(out_fname, data, delimiter=&#39;\t&#39;)
+
+        def exportPos(self):
+                xy = self.plotPos(show=False)
+                out = np.hstack([xy.T, self.xyTS[:,np.newaxis]])
+                np.savetxt(&#39;position.txt&#39;, out, delimiter=&#39;,&#39;, fmt=[&#39;%3.3i&#39;,&#39;%3.3i&#39;,&#39;%3.3f&#39;])
+
+        def plotPos(self, jumpmax=None, show=True):
+                super().plotPos(jumpmax, show)
+
+        def plotMaps(self, plot_type=&#39;map&#39;, **kwargs):
+                super().plotMaps(plot_type, **kwargs)
+
+        def plotMapsOneAtATime(self, plot_type=&#39;map&#39;, **kwargs):
+                super().plotMapsOneAtATime(plot_type, **kwargs)
+
+        def plotEEGPower(self, channel=0):
+                super().plotEEGPower(channel)
+
+        def plotSpectrogram(self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250):
+                super().plotSpectrogram(self, nSeconds, secsPerBin, ax, ymin, ymax)
+
+        def plotPSTH(self):
+                super().plotPSTH()
+
+        def plotEventEEG(self):
+                super().plotEventEEG()
+
+        def plotWaves(self):
+                super().plotWaves()</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase">OpenEphysBase</a></li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.exportPos"><code class="name flex">
+<span>def <span class="ident">exportPos</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def exportPos(self):
+        xy = self.plotPos(show=False)
+        out = np.hstack([xy.T, self.xyTS[:,np.newaxis]])
+        np.savetxt(&#39;position.txt&#39;, out, delimiter=&#39;,&#39;, fmt=[&#39;%3.3i&#39;,&#39;%3.3i&#39;,&#39;%3.3f&#39;])</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.load"><code class="name flex">
+<span>def <span class="ident">load</span></span>(<span>self, pname_root, session_name=None, recording_name=None, loadraw=False, loadspikes=False, savedat=False)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Loads xy pos from binary part of the hdf5 file and data resulting from
+a Kilosort session (see KiloSortSession class above)</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>pname_root</code></strong> :&ensp;<code>str</code></dt>
+<dd>The top level directory, typically the one named YYYY-MM-DD_HH-MM-SS
+NB In the nwb format this directory contains the experiment_1.nwb and settings.xml files</dd>
+<dt><strong><code>session_name</code></strong> :&ensp;<code>str</code></dt>
+<dd>Defaults to experiment_1.nwb</dd>
+<dt><strong><code>recording_name</code></strong> :&ensp;<code>str</code></dt>
+<dd>Defaults to recording0</dd>
+<dt><strong><code>loadraw</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Defaults to False; if True will load and save the
+raw part of the data</dd>
+<dt><strong><code>savedat</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Defaults to False; if True will extract the electrode
+data part of the hdf file and save as 'experiment_1.dat'
+NB only works if loadraw is True. Also note that this
+currently saves 64 channels worth of data (ie ignores
+the 6 accelerometer channels)</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def load(self, pname_root: None, session_name=None, recording_name=None, loadraw=False, loadspikes=False, savedat=False):
+        &#39;&#39;&#39;
+        Loads xy pos from binary part of the hdf5 file and data resulting from
+        a Kilosort session (see KiloSortSession class above)
+
+        Parameters
+        ----------
+        pname_root : str
+                The top level directory, typically the one named YYYY-MM-DD_HH-MM-SS
+                NB In the nwb format this directory contains the experiment_1.nwb and settings.xml files
+        session_name : str
+                Defaults to experiment_1.nwb
+        recording_name : str
+                Defaults to recording0
+        loadraw : bool
+                Defaults to False; if True will load and save the
+                raw part of the data
+        savedat : bool
+                Defaults to False; if True will extract the electrode
+                data part of the hdf file and save as &#39;experiment_1.dat&#39;
+                NB only works if loadraw is True. Also note that this
+                currently saves 64 channels worth of data (ie ignores
+                the 6 accelerometer channels)
+        &#39;&#39;&#39;
+
+        import h5py
+        import os
+        if pname_root is None:
+                pname_root = self.pname_root
+        if session_name is None:
+                session_name = &#39;experiment_1.nwb&#39;
+        self.nwbData = h5py.File(os.path.join(pname_root, session_name), mode=&#39;r&#39;)
+        # Position data...
+        if self.recording_name is None:
+                if recording_name is None:
+                        recording_name = &#39;recording1&#39;
+                self.recording_name = recording_name
+        self.xy = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;events&#39;][&#39;binary1&#39;][&#39;data&#39;])
+
+        self.xyTS = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;events&#39;][&#39;binary1&#39;][&#39;timestamps&#39;])
+        self.xyTS = self.xyTS - (self.xy[:,2] / 1e6)
+        self.xy = self.xy[:,0:2]
+        # TTL data...
+        self.ttl_data = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;events&#39;][&#39;ttl1&#39;][&#39;data&#39;])
+        self.ttl_timestamps = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;events&#39;][&#39;ttl1&#39;][&#39;timestamps&#39;])
+
+        # ...everything else
+        try:
+                self.__loadSettings__()
+                fpgaId = self.settings.fpga_nodeId
+                fpgaNode = &#39;processor&#39; + str(fpgaId) + &#39;_&#39; + str(fpgaId)
+                self.ts = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;continuous&#39;][fpgaNode][&#39;timestamps&#39;])
+                if (loadraw == True):
+                        self.rawData = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;continuous&#39;][fpgaNode][&#39;data&#39;])
+                        self.settings.parseChannels() # to get the neural data channels
+                        self.accelerometerData = self.rawData[:,64:]
+                        self.rawData = self.rawData[:,0:64]
+                        if (savedat == True):
+                                data2save = self.rawData[:,0:64]
+                                data2save.tofile(os.path.join(pname_root, &#39;experiment_1.dat&#39;))
+                if loadspikes == True:
+                        if self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;spikes&#39;]:
+                                # Create a dictionary containing keys &#39;electrode1&#39;, &#39;electrode2&#39; etc and None for values
+                                electrode_dict = dict.fromkeys(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;spikes&#39;].keys())
+                                # Each entry in the electrode dict is itself a dict containing keys &#39;timestamps&#39; and &#39;data&#39;...
+                                for i_electrode in electrode_dict.keys():
+                                        data_and_ts_dict = {&#39;timestamps&#39;: None, &#39;data&#39;: None}
+                                        data_and_ts_dict[&#39;timestamps&#39;] = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;spikes&#39;][i_electrode][&#39;timestamps&#39;])
+                                        data_and_ts_dict[&#39;data&#39;] = np.array(self.nwbData[&#39;acquisition&#39;][&#39;timeseries&#39;][self.recording_name][&#39;spikes&#39;][i_electrode][&#39;data&#39;])
+                                        electrode_dict[i_electrode] = data_and_ts_dict
+                        self.spikeData = electrode_dict
+        except:
+                self.ts = self.xy</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.plotEEGPower"><code class="name flex">
+<span>def <span class="ident">plotEEGPower</span></span>(<span>self, channel=0)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotEEGPower(self, channel=0):
+        super().plotEEGPower(channel)</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.plotEventEEG"><code class="name flex">
+<span>def <span class="ident">plotEventEEG</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotEventEEG(self):
+        super().plotEventEEG()</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.plotPSTH"><code class="name flex">
+<span>def <span class="ident">plotPSTH</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotPSTH(self):
+        super().plotPSTH()</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.plotSpectrogram"><code class="name flex">
+<span>def <span class="ident">plotSpectrogram</span></span>(<span>self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotSpectrogram(self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250):
+        super().plotSpectrogram(self, nSeconds, secsPerBin, ax, ymin, ymax)</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.plotWaves"><code class="name flex">
+<span>def <span class="ident">plotWaves</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotWaves(self):
+        super().plotWaves()</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.save_ttl"><code class="name flex">
+<span>def <span class="ident">save_ttl</span></span>(<span>self, out_fname)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Saves the ttl data to text file out_fname</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def save_ttl(self, out_fname):
+        &#39;&#39;&#39;
+        Saves the ttl data to text file out_fname
+        &#39;&#39;&#39;
+        if ( len(self.ttl_data) &gt; 0 ) and ( len(self.ttl_timestamps) &gt; 0 ):
+                data = np.array([self.ttl_data, self.ttl_timestamps])
+                if data.shape[0] == 2:
+                        data = data.T
+                np.savetxt(out_fname, data, delimiter=&#39;\t&#39;)</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase">OpenEphysBase</a></b></code>:
+<ul class="hlist">
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.loadKilo" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.loadKilo">loadKilo</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMaps" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMaps">plotMaps</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMapsOneAtATime" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMapsOneAtATime">plotMapsOneAtATime</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotPos" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotPos">plotPos</a></code></li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.SpkTimeCorrelogram"><code class="flex name class">
+<span>class <span class="ident">SpkTimeCorrelogram</span></span>
+<span>(</span><span>clusters, spk_times, spk_clusters)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class SpkTimeCorrelogram(object):
+        def __init__(self, clusters, spk_times, spk_clusters):
+                from dacq2py import spikecalcs
+                self.SpkCalcs = spikecalcs.SpikeCalcs()
+                self.clusters = clusters
+                self.spk_times = spk_times
+                self.spk_clusters = spk_clusters
+
+        def plotAll(self):
+                fig = plt.figure(figsize=(10,20))
+                nrows = np.ceil(np.sqrt(len(self.clusters))).astype(int)
+                for i, cluster in enumerate(self.clusters):
+                        cluster_idx = np.nonzero(self.spk_clusters == cluster)[0]
+                        cluster_ts = np.ravel(self.spk_times[cluster_idx])
+                        # ts into milliseconds ie OE sample rate / 1000
+                        y = self.SpkCalcs.xcorr(cluster_ts.T / 30.)
+                        ax = fig.add_subplot(nrows,nrows,i+1)
+                        ax.hist(y[y != 0], bins=201, range=[-500, 500], color=&#39;k&#39;, histtype=&#39;stepfilled&#39;)
+                        ax.set_xlabel(&#39;Time(ms)&#39;)
+                        ax.set_xlim(-500,500)
+                        ax.set_xticks((-500, 0, 500))
+                        ax.set_xticklabels((str(-500), &#39;0&#39;, str(500)))
+                        ax.tick_params(axis=&#39;both&#39;, which=&#39;both&#39;, left=False, right=False,
+                                                        bottom=False, top=False)
+                        ax.set_yticklabels(&#39;&#39;)
+                        ax.spines[&#39;right&#39;].set_visible(False)
+                        ax.spines[&#39;top&#39;].set_visible(False)
+                        ax.spines[&#39;left&#39;].set_visible(False)
+                        ax.xaxis.set_ticks_position(&#39;bottom&#39;)
+                        ax.set_title(cluster, fontweight=&#39;bold&#39;, size=8, pad=1)
+                plt.show()
+
+        def __iter__(self):
+                # NOTE:
+                # Will plot clusters in self.clusters in separate figure windows
+                for cluster in self.clusters:
+                        cluster_idx = np.nonzero(self.spk_clusters == cluster)[0]
+                        cluster_ts = np.ravel(self.spk_times[cluster_idx])
+                        # ts into milliseconds ie OE sample rate / 1000
+                        y = self.SpkCalcs.xcorr(cluster_ts.T / 30.)
+                        plt.figure()
+                        ax = plt.gca()
+                        ax.hist(y[y != 0], bins=201, range=[-500, 500], color=&#39;k&#39;, histtype=&#39;stepfilled&#39;)
+                        ax.set_xlabel(&#39;Time(ms)&#39;)
+                        ax.set_xlim(-500,500)
+                        ax.set_xticks((-500, 0, 500))
+                        ax.set_xticklabels((str(-500), &#39;0&#39;, str(500)))
+                        ax.tick_params(axis=&#39;both&#39;, which=&#39;both&#39;, left=&#39;off&#39;, right=&#39;off&#39;,
+                                                        bottom=&#39;off&#39;, top=&#39;off&#39;)
+                        ax.set_yticklabels(&#39;&#39;)
+                        ax.spines[&#39;right&#39;].set_visible(False)
+                        ax.spines[&#39;top&#39;].set_visible(False)
+                        ax.spines[&#39;left&#39;].set_visible(False)
+                        ax.xaxis.set_ticks_position(&#39;bottom&#39;)
+                        ax.set_title(&#39;Cluster &#39; + str(cluster))
+                        plt.show()
+                        yield cluster</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.SpkTimeCorrelogram.plotAll"><code class="name flex">
+<span>def <span class="ident">plotAll</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotAll(self):
+        fig = plt.figure(figsize=(10,20))
+        nrows = np.ceil(np.sqrt(len(self.clusters))).astype(int)
+        for i, cluster in enumerate(self.clusters):
+                cluster_idx = np.nonzero(self.spk_clusters == cluster)[0]
+                cluster_ts = np.ravel(self.spk_times[cluster_idx])
+                # ts into milliseconds ie OE sample rate / 1000
+                y = self.SpkCalcs.xcorr(cluster_ts.T / 30.)
+                ax = fig.add_subplot(nrows,nrows,i+1)
+                ax.hist(y[y != 0], bins=201, range=[-500, 500], color=&#39;k&#39;, histtype=&#39;stepfilled&#39;)
+                ax.set_xlabel(&#39;Time(ms)&#39;)
+                ax.set_xlim(-500,500)
+                ax.set_xticks((-500, 0, 500))
+                ax.set_xticklabels((str(-500), &#39;0&#39;, str(500)))
+                ax.tick_params(axis=&#39;both&#39;, which=&#39;both&#39;, left=False, right=False,
+                                                bottom=False, top=False)
+                ax.set_yticklabels(&#39;&#39;)
+                ax.spines[&#39;right&#39;].set_visible(False)
+                ax.spines[&#39;top&#39;].set_visible(False)
+                ax.spines[&#39;left&#39;].set_visible(False)
+                ax.xaxis.set_ticks_position(&#39;bottom&#39;)
+                ax.set_title(cluster, fontweight=&#39;bold&#39;, size=8, pad=1)
+        plt.show()</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.SpkWaveform"><code class="flex name class">
+<span>class <span class="ident">SpkWaveform</span></span>
+<span>(</span><span>clusters, spk_times, spk_clusters, amplitudes, raw_data)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>spk_times in samples</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class SpkWaveform(object):
+        &#39;&#39;&#39;
+
+        &#39;&#39;&#39;
+        def __init__(self, clusters, spk_times, spk_clusters, amplitudes, raw_data):
+                &#39;&#39;&#39;
+                spk_times in samples
+                &#39;&#39;&#39;
+                self.clusters = clusters
+                self.spk_times = spk_times
+                self.spk_clusters = spk_clusters
+                self.amplitudes = amplitudes
+                self.raw_data = raw_data
+
+        def __iter__(self):
+                # NOTE:
+                # Will plot in a separate figure window for each cluster in self.clusters
+                #
+                # get 500us pre-spike and 1000us post-spike interval
+                # calculate outside for loop
+                pre = int(0.5 * 3e4 / 1000)
+                post = int(1.0 * 3e4 / 1000)
+                nsamples = np.shape(self.raw_data)[0]
+                nchannels = np.shape(self.raw_data)[1]
+                times = np.linspace(-pre, post, pre+post, endpoint=False) / (3e4 / 1000)
+                times = np.tile(np.expand_dims(times,1),nchannels)
+                for cluster in self.clusters:
+                        cluster_idx = np.nonzero(self.spk_clusters == cluster)[0]
+                        nspikes = len(cluster_idx)
+                        data_idx = self.spk_times[cluster_idx]
+                        data_from_idx = (data_idx-pre).astype(int)
+                        data_to_idx = (data_idx+post).astype(int)
+                        raw_waves = np.zeros([nspikes, pre+post, nchannels], dtype=np.int16)
+
+                        for i, idx in enumerate(zip(data_from_idx, data_to_idx)):
+                                if (idx[0][0] &lt; 0):
+                                        raw_waves[i,0:idx[1][0],:] = self.raw_data[0:idx[1][0],:]
+                                elif (idx[1][0] &gt; nsamples):
+                                        raw_waves[i,(pre+post)-((pre+post)-(idx[1][0]-nsamples)):(pre+post),:] = self.raw_data[idx[0][0]:nsamples,:]
+                                else:
+                                        raw_waves[i,:,:] = self.raw_data[idx[0][0]:idx[1][0]]
+
+#            filt_waves = self.butterFilter(raw_waves,300,6000)
+                        mean_filt_waves = np.mean(raw_waves,0)
+                        plt.figure()
+                        ax = plt.gca()
+                        ax.plot(times, mean_filt_waves[:,:])
+                        ax.set_title(&#39;Cluster &#39; + str(cluster))
+                        plt.show()
+                        yield cluster
+        def plotAll(self):
+                # NOTE:
+                # Will plot all clusters in self.clusters in a single figure window
+                fig = plt.figure(figsize=(10,20))
+                nrows = np.ceil(np.sqrt(len(self.clusters))).astype(int)
+                for i, cluster in enumerate(self.clusters):
+                        cluster_idx = np.nonzero(self.spk_clusters == cluster)[0]
+                        nspikes = len(cluster_idx)
+                        data_idx = self.spk_times[cluster_idx]
+                        data_from_idx = (data_idx-pre).astype(int)
+                        data_to_idx = (data_idx+post).astype(int)
+                        raw_waves = np.zeros([nspikes, pre+post, nchannels], dtype=np.int16)
+
+                        for i, idx in enumerate(zip(data_from_idx, data_to_idx)):
+                                if (idx[0][0] &lt; 0):
+                                        raw_waves[i,0:idx[1][0],:] = self.raw_data[0:idx[1][0],:]
+                                elif (idx[1][0] &gt; nsamples):
+                                        raw_waves[i,(pre+post)-((pre+post)-(idx[1][0]-nsamples)):(pre+post),:] = self.raw_data[idx[0][0]:nsamples,:]
+                                else:
+                                        raw_waves[i,:,:] = self.raw_data[idx[0][0]:idx[1][0]]
+
+                        mean_filt_waves = np.mean(raw_waves,0)
+                        ax = fig.add_subplot(nrows,nrows,i+1)
+                        ax.plot(times, mean_filt_waves[:,:])
+                        ax.set_title(cluster, fontweight=&#39;bold&#39;, size=8)
+                plt.show()
+
+        def butterFilter(self, sig, low, high, order=5):
+                nyqlim = 3e4 / 2
+                lowcut = low / nyqlim
+                highcut = high / nyqlim
+                from scipy import signal as signal
+                b, a = signal.butter(order, [lowcut, highcut], btype=&#39;band&#39;)
+                return signal.filtfilt(b, a, sig)</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.SpkWaveform.butterFilter"><code class="name flex">
+<span>def <span class="ident">butterFilter</span></span>(<span>self, sig, low, high, order=5)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def butterFilter(self, sig, low, high, order=5):
+        nyqlim = 3e4 / 2
+        lowcut = low / nyqlim
+        highcut = high / nyqlim
+        from scipy import signal as signal
+        b, a = signal.butter(order, [lowcut, highcut], btype=&#39;band&#39;)
+        return signal.filtfilt(b, a, sig)</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.SpkWaveform.plotAll"><code class="name flex">
+<span>def <span class="ident">plotAll</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plotAll(self):
+        # NOTE:
+        # Will plot all clusters in self.clusters in a single figure window
+        fig = plt.figure(figsize=(10,20))
+        nrows = np.ceil(np.sqrt(len(self.clusters))).astype(int)
+        for i, cluster in enumerate(self.clusters):
+                cluster_idx = np.nonzero(self.spk_clusters == cluster)[0]
+                nspikes = len(cluster_idx)
+                data_idx = self.spk_times[cluster_idx]
+                data_from_idx = (data_idx-pre).astype(int)
+                data_to_idx = (data_idx+post).astype(int)
+                raw_waves = np.zeros([nspikes, pre+post, nchannels], dtype=np.int16)
+
+                for i, idx in enumerate(zip(data_from_idx, data_to_idx)):
+                        if (idx[0][0] &lt; 0):
+                                raw_waves[i,0:idx[1][0],:] = self.raw_data[0:idx[1][0],:]
+                        elif (idx[1][0] &gt; nsamples):
+                                raw_waves[i,(pre+post)-((pre+post)-(idx[1][0]-nsamples)):(pre+post),:] = self.raw_data[idx[0][0]:nsamples,:]
+                        else:
+                                raw_waves[i,:,:] = self.raw_data[idx[0][0]:idx[1][0]]
+
+                mean_filt_waves = np.mean(raw_waves,0)
+                ax = fig.add_subplot(nrows,nrows,i+1)
+                ax.plot(times, mean_filt_waves[:,:])
+                ax.set_title(cluster, fontweight=&#39;bold&#39;, size=8)
+        plt.show()</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="ephysiopy.openephys2py" href="index.html">ephysiopy.openephys2py</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="ephysiopy.openephys2py.OEKiloPhy.KiloSortSession" href="#ephysiopy.openephys2py.OEKiloPhy.KiloSortSession">KiloSortSession</a></code></h4>
+<ul class="">
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.KiloSortSession.load" href="#ephysiopy.openephys2py.OEKiloPhy.KiloSortSession.load">load</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.KiloSortSession.removeNoiseClusters" href="#ephysiopy.openephys2py.OEKiloPhy.KiloSortSession.removeNoiseClusters">removeNoiseClusters</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase">OpenEphysBase</a></code></h4>
+<ul class="two-column">
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.loadKilo" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.loadKilo">loadKilo</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotEEGPower" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotEEGPower">plotEEGPower</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotEventEEG" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotEventEEG">plotEventEEG</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMaps" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMaps">plotMaps</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMapsOneAtATime" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMapsOneAtATime">plotMapsOneAtATime</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotPSTH" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotPSTH">plotPSTH</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotPos" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotPos">plotPos</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotSpectrogram" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotSpectrogram">plotSpectrogram</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotWaves" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotWaves">plotWaves</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotXCorrs" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotXCorrs">plotXCorrs</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX">OpenEphysNPX</a></code></h4>
+<ul class="">
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.load" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.load">load</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.plotEEGPower" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.plotEEGPower">plotEEGPower</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.plotEventEEG" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.plotEventEEG">plotEventEEG</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.plotPSTH" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.plotPSTH">plotPSTH</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.plotSpectrogram" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.plotSpectrogram">plotSpectrogram</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.plotSpectrogramByDepth" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.plotSpectrogramByDepth">plotSpectrogramByDepth</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.plotWaves" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysNPX.plotWaves">plotWaves</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB">OpenEphysNWB</a></code></h4>
+<ul class="two-column">
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.exportPos" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.exportPos">exportPos</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.load" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.load">load</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.plotEEGPower" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.plotEEGPower">plotEEGPower</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.plotEventEEG" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.plotEventEEG">plotEventEEG</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.plotPSTH" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.plotPSTH">plotPSTH</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.plotSpectrogram" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.plotSpectrogram">plotSpectrogram</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.plotWaves" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.plotWaves">plotWaves</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.save_ttl" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysNWB.save_ttl">save_ttl</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="ephysiopy.openephys2py.OEKiloPhy.SpkTimeCorrelogram" href="#ephysiopy.openephys2py.OEKiloPhy.SpkTimeCorrelogram">SpkTimeCorrelogram</a></code></h4>
+<ul class="">
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.SpkTimeCorrelogram.plotAll" href="#ephysiopy.openephys2py.OEKiloPhy.SpkTimeCorrelogram.plotAll">plotAll</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="ephysiopy.openephys2py.OEKiloPhy.SpkWaveform" href="#ephysiopy.openephys2py.OEKiloPhy.SpkWaveform">SpkWaveform</a></code></h4>
+<ul class="">
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.SpkWaveform.butterFilter" href="#ephysiopy.openephys2py.OEKiloPhy.SpkWaveform.butterFilter">butterFilter</a></code></li>
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.SpkWaveform.plotAll" href="#ephysiopy.openephys2py.OEKiloPhy.SpkWaveform.plotAll">plotAll</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.7.5</a>.</p>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad()</script>
+</body>
+</html>

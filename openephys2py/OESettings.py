@@ -1,4 +1,19 @@
 #!/usr/bin/env python3
+'''
+Defines classes for parsing information contained in the settings.xml
+file that is saved when recording with the openephys system.
+
+Classes
+--------
+Settings - the main class that uses the following classes when parsing:
+
+ChannelInfo - parses the info attached to each channel
+BandpassFilter - parses the info contained in the Bandpass filter plugin
+Electrode - documents the ELECTRODE entries in the settings.xml file; this
+    is mostly for when using tetrodes and the SpikeSorter (or SpikeViewer)
+    plugin
+
+'''
 try:
     import xml.etree.cElementTree as ET
 except ImportError:

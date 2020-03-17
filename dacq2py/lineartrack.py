@@ -22,17 +22,17 @@ from matplotlib.widgets import Button, RadioButtons
 from matplotlib.backends.backend_pdf import PdfPages
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import warnings
-import dacq2py
-import tintColours as tcols
+from ephysiopy import dacq2py
+from ephysiopy.dacq2py import tintcolours as tcols
 from astropy.convolution import convolve
 from sklearn.decomposition import PCA
 from scikits import bootstrap
-from utils import rebin
-import gridcell
+from ephysiopy.dacq2py import gridcell
 from itertools import combinations
 from mpl_toolkits.axes_grid1 import ImageGrid
 import skimage, skimage.morphology, skimage.feature
-from dacq2py_util import trial, spikecalcs
+from ephysiopy.dacq2py.dacq2py_util import Trial
+from ephysiopy.dacq2py import spikecalcs
 
 class LTrack(Trial):
 	'''

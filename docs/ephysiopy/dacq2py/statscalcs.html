@@ -1,0 +1,801 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.7.5" />
+<title>ephysiopy.dacq2py.statscalcs API documentation</title>
+<meta name="description" content="Created on Mon Jun 18 18:31:31 2012 …" />
+<link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
+<link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
+<style>.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{font-weight:bold}#index h4 + ul{margin-bottom:.6em}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>ephysiopy.dacq2py.statscalcs</code></h1>
+</header>
+<section id="section-intro">
+<p>Created on Mon Jun 18 18:31:31 2012</p>
+<p>@author: robin</p>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">&#34;&#34;&#34;
+Created on Mon Jun 18 18:31:31 2012
+
+@author: robin
+&#34;&#34;&#34;
+import numpy as np
+
+class StatsCalcs():
+        def __init__(self):
+                pass
+        def circ_r(self, alpha, w=None, d=0, axis=0):
+                &#34;&#34;&#34;
+                Computes the mean resultant vector length for circular data
+                
+                Parameters
+                ----------
+                alpha: array or list
+                        sample of angles in radians
+                w: array or list
+                        counts in the case of binned data. Must be same length as alpha
+                d: array or list
+                        spacing of bin centres for binned data; if supplied, correction
+                        factor is used to correct for bias in estimation of r, in radians
+                axis: int
+                        the dimension along which to compute, Default is 0
+
+                Returns
+                -------
+                r: float
+                        the mean resultant vector length
+                        
+                References
+                ----------
+                Statistical analysis of circular data, N.I.Fisher
+                Topics in circular statistics, S.R.Jamalamadaka et al.
+                Biostatistical Analysis, J.H.Zar
+                &#34;&#34;&#34;
+                if w is None:
+                        w = np.ones_like(alpha, dtype=float)
+                else:
+                        assert(len(alpha) == len(w))
+                #TODO: error check for size constancy
+                r = np.sum(w * np.exp(1j * alpha))
+                r = np.abs(r) / np.sum(w)
+                if d != 0:
+                        c = d/2./np.sin(d/2.)
+                        r = c * r
+                return r
+                
+        def mean_resultant_vector(self, angles):
+                &#39;&#39;&#39;
+                Calculate the mean resultant length and direction for angles
+                
+                Parameters
+                ----------
+                angles: np.array
+                        sample of angles in radians
+                
+                Returns
+                -------
+                r: float
+                        the mean resultant vector length
+                th: float
+                        the mean resultant vector direction
+                &#39;&#39;&#39;
+                S = np.sum(np.sin(angles)) * (1/float(len(angles)))
+                C = np.sum(np.cos(angles)) * (1/float(len(angles)))
+                r = np.hypot(S, C)
+                th = np.arctan(S / C)
+                if (C &lt; 0):
+                        th = np.pi + th
+                return r, th
+                
+        def V_test(self, angles, test_direction):
+                &#34;&#34;&#34;
+                Taken from &#39;100 Statistical Tests&#39; G.J.Kanji, 2006 Sage Publications
+                Test is also known as the modified Rayleigh test
+
+                angles is a vector of angular values in degrees
+                test_direction is a single angular value in degrees
+                The Watson U2 tests whether the observed angles have a tendency to
+                cluster around a given angle indicating a lack of randomness in the
+                distribution
+                Limitations:
+                        For grouped data the length of the mean vector must be adjusted,
+                        and for axial data all angles must be doubled.
+                &#34;&#34;&#34;
+                n = len(angles)
+                x_hat = np.sum(np.cos(np.radians(angles))) / float(n)
+                y_hat = np.sum(np.sin(np.radians(angles))) / float(n)
+                r = np.sqrt(x_hat**2 + y_hat**2)
+                theta_hat = np.degrees(np.arctan(y_hat / x_hat))
+                if theta_hat &lt; 0:
+                        theta_hat = theta_hat + 360
+                v_squiggle = r * np.cos(np.radians(theta_hat) - np.radians(test_direction))
+                V = np.sqrt(2 * n) * v_squiggle
+                return V
+
+        def duplicates_as_complex(self, x, already_sorted=False):
+                &#34;&#34;&#34; Example:
+                        x = [9.9    9.9     12.3    15.2    15.2    15.2    ]
+                        ret=[9.9+0j 9.9+1j  12.3+0j 15.2+0j 15.2+1j 15.2+2j ]
+                &#34;&#34;&#34;
+                if not already_sorted:
+                        x = np.sort(x)
+                is_start = np.empty(len(x),dtype=bool)
+                is_start[0], is_start[1:] = True, x[:-1] != x[1:]
+                labels = np.cumsum(is_start)-1
+                sub_idx = np.arange(len(x)) - is_start.nonzero()[0][labels]
+                return x + 1j*sub_idx
+
+        def watsonsU2(self, a, b):
+                &#39;&#39;&#39;
+                Taken from &#39;100 Statistical Tests&#39; G.J.Kanji, 2006 Sage Publications
+                To test whether two samples from circular observations differ
+                significantly from each other with regard to mean direction or angular
+                variance.
+                Limitation
+                Both samples must come from a continuous distribution. In the case of
+                grouping the class interval should not exceed 5.
+                &#39;&#39;&#39;
+                a = np.sort(np.ravel(a))
+                b = np.sort(np.ravel(b))
+                n_a = len(a)
+                n_b = len(b)
+                N = float(n_a + n_b)
+                a_complex, b_complex = self.duplicates_as_complex(a, True), self.duplicates_as_complex(b, True)
+                a_and_b = np.union1d(a_complex,b_complex)
+
+                # get index for a
+                a_ind = np.zeros(len(a_and_b),dtype=int)
+                a_ind[np.searchsorted(a_and_b,a_complex)] = 1
+                a_ind = np.cumsum(a_ind)
+
+                # same for b
+                b_ind = np.zeros(len(a_and_b),dtype=int)
+                b_ind[np.searchsorted(a_and_b,b_complex)] = 1
+                b_ind = np.cumsum(b_ind)
+
+                d_k = (a_ind / float(n_a)) - (b_ind / float(n_b))
+
+                d_k_sq = d_k ** 2
+
+                U2 = ((n_a*n_b) / N**2) * (np.sum(d_k_sq) - ((np.sum(d_k)**2) / N))
+                return U2
+
+
+        def watsonsU2n(self, angles):
+                &#34;&#34;&#34;
+                Taken from &#39;100 Statistical Tests&#39; G.J.Kanji, 2006 Sage Publications
+
+                To test whether the given distribution fits a random sample of angular values
+                Limitations:
+                        This test is suitable for both unimodal and the multimodal cases.
+                        It can be used as a test for randomness.
+                &#34;&#34;&#34;
+                angles = np.sort(angles)
+                n = len(angles)
+                Vi = angles / float(360)
+                sum_Vi = np.sum(Vi)
+                sum_sq_Vi = np.sum(Vi**2)
+                Ci = (2 * np.arange(1, n+1)) - 1
+                sum_Ci_Vi_ov_n = np.sum(Ci * Vi / n)
+                V_bar = (1 / float(n)) * sum_Vi
+                U2n = sum_sq_Vi - sum_Ci_Vi_ov_n + (n * (1/float(3) - (V_bar - 0.5)**2))
+                test_vals = {&#39;0.1&#39;: 0.152, &#39;0.05&#39;: 0.187, &#39;0.025&#39;: 0.221, &#39;0.01&#39;: 0.267, &#39;0.005&#39;: 0.302}
+                for key, val in test_vals.iteritems():
+                        if U2n &gt; val:
+                                print(&#39;The Watsons U2 statistic is {0} which is greater than\n the critical value of {1} at p={2}&#39;.format(U2n, val, key))
+                        else:
+                                print(&#39;The Watsons U2 statistic is not significant at p={0}&#39;.format(key))
+                                return
+
+        def watsonWilliams(self, a, b):
+                n = len(a)
+                m = len(b)
+                N = n + m
+                #v_1 = 1 # needed to do p-value lookup in table of critical values of F distribution
+                #v_2 = N - 2 # needed to do p-value lookup in table of critical values of F distribution
+                C_1 = np.sum(np.cos(np.radians(a)))
+                S_1 = np.sum(np.sin(np.radians(a)))
+                C_2 = np.sum(np.cos(np.radians(b)))
+                S_2 = np.sum(np.sin(np.radians(b)))
+                C = C_1 + C_2
+                S = S_1 + S_2
+                R_1 = np.hypot(C_1, S_1)
+                R_2 = np.hypot(C_2, S_2)
+                R = np.hypot(C, S)
+                R_hat = (R_1 + R_2) / float(N)
+                import os
+                fid = os.path.join(os.path.getcwd(), &#39;mle_von_mises_vals.txt&#39;)
+                with open(fid, &#39;r&#39;) as f:
+                        mle_von_mises = np.loadtxt(f)
+                mle_von_mises = np.sort(mle_von_mises, 0)
+                k_hat = mle_von_mises[(np.abs(mle_von_mises[:,0]-R_hat)).argmin(), 1]
+                g = 1 - (3 / 8 * k_hat)
+                F = g * (N-2) * ((R_1 + R_2 - R) / (N - (R_1 + R_2)))
+                return F</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="ephysiopy.dacq2py.statscalcs.StatsCalcs"><code class="flex name class">
+<span>class <span class="ident">StatsCalcs</span></span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class StatsCalcs():
+        def __init__(self):
+                pass
+        def circ_r(self, alpha, w=None, d=0, axis=0):
+                &#34;&#34;&#34;
+                Computes the mean resultant vector length for circular data
+                
+                Parameters
+                ----------
+                alpha: array or list
+                        sample of angles in radians
+                w: array or list
+                        counts in the case of binned data. Must be same length as alpha
+                d: array or list
+                        spacing of bin centres for binned data; if supplied, correction
+                        factor is used to correct for bias in estimation of r, in radians
+                axis: int
+                        the dimension along which to compute, Default is 0
+
+                Returns
+                -------
+                r: float
+                        the mean resultant vector length
+                        
+                References
+                ----------
+                Statistical analysis of circular data, N.I.Fisher
+                Topics in circular statistics, S.R.Jamalamadaka et al.
+                Biostatistical Analysis, J.H.Zar
+                &#34;&#34;&#34;
+                if w is None:
+                        w = np.ones_like(alpha, dtype=float)
+                else:
+                        assert(len(alpha) == len(w))
+                #TODO: error check for size constancy
+                r = np.sum(w * np.exp(1j * alpha))
+                r = np.abs(r) / np.sum(w)
+                if d != 0:
+                        c = d/2./np.sin(d/2.)
+                        r = c * r
+                return r
+                
+        def mean_resultant_vector(self, angles):
+                &#39;&#39;&#39;
+                Calculate the mean resultant length and direction for angles
+                
+                Parameters
+                ----------
+                angles: np.array
+                        sample of angles in radians
+                
+                Returns
+                -------
+                r: float
+                        the mean resultant vector length
+                th: float
+                        the mean resultant vector direction
+                &#39;&#39;&#39;
+                S = np.sum(np.sin(angles)) * (1/float(len(angles)))
+                C = np.sum(np.cos(angles)) * (1/float(len(angles)))
+                r = np.hypot(S, C)
+                th = np.arctan(S / C)
+                if (C &lt; 0):
+                        th = np.pi + th
+                return r, th
+                
+        def V_test(self, angles, test_direction):
+                &#34;&#34;&#34;
+                Taken from &#39;100 Statistical Tests&#39; G.J.Kanji, 2006 Sage Publications
+                Test is also known as the modified Rayleigh test
+
+                angles is a vector of angular values in degrees
+                test_direction is a single angular value in degrees
+                The Watson U2 tests whether the observed angles have a tendency to
+                cluster around a given angle indicating a lack of randomness in the
+                distribution
+                Limitations:
+                        For grouped data the length of the mean vector must be adjusted,
+                        and for axial data all angles must be doubled.
+                &#34;&#34;&#34;
+                n = len(angles)
+                x_hat = np.sum(np.cos(np.radians(angles))) / float(n)
+                y_hat = np.sum(np.sin(np.radians(angles))) / float(n)
+                r = np.sqrt(x_hat**2 + y_hat**2)
+                theta_hat = np.degrees(np.arctan(y_hat / x_hat))
+                if theta_hat &lt; 0:
+                        theta_hat = theta_hat + 360
+                v_squiggle = r * np.cos(np.radians(theta_hat) - np.radians(test_direction))
+                V = np.sqrt(2 * n) * v_squiggle
+                return V
+
+        def duplicates_as_complex(self, x, already_sorted=False):
+                &#34;&#34;&#34; Example:
+                        x = [9.9    9.9     12.3    15.2    15.2    15.2    ]
+                        ret=[9.9+0j 9.9+1j  12.3+0j 15.2+0j 15.2+1j 15.2+2j ]
+                &#34;&#34;&#34;
+                if not already_sorted:
+                        x = np.sort(x)
+                is_start = np.empty(len(x),dtype=bool)
+                is_start[0], is_start[1:] = True, x[:-1] != x[1:]
+                labels = np.cumsum(is_start)-1
+                sub_idx = np.arange(len(x)) - is_start.nonzero()[0][labels]
+                return x + 1j*sub_idx
+
+        def watsonsU2(self, a, b):
+                &#39;&#39;&#39;
+                Taken from &#39;100 Statistical Tests&#39; G.J.Kanji, 2006 Sage Publications
+                To test whether two samples from circular observations differ
+                significantly from each other with regard to mean direction or angular
+                variance.
+                Limitation
+                Both samples must come from a continuous distribution. In the case of
+                grouping the class interval should not exceed 5.
+                &#39;&#39;&#39;
+                a = np.sort(np.ravel(a))
+                b = np.sort(np.ravel(b))
+                n_a = len(a)
+                n_b = len(b)
+                N = float(n_a + n_b)
+                a_complex, b_complex = self.duplicates_as_complex(a, True), self.duplicates_as_complex(b, True)
+                a_and_b = np.union1d(a_complex,b_complex)
+
+                # get index for a
+                a_ind = np.zeros(len(a_and_b),dtype=int)
+                a_ind[np.searchsorted(a_and_b,a_complex)] = 1
+                a_ind = np.cumsum(a_ind)
+
+                # same for b
+                b_ind = np.zeros(len(a_and_b),dtype=int)
+                b_ind[np.searchsorted(a_and_b,b_complex)] = 1
+                b_ind = np.cumsum(b_ind)
+
+                d_k = (a_ind / float(n_a)) - (b_ind / float(n_b))
+
+                d_k_sq = d_k ** 2
+
+                U2 = ((n_a*n_b) / N**2) * (np.sum(d_k_sq) - ((np.sum(d_k)**2) / N))
+                return U2
+
+
+        def watsonsU2n(self, angles):
+                &#34;&#34;&#34;
+                Taken from &#39;100 Statistical Tests&#39; G.J.Kanji, 2006 Sage Publications
+
+                To test whether the given distribution fits a random sample of angular values
+                Limitations:
+                        This test is suitable for both unimodal and the multimodal cases.
+                        It can be used as a test for randomness.
+                &#34;&#34;&#34;
+                angles = np.sort(angles)
+                n = len(angles)
+                Vi = angles / float(360)
+                sum_Vi = np.sum(Vi)
+                sum_sq_Vi = np.sum(Vi**2)
+                Ci = (2 * np.arange(1, n+1)) - 1
+                sum_Ci_Vi_ov_n = np.sum(Ci * Vi / n)
+                V_bar = (1 / float(n)) * sum_Vi
+                U2n = sum_sq_Vi - sum_Ci_Vi_ov_n + (n * (1/float(3) - (V_bar - 0.5)**2))
+                test_vals = {&#39;0.1&#39;: 0.152, &#39;0.05&#39;: 0.187, &#39;0.025&#39;: 0.221, &#39;0.01&#39;: 0.267, &#39;0.005&#39;: 0.302}
+                for key, val in test_vals.iteritems():
+                        if U2n &gt; val:
+                                print(&#39;The Watsons U2 statistic is {0} which is greater than\n the critical value of {1} at p={2}&#39;.format(U2n, val, key))
+                        else:
+                                print(&#39;The Watsons U2 statistic is not significant at p={0}&#39;.format(key))
+                                return
+
+        def watsonWilliams(self, a, b):
+                n = len(a)
+                m = len(b)
+                N = n + m
+                #v_1 = 1 # needed to do p-value lookup in table of critical values of F distribution
+                #v_2 = N - 2 # needed to do p-value lookup in table of critical values of F distribution
+                C_1 = np.sum(np.cos(np.radians(a)))
+                S_1 = np.sum(np.sin(np.radians(a)))
+                C_2 = np.sum(np.cos(np.radians(b)))
+                S_2 = np.sum(np.sin(np.radians(b)))
+                C = C_1 + C_2
+                S = S_1 + S_2
+                R_1 = np.hypot(C_1, S_1)
+                R_2 = np.hypot(C_2, S_2)
+                R = np.hypot(C, S)
+                R_hat = (R_1 + R_2) / float(N)
+                import os
+                fid = os.path.join(os.path.getcwd(), &#39;mle_von_mises_vals.txt&#39;)
+                with open(fid, &#39;r&#39;) as f:
+                        mle_von_mises = np.loadtxt(f)
+                mle_von_mises = np.sort(mle_von_mises, 0)
+                k_hat = mle_von_mises[(np.abs(mle_von_mises[:,0]-R_hat)).argmin(), 1]
+                g = 1 - (3 / 8 * k_hat)
+                F = g * (N-2) * ((R_1 + R_2 - R) / (N - (R_1 + R_2)))
+                return F</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="ephysiopy.dacq2py.statscalcs.StatsCalcs.V_test"><code class="name flex">
+<span>def <span class="ident">V_test</span></span>(<span>self, angles, test_direction)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Taken from '100 Statistical Tests' G.J.Kanji, 2006 Sage Publications
+Test is also known as the modified Rayleigh test</p>
+<p>angles is a vector of angular values in degrees
+test_direction is a single angular value in degrees
+The Watson U2 tests whether the observed angles have a tendency to
+cluster around a given angle indicating a lack of randomness in the
+distribution</p>
+<h2 id="limitations">Limitations</h2>
+<p>For grouped data the length of the mean vector must be adjusted,
+and for axial data all angles must be doubled.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def V_test(self, angles, test_direction):
+        &#34;&#34;&#34;
+        Taken from &#39;100 Statistical Tests&#39; G.J.Kanji, 2006 Sage Publications
+        Test is also known as the modified Rayleigh test
+
+        angles is a vector of angular values in degrees
+        test_direction is a single angular value in degrees
+        The Watson U2 tests whether the observed angles have a tendency to
+        cluster around a given angle indicating a lack of randomness in the
+        distribution
+        Limitations:
+                For grouped data the length of the mean vector must be adjusted,
+                and for axial data all angles must be doubled.
+        &#34;&#34;&#34;
+        n = len(angles)
+        x_hat = np.sum(np.cos(np.radians(angles))) / float(n)
+        y_hat = np.sum(np.sin(np.radians(angles))) / float(n)
+        r = np.sqrt(x_hat**2 + y_hat**2)
+        theta_hat = np.degrees(np.arctan(y_hat / x_hat))
+        if theta_hat &lt; 0:
+                theta_hat = theta_hat + 360
+        v_squiggle = r * np.cos(np.radians(theta_hat) - np.radians(test_direction))
+        V = np.sqrt(2 * n) * v_squiggle
+        return V</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.statscalcs.StatsCalcs.circ_r"><code class="name flex">
+<span>def <span class="ident">circ_r</span></span>(<span>self, alpha, w=None, d=0, axis=0)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Computes the mean resultant vector length for circular data</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>alpha</code></strong> :&ensp;<code>array</code> or <code>list</code></dt>
+<dd>sample of angles in radians</dd>
+<dt><strong><code>w</code></strong> :&ensp;<code>array</code> or <code>list</code></dt>
+<dd>counts in the case of binned data. Must be same length as alpha</dd>
+<dt><strong><code>d</code></strong> :&ensp;<code>array</code> or <code>list</code></dt>
+<dd>spacing of bin centres for binned data; if supplied, correction
+factor is used to correct for bias in estimation of r, in radians</dd>
+<dt><strong><code>axis</code></strong> :&ensp;<code>int</code></dt>
+<dd>the dimension along which to compute, Default is 0</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>r</code></strong> :&ensp;<code>float</code></dt>
+<dd>the mean resultant vector length</dd>
+</dl>
+<h2 id="references">References</h2>
+<p>Statistical analysis of circular data, N.I.Fisher
+Topics in circular statistics, S.R.Jamalamadaka et al.
+Biostatistical Analysis, J.H.Zar</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def circ_r(self, alpha, w=None, d=0, axis=0):
+        &#34;&#34;&#34;
+        Computes the mean resultant vector length for circular data
+        
+        Parameters
+        ----------
+        alpha: array or list
+                sample of angles in radians
+        w: array or list
+                counts in the case of binned data. Must be same length as alpha
+        d: array or list
+                spacing of bin centres for binned data; if supplied, correction
+                factor is used to correct for bias in estimation of r, in radians
+        axis: int
+                the dimension along which to compute, Default is 0
+
+        Returns
+        -------
+        r: float
+                the mean resultant vector length
+                
+        References
+        ----------
+        Statistical analysis of circular data, N.I.Fisher
+        Topics in circular statistics, S.R.Jamalamadaka et al.
+        Biostatistical Analysis, J.H.Zar
+        &#34;&#34;&#34;
+        if w is None:
+                w = np.ones_like(alpha, dtype=float)
+        else:
+                assert(len(alpha) == len(w))
+        #TODO: error check for size constancy
+        r = np.sum(w * np.exp(1j * alpha))
+        r = np.abs(r) / np.sum(w)
+        if d != 0:
+                c = d/2./np.sin(d/2.)
+                r = c * r
+        return r</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.statscalcs.StatsCalcs.duplicates_as_complex"><code class="name flex">
+<span>def <span class="ident">duplicates_as_complex</span></span>(<span>self, x, already_sorted=False)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Example:
+x = [9.9
+9.9
+12.3
+15.2
+15.2
+15.2
+]
+ret=[9.9+0j 9.9+1j
+12.3+0j 15.2+0j 15.2+1j 15.2+2j ]</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def duplicates_as_complex(self, x, already_sorted=False):
+        &#34;&#34;&#34; Example:
+                x = [9.9    9.9     12.3    15.2    15.2    15.2    ]
+                ret=[9.9+0j 9.9+1j  12.3+0j 15.2+0j 15.2+1j 15.2+2j ]
+        &#34;&#34;&#34;
+        if not already_sorted:
+                x = np.sort(x)
+        is_start = np.empty(len(x),dtype=bool)
+        is_start[0], is_start[1:] = True, x[:-1] != x[1:]
+        labels = np.cumsum(is_start)-1
+        sub_idx = np.arange(len(x)) - is_start.nonzero()[0][labels]
+        return x + 1j*sub_idx</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.statscalcs.StatsCalcs.mean_resultant_vector"><code class="name flex">
+<span>def <span class="ident">mean_resultant_vector</span></span>(<span>self, angles)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Calculate the mean resultant length and direction for angles</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>angles</code></strong> :&ensp;<code>np.array</code></dt>
+<dd>sample of angles in radians</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>r</code></strong> :&ensp;<code>float</code></dt>
+<dd>the mean resultant vector length</dd>
+<dt><strong><code>th</code></strong> :&ensp;<code>float</code></dt>
+<dd>the mean resultant vector direction</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def mean_resultant_vector(self, angles):
+        &#39;&#39;&#39;
+        Calculate the mean resultant length and direction for angles
+        
+        Parameters
+        ----------
+        angles: np.array
+                sample of angles in radians
+        
+        Returns
+        -------
+        r: float
+                the mean resultant vector length
+        th: float
+                the mean resultant vector direction
+        &#39;&#39;&#39;
+        S = np.sum(np.sin(angles)) * (1/float(len(angles)))
+        C = np.sum(np.cos(angles)) * (1/float(len(angles)))
+        r = np.hypot(S, C)
+        th = np.arctan(S / C)
+        if (C &lt; 0):
+                th = np.pi + th
+        return r, th</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.statscalcs.StatsCalcs.watsonWilliams"><code class="name flex">
+<span>def <span class="ident">watsonWilliams</span></span>(<span>self, a, b)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def watsonWilliams(self, a, b):
+        n = len(a)
+        m = len(b)
+        N = n + m
+        #v_1 = 1 # needed to do p-value lookup in table of critical values of F distribution
+        #v_2 = N - 2 # needed to do p-value lookup in table of critical values of F distribution
+        C_1 = np.sum(np.cos(np.radians(a)))
+        S_1 = np.sum(np.sin(np.radians(a)))
+        C_2 = np.sum(np.cos(np.radians(b)))
+        S_2 = np.sum(np.sin(np.radians(b)))
+        C = C_1 + C_2
+        S = S_1 + S_2
+        R_1 = np.hypot(C_1, S_1)
+        R_2 = np.hypot(C_2, S_2)
+        R = np.hypot(C, S)
+        R_hat = (R_1 + R_2) / float(N)
+        import os
+        fid = os.path.join(os.path.getcwd(), &#39;mle_von_mises_vals.txt&#39;)
+        with open(fid, &#39;r&#39;) as f:
+                mle_von_mises = np.loadtxt(f)
+        mle_von_mises = np.sort(mle_von_mises, 0)
+        k_hat = mle_von_mises[(np.abs(mle_von_mises[:,0]-R_hat)).argmin(), 1]
+        g = 1 - (3 / 8 * k_hat)
+        F = g * (N-2) * ((R_1 + R_2 - R) / (N - (R_1 + R_2)))
+        return F</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.statscalcs.StatsCalcs.watsonsU2"><code class="name flex">
+<span>def <span class="ident">watsonsU2</span></span>(<span>self, a, b)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Taken from '100 Statistical Tests' G.J.Kanji, 2006 Sage Publications
+To test whether two samples from circular observations differ
+significantly from each other with regard to mean direction or angular
+variance.
+Limitation
+Both samples must come from a continuous distribution. In the case of
+grouping the class interval should not exceed 5.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def watsonsU2(self, a, b):
+        &#39;&#39;&#39;
+        Taken from &#39;100 Statistical Tests&#39; G.J.Kanji, 2006 Sage Publications
+        To test whether two samples from circular observations differ
+        significantly from each other with regard to mean direction or angular
+        variance.
+        Limitation
+        Both samples must come from a continuous distribution. In the case of
+        grouping the class interval should not exceed 5.
+        &#39;&#39;&#39;
+        a = np.sort(np.ravel(a))
+        b = np.sort(np.ravel(b))
+        n_a = len(a)
+        n_b = len(b)
+        N = float(n_a + n_b)
+        a_complex, b_complex = self.duplicates_as_complex(a, True), self.duplicates_as_complex(b, True)
+        a_and_b = np.union1d(a_complex,b_complex)
+
+        # get index for a
+        a_ind = np.zeros(len(a_and_b),dtype=int)
+        a_ind[np.searchsorted(a_and_b,a_complex)] = 1
+        a_ind = np.cumsum(a_ind)
+
+        # same for b
+        b_ind = np.zeros(len(a_and_b),dtype=int)
+        b_ind[np.searchsorted(a_and_b,b_complex)] = 1
+        b_ind = np.cumsum(b_ind)
+
+        d_k = (a_ind / float(n_a)) - (b_ind / float(n_b))
+
+        d_k_sq = d_k ** 2
+
+        U2 = ((n_a*n_b) / N**2) * (np.sum(d_k_sq) - ((np.sum(d_k)**2) / N))
+        return U2</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.statscalcs.StatsCalcs.watsonsU2n"><code class="name flex">
+<span>def <span class="ident">watsonsU2n</span></span>(<span>self, angles)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Taken from '100 Statistical Tests' G.J.Kanji, 2006 Sage Publications</p>
+<p>To test whether the given distribution fits a random sample of angular values</p>
+<h2 id="limitations">Limitations</h2>
+<p>This test is suitable for both unimodal and the multimodal cases.
+It can be used as a test for randomness.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def watsonsU2n(self, angles):
+        &#34;&#34;&#34;
+        Taken from &#39;100 Statistical Tests&#39; G.J.Kanji, 2006 Sage Publications
+
+        To test whether the given distribution fits a random sample of angular values
+        Limitations:
+                This test is suitable for both unimodal and the multimodal cases.
+                It can be used as a test for randomness.
+        &#34;&#34;&#34;
+        angles = np.sort(angles)
+        n = len(angles)
+        Vi = angles / float(360)
+        sum_Vi = np.sum(Vi)
+        sum_sq_Vi = np.sum(Vi**2)
+        Ci = (2 * np.arange(1, n+1)) - 1
+        sum_Ci_Vi_ov_n = np.sum(Ci * Vi / n)
+        V_bar = (1 / float(n)) * sum_Vi
+        U2n = sum_sq_Vi - sum_Ci_Vi_ov_n + (n * (1/float(3) - (V_bar - 0.5)**2))
+        test_vals = {&#39;0.1&#39;: 0.152, &#39;0.05&#39;: 0.187, &#39;0.025&#39;: 0.221, &#39;0.01&#39;: 0.267, &#39;0.005&#39;: 0.302}
+        for key, val in test_vals.iteritems():
+                if U2n &gt; val:
+                        print(&#39;The Watsons U2 statistic is {0} which is greater than\n the critical value of {1} at p={2}&#39;.format(U2n, val, key))
+                else:
+                        print(&#39;The Watsons U2 statistic is not significant at p={0}&#39;.format(key))
+                        return</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="ephysiopy.dacq2py" href="index.html">ephysiopy.dacq2py</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="ephysiopy.dacq2py.statscalcs.StatsCalcs" href="#ephysiopy.dacq2py.statscalcs.StatsCalcs">StatsCalcs</a></code></h4>
+<ul class="">
+<li><code><a title="ephysiopy.dacq2py.statscalcs.StatsCalcs.V_test" href="#ephysiopy.dacq2py.statscalcs.StatsCalcs.V_test">V_test</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.statscalcs.StatsCalcs.circ_r" href="#ephysiopy.dacq2py.statscalcs.StatsCalcs.circ_r">circ_r</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.statscalcs.StatsCalcs.duplicates_as_complex" href="#ephysiopy.dacq2py.statscalcs.StatsCalcs.duplicates_as_complex">duplicates_as_complex</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.statscalcs.StatsCalcs.mean_resultant_vector" href="#ephysiopy.dacq2py.statscalcs.StatsCalcs.mean_resultant_vector">mean_resultant_vector</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.statscalcs.StatsCalcs.watsonWilliams" href="#ephysiopy.dacq2py.statscalcs.StatsCalcs.watsonWilliams">watsonWilliams</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.statscalcs.StatsCalcs.watsonsU2" href="#ephysiopy.dacq2py.statscalcs.StatsCalcs.watsonsU2">watsonsU2</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.statscalcs.StatsCalcs.watsonsU2n" href="#ephysiopy.dacq2py.statscalcs.StatsCalcs.watsonsU2n">watsonsU2n</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.7.5</a>.</p>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad()</script>
+</body>
+</html>

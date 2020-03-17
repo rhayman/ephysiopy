@@ -5,8 +5,8 @@ Created on Mon May 23 16:27:31 2016
 @author: robin
 """
 import numpy as np
-from dacq2py.dacq2py_util import Trial
-from dacq2py.eegcalcs import EEGCalcs
+from ephysiopy.dacq2py.dacq2py_util import Trial
+from ephysiopy.dacq2py.eegcalcs import EEGCalcs
 import matplotlib.pyplot as plt
 import yaml
 import os

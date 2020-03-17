@@ -7,6 +7,7 @@ Created on Thu Nov  9 17:04:38 2017
 """
 import numpy as np
 from scipy import signal
+import warnings
 import matplotlib
 import matplotlib.pylab as plt
 import matplotlib.cm as cm
@@ -17,21 +18,23 @@ from ephysiopy.ephys_generic import binning
 from ephysiopy.dacq2py import tintcolours as tcols
 
 class SpikeCalcsGeneric(object):
-    '''
+    """
     Generic class for processing and analysis of spiking data
 
     Parameters
     ----------
-    spike_times - list or numpy array of the times of 'spikes' in the trial
-                    this should be all spikes as the cluster identity vector _spk_clusters
-                    is used to pick out the right spikes
-    waveforms - np.array - not sure on shape yet but will be something like a
-                            a 4 x nSpikes x nSamples (4 for tetrode-based analysis)
+    spike_times : array like
+        the times of 'spikes' in the trial
+        this should be all spikes as the cluster identity vector _spk_clusters
+        is used to pick out the right spikes
+    waveforms : np.array
+        not sure on shape yet but will be something like a
+        a 4 x nSpikes x nSamples (4 for tetrode-based analysis)
 
     Notes
     -----
-    Units for time are always in seconds
-    '''
+    Units for time are provided as per the sample rate but converted internally to milliseconds
+    """
     def __init__(self, spike_times, waveforms=None, **kwargs):
         self.spike_times = spike_times
         self.waveforms = waveforms
@@ -40,10 +43,26 @@ class SpikeCalcsGeneric(object):
         self._event_window = np.array((-0.050, 0.100)) # window, in seconds, either side of the stimulus, to examine
         self._stim_width = None # the width, in ms, of the stimulus
         self._secs_per_bin = 0.001 # used to increase / decrease size of bins in psth
+        self._sample_rate = 30000
+        self._duration = None
 
     @property
-    def n_spikes(self):
-        return len(self.spike_times)
+    def sample_rate(self):
+        return self._sample_rate
+
+    @sample_rate.setter
+    def sample_rate(self, value):
+        self._sample_rate = value
+
+    def n_spikes(self, cluster=None):
+        if cluster is None:
+            return len(self.spike_times)
+        else:
+            if self.spk_clusters is None:
+                warnings.warn("No clusters available, please load some into me.")
+                return
+            else:
+                return np.count_nonzero(self._spk_clusters==cluster)
 
     @property
     def event_ts(self):
@@ -52,6 +71,14 @@ class SpikeCalcsGeneric(object):
     @event_ts.setter
     def event_ts(self, value):
         self._event_ts = value
+
+    @property
+    def duration(self):
+        return self._duration
+
+    @duration.setter
+    def duration(self, value):
+        self._duration = value
 
     @property
     def spk_clusters(self):
@@ -85,15 +112,89 @@ class SpikeCalcsGeneric(object):
     def _secs_per_bin(self, value):
         self.__secs_per_bin = value
 
+    def trial_mean_fr(self, cluster: int)->float:
+        # Returns the trial mean firing rate for the cluster
+        if self.duration is None:
+            warnings.warn("No duration provided, give me one!")
+            return
+        return self.n_spikes(cluster) / self.duration
+
+    def mean_isi_range(self, cluster: int, n: int)->float:
+        """
+        Calculates the mean of the autocorrelation from 0 to n milliseconds
+        Used to help classify a neruons type (principal, interneuron etc)
+
+        Parameters
+        ----------
+        cluster : int
+            The cluster to analyse
+        n : int
+            The range in milliseconds to calculate the mean over
+
+        Returns
+        -------
+        mean_isi_range : float
+            The mean of the autocorrelogram between 0 and n milliseconds
+        """
+        if cluster not in self.spk_clusters:
+            warnings.warn("Cluster not available")
+            return
+        bins = 201
+        trange = np.array((-500, 500))
+        t = self.spike_times[self.spk_clusters==cluster]
+        y = self.xcorr(t, Trange=trange)
+        y = y.astype(np.int64) # See xcorr docs
+        counts, bins = np.histogram(y[y!=0], bins=bins, range=trange)
+        mask = np.logical_and(bins>0, bins<n)
+        return np.mean(counts[mask[1:]])
+
+    def xcorr(self, x1: np.array, x2=None, Trange=None, **kwargs)->np.ndarray:
+        """
+        Calculates the histogram of the ISIs in x1 or x1 vs x2
+
+        Parameters
+        ----------
+        x1, x2 : array like
+            The times of the spikes emitted by the cluster(s)
+            NB must be signed int to accomodate negative times
+        Trange : array like
+            Range of times to bin up. Defaults to [-500, +500] in ms
+
+        Returns
+        -------
+        y : np.ndarray
+            The time differences between spike times in x1 over the range
+            of times defined Trange
+        """
+        if x2 is None:
+            x2 = x1.copy()
+        if Trange is None:
+            Trange = np.array([-500, 500])
+        if type(Trange) == tuple:
+            Trange = np.array(Trange)
+        y = []
+        irange = x1[:, np.newaxis] + Trange[np.newaxis, :]
+        dts = np.searchsorted(x2, irange)
+        for i, t in enumerate(dts):
+            y.extend(x2[t[0]:t[1]] - x1[i])
+        y = np.array(y, dtype=float)
+        return y
 
     def calculatePSTH(self, cluster_id, **kwargs):
-        '''
+        """
         Calculate the PSTH of event_ts against the spiking of a cell
 
         Parameters
         ----------
-        cluster_id - int - the cluster to calculate the psth of
-        '''
+        cluster_id : int
+            The cluster for which to calculate the psth
+
+        Returns
+        -------
+        x, y : list
+            The list of time differences between the spikes of the cluster
+            and the events (x) and the trials (y)
+        """
         if self._event_ts is None:
             raise Exception("Need some event timestamps! Aborting")
         if self._spk_clusters is None:
@@ -115,13 +216,19 @@ class SpikeCalcsGeneric(object):
         return x, y
 
     def plotPSTH(self, cluster, fig=None):
-        '''
+        """
         Plots the PSTH for a cluster
 
         Parameters
         ----------
-        cluster - int - the cluster to examine
-        '''
+        cluster : int
+            The cluster to examine
+
+        Returns
+        -------
+        cluster, i : int
+            The cluster and a junk variable (not sure why for now)
+        """
         x, y = self.calculatePSTH(cluster)
         show = False # used below to show the figure or leave this to the caller
         if fig is None:
@@ -189,7 +296,7 @@ class SpikeCalcsGeneric(object):
             cluster_idx = np.nonzero(self.spk_clusters == cluster)[0]
             cluster_ts = np.ravel(self.spike_times[cluster_idx])
             ax = fig.add_subplot(nrows,nrows,i+1)
-            y = SpkCalcs.xcorr(cluster_ts.T / 30.)
+            y = SpkCalcs.xcorr(cluster_ts.T / float(self.sample_rate / 1000)) # ms
             ax.hist(y[y != 0], bins=201, range=[-500, 500], color='k', histtype='stepfilled')
             ax.set_xlim(-500,500)
             ax.set_xticks((-500, 0, 500))
@@ -204,17 +311,32 @@ class SpikeCalcsGeneric(object):
             ax.set_title(cluster, fontweight='bold', size=10, pad=1)
         plt.show()
 
+class SpikeCalcsTetrode(SpikeCalcsGeneric):
+    """
+    Encapsulates methods specific to the geometry inherent in tetrode-based
+    recordings
+    """
+    def __init__(self):
+        pass
 
+class SpikeCalcsProbe(SpikeCalcsGeneric):
+    """
+    Encapsulates methods specific to probe-based recordings
+    """
+    def __init__(self):
+        pass
 
 class EEGCalcsGeneric(object):
-    '''
+    """
     Generic class for processing and analysis of EEG data
 
     Parameters
     ----------
-    sig - 1D np.array of the LFP data
-    fs  - float - sample rate
-    '''
+    sig : array like
+        The signal (of the LFP data)
+    fs  : float
+        The sample rate
+    """
     def __init__(self, sig, fs):
         self.sig = sig
         self.fs = fs
@@ -227,8 +349,10 @@ class EEGCalcsGeneric(object):
         self.maxFreq = 125
         self.maxPow = None
 
-    def _nextpow2(self, val):
-        '''calculates the next power of 2 that will hold val'''
+    def _nextpow2(self, val : int):
+        """
+        Calculates the next power of 2 that will hold val
+        """
         val = val - 1
         val = (val >> 1) | val
         val = (val >> 2) | val
@@ -238,7 +362,27 @@ class EEGCalcsGeneric(object):
         val = (val >> 32) | val
         return np.log2(val + 1)
 
-    def butterFilter(self, low, high, order=5):
+    def butterFilter(self, low: float, high: float, order: int=5)->np.ndarray:
+        """
+        Filters self.sig with a butterworth filter with a bandpass filter
+        defined by low and high
+
+        Parameters
+        ----------
+        low, high : float
+            The lower and upper bounds of the bandpass filter
+        order : int
+            The order of the filter
+
+        Returns
+        -------
+        filt : np.ndarray
+            The filtered signal
+
+        Notes
+        -----
+        The signal is filtered in both the forward and reverse directions (scipy.signal.filtfilt)
+        """
         nyqlim = self.fs / 2
         lowcut = low / nyqlim
         highcut = high / nyqlim
@@ -246,6 +390,27 @@ class EEGCalcsGeneric(object):
         return signal.filtfilt(b, a, self.sig)
 
     def calcEEGPowerSpectrum(self, **kwargs):
+        """
+        Calculates the power spectrum of self.sig
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        Nothing. Sets a bunch of instance variables for the first time including
+            freqs : array_like
+                The frequencies at which the spectrogram was calculated
+            power : array_like
+                The power at the frequencies defined above
+            sm_power : array_like
+                The smoothed power
+            bandmaxpower : float
+                The maximum power in the theta band
+            freqatbandmaxpower : float
+                The frequency at which the power is maximum
+        """
         nqlim = self.fs / 2
         origlen = len(self.sig)
         fftlen = 2 ** self._nextpow2(origlen).astype(int)
@@ -337,18 +502,27 @@ class EEGCalcsGeneric(object):
         plt.show()
 
 class PosCalcsGeneric(object):
-    '''
+    """
     Generic class for post-processing of position data
     Uses numpys masked arrays for dealing with bad positions, filtering etc
 
     Parameters
     ----------
-    x - 1 or 2D np.array of x positions. If 2D then 2-LED tracking was done
-    y - same as x but for y positions
-    ppm - int - pixels per metre
-    cm - bool - whether everything is converted into cms or not
-    jumpmax - int - jumps in position (pixel coords) greater than this are bad
-    '''
+    x, y : array_like
+        The x and y positions.
+    ppm : int
+        Pixels per metre
+    cm : boolean
+        Whether everything is converted into cms or not
+    jumpmax : int
+        Jumps in position (pixel coords) greater than this are bad
+
+    Notes
+    -----
+    The positional data (x,y) is turned into a numpy masked array once this
+    class is initialised - that mask is then modified through various
+    functions (postprocesspos being the main one).
+    """
     def __init__(self, x, y, ppm, cm=True, jumpmax=100):
         assert np.shape(x) == np.shape(y)
         self.xy = np.ma.MaskedArray([x, y])
@@ -360,17 +534,31 @@ class PosCalcsGeneric(object):
         self.nleds = np.ndim(x)
         self.npos = len(x)
         self.tracker_params = None
+        self.sample_rate = None
 
-    def postprocesspos(self, tracker_params, **kwargs):
-        '''
+    def postprocesspos(self, tracker_params, **kwargs)->tuple:
+        """
         Post-process position data
 
         Parameters
         ----------
-        tracker_params - dict - same dict as created in OEKiloPhy.Settings.parsePos
-                                (from module openephys2py)
+        tracker_params : dict
+            Same dict as created in OEKiloPhy.Settings.parsePos
+            (from module openephys2py)
 
-        '''
+        Returns
+        -------
+        xy, hdir : np.ma.MaskedArray
+            The post-processed position data
+
+        Notes
+        -----
+        Several internal functions are called here: speefilter, interpnans, smoothPos
+        and calcSpeed. Some internal state/ instance variables are set as well. The
+        mask of the positional data (an instance of numpy masked array) is modified
+        throughout this method.
+
+        """
         xy = self.xy
         xy = np.ma.MaskedArray(xy, dtype=np.int32)
         x_zero = xy[:, 0] < 0
@@ -412,6 +600,19 @@ class PosCalcsGeneric(object):
         return xy, hdir
 
     def speedfilter(self, xy):
+        """
+        Filters speed
+
+        Parameters
+        ----------
+        xy : np.ma.MaskedArray
+            The xy data
+
+        Returns
+        -------
+        xy : np.ma.MaskedArray
+            The xy data with speeds > self.jumpmax masked
+        """
         df = np.diff(xy, axis=0)
         disp = np.hypot(df[:,0], df[:,1])
         disp = np.insert(disp, -1, 0)
@@ -439,8 +640,17 @@ class PosCalcsGeneric(object):
 
     def smoothPos(self, xy):
         '''
-        Process position data
-        TODO: make this synonomous with Axona's postprocesspos
+        Smooths position data
+
+        Parameters
+        ----------
+        xy : np.ma.MaskedArray
+            The xy data
+
+        Returns
+        -------
+        xy : array_like
+            The smoothed positional data
         '''
         # Extract boundaries of window used in recording
 
