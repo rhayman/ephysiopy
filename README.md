@@ -90,7 +90,7 @@ When you load the data the directory structure is iterated through to find files
 npx.load()
 ```
 
-The same principles apply to the OpenEphysNWB class - as the name suggests this is for use with data recorded in the .nwb format (https://www.nwb.org/)
+The same principles apply to the OpenEphysNWB class - as the name suggests this is for use with data recorded in the [.nwb format](https://www.nwb.org/)
 
 ## Motivation
 
