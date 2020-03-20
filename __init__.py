@@ -1,5 +1,5 @@
 """
-.. include:: ./documentation.md
+.. include:: ./README.md
 
 """
 __version__ = '1.5.34'
