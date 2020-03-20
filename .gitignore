@@ -11,6 +11,9 @@
 bin/
 build/
 
+# Other folders
+.vscode/
+
 # Precompiled Headers
 *.gch
 *.pch
