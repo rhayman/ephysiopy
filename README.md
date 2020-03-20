@@ -6,7 +6,7 @@ Tools for the analysis of electrophysiological data collected with the Axona or 
 
 ephysiopy requires python3.6 or greater. The easiest way to install is using pip:
 
-> python3 -m pip install dacq2py
+> python3 -m pip install ephysiopy
 
 Or similar.
 
@@ -29,7 +29,7 @@ Main entry class for Axona related analysis is "Trial" contained in ephysiopy.da
 
 ```
 from ephysiopy.dacq2py.dacq2py_util import Trial
-T = Trial('/path/to/dataset/mytrial')
+T = Trial("/path/to/dataset/mytrial")
 ```
 
 The "usual" Axona dataset includes the following files:
@@ -52,36 +52,35 @@ T.plotMap(tetrode=1, cluster=4)
 ```
 
 For openephys-type analysis there are two main entry classes depending on whether you are doing
-Neuropixels or more 'traditional' tetrode ephys-based analysis. Both classes inherit from the same
+Neuropixels or more traditional tetrode ephys-based analysis. Both classes inherit from the same
 parent class (OpenEphysBase) and so share a high degree of functional overlap.
 
 For Neuropixels:
 
 ```
 from ephysiopy.openephys2py.OEKiloPhy import OpenEphysNPX
-npx = OpenEphysNPX('/path/to/top_level')
+npx = OpenEphysNPX("/path/to/top_level")
 ```
 
-The '/path/to/top_level' bit here means that if your directory hierarchy looks like this:
+The "/path/to/top_level" bit here means that if your directory hierarchy looks like this:
 
 ```
 ├── settings.xml
 ├── 2020-03-20_12-40-15
-    └── experiment1
-        └── recording1
-            ├── structure.oebin
-            ├── sync_messages.txt
-            ├── continuous
-            |   └── Neuropix-PXI-107.0
-            |       └── continuous.dat
-            └── events
-
+|    └── experiment1
+|        └── recording1
+|            ├── structure.oebin
+|            ├── sync_messages.txt
+|            ├── continuous
+|            |   └── Neuropix-PXI-107.0
+|            |       └── continuous.dat
+|            └── events
 ```
 
 Then OpenEphysNPX should be instantiated as follows:
 
 ```
-npx = OpenEphysNPX('2020-03-20_12-40-15')
+npx = OpenEphysNPX("2020-03-20_12-40-15")
 ```
 
 When you load the data the directory structure is iterated through to find files such as sync_messages.txt and settings.xml and so on. The data is loaded by calling the load method:
