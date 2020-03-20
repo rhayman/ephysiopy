@@ -53,7 +53,7 @@ class SpikeCalcsGeneric(object):
 
     Parameters
     ----------
-    spike_times : array like
+    spike_times : array_like
         the times of &#39;spikes&#39; in the trial
         this should be all spikes as the cluster identity vector _spk_clusters
         is used to pick out the right spikes
@@ -184,10 +184,10 @@ class SpikeCalcsGeneric(object):
 
         Parameters
         ----------
-        x1, x2 : array like
+        x1, x2 : array_like
             The times of the spikes emitted by the cluster(s)
             NB must be signed int to accomodate negative times
-        Trange : array like
+        Trange : array_like
             Range of times to bin up. Defaults to [-500, +500] in ms
 
         Returns
@@ -211,13 +211,20 @@ class SpikeCalcsGeneric(object):
         return y
 
     def calculatePSTH(self, cluster_id, **kwargs):
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         Calculate the PSTH of event_ts against the spiking of a cell
 
         Parameters
         ----------
-        cluster_id - int - the cluster to calculate the psth of
-        &#39;&#39;&#39;
+        cluster_id : int
+            The cluster for which to calculate the psth
+
+        Returns
+        -------
+        x, y : list
+            The list of time differences between the spikes of the cluster
+            and the events (x) and the trials (y)
+        &#34;&#34;&#34;
         if self._event_ts is None:
             raise Exception(&#34;Need some event timestamps! Aborting&#34;)
         if self._spk_clusters is None:
@@ -239,13 +246,19 @@ class SpikeCalcsGeneric(object):
         return x, y
 
     def plotPSTH(self, cluster, fig=None):
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         Plots the PSTH for a cluster
 
         Parameters
         ----------
-        cluster - int - the cluster to examine
-        &#39;&#39;&#39;
+        cluster : int
+            The cluster to examine
+
+        Returns
+        -------
+        cluster, i : int
+            The cluster and a junk variable (not sure why for now)
+        &#34;&#34;&#34;
         x, y = self.calculatePSTH(cluster)
         show = False # used below to show the figure or leave this to the caller
         if fig is None:
@@ -329,29 +342,31 @@ class SpikeCalcsGeneric(object):
         plt.show()
 
 class SpikeCalcsTetrode(SpikeCalcsGeneric):
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
     Encapsulates methods specific to the geometry inherent in tetrode-based
     recordings
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
     def __init__(self):
         pass
 
 class SpikeCalcsProbe(SpikeCalcsGeneric):
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
     Encapsulates methods specific to probe-based recordings
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
     def __init__(self):
         pass
 
 class EEGCalcsGeneric(object):
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
     Generic class for processing and analysis of EEG data
 
     Parameters
     ----------
-    sig - 1D np.array of the LFP data
-    fs  - float - sample rate
-    &#39;&#39;&#39;
+    sig : array_like
+        The signal (of the LFP data)
+    fs  : float
+        The sample rate
+    &#34;&#34;&#34;
     def __init__(self, sig, fs):
         self.sig = sig
         self.fs = fs
@@ -364,8 +379,10 @@ class EEGCalcsGeneric(object):
         self.maxFreq = 125
         self.maxPow = None
 
-    def _nextpow2(self, val):
-        &#39;&#39;&#39;calculates the next power of 2 that will hold val&#39;&#39;&#39;
+    def _nextpow2(self, val : int):
+        &#34;&#34;&#34;
+        Calculates the next power of 2 that will hold val
+        &#34;&#34;&#34;
         val = val - 1
         val = (val &gt;&gt; 1) | val
         val = (val &gt;&gt; 2) | val
@@ -375,7 +392,27 @@ class EEGCalcsGeneric(object):
         val = (val &gt;&gt; 32) | val
         return np.log2(val + 1)
 
-    def butterFilter(self, low, high, order=5):
+    def butterFilter(self, low: float, high: float, order: int=5)-&gt;np.ndarray:
+        &#34;&#34;&#34;
+        Filters self.sig with a butterworth filter with a bandpass filter
+        defined by low and high
+
+        Parameters
+        ----------
+        low, high : float
+            The lower and upper bounds of the bandpass filter
+        order : int
+            The order of the filter
+
+        Returns
+        -------
+        filt : np.ndarray
+            The filtered signal
+
+        Notes
+        -----
+        The signal is filtered in both the forward and reverse directions (scipy.signal.filtfilt)
+        &#34;&#34;&#34;
         nyqlim = self.fs / 2
         lowcut = low / nyqlim
         highcut = high / nyqlim
@@ -383,6 +420,27 @@ class EEGCalcsGeneric(object):
         return signal.filtfilt(b, a, self.sig)
 
     def calcEEGPowerSpectrum(self, **kwargs):
+        &#34;&#34;&#34;
+        Calculates the power spectrum of self.sig
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        Nothing. Sets a bunch of instance variables for the first time including
+            freqs : array_like
+                The frequencies at which the spectrogram was calculated
+            power : array_like
+                The power at the frequencies defined above
+            sm_power : array_like
+                The smoothed power
+            bandmaxpower : float
+                The maximum power in the theta band
+            freqatbandmaxpower : float
+                The frequency at which the power is maximum
+        &#34;&#34;&#34;
         nqlim = self.fs / 2
         origlen = len(self.sig)
         fftlen = 2 ** self._nextpow2(origlen).astype(int)
@@ -474,18 +532,27 @@ class EEGCalcsGeneric(object):
         plt.show()
 
 class PosCalcsGeneric(object):
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
     Generic class for post-processing of position data
     Uses numpys masked arrays for dealing with bad positions, filtering etc
 
     Parameters
     ----------
-    x - 1 or 2D np.array of x positions. If 2D then 2-LED tracking was done
-    y - same as x but for y positions
-    ppm - int - pixels per metre
-    cm - bool - whether everything is converted into cms or not
-    jumpmax - int - jumps in position (pixel coords) greater than this are bad
-    &#39;&#39;&#39;
+    x, y : array_like
+        The x and y positions.
+    ppm : int
+        Pixels per metre
+    cm : boolean
+        Whether everything is converted into cms or not
+    jumpmax : int
+        Jumps in position (pixel coords) greater than this are bad
+
+    Notes
+    -----
+    The positional data (x,y) is turned into a numpy masked array once this
+    class is initialised - that mask is then modified through various
+    functions (postprocesspos being the main one).
+    &#34;&#34;&#34;
     def __init__(self, x, y, ppm, cm=True, jumpmax=100):
         assert np.shape(x) == np.shape(y)
         self.xy = np.ma.MaskedArray([x, y])
@@ -497,17 +564,31 @@ class PosCalcsGeneric(object):
         self.nleds = np.ndim(x)
         self.npos = len(x)
         self.tracker_params = None
+        self.sample_rate = None
 
-    def postprocesspos(self, tracker_params, **kwargs):
-        &#39;&#39;&#39;
+    def postprocesspos(self, tracker_params, **kwargs)-&gt;tuple:
+        &#34;&#34;&#34;
         Post-process position data
 
         Parameters
         ----------
-        tracker_params - dict - same dict as created in OEKiloPhy.Settings.parsePos
-                                (from module openephys2py)
+        tracker_params : dict
+            Same dict as created in OEKiloPhy.Settings.parsePos
+            (from module openephys2py)
 
-        &#39;&#39;&#39;
+        Returns
+        -------
+        xy, hdir : np.ma.MaskedArray
+            The post-processed position data
+
+        Notes
+        -----
+        Several internal functions are called here: speefilter, interpnans, smoothPos
+        and calcSpeed. Some internal state/ instance variables are set as well. The
+        mask of the positional data (an instance of numpy masked array) is modified
+        throughout this method.
+
+        &#34;&#34;&#34;
         xy = self.xy
         xy = np.ma.MaskedArray(xy, dtype=np.int32)
         x_zero = xy[:, 0] &lt; 0
@@ -549,6 +630,19 @@ class PosCalcsGeneric(object):
         return xy, hdir
 
     def speedfilter(self, xy):
+        &#34;&#34;&#34;
+        Filters speed
+
+        Parameters
+        ----------
+        xy : np.ma.MaskedArray
+            The xy data
+
+        Returns
+        -------
+        xy : np.ma.MaskedArray
+            The xy data with speeds &gt; self.jumpmax masked
+        &#34;&#34;&#34;
         df = np.diff(xy, axis=0)
         disp = np.hypot(df[:,0], df[:,1])
         disp = np.insert(disp, -1, 0)
@@ -576,8 +670,17 @@ class PosCalcsGeneric(object):
 
     def smoothPos(self, xy):
         &#39;&#39;&#39;
-        Process position data
-        TODO: make this synonomous with Axona&#39;s postprocesspos
+        Smooths position data
+
+        Parameters
+        ----------
+        xy : np.ma.MaskedArray
+            The xy data
+
+        Returns
+        -------
+        xy : array_like
+            The smoothed positional data
         &#39;&#39;&#39;
         # Extract boundaries of window used in recording
 
@@ -592,34 +695,76 @@ class PosCalcsGeneric(object):
         return np.array([sm_x, sm_y])
 
     def calcSpeed(self, xy):
+        &#34;&#34;&#34;
+        Calculates speed
+
+        Paramters
+        ---------
+        xy : np.ma.MaskedArray
+            The xy positional data
+
+        Returns
+        -------
+        Nothing. Sets self.speed
+        &#34;&#34;&#34;
         speed = np.sqrt(np.sum(np.power(np.diff(xy),2),0))
         speed = np.append(speed, speed[-1])
-        self.speed = speed * (100 * self.sample_rate / self.ppm) # in cm/s now
+        if self.cm:
+            self.speed = speed * (100 * self.sample_rate / self.ppm) # in cm/s now
+        else:
+            self.speed = speed
 
     def upsamplePos(self, xy, upsample_rate=50):
-        &#39;&#39;&#39;
-        Upsampling for matching with Axona pos sampling rate
-        NB Assumes that the pos is being upsampled from 30Hz
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
+        Upsamples position data from 30 to upsample_rate
+
+        Paramters
+        ---------
+        xy : np.ma.MaskedArray
+            The xy positional data
+
+        upsample_rate : int
+            The rate to upsample to
+
+        Returns
+        -------
+        new_xy : np.ma.MaskedArray
+            The upsampled xy positional data
+
+        Notes
+        -----
+        This is mostly to get pos data recorded using PosTracker at 30Hz
+        into Axona format 50Hz data
+        &#34;&#34;&#34;
         from scipy import signal
         denom = np.gcd(upsample_rate, 30)
         new_xy = signal.resample_poly(xy, upsample_rate/denom, 30/denom)
         return new_xy
 
 class MapCalcsGeneric(object):
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
+    Produces graphical output including but not limited to spatial
+    analysis of data i.e. ratemaps (xy, heading dir)ection, grid cell
+    spatial autocorrelograms, speed vs rate plots etc
 
-    &#39;&#39;&#39;
+    It is possible to iterate through instances of this class as it has a yield
+    method defined
+    &#34;&#34;&#34;
     def __init__(self, xy, hdir, speed, pos_ts, spk_ts, plot_type=&#39;map&#39;, **kwargs):
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         Parameters
         ----------
-        xy - 2D numpy array
-        hdir - 1D numpy array
-        pos_ts - 1D numpy array; timestamps in seconds
-        spk_ts - 1D numpy array; timestamps in seconds
-        plot_type - str or list - any combination of [&#39;map&#39;,&#39;path&#39;,&#39;hdir&#39;,&#39;sac&#39;, &#39;speed&#39;]
-        &#39;&#39;&#39;
+        xy : np.ndarray
+            2D numpy array
+        hdir : np.ndarray
+        pos_ts : np.ndarray
+            1D array of timestamps in seconds
+        spk_ts : np.ndarray
+            1D array of timestamps in seconds
+        plot_type : str or list
+            Determines the plots produced. Legal values:
+            [&#39;map&#39;,&#39;path&#39;,&#39;hdir&#39;,&#39;sac&#39;, &#39;speed&#39;]
+        &#34;&#34;&#34;
         if (np.argmin(np.shape(xy)) == 1):
             xy = xy.T
         self.xy = xy
@@ -939,22 +1084,28 @@ class MapCalcsGeneric(object):
 <dd>
 <section class="desc"><p>Generic class for processing and analysis of EEG data</p>
 <h2 id="parameters">Parameters</h2>
-<p>sig - 1D np.array of the LFP data
-fs
-- float - sample rate</p></section>
+<dl>
+<dt><strong><code>sig</code></strong> :&ensp;<code>array_like</code></dt>
+<dd>The signal (of the LFP data)</dd>
+</dl>
+<p>fs
+: float
+The sample rate</p></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class EEGCalcsGeneric(object):
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
     Generic class for processing and analysis of EEG data
 
     Parameters
     ----------
-    sig - 1D np.array of the LFP data
-    fs  - float - sample rate
-    &#39;&#39;&#39;
+    sig : array_like
+        The signal (of the LFP data)
+    fs  : float
+        The sample rate
+    &#34;&#34;&#34;
     def __init__(self, sig, fs):
         self.sig = sig
         self.fs = fs
@@ -967,8 +1118,10 @@ fs
         self.maxFreq = 125
         self.maxPow = None
 
-    def _nextpow2(self, val):
-        &#39;&#39;&#39;calculates the next power of 2 that will hold val&#39;&#39;&#39;
+    def _nextpow2(self, val : int):
+        &#34;&#34;&#34;
+        Calculates the next power of 2 that will hold val
+        &#34;&#34;&#34;
         val = val - 1
         val = (val &gt;&gt; 1) | val
         val = (val &gt;&gt; 2) | val
@@ -978,7 +1131,27 @@ fs
         val = (val &gt;&gt; 32) | val
         return np.log2(val + 1)
 
-    def butterFilter(self, low, high, order=5):
+    def butterFilter(self, low: float, high: float, order: int=5)-&gt;np.ndarray:
+        &#34;&#34;&#34;
+        Filters self.sig with a butterworth filter with a bandpass filter
+        defined by low and high
+
+        Parameters
+        ----------
+        low, high : float
+            The lower and upper bounds of the bandpass filter
+        order : int
+            The order of the filter
+
+        Returns
+        -------
+        filt : np.ndarray
+            The filtered signal
+
+        Notes
+        -----
+        The signal is filtered in both the forward and reverse directions (scipy.signal.filtfilt)
+        &#34;&#34;&#34;
         nyqlim = self.fs / 2
         lowcut = low / nyqlim
         highcut = high / nyqlim
@@ -986,6 +1159,27 @@ fs
         return signal.filtfilt(b, a, self.sig)
 
     def calcEEGPowerSpectrum(self, **kwargs):
+        &#34;&#34;&#34;
+        Calculates the power spectrum of self.sig
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        Nothing. Sets a bunch of instance variables for the first time including
+            freqs : array_like
+                The frequencies at which the spectrogram was calculated
+            power : array_like
+                The power at the frequencies defined above
+            sm_power : array_like
+                The smoothed power
+            bandmaxpower : float
+                The maximum power in the theta band
+            freqatbandmaxpower : float
+                The frequency at which the power is maximum
+        &#34;&#34;&#34;
         nqlim = self.fs / 2
         origlen = len(self.sig)
         fftlen = 2 ** self._nextpow2(origlen).astype(int)
@@ -1082,12 +1276,47 @@ fs
 <span>def <span class="ident">butterFilter</span></span>(<span>self, low, high, order=5)</span>
 </code></dt>
 <dd>
-<section class="desc"></section>
+<section class="desc"><p>Filters self.sig with a butterworth filter with a bandpass filter
+defined by low and high</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>low</code></strong>, <strong><code>high</code></strong> :&ensp;<code>float</code></dt>
+<dd>The lower and upper bounds of the bandpass filter</dd>
+<dt><strong><code>order</code></strong> :&ensp;<code>int</code></dt>
+<dd>The order of the filter</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>filt</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>The filtered signal</dd>
+</dl>
+<h2 id="notes">Notes</h2>
+<p>The signal is filtered in both the forward and reverse directions (scipy.signal.filtfilt)</p></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def butterFilter(self, low, high, order=5):
+<pre><code class="python">def butterFilter(self, low: float, high: float, order: int=5)-&gt;np.ndarray:
+    &#34;&#34;&#34;
+    Filters self.sig with a butterworth filter with a bandpass filter
+    defined by low and high
+
+    Parameters
+    ----------
+    low, high : float
+        The lower and upper bounds of the bandpass filter
+    order : int
+        The order of the filter
+
+    Returns
+    -------
+    filt : np.ndarray
+        The filtered signal
+
+    Notes
+    -----
+    The signal is filtered in both the forward and reverse directions (scipy.signal.filtfilt)
+    &#34;&#34;&#34;
     nyqlim = self.fs / 2
     lowcut = low / nyqlim
     highcut = high / nyqlim
@@ -1099,12 +1328,52 @@ fs
 <span>def <span class="ident">calcEEGPowerSpectrum</span></span>(<span>self, **kwargs)</span>
 </code></dt>
 <dd>
-<section class="desc"></section>
+<section class="desc"><p>Calculates the power spectrum of self.sig</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>None</code></strong></dt>
+<dd>&nbsp;</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Nothing.</code> <code>Sets</code> <code>a</code> <code>bunch</code> of <code>instance</code> <code>variables</code> <code>for</code> <code>the</code> <code>first</code> <code>time</code> <code>including</code></dt>
+<dd>freqs : array_like
+The frequencies at which the spectrogram was calculated
+power : array_like
+The power at the frequencies defined above
+sm_power : array_like
+The smoothed power
+bandmaxpower : float
+The maximum power in the theta band
+freqatbandmaxpower : float
+The frequency at which the power is maximum</dd>
+</dl></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def calcEEGPowerSpectrum(self, **kwargs):
+    &#34;&#34;&#34;
+    Calculates the power spectrum of self.sig
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    Nothing. Sets a bunch of instance variables for the first time including
+        freqs : array_like
+            The frequencies at which the spectrogram was calculated
+        power : array_like
+            The power at the frequencies defined above
+        sm_power : array_like
+            The smoothed power
+        bandmaxpower : float
+            The maximum power in the theta band
+        freqatbandmaxpower : float
+            The frequency at which the power is maximum
+    &#34;&#34;&#34;
     nqlim = self.fs / 2
     origlen = len(self.sig)
     fftlen = 2 ** self._nextpow2(origlen).astype(int)
@@ -1223,30 +1492,53 @@ fs
 <span>(</span><span>xy, hdir, speed, pos_ts, spk_ts, plot_type='map', **kwargs)</span>
 </code></dt>
 <dd>
-<section class="desc"><h2 id="parameters">Parameters</h2>
-<p>xy - 2D numpy array
-hdir - 1D numpy array
-pos_ts - 1D numpy array; timestamps in seconds
-spk_ts - 1D numpy array; timestamps in seconds
-plot_type - str or list - any combination of ['map','path','hdir','sac', 'speed']</p></section>
+<section class="desc"><p>Produces graphical output including but not limited to spatial
+analysis of data i.e. ratemaps (xy, heading dir)ection, grid cell
+spatial autocorrelograms, speed vs rate plots etc</p>
+<p>It is possible to iterate through instances of this class as it has a yield
+method defined</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>xy</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>2D numpy array</dd>
+<dt><strong><code>hdir</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>&nbsp;</dd>
+<dt><strong><code>pos_ts</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>1D array of timestamps in seconds</dd>
+<dt><strong><code>spk_ts</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>1D array of timestamps in seconds</dd>
+<dt><strong><code>plot_type</code></strong> :&ensp;<code>str</code> or <code>list</code></dt>
+<dd>Determines the plots produced. Legal values:
+['map','path','hdir','sac', 'speed']</dd>
+</dl></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class MapCalcsGeneric(object):
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
+    Produces graphical output including but not limited to spatial
+    analysis of data i.e. ratemaps (xy, heading dir)ection, grid cell
+    spatial autocorrelograms, speed vs rate plots etc
 
-    &#39;&#39;&#39;
+    It is possible to iterate through instances of this class as it has a yield
+    method defined
+    &#34;&#34;&#34;
     def __init__(self, xy, hdir, speed, pos_ts, spk_ts, plot_type=&#39;map&#39;, **kwargs):
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         Parameters
         ----------
-        xy - 2D numpy array
-        hdir - 1D numpy array
-        pos_ts - 1D numpy array; timestamps in seconds
-        spk_ts - 1D numpy array; timestamps in seconds
-        plot_type - str or list - any combination of [&#39;map&#39;,&#39;path&#39;,&#39;hdir&#39;,&#39;sac&#39;, &#39;speed&#39;]
-        &#39;&#39;&#39;
+        xy : np.ndarray
+            2D numpy array
+        hdir : np.ndarray
+        pos_ts : np.ndarray
+            1D array of timestamps in seconds
+        spk_ts : np.ndarray
+            1D array of timestamps in seconds
+        plot_type : str or list
+            Determines the plots produced. Legal values:
+            [&#39;map&#39;,&#39;path&#39;,&#39;hdir&#39;,&#39;sac&#39;, &#39;speed&#39;]
+        &#34;&#34;&#34;
         if (np.argmin(np.shape(xy)) == 1):
             xy = xy.T
         self.xy = xy
@@ -1842,28 +2134,46 @@ details</p></section>
 <section class="desc"><p>Generic class for post-processing of position data
 Uses numpys masked arrays for dealing with bad positions, filtering etc</p>
 <h2 id="parameters">Parameters</h2>
-<p>x - 1 or 2D np.array of x positions. If 2D then 2-LED tracking was done
-y - same as x but for y positions
-ppm - int - pixels per metre
-cm - bool - whether everything is converted into cms or not
-jumpmax - int - jumps in position (pixel coords) greater than this are bad</p></section>
+<dl>
+<dt><strong><code>x</code></strong>, <strong><code>y</code></strong> :&ensp;<code>array_like</code></dt>
+<dd>The x and y positions.</dd>
+<dt><strong><code>ppm</code></strong> :&ensp;<code>int</code></dt>
+<dd>Pixels per metre</dd>
+<dt><strong><code>cm</code></strong> :&ensp;<code>boolean</code></dt>
+<dd>Whether everything is converted into cms or not</dd>
+<dt><strong><code>jumpmax</code></strong> :&ensp;<code>int</code></dt>
+<dd>Jumps in position (pixel coords) greater than this are bad</dd>
+</dl>
+<h2 id="notes">Notes</h2>
+<p>The positional data (x,y) is turned into a numpy masked array once this
+class is initialised - that mask is then modified through various
+functions (postprocesspos being the main one).</p></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class PosCalcsGeneric(object):
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
     Generic class for post-processing of position data
     Uses numpys masked arrays for dealing with bad positions, filtering etc
 
     Parameters
     ----------
-    x - 1 or 2D np.array of x positions. If 2D then 2-LED tracking was done
-    y - same as x but for y positions
-    ppm - int - pixels per metre
-    cm - bool - whether everything is converted into cms or not
-    jumpmax - int - jumps in position (pixel coords) greater than this are bad
-    &#39;&#39;&#39;
+    x, y : array_like
+        The x and y positions.
+    ppm : int
+        Pixels per metre
+    cm : boolean
+        Whether everything is converted into cms or not
+    jumpmax : int
+        Jumps in position (pixel coords) greater than this are bad
+
+    Notes
+    -----
+    The positional data (x,y) is turned into a numpy masked array once this
+    class is initialised - that mask is then modified through various
+    functions (postprocesspos being the main one).
+    &#34;&#34;&#34;
     def __init__(self, x, y, ppm, cm=True, jumpmax=100):
         assert np.shape(x) == np.shape(y)
         self.xy = np.ma.MaskedArray([x, y])
@@ -1875,17 +2185,31 @@ jumpmax - int - jumps in position (pixel coords) greater than this are bad</p></
         self.nleds = np.ndim(x)
         self.npos = len(x)
         self.tracker_params = None
+        self.sample_rate = None
 
-    def postprocesspos(self, tracker_params, **kwargs):
-        &#39;&#39;&#39;
+    def postprocesspos(self, tracker_params, **kwargs)-&gt;tuple:
+        &#34;&#34;&#34;
         Post-process position data
 
         Parameters
         ----------
-        tracker_params - dict - same dict as created in OEKiloPhy.Settings.parsePos
-                                (from module openephys2py)
+        tracker_params : dict
+            Same dict as created in OEKiloPhy.Settings.parsePos
+            (from module openephys2py)
 
-        &#39;&#39;&#39;
+        Returns
+        -------
+        xy, hdir : np.ma.MaskedArray
+            The post-processed position data
+
+        Notes
+        -----
+        Several internal functions are called here: speefilter, interpnans, smoothPos
+        and calcSpeed. Some internal state/ instance variables are set as well. The
+        mask of the positional data (an instance of numpy masked array) is modified
+        throughout this method.
+
+        &#34;&#34;&#34;
         xy = self.xy
         xy = np.ma.MaskedArray(xy, dtype=np.int32)
         x_zero = xy[:, 0] &lt; 0
@@ -1927,6 +2251,19 @@ jumpmax - int - jumps in position (pixel coords) greater than this are bad</p></
         return xy, hdir
 
     def speedfilter(self, xy):
+        &#34;&#34;&#34;
+        Filters speed
+
+        Parameters
+        ----------
+        xy : np.ma.MaskedArray
+            The xy data
+
+        Returns
+        -------
+        xy : np.ma.MaskedArray
+            The xy data with speeds &gt; self.jumpmax masked
+        &#34;&#34;&#34;
         df = np.diff(xy, axis=0)
         disp = np.hypot(df[:,0], df[:,1])
         disp = np.insert(disp, -1, 0)
@@ -1954,8 +2291,17 @@ jumpmax - int - jumps in position (pixel coords) greater than this are bad</p></
 
     def smoothPos(self, xy):
         &#39;&#39;&#39;
-        Process position data
-        TODO: make this synonomous with Axona&#39;s postprocesspos
+        Smooths position data
+
+        Parameters
+        ----------
+        xy : np.ma.MaskedArray
+            The xy data
+
+        Returns
+        -------
+        xy : array_like
+            The smoothed positional data
         &#39;&#39;&#39;
         # Extract boundaries of window used in recording
 
@@ -1970,15 +2316,47 @@ jumpmax - int - jumps in position (pixel coords) greater than this are bad</p></
         return np.array([sm_x, sm_y])
 
     def calcSpeed(self, xy):
+        &#34;&#34;&#34;
+        Calculates speed
+
+        Paramters
+        ---------
+        xy : np.ma.MaskedArray
+            The xy positional data
+
+        Returns
+        -------
+        Nothing. Sets self.speed
+        &#34;&#34;&#34;
         speed = np.sqrt(np.sum(np.power(np.diff(xy),2),0))
         speed = np.append(speed, speed[-1])
-        self.speed = speed * (100 * self.sample_rate / self.ppm) # in cm/s now
+        if self.cm:
+            self.speed = speed * (100 * self.sample_rate / self.ppm) # in cm/s now
+        else:
+            self.speed = speed
 
     def upsamplePos(self, xy, upsample_rate=50):
-        &#39;&#39;&#39;
-        Upsampling for matching with Axona pos sampling rate
-        NB Assumes that the pos is being upsampled from 30Hz
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
+        Upsamples position data from 30 to upsample_rate
+
+        Paramters
+        ---------
+        xy : np.ma.MaskedArray
+            The xy positional data
+
+        upsample_rate : int
+            The rate to upsample to
+
+        Returns
+        -------
+        new_xy : np.ma.MaskedArray
+            The upsampled xy positional data
+
+        Notes
+        -----
+        This is mostly to get pos data recorded using PosTracker at 30Hz
+        into Axona format 50Hz data
+        &#34;&#34;&#34;
         from scipy import signal
         denom = np.gcd(upsample_rate, 30)
         new_xy = signal.resample_poly(xy, upsample_rate/denom, 30/denom)
@@ -1990,15 +2368,40 @@ jumpmax - int - jumps in position (pixel coords) greater than this are bad</p></
 <span>def <span class="ident">calcSpeed</span></span>(<span>self, xy)</span>
 </code></dt>
 <dd>
-<section class="desc"></section>
+<section class="desc"><p>Calculates speed</p>
+<h2 id="paramters">Paramters</h2>
+<dl>
+<dt><strong><code>xy</code></strong> :&ensp;<code>np.ma.MaskedArray</code></dt>
+<dd>The xy positional data</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Nothing.</code> <code>Sets</code> <code>self.speed</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def calcSpeed(self, xy):
+    &#34;&#34;&#34;
+    Calculates speed
+
+    Paramters
+    ---------
+    xy : np.ma.MaskedArray
+        The xy positional data
+
+    Returns
+    -------
+    Nothing. Sets self.speed
+    &#34;&#34;&#34;
     speed = np.sqrt(np.sum(np.power(np.diff(xy),2),0))
     speed = np.append(speed, speed[-1])
-    self.speed = speed * (100 * self.sample_rate / self.ppm) # in cm/s now</code></pre>
+    if self.cm:
+        self.speed = speed * (100 * self.sample_rate / self.ppm) # in cm/s now
+    else:
+        self.speed = speed</code></pre>
 </details>
 </dd>
 <dt id="ephysiopy.ephys_generic.ephys_generic.PosCalcsGeneric.interpnans"><code class="name flex">
@@ -2036,22 +2439,48 @@ jumpmax - int - jumps in position (pixel coords) greater than this are bad</p></
 <dd>
 <section class="desc"><p>Post-process position data</p>
 <h2 id="parameters">Parameters</h2>
-<p>tracker_params - dict - same dict as created in OEKiloPhy.Settings.parsePos
-(from module openephys2py)</p></section>
+<dl>
+<dt><strong><code>tracker_params</code></strong> :&ensp;<code>dict</code></dt>
+<dd>Same dict as created in OEKiloPhy.Settings.parsePos
+(from module openephys2py)</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>xy</code></strong>, <strong><code>hdir</code></strong> :&ensp;<code>np.ma.MaskedArray</code></dt>
+<dd>The post-processed position data</dd>
+</dl>
+<h2 id="notes">Notes</h2>
+<p>Several internal functions are called here: speefilter, interpnans, smoothPos
+and calcSpeed. Some internal state/ instance variables are set as well. The
+mask of the positional data (an instance of numpy masked array) is modified
+throughout this method.</p></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def postprocesspos(self, tracker_params, **kwargs):
-    &#39;&#39;&#39;
+<pre><code class="python">def postprocesspos(self, tracker_params, **kwargs)-&gt;tuple:
+    &#34;&#34;&#34;
     Post-process position data
 
     Parameters
     ----------
-    tracker_params - dict - same dict as created in OEKiloPhy.Settings.parsePos
-                            (from module openephys2py)
+    tracker_params : dict
+        Same dict as created in OEKiloPhy.Settings.parsePos
+        (from module openephys2py)
 
-    &#39;&#39;&#39;
+    Returns
+    -------
+    xy, hdir : np.ma.MaskedArray
+        The post-processed position data
+
+    Notes
+    -----
+    Several internal functions are called here: speefilter, interpnans, smoothPos
+    and calcSpeed. Some internal state/ instance variables are set as well. The
+    mask of the positional data (an instance of numpy masked array) is modified
+    throughout this method.
+
+    &#34;&#34;&#34;
     xy = self.xy
     xy = np.ma.MaskedArray(xy, dtype=np.int32)
     x_zero = xy[:, 0] &lt; 0
@@ -2097,16 +2526,34 @@ jumpmax - int - jumps in position (pixel coords) greater than this are bad</p></
 <span>def <span class="ident">smoothPos</span></span>(<span>self, xy)</span>
 </code></dt>
 <dd>
-<section class="desc"><p>Process position data
-TODO: make this synonomous with Axona's postprocesspos</p></section>
+<section class="desc"><p>Smooths position data</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>xy</code></strong> :&ensp;<code>np.ma.MaskedArray</code></dt>
+<dd>The xy data</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>xy</code></strong> :&ensp;<code>array_like</code></dt>
+<dd>The smoothed positional data</dd>
+</dl></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def smoothPos(self, xy):
     &#39;&#39;&#39;
-    Process position data
-    TODO: make this synonomous with Axona&#39;s postprocesspos
+    Smooths position data
+
+    Parameters
+    ----------
+    xy : np.ma.MaskedArray
+        The xy data
+
+    Returns
+    -------
+    xy : array_like
+        The smoothed positional data
     &#39;&#39;&#39;
     # Extract boundaries of window used in recording
 
@@ -2125,12 +2572,35 @@ TODO: make this synonomous with Axona's postprocesspos</p></section>
 <span>def <span class="ident">speedfilter</span></span>(<span>self, xy)</span>
 </code></dt>
 <dd>
-<section class="desc"></section>
+<section class="desc"><p>Filters speed</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>xy</code></strong> :&ensp;<code>np.ma.MaskedArray</code></dt>
+<dd>The xy data</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>xy</code></strong> :&ensp;<code>np.ma.MaskedArray</code></dt>
+<dd>The xy data with speeds &gt; self.jumpmax masked</dd>
+</dl></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def speedfilter(self, xy):
+    &#34;&#34;&#34;
+    Filters speed
+
+    Parameters
+    ----------
+    xy : np.ma.MaskedArray
+        The xy data
+
+    Returns
+    -------
+    xy : np.ma.MaskedArray
+        The xy data with speeds &gt; self.jumpmax masked
+    &#34;&#34;&#34;
     df = np.diff(xy, axis=0)
     disp = np.hypot(df[:,0], df[:,1])
     disp = np.insert(disp, -1, 0)
@@ -2142,17 +2612,48 @@ TODO: make this synonomous with Axona's postprocesspos</p></section>
 <span>def <span class="ident">upsamplePos</span></span>(<span>self, xy, upsample_rate=50)</span>
 </code></dt>
 <dd>
-<section class="desc"><p>Upsampling for matching with Axona pos sampling rate
-NB Assumes that the pos is being upsampled from 30Hz</p></section>
+<section class="desc"><p>Upsamples position data from 30 to upsample_rate</p>
+<h2 id="paramters">Paramters</h2>
+<dl>
+<dt><strong><code>xy</code></strong> :&ensp;<code>np.ma.MaskedArray</code></dt>
+<dd>The xy positional data</dd>
+<dt><strong><code>upsample_rate</code></strong> :&ensp;<code>int</code></dt>
+<dd>The rate to upsample to</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>new_xy</code></strong> :&ensp;<code>np.ma.MaskedArray</code></dt>
+<dd>The upsampled xy positional data</dd>
+</dl>
+<h2 id="notes">Notes</h2>
+<p>This is mostly to get pos data recorded using PosTracker at 30Hz
+into Axona format 50Hz data</p></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def upsamplePos(self, xy, upsample_rate=50):
-    &#39;&#39;&#39;
-    Upsampling for matching with Axona pos sampling rate
-    NB Assumes that the pos is being upsampled from 30Hz
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
+    Upsamples position data from 30 to upsample_rate
+
+    Paramters
+    ---------
+    xy : np.ma.MaskedArray
+        The xy positional data
+
+    upsample_rate : int
+        The rate to upsample to
+
+    Returns
+    -------
+    new_xy : np.ma.MaskedArray
+        The upsampled xy positional data
+
+    Notes
+    -----
+    This is mostly to get pos data recorded using PosTracker at 30Hz
+    into Axona format 50Hz data
+    &#34;&#34;&#34;
     from scipy import signal
     denom = np.gcd(upsample_rate, 30)
     new_xy = signal.resample_poly(xy, upsample_rate/denom, 30/denom)
@@ -2169,7 +2670,7 @@ NB Assumes that the pos is being upsampled from 30Hz</p></section>
 <section class="desc"><p>Generic class for processing and analysis of spiking data</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
-<dt><strong><code>spike_times</code></strong> :&ensp;<code>array</code> <code>like</code></dt>
+<dt><strong><code>spike_times</code></strong> :&ensp;<code>array_like</code></dt>
 <dd>the times of 'spikes' in the trial
 this should be all spikes as the cluster identity vector _spk_clusters
 is used to pick out the right spikes</dd>
@@ -2189,7 +2690,7 @@ a 4 x nSpikes x nSamples (4 for tetrode-based analysis)</dd>
 
     Parameters
     ----------
-    spike_times : array like
+    spike_times : array_like
         the times of &#39;spikes&#39; in the trial
         this should be all spikes as the cluster identity vector _spk_clusters
         is used to pick out the right spikes
@@ -2320,10 +2821,10 @@ a 4 x nSpikes x nSamples (4 for tetrode-based analysis)</dd>
 
         Parameters
         ----------
-        x1, x2 : array like
+        x1, x2 : array_like
             The times of the spikes emitted by the cluster(s)
             NB must be signed int to accomodate negative times
-        Trange : array like
+        Trange : array_like
             Range of times to bin up. Defaults to [-500, +500] in ms
 
         Returns
@@ -2347,13 +2848,20 @@ a 4 x nSpikes x nSamples (4 for tetrode-based analysis)</dd>
         return y
 
     def calculatePSTH(self, cluster_id, **kwargs):
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         Calculate the PSTH of event_ts against the spiking of a cell
 
         Parameters
         ----------
-        cluster_id - int - the cluster to calculate the psth of
-        &#39;&#39;&#39;
+        cluster_id : int
+            The cluster for which to calculate the psth
+
+        Returns
+        -------
+        x, y : list
+            The list of time differences between the spikes of the cluster
+            and the events (x) and the trials (y)
+        &#34;&#34;&#34;
         if self._event_ts is None:
             raise Exception(&#34;Need some event timestamps! Aborting&#34;)
         if self._spk_clusters is None:
@@ -2375,13 +2883,19 @@ a 4 x nSpikes x nSamples (4 for tetrode-based analysis)</dd>
         return x, y
 
     def plotPSTH(self, cluster, fig=None):
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         Plots the PSTH for a cluster
 
         Parameters
         ----------
-        cluster - int - the cluster to examine
-        &#39;&#39;&#39;
+        cluster : int
+            The cluster to examine
+
+        Returns
+        -------
+        cluster, i : int
+            The cluster and a junk variable (not sure why for now)
+        &#34;&#34;&#34;
         x, y = self.calculatePSTH(cluster)
         show = False # used below to show the figure or leave this to the caller
         if fig is None:
@@ -2552,19 +3066,35 @@ def stim_width(self):
 <dd>
 <section class="desc"><p>Calculate the PSTH of event_ts against the spiking of a cell</p>
 <h2 id="parameters">Parameters</h2>
-<p>cluster_id - int - the cluster to calculate the psth of</p></section>
+<dl>
+<dt><strong><code>cluster_id</code></strong> :&ensp;<code>int</code></dt>
+<dd>The cluster for which to calculate the psth</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>x</code></strong>, <strong><code>y</code></strong> :&ensp;<code>list</code></dt>
+<dd>The list of time differences between the spikes of the cluster
+and the events (x) and the trials (y)</dd>
+</dl></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def calculatePSTH(self, cluster_id, **kwargs):
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
     Calculate the PSTH of event_ts against the spiking of a cell
 
     Parameters
     ----------
-    cluster_id - int - the cluster to calculate the psth of
-    &#39;&#39;&#39;
+    cluster_id : int
+        The cluster for which to calculate the psth
+
+    Returns
+    -------
+    x, y : list
+        The list of time differences between the spikes of the cluster
+        and the events (x) and the trials (y)
+    &#34;&#34;&#34;
     if self._event_ts is None:
         raise Exception(&#34;Need some event timestamps! Aborting&#34;)
     if self._spk_clusters is None:
@@ -2704,19 +3234,33 @@ Used to help classify a neruons type (principal, interneuron etc)</p>
 <dd>
 <section class="desc"><p>Plots the PSTH for a cluster</p>
 <h2 id="parameters">Parameters</h2>
-<p>cluster - int - the cluster to examine</p></section>
+<dl>
+<dt><strong><code>cluster</code></strong> :&ensp;<code>int</code></dt>
+<dd>The cluster to examine</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>cluster</code></strong>, <strong><code>i</code></strong> :&ensp;<code>int</code></dt>
+<dd>The cluster and a junk variable (not sure why for now)</dd>
+</dl></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def plotPSTH(self, cluster, fig=None):
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
     Plots the PSTH for a cluster
 
     Parameters
     ----------
-    cluster - int - the cluster to examine
-    &#39;&#39;&#39;
+    cluster : int
+        The cluster to examine
+
+    Returns
+    -------
+    cluster, i : int
+        The cluster and a junk variable (not sure why for now)
+    &#34;&#34;&#34;
     x, y = self.calculatePSTH(cluster)
     show = False # used below to show the figure or leave this to the caller
     if fig is None:
@@ -2794,10 +3338,10 @@ Used to help classify a neruons type (principal, interneuron etc)</p>
 <section class="desc"><p>Calculates the histogram of the ISIs in x1 or x1 vs x2</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
-<dt><strong><code>x1</code></strong>, <strong><code>x2</code></strong> :&ensp;<code>array</code> <code>like</code></dt>
+<dt><strong><code>x1</code></strong>, <strong><code>x2</code></strong> :&ensp;<code>array_like</code></dt>
 <dd>The times of the spikes emitted by the cluster(s)
 NB must be signed int to accomodate negative times</dd>
-<dt><strong><code>Trange</code></strong> :&ensp;<code>array</code> <code>like</code></dt>
+<dt><strong><code>Trange</code></strong> :&ensp;<code>array_like</code></dt>
 <dd>Range of times to bin up. Defaults to [-500, +500] in ms</dd>
 </dl>
 <h2 id="returns">Returns</h2>
@@ -2816,10 +3360,10 @@ of times defined Trange</dd>
 
     Parameters
     ----------
-    x1, x2 : array like
+    x1, x2 : array_like
         The times of the spikes emitted by the cluster(s)
         NB must be signed int to accomodate negative times
-    Trange : array like
+    Trange : array_like
         Range of times to bin up. Defaults to [-500, +500] in ms
 
     Returns
@@ -2855,9 +3399,9 @@ of times defined Trange</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class SpikeCalcsProbe(SpikeCalcsGeneric):
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
     Encapsulates methods specific to probe-based recordings
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
     def __init__(self):
         pass</code></pre>
 </details>
@@ -2889,10 +3433,10 @@ recordings</p></section>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class SpikeCalcsTetrode(SpikeCalcsGeneric):
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
     Encapsulates methods specific to the geometry inherent in tetrode-based
     recordings
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
     def __init__(self):
         pass</code></pre>
 </details>

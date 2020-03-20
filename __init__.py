@@ -1,4 +1,8 @@
-__version__ = '1.5.30'
+"""
+This is a test to see if pdoc grabs this documentation
+
+"""
+__version__ = '1.5.32'
 import mahotas # this is to get around a weird, possibly python3.6 related issue
 kk_path = '/home/robin/klustakwik/KlustaKwik'
 # used to bandpass filter the continuous raw openephys data when converting to

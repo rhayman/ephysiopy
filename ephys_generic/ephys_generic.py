@@ -23,7 +23,7 @@ class SpikeCalcsGeneric(object):
 
     Parameters
     ----------
-    spike_times : array like
+    spike_times : array_like
         the times of 'spikes' in the trial
         this should be all spikes as the cluster identity vector _spk_clusters
         is used to pick out the right spikes
@@ -154,10 +154,10 @@ class SpikeCalcsGeneric(object):
 
         Parameters
         ----------
-        x1, x2 : array like
+        x1, x2 : array_like
             The times of the spikes emitted by the cluster(s)
             NB must be signed int to accomodate negative times
-        Trange : array like
+        Trange : array_like
             Range of times to bin up. Defaults to [-500, +500] in ms
 
         Returns
@@ -332,7 +332,7 @@ class EEGCalcsGeneric(object):
 
     Parameters
     ----------
-    sig : array like
+    sig : array_like
         The signal (of the LFP data)
     fs  : float
         The sample rate
@@ -665,34 +665,76 @@ class PosCalcsGeneric(object):
         return np.array([sm_x, sm_y])
 
     def calcSpeed(self, xy):
+        """
+        Calculates speed
+
+        Paramters
+        ---------
+        xy : np.ma.MaskedArray
+            The xy positional data
+
+        Returns
+        -------
+        Nothing. Sets self.speed
+        """
         speed = np.sqrt(np.sum(np.power(np.diff(xy),2),0))
         speed = np.append(speed, speed[-1])
-        self.speed = speed * (100 * self.sample_rate / self.ppm) # in cm/s now
+        if self.cm:
+            self.speed = speed * (100 * self.sample_rate / self.ppm) # in cm/s now
+        else:
+            self.speed = speed
 
     def upsamplePos(self, xy, upsample_rate=50):
-        '''
-        Upsampling for matching with Axona pos sampling rate
-        NB Assumes that the pos is being upsampled from 30Hz
-        '''
+        """
+        Upsamples position data from 30 to upsample_rate
+
+        Paramters
+        ---------
+        xy : np.ma.MaskedArray
+            The xy positional data
+
+        upsample_rate : int
+            The rate to upsample to
+
+        Returns
+        -------
+        new_xy : np.ma.MaskedArray
+            The upsampled xy positional data
+
+        Notes
+        -----
+        This is mostly to get pos data recorded using PosTracker at 30Hz
+        into Axona format 50Hz data
+        """
         from scipy import signal
         denom = np.gcd(upsample_rate, 30)
         new_xy = signal.resample_poly(xy, upsample_rate/denom, 30/denom)
         return new_xy
 
 class MapCalcsGeneric(object):
-    '''
+    """
+    Produces graphical output including but not limited to spatial
+    analysis of data i.e. ratemaps (xy, heading dir)ection, grid cell
+    spatial autocorrelograms, speed vs rate plots etc
 
-    '''
+    It is possible to iterate through instances of this class as it has a yield
+    method defined
+    """
     def __init__(self, xy, hdir, speed, pos_ts, spk_ts, plot_type='map', **kwargs):
-        '''
+        """
         Parameters
         ----------
-        xy - 2D numpy array
-        hdir - 1D numpy array
-        pos_ts - 1D numpy array; timestamps in seconds
-        spk_ts - 1D numpy array; timestamps in seconds
-        plot_type - str or list - any combination of ['map','path','hdir','sac', 'speed']
-        '''
+        xy : np.ndarray
+            2D numpy array
+        hdir : np.ndarray
+        pos_ts : np.ndarray
+            1D array of timestamps in seconds
+        spk_ts : np.ndarray
+            1D array of timestamps in seconds
+        plot_type : str or list
+            Determines the plots produced. Legal values:
+            ['map','path','hdir','sac', 'speed']
+        """
         if (np.argmin(np.shape(xy)) == 1):
             xy = xy.T
         self.xy = xy
