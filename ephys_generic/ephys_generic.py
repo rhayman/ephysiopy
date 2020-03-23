@@ -282,9 +282,16 @@ class SpikeCalcsGeneric(object):
         yield cluster, 1
 
     def plotAllXCorrs(self, clusters, fig=None):
-        '''
-        Plots all scorrs in a single figure window
-        '''
+        """
+        Plots all xcorrs in a single figure window
+
+        Parameters
+        ----------
+        clusters : list
+            The clusters to plot
+        fig : matplotlib.figure instance, optional, default None
+            If provided the figure will contain all the axes
+        """
         from ephysiopy.dacq2py import spikecalcs
         SpkCalcs = spikecalcs.SpikeCalcs()
         if fig is None:
@@ -461,10 +468,22 @@ class EEGCalcsGeneric(object):
         plt.show()
 
     def plotEventEEG(self, event_ts, event_window=(-0.05, 0.1), stim_width=0.01, sample_rate=3e4):
-        '''
+        """
         Plots the mean eeg +- std. dev centred on event timestamps
 
-        '''
+        Parameters
+        ----------
+        event_ts : array_like
+            The event timestamps in seconds
+        event_window : 2-tuple, default = (-0.05, 0.1)
+            The pre- and post-stimulus window to examine. In seconds.
+            Defaults to the previous 50ms and the subsequent 100ms
+        stim_width : float
+            The duration of the stimulus. Used for plotting
+        sample_rate : float
+            The sample rate of the events
+
+        """
         # bandpass filter the raw data first
         from scipy import signal
         nyq = sample_rate / 2
@@ -639,7 +658,7 @@ class PosCalcsGeneric(object):
         return xy
 
     def smoothPos(self, xy):
-        '''
+        """
         Smooths position data
 
         Parameters
@@ -651,7 +670,7 @@ class PosCalcsGeneric(object):
         -------
         xy : array_like
             The smoothed positional data
-        '''
+        """
         # Extract boundaries of window used in recording
 
         x = xy[:,0].astype(np.float64)
@@ -761,11 +780,11 @@ class MapCalcsGeneric(object):
             self.save_grid_output_location = kwargs['save_grid_summary_location']
 
     def __interpSpkPosTimes(self):
-        '''
+        """
         Interpolates spike times into indices of position data
         NB Assumes pos times have been zeroed correctly - see comments in
         OEKiloPhy.OpenEphysNWB function __alignTimeStamps__()
-        '''
+        """
         idx = np.searchsorted(self.pos_ts, self.spk_ts)
         idx[idx==len(self.pos_ts)] = len(self.pos_ts) - 1
         return idx
@@ -795,6 +814,15 @@ class MapCalcsGeneric(object):
         self.__ppm = value
 
     def plotAll(self):
+        """
+        Plots rate maps and other graphical output
+
+        Notes
+        ----
+        This method uses the data provided to the class instance to plot
+        various maps into a single figure window for each cluster. The things
+        to plot are given in self.plot_type and the list of clusters in self.good_clusters
+        """
         if 'all' in self.plot_type:
             what_to_plot = ['map','path','hdir','sac','speed', 'sp_hd']
             fig = plt.figure(figsize=(20,10))
@@ -817,7 +845,6 @@ class MapCalcsGeneric(object):
             inner_nrows = 1
         else:
             inner_nrows = 2
-        first_sub_axis = what_to_plot[0]
         for i, cluster in enumerate(self.good_clusters):
             inner = gridspec.GridSpecFromSubplotSpec(inner_nrows,inner_ncols, subplot_spec=outer[i])
             for plot_type_idx, plot_type in enumerate(what_to_plot):

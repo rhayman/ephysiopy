@@ -57,7 +57,7 @@ class SpikeCalcsGeneric(object):
         the times of &#39;spikes&#39; in the trial
         this should be all spikes as the cluster identity vector _spk_clusters
         is used to pick out the right spikes
-    waveforms : np.array
+    waveforms : np.array, optional
         not sure on shape yet but will be something like a
         a 4 x nSpikes x nSamples (4 for tetrode-based analysis)
 
@@ -312,9 +312,16 @@ class SpikeCalcsGeneric(object):
         yield cluster, 1
 
     def plotAllXCorrs(self, clusters, fig=None):
-        &#39;&#39;&#39;
-        Plots all scorrs in a single figure window
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
+        Plots all xcorrs in a single figure window
+
+        Parameters
+        ----------
+        clusters : list
+            The clusters to plot
+        fig : matplotlib.figure instance, optional, default None
+            If provided the figure will contain all the axes
+        &#34;&#34;&#34;
         from ephysiopy.dacq2py import spikecalcs
         SpkCalcs = spikecalcs.SpikeCalcs()
         if fig is None:
@@ -491,10 +498,22 @@ class EEGCalcsGeneric(object):
         plt.show()
 
     def plotEventEEG(self, event_ts, event_window=(-0.05, 0.1), stim_width=0.01, sample_rate=3e4):
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         Plots the mean eeg +- std. dev centred on event timestamps
 
-        &#39;&#39;&#39;
+        Parameters
+        ----------
+        event_ts : array_like
+            The event timestamps in seconds
+        event_window : 2-tuple, default = (-0.05, 0.1)
+            The pre- and post-stimulus window to examine. In seconds.
+            Defaults to the previous 50ms and the subsequent 100ms
+        stim_width : float
+            The duration of the stimulus. Used for plotting
+        sample_rate : float
+            The sample rate of the events
+
+        &#34;&#34;&#34;
         # bandpass filter the raw data first
         from scipy import signal
         nyq = sample_rate / 2
@@ -669,7 +688,7 @@ class PosCalcsGeneric(object):
         return xy
 
     def smoothPos(self, xy):
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         Smooths position data
 
         Parameters
@@ -681,7 +700,7 @@ class PosCalcsGeneric(object):
         -------
         xy : array_like
             The smoothed positional data
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         # Extract boundaries of window used in recording
 
         x = xy[:,0].astype(np.float64)
@@ -791,11 +810,11 @@ class MapCalcsGeneric(object):
             self.save_grid_output_location = kwargs[&#39;save_grid_summary_location&#39;]
 
     def __interpSpkPosTimes(self):
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         Interpolates spike times into indices of position data
         NB Assumes pos times have been zeroed correctly - see comments in
         OEKiloPhy.OpenEphysNWB function __alignTimeStamps__()
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         idx = np.searchsorted(self.pos_ts, self.spk_ts)
         idx[idx==len(self.pos_ts)] = len(self.pos_ts) - 1
         return idx
@@ -825,6 +844,15 @@ class MapCalcsGeneric(object):
         self.__ppm = value
 
     def plotAll(self):
+        &#34;&#34;&#34;
+        Plots rate maps and other graphical output
+
+        Notes
+        ----
+        This method uses the data provided to the class instance to plot
+        various maps into a single figure window for each cluster. The things
+        to plot are given in self.plot_type and the list of clusters in self.good_clusters
+        &#34;&#34;&#34;
         if &#39;all&#39; in self.plot_type:
             what_to_plot = [&#39;map&#39;,&#39;path&#39;,&#39;hdir&#39;,&#39;sac&#39;,&#39;speed&#39;, &#39;sp_hd&#39;]
             fig = plt.figure(figsize=(20,10))
@@ -847,7 +875,6 @@ class MapCalcsGeneric(object):
             inner_nrows = 1
         else:
             inner_nrows = 2
-        first_sub_axis = what_to_plot[0]
         for i, cluster in enumerate(self.good_clusters):
             inner = gridspec.GridSpecFromSubplotSpec(inner_nrows,inner_ncols, subplot_spec=outer[i])
             for plot_type_idx, plot_type in enumerate(what_to_plot):
@@ -1230,10 +1257,22 @@ The sample rate</p></section>
         plt.show()
 
     def plotEventEEG(self, event_ts, event_window=(-0.05, 0.1), stim_width=0.01, sample_rate=3e4):
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         Plots the mean eeg +- std. dev centred on event timestamps
 
-        &#39;&#39;&#39;
+        Parameters
+        ----------
+        event_ts : array_like
+            The event timestamps in seconds
+        event_window : 2-tuple, default = (-0.05, 0.1)
+            The pre- and post-stimulus window to examine. In seconds.
+            Defaults to the previous 50ms and the subsequent 100ms
+        stim_width : float
+            The duration of the stimulus. Used for plotting
+        sample_rate : float
+            The sample rate of the events
+
+        &#34;&#34;&#34;
         # bandpass filter the raw data first
         from scipy import signal
         nyq = sample_rate / 2
@@ -1401,16 +1440,40 @@ The frequency at which the power is maximum</dd>
 <span>def <span class="ident">plotEventEEG</span></span>(<span>self, event_ts, event_window=(-0.05, 0.1), stim_width=0.01, sample_rate=30000.0)</span>
 </code></dt>
 <dd>
-<section class="desc"><p>Plots the mean eeg +- std. dev centred on event timestamps</p></section>
+<section class="desc"><p>Plots the mean eeg +- std. dev centred on event timestamps</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>event_ts</code></strong> :&ensp;<code>array_like</code></dt>
+<dd>The event timestamps in seconds</dd>
+<dt><strong><code>event_window</code></strong> :&ensp;<code>2</code>-<code>tuple</code>, default = (-<code>0.05</code>, <code>0.1</code>)</dt>
+<dd>The pre- and post-stimulus window to examine. In seconds.
+Defaults to the previous 50ms and the subsequent 100ms</dd>
+<dt><strong><code>stim_width</code></strong> :&ensp;<code>float</code></dt>
+<dd>The duration of the stimulus. Used for plotting</dd>
+<dt><strong><code>sample_rate</code></strong> :&ensp;<code>float</code></dt>
+<dd>The sample rate of the events</dd>
+</dl></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def plotEventEEG(self, event_ts, event_window=(-0.05, 0.1), stim_width=0.01, sample_rate=3e4):
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
     Plots the mean eeg +- std. dev centred on event timestamps
 
-    &#39;&#39;&#39;
+    Parameters
+    ----------
+    event_ts : array_like
+        The event timestamps in seconds
+    event_window : 2-tuple, default = (-0.05, 0.1)
+        The pre- and post-stimulus window to examine. In seconds.
+        Defaults to the previous 50ms and the subsequent 100ms
+    stim_width : float
+        The duration of the stimulus. Used for plotting
+    sample_rate : float
+        The sample rate of the events
+
+    &#34;&#34;&#34;
     # bandpass filter the raw data first
     from scipy import signal
     nyq = sample_rate / 2
@@ -1565,11 +1628,11 @@ method defined</p>
             self.save_grid_output_location = kwargs[&#39;save_grid_summary_location&#39;]
 
     def __interpSpkPosTimes(self):
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         Interpolates spike times into indices of position data
         NB Assumes pos times have been zeroed correctly - see comments in
         OEKiloPhy.OpenEphysNWB function __alignTimeStamps__()
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         idx = np.searchsorted(self.pos_ts, self.spk_ts)
         idx[idx==len(self.pos_ts)] = len(self.pos_ts) - 1
         return idx
@@ -1599,6 +1662,15 @@ method defined</p>
         self.__ppm = value
 
     def plotAll(self):
+        &#34;&#34;&#34;
+        Plots rate maps and other graphical output
+
+        Notes
+        ----
+        This method uses the data provided to the class instance to plot
+        various maps into a single figure window for each cluster. The things
+        to plot are given in self.plot_type and the list of clusters in self.good_clusters
+        &#34;&#34;&#34;
         if &#39;all&#39; in self.plot_type:
             what_to_plot = [&#39;map&#39;,&#39;path&#39;,&#39;hdir&#39;,&#39;sac&#39;,&#39;speed&#39;, &#39;sp_hd&#39;]
             fig = plt.figure(figsize=(20,10))
@@ -1621,7 +1693,6 @@ method defined</p>
             inner_nrows = 1
         else:
             inner_nrows = 2
-        first_sub_axis = what_to_plot[0]
         for i, cluster in enumerate(self.good_clusters):
             inner = gridspec.GridSpecFromSubplotSpec(inner_nrows,inner_ncols, subplot_spec=outer[i])
             for plot_type_idx, plot_type in enumerate(what_to_plot):
@@ -2065,12 +2136,25 @@ details</p></section>
 <span>def <span class="ident">plotAll</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<section class="desc"></section>
+<section class="desc"><p>Plots rate maps and other graphical output</p>
+<h2 id="notes">Notes</h2>
+<p>This method uses the data provided to the class instance to plot
+various maps into a single figure window for each cluster. The things
+to plot are given in self.plot_type and the list of clusters in self.good_clusters</p></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def plotAll(self):
+    &#34;&#34;&#34;
+    Plots rate maps and other graphical output
+
+    Notes
+    ----
+    This method uses the data provided to the class instance to plot
+    various maps into a single figure window for each cluster. The things
+    to plot are given in self.plot_type and the list of clusters in self.good_clusters
+    &#34;&#34;&#34;
     if &#39;all&#39; in self.plot_type:
         what_to_plot = [&#39;map&#39;,&#39;path&#39;,&#39;hdir&#39;,&#39;sac&#39;,&#39;speed&#39;, &#39;sp_hd&#39;]
         fig = plt.figure(figsize=(20,10))
@@ -2093,7 +2177,6 @@ details</p></section>
         inner_nrows = 1
     else:
         inner_nrows = 2
-    first_sub_axis = what_to_plot[0]
     for i, cluster in enumerate(self.good_clusters):
         inner = gridspec.GridSpecFromSubplotSpec(inner_nrows,inner_ncols, subplot_spec=outer[i])
         for plot_type_idx, plot_type in enumerate(what_to_plot):
@@ -2290,7 +2373,7 @@ functions (postprocesspos being the main one).</p></section>
         return xy
 
     def smoothPos(self, xy):
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         Smooths position data
 
         Parameters
@@ -2302,7 +2385,7 @@ functions (postprocesspos being the main one).</p></section>
         -------
         xy : array_like
             The smoothed positional data
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         # Extract boundaries of window used in recording
 
         x = xy[:,0].astype(np.float64)
@@ -2542,7 +2625,7 @@ throughout this method.</p></section>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def smoothPos(self, xy):
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
     Smooths position data
 
     Parameters
@@ -2554,7 +2637,7 @@ throughout this method.</p></section>
     -------
     xy : array_like
         The smoothed positional data
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
     # Extract boundaries of window used in recording
 
     x = xy[:,0].astype(np.float64)
@@ -2674,7 +2757,7 @@ into Axona format 50Hz data</p></section>
 <dd>the times of 'spikes' in the trial
 this should be all spikes as the cluster identity vector _spk_clusters
 is used to pick out the right spikes</dd>
-<dt><strong><code>waveforms</code></strong> :&ensp;<code>np.array</code></dt>
+<dt><strong><code>waveforms</code></strong> :&ensp;<code>np.array</code>, optional</dt>
 <dd>not sure on shape yet but will be something like a
 a 4 x nSpikes x nSamples (4 for tetrode-based analysis)</dd>
 </dl>
@@ -2694,7 +2777,7 @@ a 4 x nSpikes x nSamples (4 for tetrode-based analysis)</dd>
         the times of &#39;spikes&#39; in the trial
         this should be all spikes as the cluster identity vector _spk_clusters
         is used to pick out the right spikes
-    waveforms : np.array
+    waveforms : np.array, optional
         not sure on shape yet but will be something like a
         a 4 x nSpikes x nSamples (4 for tetrode-based analysis)
 
@@ -2949,9 +3032,16 @@ a 4 x nSpikes x nSamples (4 for tetrode-based analysis)</dd>
         yield cluster, 1
 
     def plotAllXCorrs(self, clusters, fig=None):
-        &#39;&#39;&#39;
-        Plots all scorrs in a single figure window
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
+        Plots all xcorrs in a single figure window
+
+        Parameters
+        ----------
+        clusters : list
+            The clusters to plot
+        fig : matplotlib.figure instance, optional, default None
+            If provided the figure will contain all the axes
+        &#34;&#34;&#34;
         from ephysiopy.dacq2py import spikecalcs
         SpkCalcs = spikecalcs.SpikeCalcs()
         if fig is None:
@@ -3192,15 +3282,29 @@ Used to help classify a neruons type (principal, interneuron etc)</p>
 <span>def <span class="ident">plotAllXCorrs</span></span>(<span>self, clusters, fig=None)</span>
 </code></dt>
 <dd>
-<section class="desc"><p>Plots all scorrs in a single figure window</p></section>
+<section class="desc"><p>Plots all xcorrs in a single figure window</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>clusters</code></strong> :&ensp;<code>list</code></dt>
+<dd>The clusters to plot</dd>
+<dt><strong><code>fig</code></strong> :&ensp;<code>matplotlib.figure</code> <code>instance</code>, optional, default <code>None</code></dt>
+<dd>If provided the figure will contain all the axes</dd>
+</dl></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def plotAllXCorrs(self, clusters, fig=None):
-    &#39;&#39;&#39;
-    Plots all scorrs in a single figure window
-    &#39;&#39;&#39;
+    &#34;&#34;&#34;
+    Plots all xcorrs in a single figure window
+
+    Parameters
+    ----------
+    clusters : list
+        The clusters to plot
+    fig : matplotlib.figure instance, optional, default None
+        If provided the figure will contain all the axes
+    &#34;&#34;&#34;
     from ephysiopy.dacq2py import spikecalcs
     SpkCalcs = spikecalcs.SpikeCalcs()
     if fig is None:

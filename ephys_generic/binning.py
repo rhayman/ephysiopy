@@ -21,6 +21,23 @@ class RateMap(object):
 		position sample when binning data. For example, if there were 5 positions
 		recorded and a cell spiked once in position 2 and 5 times in position 3 and
 		nothing anywhere else then pos_weights looks like: [0 0 1 5 0]
+		In the case of binning up position this will be an array of mostly just 1's
+		unless there are some positions you want excluded for some reason
+	ppm : int, optional
+		Pixels per metre. Specifies how many camera pixels per metre so this,
+		in combination with cmsPerBin, will determine how many bins there are
+		in the rate map
+	xyInCms : bool, optional, default False
+		Whether the positional data is in cms
+	cmsPerBin : int, optional, default 3
+		How many cms on a side each bin is in a rate map OR the number of degrees
+		per bin in the case of directional binning
+	smooth_sz : int, optional, default = 5
+		The width of the smoothing kernel for smoothing rate maps
+
+	Notes
+	----
+	There are several instance variables you can set, see below
 	
 	"""
 	def __init__(self, xy=None, hdir=None, speed=None, pos_weights=None, ppm=430, xyInCms=False, cmsPerBin=3, smooth_sz=5):
@@ -38,9 +55,7 @@ class RateMap(object):
 
 	@property
 	def inCms(self):
-		'''
-		Whether the units are in cms or not
-		'''
+		# Whether the units are in cms or not
 		return self.__inCms
 
 	@inCms.setter
@@ -49,9 +64,7 @@ class RateMap(object):
 
 	@property
 	def ppm(self):
-		"""
-		Get the current pixels per metre (ppm)
-		"""
+		# Get the current pixels per metre (ppm)
 		return self.__ppm
 
 	@ppm.setter
@@ -61,9 +74,7 @@ class RateMap(object):
 
 	@property
 	def binsize(self):
-		'''
-		Returns binsize calculated in __calcBinSize and based on cmsPerBin
-		'''
+		# Returns binsize calculated in __calcBinSize and based on cmsPerBin
 		if self.__binsize__ is None:
 			try:
 				self.__binsize__ = self.__calcBinSize(self.cmsPerBin)
@@ -77,12 +88,12 @@ class RateMap(object):
 
 	@property
 	def pos_weights(self):
-		'''
+		"""
 		The 'weights' used as an argument to np.histogram* for binning up position
 		Mostly this is just an array of 1's equal to the length of the pos
 		data, but usefully can be adjusted when masking data in the trial
 		by
-		'''
+		"""
 		return self.__pos_weights
 
 	@pos_weights.setter
@@ -91,9 +102,7 @@ class RateMap(object):
 
 	@property
 	def cmsPerBin(self):
-		'''
-		The number of cms per bin of the binned up map
-		'''
+		# The number of cms per bin of the binned up map
 		return self.__cmsPerBin
 
 	@cmsPerBin.setter
@@ -103,9 +112,7 @@ class RateMap(object):
 
 	@property
 	def smooth_sz(self):
-		'''
-		The size of the smoothing window applied to the binned data (1D or 2D)
-		'''
+		# The size of the smoothing window applied to the binned data (1D or 2D)
 		return self.__smooth_sz
 
 	@smooth_sz.setter
@@ -114,9 +121,7 @@ class RateMap(object):
 
 	@property
 	def smoothingType(self):
-		'''
-		The type of smoothing to do - legal values are 'boxcar' or 'gaussian'
-		'''
+		# The type of smoothing to do - legal values are 'boxcar' or 'gaussian'
 		return self.__smoothingType
 
 	@smoothingType.setter
@@ -125,19 +130,22 @@ class RateMap(object):
 
 	@property
 	def pixelsPerBin(self):
-		'''
-		Calculates the number of camera pixels per bin of the binned data
-		'''
+		# Calculates the number of camera pixels per bin of the binned data
 		if getattr(self, 'inCms'):
 			return getattr(self, 'cmsPerBin')
 		else:
 			return (getattr(self, 'ppm') / 100.) * getattr(self, 'cmsPerBin')
 
 	def __calcBinSize(self, cmsPerBin=3):
-		'''
+		"""
 		Aims to get the right number of bins for x and y dims given the ppm
-		in the set header and the x and y extent - aiming for 3 cm per bin
-		'''
+		in the set header and the x and y extent
+
+		Parameters
+		----------
+		cmsPerBin : int, optional, default = 3
+			The number of cms per bin OR degrees in the case of directional binning
+		"""
 		x_lims = (np.min(self.xy[0]), np.max(self.xy[0]))
 		y_lims = (np.min(self.xy[1]), np.max(self.xy[1]))
 		ppb = getattr(self, 'pixelsPerBin')
@@ -146,23 +154,33 @@ class RateMap(object):
 		return self.binsize
 
 	def getMap(self, spkWeights, varType='xy', mapType='rate', smoothing=True):
-		'''
+		"""
 		Bins up the variable type varType and returns a tuple of (rmap, binnedPositionDir) or
 		(rmap, binnedPostionX, binnedPositionY)
 
 		Parameters
-		----------------
-		spkWeights : np.array
+		----------
+		spkWeights : array_like
 			Shape equal to number of positions samples captured and consists of
-			1's and 0's where 1's are a count of spikes in a position time bin
-		varType : str
+			position weights. For example, if there were 5 positions
+			recorded and a cell spiked once in position 2 and 5 times in position 3 and
+			nothing anywhere else then pos_weights looks like: [0 0 1 5 0]
+		varType : str, optional, default 'xy'
 			The variable to bin up. Legal values are: 'xy', 'dir', and 'speed'
-		mapType : str
-			Whether to divide the binned up spikes by varType
-		smoothing : bool
+		mapType : str, optional, default 'rate'
+			If 'rate' then the binned up spikes are divided by varType. Otherwise return
+			binned up position. Options are 'rate' or 'pos'
+		smoothing : bool, optional, default True
 			Whether to smooth the data or not
 
-		'''
+		Returns
+		-------
+		binned_data, binned_pos : tuple
+			This is either a 2-tuple or a 3-tuple depening on whether binned pos
+			(mapType is 'pos') or binned spikes (mapType is 'rate') is asked for,
+			respectively
+
+		"""
 		sample = getattr(self, varType)
 		assert(sample is not None) # might happen if head direction not supplied for example
 
@@ -244,23 +262,23 @@ class RateMap(object):
 		return rmap, binned_pos_edges
 
 	def blurImage(self, im, n, ny=None, ftype='boxcar'):
-		'''
+		"""
 		Smooths a 2D image by convolving with a filter
 
 		Parameters
-		-------------
-		im : np.array (2D)
-			the array to smooth
+		----------
+		im : array_like
+			The array to smooth
 		n, ny : int
-			the size of the smoothing kernel
+			The size of the smoothing kernel
 		ftype : str
 			The type of smoothing kernel. Either 'boxcar' or 'gaussian'
 
 		Returns
-		-----------
-		res: np.array (2D)
+		-------
+		res: array_like
 			The smoothed vector with shape the same as im
-		'''
+		"""
 		n = int(n)
 		if not ny:
 			ny = n
@@ -290,20 +308,34 @@ class RateMap(object):
 		return improc
 
 	def __binData(self, var, bin_edges, weights):
-		# TODO: this fcn depserately needs cleaning up
-		'''
-		TODO: this kind of breaks compatability with numpys histogramdd
+		"""
+		Bins data taking account of possible multi-dimensionality
+
+		Parameters
+		----------
+		var : array_like
+			The variable to bin
+		bin_edges : array_like
+			The edges of the data - see numpys histogramdd for more
+		weights : array_like
+			The weights attributed to the samples in var
+		
+		Returns
+		-------
+		ndhist : 2-tuple
+			Think this always returns a two-tuple of the binned variable and
+			the bin edges - need to check to be sure...		
+
+		Notes
+		-----
+		This breaks compatability with numpys histogramdd
 		In the 2d histogram case below I swap the axes around so that x and y
 		are binned in the 'normal' format i.e. so x appears horizontally and y
-		vertically. This function should be re-written to maintain compatability
-		with histogramdd such that it can take in a weights array that is
-		nSamples x nClusters so that a lambda can be applied in combination with
-		np.apply_along_axis i.e.:
-		h = apply_along_axis(lambda x: histogramdd(sample.T,weights=x,bins=bins),0,spk_weights)
-		NB The above multi-binning issue is dealt with awkwardly through checking
+		vertically. 
+		Multi-binning issue is dealt with awkwardly through checking
 		the dimensionality of the weights array - 'normally' this would be 1 dim
 		but when multiple clusters are being binned it will be 2 dim. In that case
-		the above apply_along_axis functionality is applied. The spike weights in
+		np.apply_along_axis functionality is applied. The spike weights in
 		that case might be created like so:
 
 		>>> spk_W = np.zeros(shape=[len(trial.nClusters), trial.npos])
@@ -318,7 +350,7 @@ class RateMap(object):
 
 		Returned will be a tuple containing the binned up data and the bin edges for x and y (obv this will be the same for all
 		entries of h)
-		'''
+		"""
 		if weights is None:
 			weights = np.ones_like(var)
 		dims = weights.ndim
@@ -349,23 +381,23 @@ class RateMap(object):
 
 
 	def __circPadSmooth(self, var, n=3, ny=None):
-		'''
+		"""
 		Smooths a vector by convolving with a gaussian
 		Mirror reflects the start and end of the vector to
 		deal with edge effects
 
 		Parameters
-		------------
-		var : np.array (1D)
+		----------
+		var : array_like
 			The vector to smooth
 		n, ny : int
 			Size of the smoothing (sigma in gaussian)
 
 		Returns
-		-----------
-		res : np.array (1D)
+		-------
+		res : array_like
 			The smoothed vector with shape the same as var
-		'''
+		"""
 
 		tn = len(var)
 		t2 = int(np.floor(tn / 2))
@@ -382,7 +414,7 @@ class RateMap(object):
 		return improc
 
 	def __circularStructure(self, radius):
-		'''
+		"""
 		Generates a circular binary structure for use with morphological
 		operations such as ndimage.binary_dilation etc
 
@@ -390,15 +422,19 @@ class RateMap(object):
 		ratemaps for use with information theoretic measures (Skaggs etc)
 
 		Parameters
-		-------------
+		----------
 		radius : int
 			the size of the circular structure
 
 		Returns
-		-------------
-		res : numpy.array (2D)
-			binary structure with shape [(radius*2) + 1,(radius*2) + 1]
-		'''
+		-------
+		res : array_like
+			Binary structure with shape [(radius*2) + 1,(radius*2) + 1]
+
+		See Also
+		--------
+		RateMap.__adpativeMap
+		"""
 		crad = np.ceil(radius-0.5).astype(np.int)
 		x, y = np.mgrid[-crad:crad+1, -crad:crad+1].astype(float)
 		maxxy = np.maximum(abs(x), abs(y))
@@ -440,16 +476,33 @@ class RateMap(object):
 		return kernel
 
 	def __adaptiveMap(self, pos_binned, spk_binned, alpha=200):
-		'''
+		"""
+		Produces a ratemap that has been adaptively binned according to the
+		algorithm described in Skaggs et al., 1996) [1]_.
+
+		Parameters
+		----------
+		pos_binned : array_like
+			The binned positional data. For example that returned from getMap
+			above with mapType as 'pos'
+		spk_binned : array_like
+			The binned spikes
+		alpha : int, optional, default = 200
+			A scaling parameter determing the amount of occupancy to aim at
+			in each bin
+
+		Returns
+		-------
 		Returns adaptively binned spike and pos maps. Use to generate Skaggs
 		information measure
-		map = adpativeBin(pos_binned, spk_binned, alpha = 200)
-		Produces a ratemap that has been adaptively binned according to the
-		algorithm described in Skaggs et al., 1996); positions with high rates
-		mean proportionately less error than those with low rates. This is the
+
+		Notes
+		-----
+		Positions with high rates mean proportionately less error than those
+		with low rates, so this tries to even the playing field a bit. This is the
 		kind of binning that should be used for calculations of spatial info
 		as with the skaggsInfo method in the fieldcalcs class (see below)
-		NB alpha is a scaling parameter that might need tweaking for different
+		alpha is a scaling parameter that might need tweaking for different
 		data sets.
 		From the paper:
 			The data [are] first binned
@@ -462,7 +515,14 @@ class RateMap(object):
 			scaling parameter
 			The firing rate in the given bin is then calculated as:
 				sample_rate * (Nspks / Nocc)
-		'''
+		
+		References
+		----------
+		.. [1] W. E. Skaggs, B. L. McNaughton, K. M. Gothard & E. J. Markus
+			"An Information-Theoretic Approach to Deciphering the Hippocampal Code"
+			Neural Information Processing Systems, 1993.
+				
+		"""
 		#  assign output arrays
 		smthdPos = np.zeros_like(pos_binned)
 		smthdSpk = np.zeros_like(spk_binned)

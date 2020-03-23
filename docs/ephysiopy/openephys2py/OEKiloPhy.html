@@ -27,7 +27,7 @@ either the .nwb or binary format (ie when using neuropixels)</p>
 <p>4 classes defined:</p>
 <p>KiloSortSession - deals with the output from kilosort or kilosort2
 OpenEphysBase - a not really abstract base class which is the parent (super)
-class for these two
+class for:
 OpenEphysNPX - deals with neuropixels data
 OpenEphysNWB - deals with data recorded in nwb format</p>
 <details class="source">
@@ -48,9 +48,9 @@ either the .nwb or binary format (ie when using neuropixels)
 
 KiloSortSession - deals with the output from kilosort or kilosort2
 OpenEphysBase - a not really abstract base class which is the parent (super)
-                                class for these two
-        OpenEphysNPX - deals with neuropixels data
-        OpenEphysNWB - deals with data recorded in nwb format
+                                class for:
+OpenEphysNPX - deals with neuropixels data
+OpenEphysNWB - deals with data recorded in nwb format
 
 &#34;&#34;&#34;
 import numpy as np
@@ -66,7 +66,8 @@ try:
         from .ephysiopy.openephys2py.OESettings import Settings
 except ImportError:
         from ephysiopy.openephys2py.OESettings import Settings
-&#39;&#39;&#39;
+
+&#34;&#34;&#34;
 The results of a kilosort session are a load of .npy files, a .csv file
 and some other stuff
 The .npy files contain things like spike times, cluster ids etc. Importantly
@@ -77,21 +78,22 @@ where &#39;cluster_id&#39; is obvious (and relates to the identity in spk_cluste
 the &#39;group&#39; is a string that contains things like &#39;noise&#39; or &#39;unsorted&#39; or
 presumably a number or quality measure as determined by the user
 Load all these things to get a restricted list of things to look at...
-&#39;&#39;&#39;
+&#34;&#34;&#34;
+
 class KiloSortSession(object):
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         Parameters
         ----------
         fname_root : str
                 Should contain all the files from a kilosort session and
                 the .dat file (extracted from the nwb OE session)
 
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         def __init__(self, fname_root):
-                &#39;&#39;&#39;
+                &#34;&#34;&#34;
                 Walk through the path to find the location of the files in case this has been
                 called in another way i.e. binary format a la Neuropixels
-                &#39;&#39;&#39;
+                &#34;&#34;&#34;
                 self.fname_root = fname_root
                 import os
                 for d, c, f in os.walk(fname_root):
@@ -103,11 +105,14 @@ class KiloSortSession(object):
                 self.spk_times = None
 
         def load(self):
-                &#39;&#39;&#39;
-                Load all the relevant files
-                KSLabel - output from KiloSort - algorithm defined
-                cluster_group - group labels from phy - user defined (&#39;good&#39;, &#39;MUA&#39;, &#39;noise&#39;)
-                &#39;&#39;&#39;
+                &#34;&#34;&#34;
+                Loads all the relevant files
+
+                Notes
+                -----
+                * KSLabel is output from KiloSort and so algorithm defined
+                * cluster_group are group labels from phy and so user defined (has labels like &#39;good&#39;, &#39;MUA&#39;, &#39;noise&#39; etc)
+                &#34;&#34;&#34;
                 import os
                 dtype = {&#39;names&#39;: (&#39;cluster_id&#39;, &#39;group&#39;), &#39;formats&#39;: (&#39;i4&#39;, &#39;S10&#39;)}
                 # One of these is from kilosort and the other from kilosort2
@@ -125,9 +130,9 @@ class KiloSortSession(object):
                 self.spk_times    = np.squeeze(np.load(os.path.join(self.fname_root, &#39;spike_times.npy&#39;)))
 
         def removeNoiseClusters(self):
-                &#39;&#39;&#39;
-                Restricts analysis to anything that isn&#39;t listed as &#39;noise&#39; in self.group
-                &#39;&#39;&#39;
+                &#34;&#34;&#34;
+                Removes clusters with labels &#39;noise&#39; and &#39;mua&#39; in self.group
+                &#34;&#34;&#34;
                 if self.cluster_id is not None:
                         self.good_clusters = []
                         for id_group in zip(self.cluster_id, self.group):
@@ -138,6 +143,16 @@ class KiloSortSession(object):
 class OpenEphysBase(object):
         &#34;&#34;&#34;
         Base class for openephys anaylsis with data recorded in either the NWB or binary format
+
+        Parameters
+        ----------
+        pname_root : str
+                The top-level directory, typically in form of YYYY-MM-DD_HH-MM-SS
+
+        Notes
+        ----
+        This isn&#39;t really an Abstract Base Class (as with c++) as Python doesn&#39;t really have this
+        concept but it forms the backbone for two other classes (OpenEphysNPX &amp; OpenEphysNWB)
         &#34;&#34;&#34;
         def __init__(self, pname_root, **kwargs):
                 super().__init__()
@@ -160,18 +175,15 @@ class OpenEphysBase(object):
                         self.jumpmax = 100
 
         def loadKilo(self):
-                &#39;&#39;&#39;
-                Loads a kilosort session
-                &#39;&#39;&#39;
+                # Loads a kilosort session
+                
                 kilodata = KiloSortSession(self.pname_root) # pname_root gets walked through and over-written with correct location of kiolsort data
                 kilodata.load()
                 kilodata.removeNoiseClusters()
                 self.kilodata = kilodata
 
         def __loadSettings__(self):
-                &#39;&#39;&#39;
-                Loads the settings.xml data
-                &#39;&#39;&#39;
+                # Loads the settings.xml data
                 if self.settings is None:
                         import os
                         settings = Settings(self.pname_root) # pname_root gets walked through and over-written with correct location of settings.xml
@@ -180,7 +192,7 @@ class OpenEphysBase(object):
                         self.settings = settings
 
         def __loaddata__(self, **kwargs):
-                self.load(self.pname_root, **kwargs)
+                self.load(self.pname_root, **kwargs) # some knarly hack
 
         def plotXCorrs(self):
                 if self.kilodata is None:
@@ -191,18 +203,21 @@ class OpenEphysBase(object):
                 corriter.plotAllXCorrs(self.kilodata.good_clusters)
 
         def plotPos(self, jumpmax=None, show=True, **kwargs):
-                &#39;&#39;&#39;
-                Plots x vs y position for this trial
+                &#34;&#34;&#34;
+                Plots x vs y position for the current trial
 
                 Parameters
-                ------------
-                jumpmax - the max amount the LED is allowed to instantaneously move. int or greater
-                show - boolean - whether to plot the pos or not (default is True)
+                ----------
+                jumpmax : int
+                        The max amount the LED is allowed to instantaneously move
+                show : bool
+                        Whether to plot the pos into a figure window or not (default True)
 
                 Returns
                 ----------
-                xy - a nx2 np.array of xy
-                &#39;&#39;&#39;
+                xy : array_like
+                        positional data following post-processing
+                &#34;&#34;&#34;
                 if jumpmax is None:
                         jumpmax = self.jumpmax
                 import matplotlib.pylab as plt
@@ -221,20 +236,20 @@ class OpenEphysBase(object):
                 return xy
 
         def plotMaps(self, plot_type=&#39;map&#39;, **kwargs):
-                &#39;&#39;&#39;
+                &#34;&#34;&#34;
                 Parameters
                 ------------
-                plot_type - str - valid strings include:
-                                                &#39;map&#39; - just ratemap plotted
-                                                &#39;path&#39; - just spikes on path
-                                                &#39;both&#39; - both of the above
-                                                &#39;all&#39; - both spikes on path, ratemap &amp; SAC plotted
-                                                can also be a list
+                plot_type : str or list
+                        The type of map to plot. Valid strings include:
+                        * &#39;map&#39; - just ratemap plotted
+                        * &#39;path&#39; - just spikes on path
+                        * &#39;both&#39; - both of the above
+                        * &#39;all&#39; - both spikes on path, ratemap &amp; SAC plotted
                 Valid kwargs: &#39;ppm&#39; - this is an integer denoting pixels per metre:
                                                                                                 lower values = more bins in ratemap / SAC
                                 &#39;clusters&#39; - int or list of ints describing which clusters to plot
                                 i.e. this overwrites the &#39;good_clusters&#39; value in self.kilodata
-                &#39;&#39;&#39;
+                &#34;&#34;&#34;
                 if self.kilodata is None:
                         self.loadKilo()
                 if ( &#39;ppm&#39; in kwargs.keys() ):
@@ -846,19 +861,19 @@ called in another way i.e. binary format a la Neuropixels</p></section>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class KiloSortSession(object):
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         Parameters
         ----------
         fname_root : str
                 Should contain all the files from a kilosort session and
                 the .dat file (extracted from the nwb OE session)
 
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         def __init__(self, fname_root):
-                &#39;&#39;&#39;
+                &#34;&#34;&#34;
                 Walk through the path to find the location of the files in case this has been
                 called in another way i.e. binary format a la Neuropixels
-                &#39;&#39;&#39;
+                &#34;&#34;&#34;
                 self.fname_root = fname_root
                 import os
                 for d, c, f in os.walk(fname_root):
@@ -870,11 +885,14 @@ called in another way i.e. binary format a la Neuropixels</p></section>
                 self.spk_times = None
 
         def load(self):
-                &#39;&#39;&#39;
-                Load all the relevant files
-                KSLabel - output from KiloSort - algorithm defined
-                cluster_group - group labels from phy - user defined (&#39;good&#39;, &#39;MUA&#39;, &#39;noise&#39;)
-                &#39;&#39;&#39;
+                &#34;&#34;&#34;
+                Loads all the relevant files
+
+                Notes
+                -----
+                * KSLabel is output from KiloSort and so algorithm defined
+                * cluster_group are group labels from phy and so user defined (has labels like &#39;good&#39;, &#39;MUA&#39;, &#39;noise&#39; etc)
+                &#34;&#34;&#34;
                 import os
                 dtype = {&#39;names&#39;: (&#39;cluster_id&#39;, &#39;group&#39;), &#39;formats&#39;: (&#39;i4&#39;, &#39;S10&#39;)}
                 # One of these is from kilosort and the other from kilosort2
@@ -892,9 +910,9 @@ called in another way i.e. binary format a la Neuropixels</p></section>
                 self.spk_times    = np.squeeze(np.load(os.path.join(self.fname_root, &#39;spike_times.npy&#39;)))
 
         def removeNoiseClusters(self):
-                &#39;&#39;&#39;
-                Restricts analysis to anything that isn&#39;t listed as &#39;noise&#39; in self.group
-                &#39;&#39;&#39;
+                &#34;&#34;&#34;
+                Removes clusters with labels &#39;noise&#39; and &#39;mua&#39; in self.group
+                &#34;&#34;&#34;
                 if self.cluster_id is not None:
                         self.good_clusters = []
                         for id_group in zip(self.cluster_id, self.group):
@@ -907,19 +925,25 @@ called in another way i.e. binary format a la Neuropixels</p></section>
 <span>def <span class="ident">load</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<section class="desc"><p>Load all the relevant files
-KSLabel - output from KiloSort - algorithm defined
-cluster_group - group labels from phy - user defined ('good', 'MUA', 'noise')</p></section>
+<section class="desc"><p>Loads all the relevant files</p>
+<h2 id="notes">Notes</h2>
+<ul>
+<li>KSLabel is output from KiloSort and so algorithm defined</li>
+<li>cluster_group are group labels from phy and so user defined (has labels like 'good', 'MUA', 'noise' etc)</li>
+</ul></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def load(self):
-        &#39;&#39;&#39;
-        Load all the relevant files
-        KSLabel - output from KiloSort - algorithm defined
-        cluster_group - group labels from phy - user defined (&#39;good&#39;, &#39;MUA&#39;, &#39;noise&#39;)
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
+        Loads all the relevant files
+
+        Notes
+        -----
+        * KSLabel is output from KiloSort and so algorithm defined
+        * cluster_group are group labels from phy and so user defined (has labels like &#39;good&#39;, &#39;MUA&#39;, &#39;noise&#39; etc)
+        &#34;&#34;&#34;
         import os
         dtype = {&#39;names&#39;: (&#39;cluster_id&#39;, &#39;group&#39;), &#39;formats&#39;: (&#39;i4&#39;, &#39;S10&#39;)}
         # One of these is from kilosort and the other from kilosort2
@@ -941,15 +965,15 @@ cluster_group - group labels from phy - user defined ('good', 'MUA', 'noise')</p
 <span>def <span class="ident">removeNoiseClusters</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<section class="desc"><p>Restricts analysis to anything that isn't listed as 'noise' in self.group</p></section>
+<section class="desc"><p>Removes clusters with labels 'noise' and 'mua' in self.group</p></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def removeNoiseClusters(self):
-        &#39;&#39;&#39;
-        Restricts analysis to anything that isn&#39;t listed as &#39;noise&#39; in self.group
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
+        Removes clusters with labels &#39;noise&#39; and &#39;mua&#39; in self.group
+        &#34;&#34;&#34;
         if self.cluster_id is not None:
                 self.good_clusters = []
                 for id_group in zip(self.cluster_id, self.group):
@@ -964,7 +988,15 @@ cluster_group - group labels from phy - user defined ('good', 'MUA', 'noise')</p
 <span>(</span><span>pname_root, **kwargs)</span>
 </code></dt>
 <dd>
-<section class="desc"><p>Base class for openephys anaylsis with data recorded in either the NWB or binary format</p></section>
+<section class="desc"><p>Base class for openephys anaylsis with data recorded in either the NWB or binary format</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>pname_root</code></strong> :&ensp;<code>str</code></dt>
+<dd>The top-level directory, typically in form of YYYY-MM-DD_HH-MM-SS</dd>
+</dl>
+<h2 id="notes">Notes</h2>
+<p>This isn't really an Abstract Base Class (as with c++) as Python doesn't really have this
+concept but it forms the backbone for two other classes (OpenEphysNPX &amp; OpenEphysNWB)</p></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -972,6 +1004,16 @@ cluster_group - group labels from phy - user defined ('good', 'MUA', 'noise')</p
 <pre><code class="python">class OpenEphysBase(object):
         &#34;&#34;&#34;
         Base class for openephys anaylsis with data recorded in either the NWB or binary format
+
+        Parameters
+        ----------
+        pname_root : str
+                The top-level directory, typically in form of YYYY-MM-DD_HH-MM-SS
+
+        Notes
+        ----
+        This isn&#39;t really an Abstract Base Class (as with c++) as Python doesn&#39;t really have this
+        concept but it forms the backbone for two other classes (OpenEphysNPX &amp; OpenEphysNWB)
         &#34;&#34;&#34;
         def __init__(self, pname_root, **kwargs):
                 super().__init__()
@@ -994,18 +1036,15 @@ cluster_group - group labels from phy - user defined ('good', 'MUA', 'noise')</p
                         self.jumpmax = 100
 
         def loadKilo(self):
-                &#39;&#39;&#39;
-                Loads a kilosort session
-                &#39;&#39;&#39;
+                # Loads a kilosort session
+                
                 kilodata = KiloSortSession(self.pname_root) # pname_root gets walked through and over-written with correct location of kiolsort data
                 kilodata.load()
                 kilodata.removeNoiseClusters()
                 self.kilodata = kilodata
 
         def __loadSettings__(self):
-                &#39;&#39;&#39;
-                Loads the settings.xml data
-                &#39;&#39;&#39;
+                # Loads the settings.xml data
                 if self.settings is None:
                         import os
                         settings = Settings(self.pname_root) # pname_root gets walked through and over-written with correct location of settings.xml
@@ -1014,7 +1053,7 @@ cluster_group - group labels from phy - user defined ('good', 'MUA', 'noise')</p
                         self.settings = settings
 
         def __loaddata__(self, **kwargs):
-                self.load(self.pname_root, **kwargs)
+                self.load(self.pname_root, **kwargs) # some knarly hack
 
         def plotXCorrs(self):
                 if self.kilodata is None:
@@ -1025,18 +1064,21 @@ cluster_group - group labels from phy - user defined ('good', 'MUA', 'noise')</p
                 corriter.plotAllXCorrs(self.kilodata.good_clusters)
 
         def plotPos(self, jumpmax=None, show=True, **kwargs):
-                &#39;&#39;&#39;
-                Plots x vs y position for this trial
+                &#34;&#34;&#34;
+                Plots x vs y position for the current trial
 
                 Parameters
-                ------------
-                jumpmax - the max amount the LED is allowed to instantaneously move. int or greater
-                show - boolean - whether to plot the pos or not (default is True)
+                ----------
+                jumpmax : int
+                        The max amount the LED is allowed to instantaneously move
+                show : bool
+                        Whether to plot the pos into a figure window or not (default True)
 
                 Returns
                 ----------
-                xy - a nx2 np.array of xy
-                &#39;&#39;&#39;
+                xy : array_like
+                        positional data following post-processing
+                &#34;&#34;&#34;
                 if jumpmax is None:
                         jumpmax = self.jumpmax
                 import matplotlib.pylab as plt
@@ -1055,20 +1097,20 @@ cluster_group - group labels from phy - user defined ('good', 'MUA', 'noise')</p
                 return xy
 
         def plotMaps(self, plot_type=&#39;map&#39;, **kwargs):
-                &#39;&#39;&#39;
+                &#34;&#34;&#34;
                 Parameters
                 ------------
-                plot_type - str - valid strings include:
-                                                &#39;map&#39; - just ratemap plotted
-                                                &#39;path&#39; - just spikes on path
-                                                &#39;both&#39; - both of the above
-                                                &#39;all&#39; - both spikes on path, ratemap &amp; SAC plotted
-                                                can also be a list
+                plot_type : str or list
+                        The type of map to plot. Valid strings include:
+                        * &#39;map&#39; - just ratemap plotted
+                        * &#39;path&#39; - just spikes on path
+                        * &#39;both&#39; - both of the above
+                        * &#39;all&#39; - both spikes on path, ratemap &amp; SAC plotted
                 Valid kwargs: &#39;ppm&#39; - this is an integer denoting pixels per metre:
                                                                                                 lower values = more bins in ratemap / SAC
                                 &#39;clusters&#39; - int or list of ints describing which clusters to plot
                                 i.e. this overwrites the &#39;good_clusters&#39; value in self.kilodata
-                &#39;&#39;&#39;
+                &#34;&#34;&#34;
                 if self.kilodata is None:
                         self.loadKilo()
                 if ( &#39;ppm&#39; in kwargs.keys() ):
@@ -1231,15 +1273,14 @@ cluster_group - group labels from phy - user defined ('good', 'MUA', 'noise')</p
 <span>def <span class="ident">loadKilo</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<section class="desc"><p>Loads a kilosort session</p></section>
+<section class="desc"></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def loadKilo(self):
-        &#39;&#39;&#39;
-        Loads a kilosort session
-        &#39;&#39;&#39;
+        # Loads a kilosort session
+        
         kilodata = KiloSortSession(self.pname_root) # pname_root gets walked through and over-written with correct location of kiolsort data
         kilodata.load()
         kilodata.removeNoiseClusters()
@@ -1293,13 +1334,15 @@ cluster_group - group labels from phy - user defined ('good', 'MUA', 'noise')</p
 </code></dt>
 <dd>
 <section class="desc"><h2 id="parameters">Parameters</h2>
-<p>plot_type - str - valid strings include:
-'map' - just ratemap plotted
-'path' - just spikes on path
-'both' - both of the above
-'all' - both spikes on path, ratemap &amp; SAC plotted
-can also be a list
-Valid kwargs: 'ppm' - this is an integer denoting pixels per metre:
+<dl>
+<dt><strong><code>plot_type</code></strong> :&ensp;<code>str</code> or <code>list</code></dt>
+<dd>The type of map to plot. Valid strings include:
+* 'map' - just ratemap plotted
+* 'path' - just spikes on path
+* 'both' - both of the above
+* 'all' - both spikes on path, ratemap &amp; SAC plotted</dd>
+</dl>
+<p>Valid kwargs: 'ppm' - this is an integer denoting pixels per metre:
 lower values = more bins in ratemap / SAC
 'clusters' - int or list of ints describing which clusters to plot
 i.e. this overwrites the 'good_clusters' value in self.kilodata</p></section>
@@ -1308,20 +1351,20 @@ i.e. this overwrites the 'good_clusters' value in self.kilodata</p></section>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def plotMaps(self, plot_type=&#39;map&#39;, **kwargs):
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         Parameters
         ------------
-        plot_type - str - valid strings include:
-                                        &#39;map&#39; - just ratemap plotted
-                                        &#39;path&#39; - just spikes on path
-                                        &#39;both&#39; - both of the above
-                                        &#39;all&#39; - both spikes on path, ratemap &amp; SAC plotted
-                                        can also be a list
+        plot_type : str or list
+                The type of map to plot. Valid strings include:
+                * &#39;map&#39; - just ratemap plotted
+                * &#39;path&#39; - just spikes on path
+                * &#39;both&#39; - both of the above
+                * &#39;all&#39; - both spikes on path, ratemap &amp; SAC plotted
         Valid kwargs: &#39;ppm&#39; - this is an integer denoting pixels per metre:
                                                                                         lower values = more bins in ratemap / SAC
                         &#39;clusters&#39; - int or list of ints describing which clusters to plot
                         i.e. this overwrites the &#39;good_clusters&#39; value in self.kilodata
-        &#39;&#39;&#39;
+        &#34;&#34;&#34;
         if self.kilodata is None:
                 self.loadKilo()
         if ( &#39;ppm&#39; in kwargs.keys() ):
@@ -1448,32 +1491,39 @@ gridcell.SAC.getMeasures is saved for each cluster - this is passed to MapCalcsG
 <span>def <span class="ident">plotPos</span></span>(<span>self, jumpmax=None, show=True, **kwargs)</span>
 </code></dt>
 <dd>
-<section class="desc"><p>Plots x vs y position for this trial</p>
+<section class="desc"><p>Plots x vs y position for the current trial</p>
 <h2 id="parameters">Parameters</h2>
-<p>jumpmax - the max amount the LED is allowed to instantaneously move. int or greater
-show - boolean - whether to plot the pos or not (default is True)</p>
+<dl>
+<dt><strong><code>jumpmax</code></strong> :&ensp;<code>int</code></dt>
+<dd>The max amount the LED is allowed to instantaneously move</dd>
+<dt><strong><code>show</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Whether to plot the pos into a figure window or not (default True)</dd>
+</dl>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><code>xy</code> - <code>a</code> <code>nx2</code> <code>np.array</code> of <code>xy</code></dt>
-<dd>&nbsp;</dd>
+<dt><strong><code>xy</code></strong> :&ensp;<code>array_like</code></dt>
+<dd>positional data following post-processing</dd>
 </dl></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def plotPos(self, jumpmax=None, show=True, **kwargs):
-        &#39;&#39;&#39;
-        Plots x vs y position for this trial
+        &#34;&#34;&#34;
+        Plots x vs y position for the current trial
 
         Parameters
-        ------------
-        jumpmax - the max amount the LED is allowed to instantaneously move. int or greater
-        show - boolean - whether to plot the pos or not (default is True)
+        ----------
+        jumpmax : int
+                The max amount the LED is allowed to instantaneously move
+        show : bool
+                Whether to plot the pos into a figure window or not (default True)
 
         Returns
         ----------
-        xy - a nx2 np.array of xy
-        &#39;&#39;&#39;
+        xy : array_like
+                positional data following post-processing
+        &#34;&#34;&#34;
         if jumpmax is None:
                 jumpmax = self.jumpmax
         import matplotlib.pylab as plt
@@ -1963,7 +2013,6 @@ See <a href="https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/166789121/Fl
 <ul class="hlist">
 <li><code><b><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase">OpenEphysBase</a></b></code>:
 <ul class="hlist">
-<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.loadKilo" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.loadKilo">loadKilo</a></code></li>
 <li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMaps" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMaps">plotMaps</a></code></li>
 <li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMapsOneAtATime" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMapsOneAtATime">plotMapsOneAtATime</a></code></li>
 <li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotPos" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotPos">plotPos</a></code></li>
@@ -2326,7 +2375,6 @@ the 6 accelerometer channels)</dd>
 <ul class="hlist">
 <li><code><b><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase">OpenEphysBase</a></b></code>:
 <ul class="hlist">
-<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.loadKilo" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.loadKilo">loadKilo</a></code></li>
 <li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMaps" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMaps">plotMaps</a></code></li>
 <li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMapsOneAtATime" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMapsOneAtATime">plotMapsOneAtATime</a></code></li>
 <li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotPos" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotPos">plotPos</a></code></li>

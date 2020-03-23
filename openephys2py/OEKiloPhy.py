@@ -12,9 +12,9 @@ either the .nwb or binary format (ie when using neuropixels)
 
 KiloSortSession - deals with the output from kilosort or kilosort2
 OpenEphysBase - a not really abstract base class which is the parent (super)
-				class for these two
-	OpenEphysNPX - deals with neuropixels data
-	OpenEphysNWB - deals with data recorded in nwb format
+				class for:
+OpenEphysNPX - deals with neuropixels data
+OpenEphysNWB - deals with data recorded in nwb format
 
 """
 import numpy as np
@@ -30,7 +30,8 @@ try:
 	from .ephysiopy.openephys2py.OESettings import Settings
 except ImportError:
 	from ephysiopy.openephys2py.OESettings import Settings
-'''
+
+"""
 The results of a kilosort session are a load of .npy files, a .csv file
 and some other stuff
 The .npy files contain things like spike times, cluster ids etc. Importantly
@@ -41,21 +42,22 @@ where 'cluster_id' is obvious (and relates to the identity in spk_clusters.npy),
 the 'group' is a string that contains things like 'noise' or 'unsorted' or
 presumably a number or quality measure as determined by the user
 Load all these things to get a restricted list of things to look at...
-'''
+"""
+
 class KiloSortSession(object):
-	'''
+	"""
 	Parameters
 	----------
 	fname_root : str
 		Should contain all the files from a kilosort session and
 		the .dat file (extracted from the nwb OE session)
 
-	'''
+	"""
 	def __init__(self, fname_root):
-		'''
+		"""
 		Walk through the path to find the location of the files in case this has been
 		called in another way i.e. binary format a la Neuropixels
-		'''
+		"""
 		self.fname_root = fname_root
 		import os
 		for d, c, f in os.walk(fname_root):
@@ -67,11 +69,14 @@ class KiloSortSession(object):
 		self.spk_times = None
 
 	def load(self):
-		'''
-		Load all the relevant files
-		KSLabel - output from KiloSort - algorithm defined
-		cluster_group - group labels from phy - user defined ('good', 'MUA', 'noise')
-		'''
+		"""
+		Loads all the relevant files
+
+		Notes
+		-----
+		* KSLabel is output from KiloSort and so algorithm defined
+		* cluster_group are group labels from phy and so user defined (has labels like 'good', 'MUA', 'noise' etc)
+		"""
 		import os
 		dtype = {'names': ('cluster_id', 'group'), 'formats': ('i4', 'S10')}
 		# One of these is from kilosort and the other from kilosort2
@@ -89,9 +94,9 @@ class KiloSortSession(object):
 		self.spk_times    = np.squeeze(np.load(os.path.join(self.fname_root, 'spike_times.npy')))
 
 	def removeNoiseClusters(self):
-		'''
-		Restricts analysis to anything that isn't listed as 'noise' in self.group
-		'''
+		"""
+		Removes clusters with labels 'noise' and 'mua' in self.group
+		"""
 		if self.cluster_id is not None:
 			self.good_clusters = []
 			for id_group in zip(self.cluster_id, self.group):
@@ -102,6 +107,16 @@ class KiloSortSession(object):
 class OpenEphysBase(object):
 	"""
 	Base class for openephys anaylsis with data recorded in either the NWB or binary format
+
+	Parameters
+	----------
+	pname_root : str
+		The top-level directory, typically in form of YYYY-MM-DD_HH-MM-SS
+
+	Notes
+	----
+	This isn't really an Abstract Base Class (as with c++) as Python doesn't really have this
+	concept but it forms the backbone for two other classes (OpenEphysNPX & OpenEphysNWB)
 	"""
 	def __init__(self, pname_root, **kwargs):
 		super().__init__()
@@ -124,18 +139,15 @@ class OpenEphysBase(object):
 			self.jumpmax = 100
 
 	def loadKilo(self):
-		'''
-		Loads a kilosort session
-		'''
+		# Loads a kilosort session
+		
 		kilodata = KiloSortSession(self.pname_root) # pname_root gets walked through and over-written with correct location of kiolsort data
 		kilodata.load()
 		kilodata.removeNoiseClusters()
 		self.kilodata = kilodata
 
 	def __loadSettings__(self):
-		'''
-		Loads the settings.xml data
-		'''
+		# Loads the settings.xml data
 		if self.settings is None:
 			import os
 			settings = Settings(self.pname_root) # pname_root gets walked through and over-written with correct location of settings.xml
@@ -144,7 +156,7 @@ class OpenEphysBase(object):
 			self.settings = settings
 
 	def __loaddata__(self, **kwargs):
-		self.load(self.pname_root, **kwargs)
+		self.load(self.pname_root, **kwargs) # some knarly hack
 
 	def plotXCorrs(self):
 		if self.kilodata is None:
@@ -155,18 +167,21 @@ class OpenEphysBase(object):
 		corriter.plotAllXCorrs(self.kilodata.good_clusters)
 
 	def plotPos(self, jumpmax=None, show=True, **kwargs):
-		'''
-		Plots x vs y position for this trial
+		"""
+		Plots x vs y position for the current trial
 
 		Parameters
-		------------
-		jumpmax - the max amount the LED is allowed to instantaneously move. int or greater
-		show - boolean - whether to plot the pos or not (default is True)
+		----------
+		jumpmax : int
+			The max amount the LED is allowed to instantaneously move
+		show : bool
+			Whether to plot the pos into a figure window or not (default True)
 
 		Returns
 		----------
-		xy - a nx2 np.array of xy
-		'''
+		xy : array_like
+			positional data following post-processing
+		"""
 		if jumpmax is None:
 			jumpmax = self.jumpmax
 		import matplotlib.pylab as plt
@@ -185,20 +200,20 @@ class OpenEphysBase(object):
 		return xy
 
 	def plotMaps(self, plot_type='map', **kwargs):
-		'''
+		"""
 		Parameters
 		------------
-		plot_type - str - valid strings include:
-						'map' - just ratemap plotted
-						'path' - just spikes on path
-						'both' - both of the above
-						'all' - both spikes on path, ratemap & SAC plotted
-						can also be a list
+		plot_type : str or list
+			The type of map to plot. Valid strings include:
+			* 'map' - just ratemap plotted
+			* 'path' - just spikes on path
+			* 'both' - both of the above
+			* 'all' - both spikes on path, ratemap & SAC plotted
 		Valid kwargs: 'ppm' - this is an integer denoting pixels per metre:
 												lower values = more bins in ratemap / SAC
 				'clusters' - int or list of ints describing which clusters to plot
 				i.e. this overwrites the 'good_clusters' value in self.kilodata
-		'''
+		"""
 		if self.kilodata is None:
 			self.loadKilo()
 		if ( 'ppm' in kwargs.keys() ):
