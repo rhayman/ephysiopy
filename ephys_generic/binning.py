@@ -3,7 +3,26 @@ from scipy import signal
 from astropy import convolution # deals with nans unlike other convs
 
 class RateMap(object):
-	"""docstring for RateMap"""
+	"""
+	Bins up positional data (xy, head direction etc) and produces rate maps
+	of the relevant kind. This is a generic class meant to be independent of
+	any particular recording format
+
+	Parameters
+	----------
+	xy : array_like, optional
+		The xy data, usually given as a 2 x n sample numpy array
+	hdir : array_like, optional
+		The head direction data, usualy a 1 x n sample numpy array
+	speed : array_like, optional
+		Similar to hdir
+	pos_weights : array_like, optional
+		A 1D numpy array n samples long which is used to weight a particular
+		position sample when binning data. For example, if there were 5 positions
+		recorded and a cell spiked once in position 2 and 5 times in position 3 and
+		nothing anywhere else then pos_weights looks like: [0 0 1 5 0]
+	
+	"""
 	def __init__(self, xy=None, hdir=None, speed=None, pos_weights=None, ppm=430, xyInCms=False, cmsPerBin=3, smooth_sz=5):
 		self.xy = xy
 		self.dir = hdir

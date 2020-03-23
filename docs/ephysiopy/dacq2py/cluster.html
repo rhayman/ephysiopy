@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.7.5" />
+<title>ephysiopy.dacq2py.cluster API documentation</title>
+<meta name="description" content="Created on Mon Jun 18 18:31:31 2012 …" />
+<link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
+<link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
+<style>.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{font-weight:bold}#index h4 + ul{margin-bottom:.6em}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>ephysiopy.dacq2py.cluster</code></h1>
+</header>
+<section id="section-intro">
+<p>Created on Mon Jun 18 18:31:31 2012</p>
+<p>@author: robin</p>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python"># -*- coding: utf-8 -*-
+&#39;&#39;&#39;
+Created on Mon Jun 18 18:31:31 2012
+
+@author: robin
+&#39;&#39;&#39;
+import numpy as np
+import os
+from subprocess import Popen, PIPE
+
+class Kluster():
+        &#39;&#39;&#39;
+        Runs KlustaKwik (KK) against data recorded on the Axona dacqUSB recording
+        system
+
+        Inherits from axonaIO.Tetrode to allow for mask construction (for the
+        newer version of KK) and easy access to some relevant information (e.g
+        number of spikes recorded)
+        &#39;&#39;&#39;
+        def __init__(self, filename, tet_num, feature_array):
+                &#39;&#39;&#39;
+                Inherits from dacq2py.IO so as to be able to load .set file for fmask
+                construction (ie remove grounded channels, eeg channels etc)
+
+                Parameters
+                ---------------
+                filename : str
+                        fully qualified, absolute root filename (i.e. without the
+                        .fet.n)
+                tet_num : int
+                        the tetrode number
+                feature_array : numpy.aray
+                        array containing the features to be put into the fet file
+                &#39;&#39;&#39;
+
+                self.filename = filename
+                self.tet_num = tet_num
+                self.feature_array = feature_array
+                self.n_features = feature_array.shape[1] / 4
+                self.distribution = 1
+                self.feature_mask = None
+
+        def make_fet(self):
+                &#39;&#39;&#39;
+                Creates and writes a .fet.n file for reading in  to KlustaKwik given
+                the array input a
+                &#39;&#39;&#39;
+
+                fet_filename = self.filename + &#39;.fet.&#39; + str(self.tet_num)
+                with open(fet_filename, &#39;w&#39;) as f:
+                        f.write(str(self.feature_array.shape[1]))
+                        f.write(&#39;\n&#39;)
+                        np.savetxt(f, self.feature_array, fmt=&#39;%1.5f&#39;)
+
+        def get_mask(self):
+                &#39;&#39;&#39;
+                Returns a feature mask based on unused channels, eeg recordings etc
+                Loads the set file associated with the trial and creates two dicts
+                containing the mode on each channel and the channels which contain the
+                eeg recordings
+                keys and values for both dicts are in the form of ints NB mode is
+                numbered from 0 upwards but eeg_filter is from 1 upwards
+                The mode key/ value pair of the Axona .set file correspond to the
+                following values:
+                2 - eeg
+                5 - ref-sig
+                6 - grounded
+                The collectMask key in the Axona .set file corresponds to whether or
+                not a tetrode was kept in the recording - use this also to construct
+                the feature mask
+                &#39;&#39;&#39;
+
+                #  use the feature array a to calculate which channels to include etc
+                sums = np.sum(self.feature_array, 0)
+                feature_mask = np.repeat(np.ones(4, dtype=np.int), self.n_features)
+                #  if there are &#34;missing&#34; channels use the older version of KK
+                zero_sums = sums == 0
+                if np.any(zero_sums):
+                        self.distribution = 1
+                        feature_mask[zero_sums] = 0
+                self.feature_mask = feature_mask
+                return feature_mask
+
+        def make_fmask(self, feature_mask):
+                &#39;&#39;&#39;
+                Create a .fmask.n file for use in the new (01/09/14) KlustaKwik program
+                where n denotes tetrode id
+
+                Parameters
+                ----------
+                feature_mask : numpy.array
+                        array of numbers between 0 and 1 (see above
+                        description from github site)
+
+                Notes
+                -----
+                From the github site:
+                &#34;The .fmask file is a text file, every line of which is a vector of
+                length the number of features, in which 1 denotes unmasked and 0
+                denotes masked, and values between 0 and 1 indicate partial masking&#34;
+                &#39;&#39;&#39;
+
+                fmask_filename = self.filename + &#39;.fmask.&#39; + str(self.tet_num)
+                mask = np.tile(feature_mask, (self.feature_array.shape[0], 1))
+                with open(fmask_filename, &#39;w&#39;) as f:
+                        f.write(str(self.feature_array.shape[1]))
+                        f.write(&#39;\n&#39;)
+                        np.savetxt(f, mask, fmt=&#39;%1d&#39;)
+
+        def kluster(self):
+                &#39;&#39;&#39;
+                Using a .fet.n file this makes a system call to KlustaKwik (KK) which
+                clusters data and saves istributional &#39; + str(self.distribution)
+                &#39;&#39;&#39;
+
+                # specify path to KlustaKwik exe
+                # NB THIS IS NOW SPECIFIED IN THE __init__.py FILE AT THE HEAD OF THIS
+                # PACKAGE
+                from ephysiopy import kk_path # from __init__.py at head of package
+                if not os.path.exists(kk_path):
+                        print(kk_path)
+                        raise IOError()
+                kk_proc = Popen(
+                        kk_path + &#39; &#39; +
+                        self.filename + &#39; &#39; +
+                        str(self.tet_num) +
+                        &#39; -UseDistributional &#39; + str(self.distribution) +
+                        &#39; -MinClusters 5&#39;
+                        &#39; -MaxPossibleClusters 31&#39;
+                        &#39; -MaskStarts 30&#39;
+                        &#39; -FullStepEvery 1&#39;
+                        &#39; -SplitEvery 40&#39;
+                        &#39; -UseMaskedInitialConditions 1&#39;
+                        &#39; -AssignToFirstClosestMask 1&#39;
+                        &#39; -DropLastNFeatures 1&#39;
+                        &#39; -RandomSeed 123&#39;
+                        &#39; -PriorPoint 1&#39;
+                        &#39; -MaxIter 10000&#39;
+                        &#39; -PenaltyK 1&#39;
+                        &#39; -PenaltyKLogN 0&#39;
+                        &#39; -Log 0&#39;
+                        &#39; -DistThresh 9.6&#39;
+                        &#39; -UseFeatures &#39; + &#39;&#39;.join(map(str, self.feature_mask))
+                , shell=True, stdout=PIPE)
+                # Print the output of the KlustaKwik algo
+                for line in kk_proc.stdout:
+                        print(line.replace(b&#39;\n&#39;, b&#39;&#39;))
+                &#39;&#39;&#39;
+                now read in the .clu.n file that has been created as a result of this
+                process and create the Tint-friendly cut file
+                &#39;&#39;&#39;
+                clu_filename = self.filename + &#39;.clu.&#39; + str(self.tet_num)
+                clu_data = np.loadtxt(clu_filename)
+                n_clusters = clu_data[0]
+                clu_data = clu_data[1:] - 1  # -1 so cluster 0 is junk
+                n_chan = 4
+                n_spikes = int(clu_data.shape[0])
+                cut_filename = self.filename.split(&#39;.&#39;)[0] + &#39;_&#39; + str(self.tet_num) + &#39;.cut&#39;
+                with open(cut_filename, &#39;w&#39;) as f:
+                        f.write(&#39;n_clusters: {nClusters}\n&#39;.format(nClusters=n_clusters.astype(int)))
+                        f.write(&#39;n_channels: {nChan}\n&#39;.format(nChan=n_chan))
+                        f.write(&#39;n_params: {nParam}\n&#39;.format(nParam=2))
+                        f.write(&#39;times_used_in_Vt:    {Vt}    {Vt}    {Vt}    {Vt}\n&#39;.format(Vt=0))
+                        for i in range(0, n_clusters.astype(int)):
+                                f.write(&#39; cluster: {i} center:{zeros}\n&#39;.format(i=i, zeros=&#39;    0    0    0    0    0    0    0    0&#39;))
+                                f.write(&#39;                min:{zeros}\n&#39;.format(i=i, zeros=&#39;    0    0    0    0    0    0    0    0&#39;))
+                                f.write(&#39;                max:{zeros}\n&#39;.format(i=i, zeros=&#39;    0    0    0    0    0    0    0    0&#39;))
+                        f.write(&#39;Exact_cut_for: {fname} spikes: {nSpikes}\n&#39;.format(fname=os.path.basename(self.filename), nSpikes=str(n_spikes)))
+                        for spk in clu_data:
+                                f.write(&#39;{spk}  &#39;.format(spk=spk.astype(int)))</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="ephysiopy.dacq2py.cluster.Kluster"><code class="flex name class">
+<span>class <span class="ident">Kluster</span></span>
+<span>(</span><span>filename, tet_num, feature_array)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Runs KlustaKwik (KK) against data recorded on the Axona dacqUSB recording
+system</p>
+<p>Inherits from axonaIO.Tetrode to allow for mask construction (for the
+newer version of KK) and easy access to some relevant information (e.g
+number of spikes recorded)</p>
+<p>Inherits from dacq2py.IO so as to be able to load .set file for fmask
+construction (ie remove grounded channels, eeg channels etc)</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>filename</code></strong> :&ensp;<code>str</code></dt>
+<dd>fully qualified, absolute root filename (i.e. without the
+.fet.n)</dd>
+<dt><strong><code>tet_num</code></strong> :&ensp;<code>int</code></dt>
+<dd>the tetrode number</dd>
+<dt><strong><code>feature_array</code></strong> :&ensp;<code>numpy.aray</code></dt>
+<dd>array containing the features to be put into the fet file</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Kluster():
+        &#39;&#39;&#39;
+        Runs KlustaKwik (KK) against data recorded on the Axona dacqUSB recording
+        system
+
+        Inherits from axonaIO.Tetrode to allow for mask construction (for the
+        newer version of KK) and easy access to some relevant information (e.g
+        number of spikes recorded)
+        &#39;&#39;&#39;
+        def __init__(self, filename, tet_num, feature_array):
+                &#39;&#39;&#39;
+                Inherits from dacq2py.IO so as to be able to load .set file for fmask
+                construction (ie remove grounded channels, eeg channels etc)
+
+                Parameters
+                ---------------
+                filename : str
+                        fully qualified, absolute root filename (i.e. without the
+                        .fet.n)
+                tet_num : int
+                        the tetrode number
+                feature_array : numpy.aray
+                        array containing the features to be put into the fet file
+                &#39;&#39;&#39;
+
+                self.filename = filename
+                self.tet_num = tet_num
+                self.feature_array = feature_array
+                self.n_features = feature_array.shape[1] / 4
+                self.distribution = 1
+                self.feature_mask = None
+
+        def make_fet(self):
+                &#39;&#39;&#39;
+                Creates and writes a .fet.n file for reading in  to KlustaKwik given
+                the array input a
+                &#39;&#39;&#39;
+
+                fet_filename = self.filename + &#39;.fet.&#39; + str(self.tet_num)
+                with open(fet_filename, &#39;w&#39;) as f:
+                        f.write(str(self.feature_array.shape[1]))
+                        f.write(&#39;\n&#39;)
+                        np.savetxt(f, self.feature_array, fmt=&#39;%1.5f&#39;)
+
+        def get_mask(self):
+                &#39;&#39;&#39;
+                Returns a feature mask based on unused channels, eeg recordings etc
+                Loads the set file associated with the trial and creates two dicts
+                containing the mode on each channel and the channels which contain the
+                eeg recordings
+                keys and values for both dicts are in the form of ints NB mode is
+                numbered from 0 upwards but eeg_filter is from 1 upwards
+                The mode key/ value pair of the Axona .set file correspond to the
+                following values:
+                2 - eeg
+                5 - ref-sig
+                6 - grounded
+                The collectMask key in the Axona .set file corresponds to whether or
+                not a tetrode was kept in the recording - use this also to construct
+                the feature mask
+                &#39;&#39;&#39;
+
+                #  use the feature array a to calculate which channels to include etc
+                sums = np.sum(self.feature_array, 0)
+                feature_mask = np.repeat(np.ones(4, dtype=np.int), self.n_features)
+                #  if there are &#34;missing&#34; channels use the older version of KK
+                zero_sums = sums == 0
+                if np.any(zero_sums):
+                        self.distribution = 1
+                        feature_mask[zero_sums] = 0
+                self.feature_mask = feature_mask
+                return feature_mask
+
+        def make_fmask(self, feature_mask):
+                &#39;&#39;&#39;
+                Create a .fmask.n file for use in the new (01/09/14) KlustaKwik program
+                where n denotes tetrode id
+
+                Parameters
+                ----------
+                feature_mask : numpy.array
+                        array of numbers between 0 and 1 (see above
+                        description from github site)
+
+                Notes
+                -----
+                From the github site:
+                &#34;The .fmask file is a text file, every line of which is a vector of
+                length the number of features, in which 1 denotes unmasked and 0
+                denotes masked, and values between 0 and 1 indicate partial masking&#34;
+                &#39;&#39;&#39;
+
+                fmask_filename = self.filename + &#39;.fmask.&#39; + str(self.tet_num)
+                mask = np.tile(feature_mask, (self.feature_array.shape[0], 1))
+                with open(fmask_filename, &#39;w&#39;) as f:
+                        f.write(str(self.feature_array.shape[1]))
+                        f.write(&#39;\n&#39;)
+                        np.savetxt(f, mask, fmt=&#39;%1d&#39;)
+
+        def kluster(self):
+                &#39;&#39;&#39;
+                Using a .fet.n file this makes a system call to KlustaKwik (KK) which
+                clusters data and saves istributional &#39; + str(self.distribution)
+                &#39;&#39;&#39;
+
+                # specify path to KlustaKwik exe
+                # NB THIS IS NOW SPECIFIED IN THE __init__.py FILE AT THE HEAD OF THIS
+                # PACKAGE
+                from ephysiopy import kk_path # from __init__.py at head of package
+                if not os.path.exists(kk_path):
+                        print(kk_path)
+                        raise IOError()
+                kk_proc = Popen(
+                        kk_path + &#39; &#39; +
+                        self.filename + &#39; &#39; +
+                        str(self.tet_num) +
+                        &#39; -UseDistributional &#39; + str(self.distribution) +
+                        &#39; -MinClusters 5&#39;
+                        &#39; -MaxPossibleClusters 31&#39;
+                        &#39; -MaskStarts 30&#39;
+                        &#39; -FullStepEvery 1&#39;
+                        &#39; -SplitEvery 40&#39;
+                        &#39; -UseMaskedInitialConditions 1&#39;
+                        &#39; -AssignToFirstClosestMask 1&#39;
+                        &#39; -DropLastNFeatures 1&#39;
+                        &#39; -RandomSeed 123&#39;
+                        &#39; -PriorPoint 1&#39;
+                        &#39; -MaxIter 10000&#39;
+                        &#39; -PenaltyK 1&#39;
+                        &#39; -PenaltyKLogN 0&#39;
+                        &#39; -Log 0&#39;
+                        &#39; -DistThresh 9.6&#39;
+                        &#39; -UseFeatures &#39; + &#39;&#39;.join(map(str, self.feature_mask))
+                , shell=True, stdout=PIPE)
+                # Print the output of the KlustaKwik algo
+                for line in kk_proc.stdout:
+                        print(line.replace(b&#39;\n&#39;, b&#39;&#39;))
+                &#39;&#39;&#39;
+                now read in the .clu.n file that has been created as a result of this
+                process and create the Tint-friendly cut file
+                &#39;&#39;&#39;
+                clu_filename = self.filename + &#39;.clu.&#39; + str(self.tet_num)
+                clu_data = np.loadtxt(clu_filename)
+                n_clusters = clu_data[0]
+                clu_data = clu_data[1:] - 1  # -1 so cluster 0 is junk
+                n_chan = 4
+                n_spikes = int(clu_data.shape[0])
+                cut_filename = self.filename.split(&#39;.&#39;)[0] + &#39;_&#39; + str(self.tet_num) + &#39;.cut&#39;
+                with open(cut_filename, &#39;w&#39;) as f:
+                        f.write(&#39;n_clusters: {nClusters}\n&#39;.format(nClusters=n_clusters.astype(int)))
+                        f.write(&#39;n_channels: {nChan}\n&#39;.format(nChan=n_chan))
+                        f.write(&#39;n_params: {nParam}\n&#39;.format(nParam=2))
+                        f.write(&#39;times_used_in_Vt:    {Vt}    {Vt}    {Vt}    {Vt}\n&#39;.format(Vt=0))
+                        for i in range(0, n_clusters.astype(int)):
+                                f.write(&#39; cluster: {i} center:{zeros}\n&#39;.format(i=i, zeros=&#39;    0    0    0    0    0    0    0    0&#39;))
+                                f.write(&#39;                min:{zeros}\n&#39;.format(i=i, zeros=&#39;    0    0    0    0    0    0    0    0&#39;))
+                                f.write(&#39;                max:{zeros}\n&#39;.format(i=i, zeros=&#39;    0    0    0    0    0    0    0    0&#39;))
+                        f.write(&#39;Exact_cut_for: {fname} spikes: {nSpikes}\n&#39;.format(fname=os.path.basename(self.filename), nSpikes=str(n_spikes)))
+                        for spk in clu_data:
+                                f.write(&#39;{spk}  &#39;.format(spk=spk.astype(int)))</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="ephysiopy.dacq2py.cluster.Kluster.get_mask"><code class="name flex">
+<span>def <span class="ident">get_mask</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Returns a feature mask based on unused channels, eeg recordings etc
+Loads the set file associated with the trial and creates two dicts
+containing the mode on each channel and the channels which contain the
+eeg recordings
+keys and values for both dicts are in the form of ints NB mode is
+numbered from 0 upwards but eeg_filter is from 1 upwards
+The mode key/ value pair of the Axona .set file correspond to the
+following values:
+2 - eeg
+5 - ref-sig
+6 - grounded
+The collectMask key in the Axona .set file corresponds to whether or
+not a tetrode was kept in the recording - use this also to construct
+the feature mask</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_mask(self):
+        &#39;&#39;&#39;
+        Returns a feature mask based on unused channels, eeg recordings etc
+        Loads the set file associated with the trial and creates two dicts
+        containing the mode on each channel and the channels which contain the
+        eeg recordings
+        keys and values for both dicts are in the form of ints NB mode is
+        numbered from 0 upwards but eeg_filter is from 1 upwards
+        The mode key/ value pair of the Axona .set file correspond to the
+        following values:
+        2 - eeg
+        5 - ref-sig
+        6 - grounded
+        The collectMask key in the Axona .set file corresponds to whether or
+        not a tetrode was kept in the recording - use this also to construct
+        the feature mask
+        &#39;&#39;&#39;
+
+        #  use the feature array a to calculate which channels to include etc
+        sums = np.sum(self.feature_array, 0)
+        feature_mask = np.repeat(np.ones(4, dtype=np.int), self.n_features)
+        #  if there are &#34;missing&#34; channels use the older version of KK
+        zero_sums = sums == 0
+        if np.any(zero_sums):
+                self.distribution = 1
+                feature_mask[zero_sums] = 0
+        self.feature_mask = feature_mask
+        return feature_mask</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.cluster.Kluster.kluster"><code class="name flex">
+<span>def <span class="ident">kluster</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Using a .fet.n file this makes a system call to KlustaKwik (KK) which
+clusters data and saves istributional ' + str(self.distribution)</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def kluster(self):
+        &#39;&#39;&#39;
+        Using a .fet.n file this makes a system call to KlustaKwik (KK) which
+        clusters data and saves istributional &#39; + str(self.distribution)
+        &#39;&#39;&#39;
+
+        # specify path to KlustaKwik exe
+        # NB THIS IS NOW SPECIFIED IN THE __init__.py FILE AT THE HEAD OF THIS
+        # PACKAGE
+        from ephysiopy import kk_path # from __init__.py at head of package
+        if not os.path.exists(kk_path):
+                print(kk_path)
+                raise IOError()
+        kk_proc = Popen(
+                kk_path + &#39; &#39; +
+                self.filename + &#39; &#39; +
+                str(self.tet_num) +
+                &#39; -UseDistributional &#39; + str(self.distribution) +
+                &#39; -MinClusters 5&#39;
+                &#39; -MaxPossibleClusters 31&#39;
+                &#39; -MaskStarts 30&#39;
+                &#39; -FullStepEvery 1&#39;
+                &#39; -SplitEvery 40&#39;
+                &#39; -UseMaskedInitialConditions 1&#39;
+                &#39; -AssignToFirstClosestMask 1&#39;
+                &#39; -DropLastNFeatures 1&#39;
+                &#39; -RandomSeed 123&#39;
+                &#39; -PriorPoint 1&#39;
+                &#39; -MaxIter 10000&#39;
+                &#39; -PenaltyK 1&#39;
+                &#39; -PenaltyKLogN 0&#39;
+                &#39; -Log 0&#39;
+                &#39; -DistThresh 9.6&#39;
+                &#39; -UseFeatures &#39; + &#39;&#39;.join(map(str, self.feature_mask))
+        , shell=True, stdout=PIPE)
+        # Print the output of the KlustaKwik algo
+        for line in kk_proc.stdout:
+                print(line.replace(b&#39;\n&#39;, b&#39;&#39;))
+        &#39;&#39;&#39;
+        now read in the .clu.n file that has been created as a result of this
+        process and create the Tint-friendly cut file
+        &#39;&#39;&#39;
+        clu_filename = self.filename + &#39;.clu.&#39; + str(self.tet_num)
+        clu_data = np.loadtxt(clu_filename)
+        n_clusters = clu_data[0]
+        clu_data = clu_data[1:] - 1  # -1 so cluster 0 is junk
+        n_chan = 4
+        n_spikes = int(clu_data.shape[0])
+        cut_filename = self.filename.split(&#39;.&#39;)[0] + &#39;_&#39; + str(self.tet_num) + &#39;.cut&#39;
+        with open(cut_filename, &#39;w&#39;) as f:
+                f.write(&#39;n_clusters: {nClusters}\n&#39;.format(nClusters=n_clusters.astype(int)))
+                f.write(&#39;n_channels: {nChan}\n&#39;.format(nChan=n_chan))
+                f.write(&#39;n_params: {nParam}\n&#39;.format(nParam=2))
+                f.write(&#39;times_used_in_Vt:    {Vt}    {Vt}    {Vt}    {Vt}\n&#39;.format(Vt=0))
+                for i in range(0, n_clusters.astype(int)):
+                        f.write(&#39; cluster: {i} center:{zeros}\n&#39;.format(i=i, zeros=&#39;    0    0    0    0    0    0    0    0&#39;))
+                        f.write(&#39;                min:{zeros}\n&#39;.format(i=i, zeros=&#39;    0    0    0    0    0    0    0    0&#39;))
+                        f.write(&#39;                max:{zeros}\n&#39;.format(i=i, zeros=&#39;    0    0    0    0    0    0    0    0&#39;))
+                f.write(&#39;Exact_cut_for: {fname} spikes: {nSpikes}\n&#39;.format(fname=os.path.basename(self.filename), nSpikes=str(n_spikes)))
+                for spk in clu_data:
+                        f.write(&#39;{spk}  &#39;.format(spk=spk.astype(int)))</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.cluster.Kluster.make_fet"><code class="name flex">
+<span>def <span class="ident">make_fet</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Creates and writes a .fet.n file for reading in
+to KlustaKwik given
+the array input a</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def make_fet(self):
+        &#39;&#39;&#39;
+        Creates and writes a .fet.n file for reading in  to KlustaKwik given
+        the array input a
+        &#39;&#39;&#39;
+
+        fet_filename = self.filename + &#39;.fet.&#39; + str(self.tet_num)
+        with open(fet_filename, &#39;w&#39;) as f:
+                f.write(str(self.feature_array.shape[1]))
+                f.write(&#39;\n&#39;)
+                np.savetxt(f, self.feature_array, fmt=&#39;%1.5f&#39;)</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.cluster.Kluster.make_fmask"><code class="name flex">
+<span>def <span class="ident">make_fmask</span></span>(<span>self, feature_mask)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Create a .fmask.n file for use in the new (01/09/14) KlustaKwik program
+where n denotes tetrode id</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>feature_mask</code></strong> :&ensp;<code>numpy.array</code></dt>
+<dd>array of numbers between 0 and 1 (see above
+description from github site)</dd>
+</dl>
+<h2 id="notes">Notes</h2>
+<p>From the github site:
+"The .fmask file is a text file, every line of which is a vector of
+length the number of features, in which 1 denotes unmasked and 0
+denotes masked, and values between 0 and 1 indicate partial masking"</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def make_fmask(self, feature_mask):
+        &#39;&#39;&#39;
+        Create a .fmask.n file for use in the new (01/09/14) KlustaKwik program
+        where n denotes tetrode id
+
+        Parameters
+        ----------
+        feature_mask : numpy.array
+                array of numbers between 0 and 1 (see above
+                description from github site)
+
+        Notes
+        -----
+        From the github site:
+        &#34;The .fmask file is a text file, every line of which is a vector of
+        length the number of features, in which 1 denotes unmasked and 0
+        denotes masked, and values between 0 and 1 indicate partial masking&#34;
+        &#39;&#39;&#39;
+
+        fmask_filename = self.filename + &#39;.fmask.&#39; + str(self.tet_num)
+        mask = np.tile(feature_mask, (self.feature_array.shape[0], 1))
+        with open(fmask_filename, &#39;w&#39;) as f:
+                f.write(str(self.feature_array.shape[1]))
+                f.write(&#39;\n&#39;)
+                np.savetxt(f, mask, fmt=&#39;%1d&#39;)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="ephysiopy.dacq2py" href="index.html">ephysiopy.dacq2py</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="ephysiopy.dacq2py.cluster.Kluster" href="#ephysiopy.dacq2py.cluster.Kluster">Kluster</a></code></h4>
+<ul class="">
+<li><code><a title="ephysiopy.dacq2py.cluster.Kluster.get_mask" href="#ephysiopy.dacq2py.cluster.Kluster.get_mask">get_mask</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.cluster.Kluster.kluster" href="#ephysiopy.dacq2py.cluster.Kluster.kluster">kluster</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.cluster.Kluster.make_fet" href="#ephysiopy.dacq2py.cluster.Kluster.make_fet">make_fet</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.cluster.Kluster.make_fmask" href="#ephysiopy.dacq2py.cluster.Kluster.make_fmask">make_fmask</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.7.5</a>.</p>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad()</script>
+</body>
+</html>

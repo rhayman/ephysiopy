@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.7.5" />
+<title>ephysiopy.format_converters.OE_numpy API documentation</title>
+<meta name="description" content="Created on Fri Sep 27 12:08:10 2019 …" />
+<link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
+<link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
+<style>.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{font-weight:bold}#index h4 + ul{margin-bottom:.6em}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>ephysiopy.format_converters.OE_numpy</code></h1>
+</header>
+<section id="section-intro">
+<p>Created on Fri Sep 27 12:08:10 2019</p>
+<p>@author: robin</p>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+&#34;&#34;&#34;
+Created on Fri Sep 27 12:08:10 2019
+
+@author: robin
+&#34;&#34;&#34;
+import numpy as np
+import os
+import matplotlib.pylab as plt
+from ephysiopy.dacq2py import axonaIO
+from ephysiopy.ephys_generic.ephys_generic import PosCalcsGeneric
+from ephysiopy.openephys2py import OEKiloPhy, OESettings
+from scipy import signal
+import h5py
+
+class OE2Numpy(object):
+        &#34;&#34;&#34;
+
+        &#34;&#34;&#34;
+        def __init__(self, filename_root: str):
+                self.filename_root = filename_root # &#39;/home/robin/Data/experiment_1.nwb&#39; or whatever
+                self.dirname = os.path.dirname(filename_root) # &#39;/home/robin/Data&#39;
+                self.experiment_name = os.path.basename(self.filename_root) # &#39;experiment_1.nwb&#39;
+                self.recording_name = None # will become &#39;recording1&#39; etc
+                self.OE_data = None # will become an instance of OEKiloPhy.OpenEphysNWB
+                self._settings = None # will become an instance of OESettings.Settings
+                self.fs = None
+                self.lfp_lowcut = None
+                self.lfp_highcut = None
+
+        def resample(self, data, src_rate=30, dst_rate=50, axis=0):
+                &#39;&#39;&#39;
+                Upsamples data using FFT
+                &#39;&#39;&#39;
+                denom = np.gcd(dst_rate, src_rate)
+                new_data = signal.resample_poly(data, dst_rate/denom, src_rate/denom, axis)
+                return new_data
+
+        @property
+        def settings(self):
+                &#39;&#39;&#39;
+                Loads the settings data from the settings.xml file
+                &#39;&#39;&#39;
+                if self._settings is None:
+                        self._settings = OESettings.Settings(self.dirname)
+                return self._settings
+
+        @settings.setter
+        def settings(self, value):
+                self._settings = value
+
+        def getOEData(self, filename_root: str, recording_name=&#39;recording1&#39;)-&gt;dict:
+                &#39;&#39;&#39;
+                Loads the nwb file names in filename_root and returns a dict containing some of the nwb data
+                relevant for converting to Axona file formats
+
+                Parameters
+                ----------------
+                filename_root - fuly qualified name of the nwb file
+                recording_name - the name of the recording in the nwb file NB the default has changed in different versions of OE from &#39;recording0&#39; to &#39;recording1&#39;
+                &#39;&#39;&#39;
+                if os.path.isfile(filename_root):
+                        root_filename = os.path.splitext(self.experiment_name)[0]
+                        OE_data = OEKiloPhy.OpenEphysNWB(self.dirname)
+                        print(&#34;Loading nwb data...&#34;)
+                        OE_data.load(self.dirname, session_name=self.experiment_name, recording_name=recording_name, loadspikes=False, loadraw=True)
+                        print(&#34;Loaded nwb data from: {}&#34;.format(filename_root))
+                        # It&#39;s likely that spikes have been collected after the last position sample
+                        # due to buffering issues I can&#39;t be bothered to resolve. Get the last pos
+                        # timestamps here and check that spikes don&#39;t go beyond this when writing data
+                        # out later
+                        # Also the pos and spike data timestamps almost never start at 0 as the user
+                        # usually acquires data for a while before recording. Grab the first timestamp
+                        # here with a view to subtracting this from everything (including the spike data)
+                        # and figuring out what to keep later
+                        try: # pos might not be present
+                                first_pos_ts = OE_data.xyTS[0]
+                                last_pos_ts = OE_data.xyTS[-1]
+                                self.first_pos_ts = first_pos_ts
+                                self.last_pos_ts = last_pos_ts
+                        except:
+                                print(&#34;No position data in nwb file&#34;)
+                        self.recording_name = recording_name
+                        self.OE_data = OE_data
+                        return OE_data
+
+        def exportLFP(self, channels: list, output_freq: int):
+                print(&#34;Beginning conversion and exporting of LFP data...&#34;)
+                channels = [int(c) for c in channels]
+                if self.settings.fpga_nodeId is None:
+                        self.settings.parse()
+                if self.settings.fpga_sample_rate is None:
+                        self.settings.parseChannels()
+                output_name = os.path.join(self.dirname, &#34;lfp.npy&#34;)
+                output_ts_name = os.path.join(self.dirname, &#34;lfp_timestamps.npy&#34;)
+                if len(channels) == 1:
+                        # resample data
+                        print(&#34;Resampling data from {0} to {1} Hz&#34;.format(self.settings.fpga_sample_rate, output_freq))
+                        new_data = self.resample(self.OE_data.rawData[:, channels], self.settings.fpga_sample_rate, output_freq)
+                        np.save(output_name, new_data, allow_pickle=False)
+                if len(channels) &gt; 1:
+                        print(&#34;Resampling data from {0} to {1} Hz&#34;.format(self.settings.fpga_sample_rate, output_freq))
+                        new_data = self.resample(self.OE_data.rawData[:, channels[0]:channels[-1]], self.settings.fpga_sample_rate, output_freq)
+                        np.save(output_name, new_data, allow_pickle=False)
+                nsamples = np.shape(new_data)[0]
+                new_ts = np.linspace(self.OE_data.ts[0], self.OE_data.ts[-1], nsamples)
+                np.save(output_ts_name, new_ts, allow_pickle=False)
+                print(&#34;Finished exporting LFP data&#34;)
+
+        def exportTTL(self):
+                print(&#34;Exporting TTL data...&#34;)
+                ttl_state = self.OE_data.ttl_data
+                ttl_ts = self.OE_data.ttl_timestamps
+                np.save(os.path.join(self.dirname, &#34;ttl_state.npy&#34;), ttl_state, allow_pickle=False)
+                np.save(os.path.join(self.dirname, &#34;ttl_timestamps.npy&#34;), ttl_ts, allow_pickle=False)
+                print(&#34;Finished exporting TTL data&#34;)</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="ephysiopy.format_converters.OE_numpy.OE2Numpy"><code class="flex name class">
+<span>class <span class="ident">OE2Numpy</span></span>
+<span>(</span><span>filename_root)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class OE2Numpy(object):
+        &#34;&#34;&#34;
+
+        &#34;&#34;&#34;
+        def __init__(self, filename_root: str):
+                self.filename_root = filename_root # &#39;/home/robin/Data/experiment_1.nwb&#39; or whatever
+                self.dirname = os.path.dirname(filename_root) # &#39;/home/robin/Data&#39;
+                self.experiment_name = os.path.basename(self.filename_root) # &#39;experiment_1.nwb&#39;
+                self.recording_name = None # will become &#39;recording1&#39; etc
+                self.OE_data = None # will become an instance of OEKiloPhy.OpenEphysNWB
+                self._settings = None # will become an instance of OESettings.Settings
+                self.fs = None
+                self.lfp_lowcut = None
+                self.lfp_highcut = None
+
+        def resample(self, data, src_rate=30, dst_rate=50, axis=0):
+                &#39;&#39;&#39;
+                Upsamples data using FFT
+                &#39;&#39;&#39;
+                denom = np.gcd(dst_rate, src_rate)
+                new_data = signal.resample_poly(data, dst_rate/denom, src_rate/denom, axis)
+                return new_data
+
+        @property
+        def settings(self):
+                &#39;&#39;&#39;
+                Loads the settings data from the settings.xml file
+                &#39;&#39;&#39;
+                if self._settings is None:
+                        self._settings = OESettings.Settings(self.dirname)
+                return self._settings
+
+        @settings.setter
+        def settings(self, value):
+                self._settings = value
+
+        def getOEData(self, filename_root: str, recording_name=&#39;recording1&#39;)-&gt;dict:
+                &#39;&#39;&#39;
+                Loads the nwb file names in filename_root and returns a dict containing some of the nwb data
+                relevant for converting to Axona file formats
+
+                Parameters
+                ----------------
+                filename_root - fuly qualified name of the nwb file
+                recording_name - the name of the recording in the nwb file NB the default has changed in different versions of OE from &#39;recording0&#39; to &#39;recording1&#39;
+                &#39;&#39;&#39;
+                if os.path.isfile(filename_root):
+                        root_filename = os.path.splitext(self.experiment_name)[0]
+                        OE_data = OEKiloPhy.OpenEphysNWB(self.dirname)
+                        print(&#34;Loading nwb data...&#34;)
+                        OE_data.load(self.dirname, session_name=self.experiment_name, recording_name=recording_name, loadspikes=False, loadraw=True)
+                        print(&#34;Loaded nwb data from: {}&#34;.format(filename_root))
+                        # It&#39;s likely that spikes have been collected after the last position sample
+                        # due to buffering issues I can&#39;t be bothered to resolve. Get the last pos
+                        # timestamps here and check that spikes don&#39;t go beyond this when writing data
+                        # out later
+                        # Also the pos and spike data timestamps almost never start at 0 as the user
+                        # usually acquires data for a while before recording. Grab the first timestamp
+                        # here with a view to subtracting this from everything (including the spike data)
+                        # and figuring out what to keep later
+                        try: # pos might not be present
+                                first_pos_ts = OE_data.xyTS[0]
+                                last_pos_ts = OE_data.xyTS[-1]
+                                self.first_pos_ts = first_pos_ts
+                                self.last_pos_ts = last_pos_ts
+                        except:
+                                print(&#34;No position data in nwb file&#34;)
+                        self.recording_name = recording_name
+                        self.OE_data = OE_data
+                        return OE_data
+
+        def exportLFP(self, channels: list, output_freq: int):
+                print(&#34;Beginning conversion and exporting of LFP data...&#34;)
+                channels = [int(c) for c in channels]
+                if self.settings.fpga_nodeId is None:
+                        self.settings.parse()
+                if self.settings.fpga_sample_rate is None:
+                        self.settings.parseChannels()
+                output_name = os.path.join(self.dirname, &#34;lfp.npy&#34;)
+                output_ts_name = os.path.join(self.dirname, &#34;lfp_timestamps.npy&#34;)
+                if len(channels) == 1:
+                        # resample data
+                        print(&#34;Resampling data from {0} to {1} Hz&#34;.format(self.settings.fpga_sample_rate, output_freq))
+                        new_data = self.resample(self.OE_data.rawData[:, channels], self.settings.fpga_sample_rate, output_freq)
+                        np.save(output_name, new_data, allow_pickle=False)
+                if len(channels) &gt; 1:
+                        print(&#34;Resampling data from {0} to {1} Hz&#34;.format(self.settings.fpga_sample_rate, output_freq))
+                        new_data = self.resample(self.OE_data.rawData[:, channels[0]:channels[-1]], self.settings.fpga_sample_rate, output_freq)
+                        np.save(output_name, new_data, allow_pickle=False)
+                nsamples = np.shape(new_data)[0]
+                new_ts = np.linspace(self.OE_data.ts[0], self.OE_data.ts[-1], nsamples)
+                np.save(output_ts_name, new_ts, allow_pickle=False)
+                print(&#34;Finished exporting LFP data&#34;)
+
+        def exportTTL(self):
+                print(&#34;Exporting TTL data...&#34;)
+                ttl_state = self.OE_data.ttl_data
+                ttl_ts = self.OE_data.ttl_timestamps
+                np.save(os.path.join(self.dirname, &#34;ttl_state.npy&#34;), ttl_state, allow_pickle=False)
+                np.save(os.path.join(self.dirname, &#34;ttl_timestamps.npy&#34;), ttl_ts, allow_pickle=False)
+                print(&#34;Finished exporting TTL data&#34;)</code></pre>
+</details>
+<h3>Instance variables</h3>
+<dl>
+<dt id="ephysiopy.format_converters.OE_numpy.OE2Numpy.settings"><code class="name">var <span class="ident">settings</span></code></dt>
+<dd>
+<section class="desc"><p>Loads the settings data from the settings.xml file</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def settings(self):
+        &#39;&#39;&#39;
+        Loads the settings data from the settings.xml file
+        &#39;&#39;&#39;
+        if self._settings is None:
+                self._settings = OESettings.Settings(self.dirname)
+        return self._settings</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="ephysiopy.format_converters.OE_numpy.OE2Numpy.exportLFP"><code class="name flex">
+<span>def <span class="ident">exportLFP</span></span>(<span>self, channels, output_freq)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def exportLFP(self, channels: list, output_freq: int):
+        print(&#34;Beginning conversion and exporting of LFP data...&#34;)
+        channels = [int(c) for c in channels]
+        if self.settings.fpga_nodeId is None:
+                self.settings.parse()
+        if self.settings.fpga_sample_rate is None:
+                self.settings.parseChannels()
+        output_name = os.path.join(self.dirname, &#34;lfp.npy&#34;)
+        output_ts_name = os.path.join(self.dirname, &#34;lfp_timestamps.npy&#34;)
+        if len(channels) == 1:
+                # resample data
+                print(&#34;Resampling data from {0} to {1} Hz&#34;.format(self.settings.fpga_sample_rate, output_freq))
+                new_data = self.resample(self.OE_data.rawData[:, channels], self.settings.fpga_sample_rate, output_freq)
+                np.save(output_name, new_data, allow_pickle=False)
+        if len(channels) &gt; 1:
+                print(&#34;Resampling data from {0} to {1} Hz&#34;.format(self.settings.fpga_sample_rate, output_freq))
+                new_data = self.resample(self.OE_data.rawData[:, channels[0]:channels[-1]], self.settings.fpga_sample_rate, output_freq)
+                np.save(output_name, new_data, allow_pickle=False)
+        nsamples = np.shape(new_data)[0]
+        new_ts = np.linspace(self.OE_data.ts[0], self.OE_data.ts[-1], nsamples)
+        np.save(output_ts_name, new_ts, allow_pickle=False)
+        print(&#34;Finished exporting LFP data&#34;)</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.format_converters.OE_numpy.OE2Numpy.exportTTL"><code class="name flex">
+<span>def <span class="ident">exportTTL</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def exportTTL(self):
+        print(&#34;Exporting TTL data...&#34;)
+        ttl_state = self.OE_data.ttl_data
+        ttl_ts = self.OE_data.ttl_timestamps
+        np.save(os.path.join(self.dirname, &#34;ttl_state.npy&#34;), ttl_state, allow_pickle=False)
+        np.save(os.path.join(self.dirname, &#34;ttl_timestamps.npy&#34;), ttl_ts, allow_pickle=False)
+        print(&#34;Finished exporting TTL data&#34;)</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.format_converters.OE_numpy.OE2Numpy.getOEData"><code class="name flex">
+<span>def <span class="ident">getOEData</span></span>(<span>self, filename_root, recording_name='recording1')</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Loads the nwb file names in filename_root and returns a dict containing some of the nwb data
+relevant for converting to Axona file formats</p>
+<h2 id="parameters">Parameters</h2>
+<p>filename_root - fuly qualified name of the nwb file
+recording_name - the name of the recording in the nwb file NB the default has changed in different versions of OE from 'recording0' to 'recording1'</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def getOEData(self, filename_root: str, recording_name=&#39;recording1&#39;)-&gt;dict:
+        &#39;&#39;&#39;
+        Loads the nwb file names in filename_root and returns a dict containing some of the nwb data
+        relevant for converting to Axona file formats
+
+        Parameters
+        ----------------
+        filename_root - fuly qualified name of the nwb file
+        recording_name - the name of the recording in the nwb file NB the default has changed in different versions of OE from &#39;recording0&#39; to &#39;recording1&#39;
+        &#39;&#39;&#39;
+        if os.path.isfile(filename_root):
+                root_filename = os.path.splitext(self.experiment_name)[0]
+                OE_data = OEKiloPhy.OpenEphysNWB(self.dirname)
+                print(&#34;Loading nwb data...&#34;)
+                OE_data.load(self.dirname, session_name=self.experiment_name, recording_name=recording_name, loadspikes=False, loadraw=True)
+                print(&#34;Loaded nwb data from: {}&#34;.format(filename_root))
+                # It&#39;s likely that spikes have been collected after the last position sample
+                # due to buffering issues I can&#39;t be bothered to resolve. Get the last pos
+                # timestamps here and check that spikes don&#39;t go beyond this when writing data
+                # out later
+                # Also the pos and spike data timestamps almost never start at 0 as the user
+                # usually acquires data for a while before recording. Grab the first timestamp
+                # here with a view to subtracting this from everything (including the spike data)
+                # and figuring out what to keep later
+                try: # pos might not be present
+                        first_pos_ts = OE_data.xyTS[0]
+                        last_pos_ts = OE_data.xyTS[-1]
+                        self.first_pos_ts = first_pos_ts
+                        self.last_pos_ts = last_pos_ts
+                except:
+                        print(&#34;No position data in nwb file&#34;)
+                self.recording_name = recording_name
+                self.OE_data = OE_data
+                return OE_data</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.format_converters.OE_numpy.OE2Numpy.resample"><code class="name flex">
+<span>def <span class="ident">resample</span></span>(<span>self, data, src_rate=30, dst_rate=50, axis=0)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Upsamples data using FFT</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def resample(self, data, src_rate=30, dst_rate=50, axis=0):
+        &#39;&#39;&#39;
+        Upsamples data using FFT
+        &#39;&#39;&#39;
+        denom = np.gcd(dst_rate, src_rate)
+        new_data = signal.resample_poly(data, dst_rate/denom, src_rate/denom, axis)
+        return new_data</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="ephysiopy.format_converters" href="index.html">ephysiopy.format_converters</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="ephysiopy.format_converters.OE_numpy.OE2Numpy" href="#ephysiopy.format_converters.OE_numpy.OE2Numpy">OE2Numpy</a></code></h4>
+<ul class="">
+<li><code><a title="ephysiopy.format_converters.OE_numpy.OE2Numpy.exportLFP" href="#ephysiopy.format_converters.OE_numpy.OE2Numpy.exportLFP">exportLFP</a></code></li>
+<li><code><a title="ephysiopy.format_converters.OE_numpy.OE2Numpy.exportTTL" href="#ephysiopy.format_converters.OE_numpy.OE2Numpy.exportTTL">exportTTL</a></code></li>
+<li><code><a title="ephysiopy.format_converters.OE_numpy.OE2Numpy.getOEData" href="#ephysiopy.format_converters.OE_numpy.OE2Numpy.getOEData">getOEData</a></code></li>
+<li><code><a title="ephysiopy.format_converters.OE_numpy.OE2Numpy.resample" href="#ephysiopy.format_converters.OE_numpy.OE2Numpy.resample">resample</a></code></li>
+<li><code><a title="ephysiopy.format_converters.OE_numpy.OE2Numpy.settings" href="#ephysiopy.format_converters.OE_numpy.OE2Numpy.settings">settings</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.7.5</a>.</p>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad()</script>
+</body>
+</html>

@@ -27,7 +27,7 @@ class SpikeCalcsGeneric(object):
         the times of 'spikes' in the trial
         this should be all spikes as the cluster identity vector _spk_clusters
         is used to pick out the right spikes
-    waveforms : np.array
+    waveforms : np.array, optional
         not sure on shape yet but will be something like a
         a 4 x nSpikes x nSamples (4 for tetrode-based analysis)
 

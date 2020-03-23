@@ -1,0 +1,2145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.7.5" />
+<title>ephysiopy.dacq2py.eegcalcs API documentation</title>
+<meta name="description" content="Created on Mon Jun 18 18:31:31 2012 …" />
+<link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
+<link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
+<style>.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{font-weight:bold}#index h4 + ul{margin-bottom:.6em}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>ephysiopy.dacq2py.eegcalcs</code></h1>
+</header>
+<section id="section-intro">
+<p>Created on Mon Jun 18 18:31:31 2012</p>
+<p>@author: robin</p>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python"># -*- coding: utf-8 -*-
+&#34;&#34;&#34;
+Created on Mon Jun 18 18:31:31 2012
+
+@author: robin
+&#34;&#34;&#34;
+import numpy as np
+import os
+from scipy import signal
+from .axonaIO import EEG as EEGIO
+from itertools import groupby
+from operator import itemgetter
+from .statscalcs import StatsCalcs
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from matplotlib.collections import LineCollection
+from scipy.special._ufuncs import gammainc, gamma
+from scipy.optimize import fminbound
+
+class EEGCalcs(EEGIO):
+        def __init__(self, fname, eegType=&#39;eeg&#39;, thetaRange=[7,11], pad2pow=np.nan,
+                                 smthKernelWidth=2, smthKernelSigma=0.1875, sn2Width=2,
+                                 maxFreq=125, ymax=None, xmax=25):
+                if eegType == &#39;eeg&#39;:
+                        egf = 0;
+                elif eegType == &#39;egf&#39;:
+                        egf = 1;
+                self.fname = os.path.basename(fname)
+                self.EEG = EEGIO(fname, egf=egf)
+                self.posSampFreq = 50
+                self.sampsPerPos = int(self.EEG.sample_rate / self.posSampFreq)
+                self.sample_rate = self.EEG.sample_rate
+                self.eeg = self.EEG.eeg - np.ma.mean(self.EEG.eeg)
+                self.thetaRange = [7,11]
+                self.pad2pow = pad2pow
+                self.smthKernelWidth = smthKernelWidth
+                self.smthKernelSigma = smthKernelSigma
+                self.sn2Width = sn2Width
+                self.maxFreq = maxFreq
+                self.ymax = ymax
+                self.xmax = xmax
+
+        def intrinsic_freq_autoCorr(self, spkTimes=None, posMask=None, maxFreq=25,
+                                                                acBinSize=0.002, acWindow=0.5, plot=True,
+                                                                **kwargs):
+                &#34;&#34;&#34;
+                Be careful that if you&#39;ve called dacq2py.Tetrode.getSpkTS()
+                that they are divided by
+                96000 to get into seconds before using here
+                &#34;&#34;&#34;
+                acBinsPerPos = 1. / self.posSampFreq / acBinSize
+                acWindowSizeBins = np.round(acWindow / acBinSize)
+                binCentres = np.arange(0.5, len(posMask)*acBinsPerPos) * acBinSize
+                spkTrHist, _ = np.histogram(spkTimes, bins=binCentres)
+
+                # find start, end and length of each block of trues in posMask
+                idxArray = np.array([map(itemgetter(0), itemgetter(0, -1)(list(g))) + [k] for k, g in groupby(enumerate(posMask), itemgetter(1))])
+                chunkLens = np.diff(idxArray)[:, 0] + 1
+
+                # split the single histogram into individual chunks
+                splitIdx = np.nonzero(np.diff(posMask.astype(int)))[0]+1
+                splitMask = np.split(posMask, splitIdx)
+                splitSpkHist = np.split(spkTrHist, splitIdx * acBinsPerPos)
+                histChunks = []
+                for i in range(len(splitSpkHist)):
+                        if np.all(splitMask[i]):
+                                if np.sum(splitSpkHist[i]) &gt; 2:
+                                        histChunks.append(splitSpkHist[i])
+                autoCorrGrid = np.zeros((acWindowSizeBins + 1, len(histChunks)))
+                chunkLens = []
+                for i in range(len(histChunks)):
+                        lenThisChunk = len(histChunks[i])
+                        chunkLens.append(lenThisChunk)
+                        tmp = np.zeros(lenThisChunk * 2)
+                        tmp[lenThisChunk/2:lenThisChunk/2+lenThisChunk] = histChunks[i]
+                        tmp2 = signal.fftconvolve(tmp, histChunks[i][::-1], mode=&#39;valid&#39;)
+                        autoCorrGrid[:, i] = tmp2[lenThisChunk/2:lenThisChunk/2+acWindowSizeBins+1] / acBinsPerPos
+
+                totalLen = np.sum(chunkLens)
+                autoCorrSum = np.nansum(autoCorrGrid, 1) / totalLen
+                #lags = np.arange(0, acWindowSizeBins) * acBinSize
+                meanNormdAc = autoCorrSum[1::] - np.nanmean(autoCorrSum[1::])
+                out = self.power_spectrum(eeg=meanNormdAc, binWidthSecs=acBinSize,
+                                                                  maxFreq=maxFreq, pad2pow=16, **kwargs)
+                out.update({&#39;meanNormdAc&#39;: meanNormdAc})
+                if plot:
+                        fig = plt.gcf()
+                        ax = fig.gca()
+                        xlim = ax.get_xlim()
+                        ylim = ax.get_ylim()
+                        ax.imshow(autoCorrGrid,
+                                         extent=[maxFreq*0.6, maxFreq,
+                                                         np.max(out[&#39;Power&#39;])*0.6, ax.get_ylim()[1]])
+                        ax.set_ylim(ylim)
+                        ax.set_xlim(xlim)
+                return out
+
+        def wavelet(self, Y, dt, pad=0, dj=-1, s0=-1, J1=-1, mother=-1, param=-1):
+                n1 = len(Y)
+        
+                if s0 == -1:
+                        s0 = 2 * dt
+                if dj == -1:
+                        dj = 1. / 4.
+                if J1 == -1:
+                        J1 = np.fix((np.log(n1 * dt / s0) / np.log(2)) / dj)
+                if mother == -1:
+                        mother = &#39;MORLET&#39;
+        
+                #....construct time series to analyze, pad if necessary
+                x = Y - np.mean(Y)
+                if pad == 1:
+                        base2 = np.fix(np.log(n1) / np.log(2) + 0.4999)  # power of 2 nearest to N
+                        x = np.concatenate((x, np.zeros(2 ** (base2 + 1) - n1)))
+        
+                n = len(x)
+        
+                #....construct wavenumber array used in transform [Eqn(5)]
+                kplus = np.arange(1, np.fix(n / 2 + 1))
+                kplus = (kplus * 2 * np.pi / (n * dt))
+                kminus = (-(kplus[0:-1])[::-1])
+                k = np.concatenate(([0.], kplus, kminus))
+        
+                #....compute FFT of the (padded) time series
+                f = np.fft.fft(x)  # [Eqn(3)]
+        
+                #....construct SCALE array &amp; empty PERIOD &amp; WAVE arrays
+                j = np.arange(0,J1+1)
+                scale = s0 * 2. ** (j * dj)
+                wave = np.zeros(shape=(J1 + 1, n), dtype=complex)  # define the wavelet array
+        
+                # loop through all scales and compute transform
+                for a1 in range(0, int(J1+1)):
+                        daughter, fourier_factor, coi, dofmin = self.wave_bases(mother, k, scale[a1], param)
+                        wave[a1, :] = np.fft.ifft(f * daughter)  # wavelet transform[Eqn(4)]
+        
+                period = fourier_factor * scale  #[Table(1)]
+                coi = coi * dt * np.concatenate((np.insert(np.arange((n1 + 1) / 2 - 1), [0], [1E-5]),
+                                                                                 np.insert(np.flipud(np.arange(0, n1 / 2 - 1)), [-1], [1E-5])))  # COI [Sec.3g]
+                wave = wave[:, :n1]  # get rid of padding before returning
+        
+                return wave, period, scale, coi
+
+        def wave_bases(self, mother, k, scale, param):
+                n = len(k)
+                kplus = np.array(k &gt; 0., dtype=float)
+        
+                if mother == &#39;MORLET&#39;:  #-----------------------------------  Morlet
+        
+                        if param == -1:
+                                param = 6.
+        
+                        k0 = np.copy(param)
+                        expnt = -(scale * k - k0) ** 2 / 2. * kplus
+                        norm = np.sqrt(scale * k[1]) * (np.pi ** (-0.25)) * np.sqrt(n)  # total energy=N   [Eqn(7)]
+                        daughter = norm * np.exp(expnt)
+                        daughter = daughter * kplus  # Heaviside step function
+                        fourier_factor = (4 * np.pi) / (k0 + np.sqrt(2 + k0 ** 2))  # Scale--&gt;Fourier [Sec.3h]
+                        coi = fourier_factor / np.sqrt(2)  # Cone-of-influence [Sec.3g]
+                        dofmin = 2  # Degrees of freedom
+                elif mother == &#39;PAUL&#39;:  #--------------------------------  Paul
+                        if param == -1:
+                                param = 4.
+                        m = param
+                        expnt = -scale * k * kplus
+                        norm = np.sqrt(scale * k[1]) * (2 ** m / np.sqrt(m*np.prod(np.arange(1, (2 * m))))) * np.sqrt(n)
+                        daughter = norm * ((scale * k) ** m) * np.exp(expnt) * kplus
+                        fourier_factor = 4 * np.pi / (2 * m + 1)
+                        coi = fourier_factor * np.sqrt(2)
+                        dofmin = 2
+                elif mother == &#39;DOG&#39;:  #--------------------------------  DOG
+                        if param == -1:
+                                param = 2.
+                        m = param
+                        expnt = -(scale * k) ** 2 / 2.0
+                        norm = np.sqrt(scale * k[1] / gamma(m + 0.5)) * np.sqrt(n)
+                        daughter = -norm * (1j ** m) * ((scale * k) ** m) * np.exp(expnt)
+                        fourier_factor = 2 * np.pi * np.sqrt(2. / (2 * m + 1))
+                        coi = fourier_factor / np.sqrt(2)
+                        dofmin = 1
+                else:
+                        print(&#39;Mother must be one of MORLET, PAUL, DOG&#39;)
+        
+                return daughter, fourier_factor, coi, dofmin
+                
+        def wave_signif(self, Y, dt, scale, sigtest=-1, lag1=-1, siglvl=-1, dof=-1, mother=-1, param=-1):
+                n1 = len(np.atleast_1d(Y))
+                J1 = len(scale) - 1
+                s0 = np.min(scale)
+                dj = np.log2(scale[1] / scale[0])
+        
+                if n1 == 1:
+                        variance = Y
+                else:
+                        variance = np.std(Y) ** 2
+        
+                if sigtest == -1:
+                        sigtest = 0
+                if lag1 == -1:
+                        lag1 = 0.0
+                if siglvl == -1:
+                        siglvl = 0.95
+                if mother == -1:
+                        mother = &#39;MORLET&#39;
+        
+                # get the appropriate parameters [see Table(2)]
+                if mother == &#39;MORLET&#39;:  #----------------------------------  Morlet
+                        empir = ([2., -1, -1, -1])
+                        if param == -1:
+                                param = 6.
+                                empir[1:] = ([0.776, 2.32, 0.60])
+                        k0 = param
+                        fourier_factor = (4 * np.pi) / (k0 + np.sqrt(2 + k0 ** 2))  # Scale--&gt;Fourier [Sec.3h]
+                elif mother == &#39;PAUL&#39;:
+                        empir = ([2, -1, -1, -1])
+                        if param == -1:
+                                param = 4
+                                empir[1:] = ([1.132, 1.17, 1.5])
+                        m = param
+                        fourier_factor = (4 * np.pi) / (2 * m + 1)
+                elif mother == &#39;DOG&#39;:  #-------------------------------------Paul
+                        empir = ([1., -1, -1, -1])
+                        if param == -1:
+                                param = 2.
+                                empir[1:] = ([3.541, 1.43, 1.4])
+                        elif param == 6:  #--------------------------------------DOG
+                                empir[1:] = ([1.966, 1.37, 0.97])
+                        m = param
+                        fourier_factor = 2 * np.pi * np.sqrt(2. / (2 * m + 1))
+                else:
+                        print(&#39;Mother must be one of MORLET, PAUL, DOG&#39;)
+        
+                period = scale * fourier_factor
+                dofmin = empir[0]  # Degrees of freedom with no smoothing
+                Cdelta = empir[1]  # reconstruction factor
+                gamma_fac = empir[2]  # time-decorrelation factor
+                dj0 = empir[3]  # scale-decorrelation factor
+        
+                freq = dt / period  # normalized frequency
+                fft_theor = (1 - lag1 ** 2) / (1 - 2 * lag1 * np.cos(freq * 2 * np.pi) + lag1 ** 2)  # [Eqn(16)]
+                fft_theor = variance * fft_theor  # include time-series variance
+                signif = fft_theor
+                if len(np.atleast_1d(dof)) == 1:
+                        if dof == -1:
+                                dof = dofmin
+        
+                if sigtest == 0:  # no smoothing, DOF=dofmin [Sec.4]
+                        dof = dofmin
+                        chisquare = self.chisquare_inv(siglvl, dof) / dof
+                        signif = fft_theor * chisquare  # [Eqn(18)]
+                elif sigtest == 1:  # time-averaged significance
+                        if len(np.atleast_1d(dof)) == 1:
+                                dof = np.zeros(J1) + dof
+                        dof[dof &lt; 1] = 1
+                        dof = dofmin * np.sqrt(1 + (dof * dt / gamma_fac / scale) ** 2)  # [Eqn(23)]
+                        dof[dof &lt; dofmin] = dofmin   # minimum DOF is dofmin
+                        for a1 in range(0, J1 + 1):
+                                chisquare = self.chisquare_inv(siglvl, dof[a1]) / dof[a1]
+                                signif[a1] = fft_theor[a1] * chisquare
+                        print(chisquare)
+                elif sigtest == 2:  # time-averaged significance
+                        if len(dof) != 2:
+                                print(&#39;ERROR: DOF must be set to [S1,S2], the range of scale-averages&#39;)
+                        if Cdelta == -1:
+                                print(&#39;ERROR: Cdelta &amp; dj0 not defined for &#39; + mother + &#39; with param = &#39; + str(param))
+        
+                        s1 = dof[0]
+                        s2 = dof[1]
+                        avg =  np.logical_and(scale &gt;= 2, scale &lt; 8)# scales between S1 &amp; S2
+                        navg = np.sum(np.array(np.logical_and(scale &gt;= 2, scale &lt; 8), dtype=int))
+                        if navg == 0:
+                                print(&#39;ERROR: No valid scales between &#39; + str(s1) + &#39; and &#39; + str(s2))
+                        Savg = 1. / np.sum(1. / scale[avg])  # [Eqn(25)]
+                        Smid = np.exp((np.log(s1) + np.log(s2)) / 2.)  # power-of-two midpoint
+                        dof = (dofmin * navg * Savg / Smid) * np.sqrt(1 + (navg * dj / dj0) ** 2)  # [Eqn(28)]
+                        fft_theor = Savg * np.sum(fft_theor[avg] / scale[avg])  # [Eqn(27)]
+                        chisquare = chisquare_inv(siglvl, dof) / dof
+                        signif = (dj * dt / Cdelta / Savg) * fft_theor * chisquare  # [Eqn(26)]
+                else:
+                        print(&#39;ERROR: sigtest must be either 0, 1, or 2&#39;)
+        
+                return signif
+
+        def chisquare_inv(self, P, V):
+
+                if (1 - P) &lt; 1E-4:
+                        print(&#39;P must be &lt; 0.9999&#39;)
+        
+                if P == 0.95 and V == 2:  # this is a no-brainer
+                        X = 5.9915
+                        return X
+        
+                MINN = 0.01  # hopefully this is small enough
+                MAXX = 1  # actually starts at 10 (see while loop below)
+                X = 1
+                TOLERANCE = 1E-4  # this should be accurate enough
+        
+                while (X + TOLERANCE) &gt;= MAXX:  # should only need to loop thru once
+                        MAXX = MAXX * 10.
+                # this calculates value for X, NORMALIZED by V
+                        X = fminbound(self.chisquare_solve, MINN, MAXX, args=(P,V), xtol=TOLERANCE )
+                        MINN = MAXX
+        
+                X = X * V  # put back in the goofy V factor
+        
+                return X  # end of code
+                
+        def chisquare_solve(self, XGUESS,P,V):
+
+                PGUESS = gammainc(V/2, V*XGUESS/2)  # incomplete Gamma function
+        
+                PDIFF = np.abs(PGUESS - P)            # error in calculated P
+        
+                TOL = 1E-4
+                if PGUESS &gt;= 1-TOL:  # if P is very close to 1 (i.e. a bad guess)
+                        PDIFF = XGUESS   # then just assign some big number like XGUESS
+        
+                return PDIFF
+                
+        def ifftFilter(self, sig, freqs, fs=250):
+                &#39;&#39;&#39;
+                Calculates the dft of signal and filters out the frequencies in
+                freqs from the result and reconstructs the original signal using 
+                the inverse fft without those frequencies
+                &#39;&#39;&#39;
+                from scipy import signal
+                origLen = len(sig)
+                nyq = fs / 2.0
+                fftRes = np.fft.fft(sig)
+                f = nyq * np.linspace(0, 1, len(fftRes)/2)
+                f = np.concatenate([f,f-nyq])           
+                
+                band = 0.0625
+                idx = np.zeros([len(freqs), len(f)]).astype(bool)
+                
+                for i,freq in enumerate(freqs):
+                        idx[i,:] = np.logical_and(np.abs(f)&lt;freq+band, np.abs(f)&gt;freq-band)
+                
+                pollutedIdx = np.sum(idx, 0)
+                fftRes[pollutedIdx] = np.mean(fftRes)
+                
+                reconSig = np.fft.ifft(fftRes)
+                        
+                
+
+        def filterForLaser(self, E=None, width=0.125, dip=15.0, stimFreq=6.66):
+                &#39;&#39;&#39;
+                In some of the optogenetic experiments I ran the frequency of laser
+                stimulation was at 6.66Hz - this method attempts to filter those
+                frequencies out
+                &#39;&#39;&#39;
+                from scipy.signal import kaiserord, firwin, filtfilt        
+                nyq = self.sample_rate / 2.
+                width = width / nyq
+                dip = dip
+                N, beta = kaiserord(dip, width)
+                print(&#34;N: {0}\nbeta: {1}&#34;.format(N, beta))
+                upper = np.ceil(nyq/stimFreq)
+                c = np.arange(stimFreq, upper*stimFreq, stimFreq)
+                dt = np.array([-0.125, 0.125])
+                cutoff_hz = dt[:, np.newaxis] + c[np.newaxis, :]
+                cutoff_hz = cutoff_hz.ravel()
+                cutoff_hz = np.append(cutoff_hz, nyq-1)
+                cutoff_hz.sort()
+                cutoff_hz_nyq = cutoff_hz / nyq
+                taps = firwin(N, cutoff_hz_nyq, window=(&#39;kaiser&#39;, beta))
+                if E is None:
+                        eeg = self.EEG.eeg
+                else:
+                        eeg = E
+                fx = filtfilt(taps, [1.0], eeg)
+                return fx
+                
+        def filterWithButter(self, data, low, high, fs, order=5):
+                from scipy.signal import butter, filtfilt
+                nyq = fs / 2.
+                lowcut = low / nyq
+                highcut = high / nyq
+                b, a = butter(order, [lowcut, highcut], btype=&#39;band&#39;)
+                y = filtfilt(b, a, data)
+                return y
+                                                                
+        def eeg_instant_freq_power(self, eeg=None, plot=True):
+                if eeg is None:
+                        eeg = self.EEG.eeg
+                else:
+                        eeg = eeg
+                filtRange = self.thetaRange
+                eegSampFreq = self.EEG.sample_rate
+                self.EEG.x1=filtRange[0]
+                self.EEG.x2=filtRange[1]
+                filteredEEG = self.eegfilter(E=eeg)
+                analyticEEG = signal.hilbert(filteredEEG)
+                phaseEEGWrpd = np.angle(analyticEEG)
+                phaseEEG = np.unwrap(phaseEEGWrpd)
+                ampEEG = np.abs(analyticEEG)
+                # calculate instantaneous freq
+                freqEEG = np.diff(phaseEEG) * eegSampFreq / (2 * np.pi)
+                freqEEGposHz = np.nanmean(signal.decimate(freqEEG, self.sampsPerPos))
+                ampEEGposHz = np.nanmean(signal.decimate(ampEEG, self.sampsPerPos))
+                phaseEEGposHz = np.nanmean(signal.decimate(phaseEEG, self.sampsPerPos))
+                out_dict = {&#39;freqEEGposHz&#39;: freqEEGposHz, &#39;ampEEGposHz&#39;: ampEEGposHz,
+                                        &#39;phaseEEGposHz&#39;: phaseEEGposHz, &#39;filteredEEG&#39;: filteredEEG,
+                                        &#39;phaseEEG&#39;: phaseEEG, &#39;ampEEG&#39;: ampEEG,
+                                        &#39;phaseEEGWrpd&#39;: phaseEEGWrpd}
+                if plot:
+                        times = np.linspace(0, len(eeg) / eegSampFreq, len(eeg))
+                        ys = (eeg, filteredEEG, np.real(analyticEEG), ampEEG, -ampEEG)
+                        fig = plt.figure(figsize=(20,5))
+                        ax = fig.add_subplot(111)
+                        ax.set_ylim(np.amin(ys), np.amax(ys))
+                        ax.set_xlim(np.amin(times), np.amax(times))
+                        line_segs = LineCollection([list(zip(times,y)) for y in ys],
+                                                                           colors=[[0.8,0.8,0.8,1],
+                                                                                                   [0.5,0.5,0.5,1],
+                                                                                                        [1,0,0,1], [0,0,1,1],
+                                                                                                        [0,0,1,1]],
+                                                                                   linestyles=&#39;solid&#39;)
+                        line_segs.set_array(times)
+                        ax.add_collection(line_segs)
+                        ax.set_xlabel(&#39;Time(s)&#39;)
+                        ax.set_ylabel(&#39;EEG(V)&#39;)
+                        scale = 1
+                        ax.plot(times, filteredEEG*scale, color=[0.5, 0.5, 0.5], rasterized=True)
+                        ax.plot(times, np.real(analyticEEG)*scale, color=&#39;r&#39;, rasterized=True)
+                        ax.plot(times, ampEEG*scale, color=&#39;b&#39;, rasterized=True)
+                        ax.plot(times, -ampEEG*scale, color=&#39;b&#39;, rasterized=True)
+                        s = np.nanmedian(ampEEG) / 50. * scale
+                        phaseInd = np.round(np.mod(phaseEEG, 2*np.pi) / (2 * np.pi) * 100)
+                        phaseInd[phaseInd==0] = 100
+                        S = cm.ScalarMappable()
+                        phaseImg = S.to_rgba(phaseInd)
+                        phaseImg = phaseImg[:, 0:3]
+                        ax.imshow(phaseImg, extent=[0, times[-1], -s, s])
+                        ax.set_aspect(2e8)
+                        plt.show()
+                return out_dict
+
+        def eeg_power_spectra(self, eeg=None, pos2use=&#39;all&#39;, **kwargs):
+                if eeg is None:
+                        eeg = self.EEG.eeg
+                else:
+                        eeg = eeg
+                if isinstance(pos2use, str):
+                        if &#39;all&#39; in pos2use:
+                                eeg = eeg
+                elif isinstance(pos2use, np.ndarray):
+                        # TODO: need to check this doesn&#39;t exceed pos len
+                        eeg = signal.decimate(eeg, self.sampsPerPos)
+                        eeg = eeg[pos2use]
+                out = self.power_spectrum(eeg=eeg, binWidthSecs=1/self.sample_rate,
+                                                                  **kwargs)
+                return out
+
+        def plv(self, eeg=None, forder=2, thetaband=[4, 8], gammaband=[30, 80],
+                        plot=True, **kwargs):
+                &#34;&#34;&#34;
+                Computes the phase-amplitude coupling (PAC) of nested oscillations. More
+                specifically this is the phase-locking value (PLV) between two nested
+                oscillations in EEG data, in this case theta (default between 4-8Hz) 
+                and gamma (defaults to 30-80Hz). A PLV of unity indicates perfect phase
+                locking (here PAC) and a value of zero indicates no locking (no PAC)
+                
+                Parameters
+                ----------
+                eeg: numpy array
+                        the eeg data itself. This is a 1-d array which can be masked or not
+                forder: int
+                        the order of the filter(s) applied to the eeg data
+                thetaband/ gammaband: list/ array
+                        the range of values to bandpass filter for for the theta and gamma
+                        ranges
+                plot: bool (default True)
+                        whether to plot the resulting binned up polar plot which shows the 
+                        amplitude of the gamma oscillation found at different phases of the 
+                        theta oscillation
+                Returns
+                -------
+                plv: float
+                        the value of the phase-amplitude coupling
+                
+                &#34;&#34;&#34;
+                if eeg is None:
+                        eeg = self.eeg
+                eeg = eeg - np.ma.mean(eeg)
+                if np.ma.is_masked(eeg):
+                        eeg = np.ma.compressed(eeg)
+                
+                lowfreq, highfreq, lowphase, highamp, highamp_f = self._getFreqPhase(eeg, forder, thetaband, gammaband)
+
+                highampphase = np.angle(signal.hilbert(highamp_f))
+                phasedf = highampphase - lowphase
+                phasedf = np.exp(1j * phasedf)
+                phasedf = np.angle(phasedf)
+                calcs = StatsCalcs()
+                plv = calcs.circ_r(phasedf)
+                th = np.linspace(0.0, 2*np.pi, 20, endpoint=False)
+                h, xe = np.histogram(phasedf, bins=20)
+                h = h / float(len(phasedf))
+                
+                if plot:
+                        fig = plt.figure()
+                        ax = fig.add_subplot(111, polar=True)
+                        w = np.pi / 10
+                        ax.bar(th, h, width = w, bottom=0.0)
+                return plv, th, h
+                
+        def modulationindex(self, eeg=None, nbins=20, forder=2,
+                                                thetaband=[4, 8], gammaband=[30, 80],
+                                                plot=True, **kwargs):
+                if eeg is None:
+                        eeg = self.eeg
+                eeg = eeg - np.ma.mean(eeg)
+                if np.ma.is_masked(eeg):
+                        eeg = np.ma.compressed(eeg)
+                _, _, lowphase, highamp, _= self._getFreqPhase(eeg, forder, thetaband, gammaband)
+                inc = 2*np.pi/nbins
+                a = np.arange(-np.pi+inc/2, np.pi, inc)
+                dt = np.array([-inc/2, inc/2])
+                pbins = a[:, np.newaxis] + dt[np.newaxis, :]
+                amp = np.zeros((nbins))
+                phaselen = np.arange(len(lowphase))
+                for i in xrange(nbins):
+                        pts = np.nonzero((lowphase &gt;= pbins[i,0]) * (lowphase &lt; pbins[i,1]) * phaselen)
+                        amp[i] = np.mean(highamp[pts])
+                amp = amp / np.sum(amp)
+                calcs = StatsCalcs()
+                mi = calcs.circ_r(pbins[:,1], amp)
+                if plot:
+                        fig = plt.figure()
+                        ax = fig.add_subplot(111, polar=True)
+                        w = np.pi / (nbins/2)
+                        ax.bar(pbins[:,1], amp, width=w)
+                        ax.set_title(&#34;Modulation index={0:.5f}&#34;.format(mi))
+                        fig.canvas.set_window_title(self.fname)
+                return mi
+                
+        def _getFreqPhase(self, eeg, ford, lowband, highband):
+                lowband = np.array(lowband, dtype=float)
+                highband = np.array(highband, dtype=float)
+                b, a = signal.butter(ford, lowband / (self.sample_rate / 2), btype=&#39;band&#39;)
+                e, f = signal.butter(ford, highband / (self.sample_rate / 2), btype=&#39;band&#39;)
+                lowfreq = signal.filtfilt(b, a, eeg, padtype=&#39;odd&#39;)
+                highfreq = signal.filtfilt(e, f, eeg, padtype=&#39;odd&#39;)
+                lowphase = np.angle(signal.hilbert(lowfreq))
+                highamp = np.abs(signal.hilbert(highfreq))
+                highamp_f = signal.filtfilt(b, a, highamp, padtype=&#39;odd&#39;)
+                return lowfreq, highfreq, lowphase, highamp, highamp_f
+                
+        def power_spectrum(self, eeg=None, plot=True, binWidthSecs=None,
+                                           maxFreq=None, pad2pow=None, ymax=None, **kwargs):
+                &#34;&#34;&#34;
+                Method used by eeg_power_spectra and intrinsic_freq_autoCorr
+                Signal in must be mean normalised already
+                &#34;&#34;&#34;
+                if eeg is None:
+                        eeg = self.eeg
+                else:
+                        eeg = eeg
+                if maxFreq is None:
+                        maxFreq = self.maxFreq
+                else:
+                        maxFreq = maxFreq
+                # Get raw power spectrum
+                nqLim = self.EEG.sample_rate / 2.
+                origLen = len(eeg)
+                if pad2pow is None:
+                        fftLen = int(np.power(2, self._nextpow2(origLen)))
+                else:
+                        fftLen = int(np.power(2, pad2pow))
+                fftHalfLen = int(fftLen / float(2) + 1)
+
+                fftRes = np.fft.fft(eeg, fftLen)
+                # get power density from fft and discard second half of spectrum
+                _power = np.power(np.abs(fftRes), 2) / origLen
+                power = np.delete(_power, np.s_[fftHalfLen::])
+                power[1:-2] = power[1:-2] * 2
+
+                # calculate freqs and crop spectrum to requested range
+                freqs = nqLim * np.linspace(0, 1, fftHalfLen)
+                freqs = freqs[freqs &lt;= maxFreq].T
+                power = power[0:len(freqs)]
+
+                # smooth spectrum using gaussian kernel
+                binsPerHz = (fftHalfLen - 1) / nqLim
+                kernelLen = np.round(self.smthKernelWidth * binsPerHz)
+                kernelSig = self.smthKernelSigma * binsPerHz
+                k = signal.gaussian(kernelLen, kernelSig) / (kernelLen/2/2)
+                power_sm = signal.fftconvolve(power, k[::-1], mode=&#39;same&#39;)
+
+                # calculate some metrics
+                # find max in theta band
+                spectrumMaskBand = np.logical_and(freqs &gt; self.thetaRange[0],
+                                                                                  freqs &lt; self.thetaRange[1])
+                bandMaxPower = np.max(power_sm[spectrumMaskBand])
+                maxBinInBand = np.argmax(power_sm[spectrumMaskBand])
+                bandFreqs = freqs[spectrumMaskBand]
+                freqAtBandMaxPower = bandFreqs[maxBinInBand]
+                self.maxBinInBand = maxBinInBand
+                self.freqAtBandMaxPower = freqAtBandMaxPower
+                self.bandMaxPower = bandMaxPower
+
+                # find power in small window around peak and divide by power in rest
+                # of spectrum to get snr
+                spectrumMaskPeak = np.logical_and(freqs &gt; freqAtBandMaxPower - self.sn2Width / 2,
+                                                                                  freqs &lt; freqAtBandMaxPower + self.sn2Width / 2)
+                s2n = np.nanmean(power_sm[spectrumMaskPeak]) / np.nanmean(power_sm[~spectrumMaskPeak])
+                self.freqs = freqs
+                self.power_sm = power_sm
+                self.spectrumMaskPeak = spectrumMaskPeak
+                if plot:
+                        fig = plt.figure()
+                        ax = fig.add_subplot(111)
+                        if ymax is None:
+                                ymax = np.min([2 * np.max(power), np.max(power_sm)])
+                                if ymax == 0:
+                                        ymax = 1
+                        ax.plot(freqs, power, c=[0.9, 0.9, 0.9])
+                        ax.hold(True)
+                        ax.plot(freqs, power_sm, &#39;k&#39;, lw=2)
+                        ax.axvline(self.thetaRange[0], c=&#39;b&#39;, ls=&#39;--&#39;)
+                        ax.axvline(self.thetaRange[1], c=&#39;b&#39;, ls=&#39;--&#39;)
+                        ax.stem([freqAtBandMaxPower], [bandMaxPower], c=&#39;r&#39;, lw=2)
+                        ax.fill_between(freqs, 0, power_sm, where=spectrumMaskPeak,
+                                                        color=&#39;r&#39;, alpha=0.25, zorder=25)
+                        ax.set_ylim(0, ymax)
+                        ax.set_xlim(0, self.xmax)
+                        ax.set_xlabel(&#39;Frequency (Hz)&#39;)
+                        ax.set_ylabel(&#39;Power density (W/Hz)&#39;)
+                out_dict = {&#39;maxFreq&#39;: freqAtBandMaxPower, &#39;Power&#39;: power_sm,
+                                        &#39;Freqs&#39;: freqs, &#39;s2n&#39;: s2n, &#39;Power_raw&#39;: power, &#39;k&#39;: k, &#39;kernelLen&#39;: kernelLen,
+                                        &#39;kernelSig&#39;: kernelSig, &#39;binsPerHz&#39;: binsPerHz, &#39;kernelLen&#39;: kernelLen}
+                return out_dict
+
+        def _nextpow2(self, val):
+                &#39;&#39;&#39;calculates the next power of 2 that will hold val&#39;&#39;&#39;
+                val = val - 1
+                val = (val &gt;&gt; 1) | val
+                val = (val &gt;&gt; 2) | val
+                val = (val &gt;&gt; 4) | val
+                val = (val &gt;&gt; 8) | val
+                val = (val &gt;&gt; 16) | val
+                val = (val &gt;&gt; 32) | val
+                return np.log2(val + 1)</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="ephysiopy.dacq2py.eegcalcs.EEGCalcs"><code class="flex name class">
+<span>class <span class="ident">EEGCalcs</span></span>
+<span>(</span><span>fname, eegType='eeg', thetaRange=[7, 11], pad2pow=nan, smthKernelWidth=2, smthKernelSigma=0.1875, sn2Width=2, maxFreq=125, ymax=None, xmax=25)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Class for reading data from Axona data acquisition system. Also
+reads .clu files generated from KlustaKwik</p>
+<p>Class attributes:
+axona_files (dict): keys are axona format file suffixes
+and the values are used as numpy dtypes to read the data.
+NB it's assumed a .set file is <em>always</em> present</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class EEGCalcs(EEGIO):
+        def __init__(self, fname, eegType=&#39;eeg&#39;, thetaRange=[7,11], pad2pow=np.nan,
+                                 smthKernelWidth=2, smthKernelSigma=0.1875, sn2Width=2,
+                                 maxFreq=125, ymax=None, xmax=25):
+                if eegType == &#39;eeg&#39;:
+                        egf = 0;
+                elif eegType == &#39;egf&#39;:
+                        egf = 1;
+                self.fname = os.path.basename(fname)
+                self.EEG = EEGIO(fname, egf=egf)
+                self.posSampFreq = 50
+                self.sampsPerPos = int(self.EEG.sample_rate / self.posSampFreq)
+                self.sample_rate = self.EEG.sample_rate
+                self.eeg = self.EEG.eeg - np.ma.mean(self.EEG.eeg)
+                self.thetaRange = [7,11]
+                self.pad2pow = pad2pow
+                self.smthKernelWidth = smthKernelWidth
+                self.smthKernelSigma = smthKernelSigma
+                self.sn2Width = sn2Width
+                self.maxFreq = maxFreq
+                self.ymax = ymax
+                self.xmax = xmax
+
+        def intrinsic_freq_autoCorr(self, spkTimes=None, posMask=None, maxFreq=25,
+                                                                acBinSize=0.002, acWindow=0.5, plot=True,
+                                                                **kwargs):
+                &#34;&#34;&#34;
+                Be careful that if you&#39;ve called dacq2py.Tetrode.getSpkTS()
+                that they are divided by
+                96000 to get into seconds before using here
+                &#34;&#34;&#34;
+                acBinsPerPos = 1. / self.posSampFreq / acBinSize
+                acWindowSizeBins = np.round(acWindow / acBinSize)
+                binCentres = np.arange(0.5, len(posMask)*acBinsPerPos) * acBinSize
+                spkTrHist, _ = np.histogram(spkTimes, bins=binCentres)
+
+                # find start, end and length of each block of trues in posMask
+                idxArray = np.array([map(itemgetter(0), itemgetter(0, -1)(list(g))) + [k] for k, g in groupby(enumerate(posMask), itemgetter(1))])
+                chunkLens = np.diff(idxArray)[:, 0] + 1
+
+                # split the single histogram into individual chunks
+                splitIdx = np.nonzero(np.diff(posMask.astype(int)))[0]+1
+                splitMask = np.split(posMask, splitIdx)
+                splitSpkHist = np.split(spkTrHist, splitIdx * acBinsPerPos)
+                histChunks = []
+                for i in range(len(splitSpkHist)):
+                        if np.all(splitMask[i]):
+                                if np.sum(splitSpkHist[i]) &gt; 2:
+                                        histChunks.append(splitSpkHist[i])
+                autoCorrGrid = np.zeros((acWindowSizeBins + 1, len(histChunks)))
+                chunkLens = []
+                for i in range(len(histChunks)):
+                        lenThisChunk = len(histChunks[i])
+                        chunkLens.append(lenThisChunk)
+                        tmp = np.zeros(lenThisChunk * 2)
+                        tmp[lenThisChunk/2:lenThisChunk/2+lenThisChunk] = histChunks[i]
+                        tmp2 = signal.fftconvolve(tmp, histChunks[i][::-1], mode=&#39;valid&#39;)
+                        autoCorrGrid[:, i] = tmp2[lenThisChunk/2:lenThisChunk/2+acWindowSizeBins+1] / acBinsPerPos
+
+                totalLen = np.sum(chunkLens)
+                autoCorrSum = np.nansum(autoCorrGrid, 1) / totalLen
+                #lags = np.arange(0, acWindowSizeBins) * acBinSize
+                meanNormdAc = autoCorrSum[1::] - np.nanmean(autoCorrSum[1::])
+                out = self.power_spectrum(eeg=meanNormdAc, binWidthSecs=acBinSize,
+                                                                  maxFreq=maxFreq, pad2pow=16, **kwargs)
+                out.update({&#39;meanNormdAc&#39;: meanNormdAc})
+                if plot:
+                        fig = plt.gcf()
+                        ax = fig.gca()
+                        xlim = ax.get_xlim()
+                        ylim = ax.get_ylim()
+                        ax.imshow(autoCorrGrid,
+                                         extent=[maxFreq*0.6, maxFreq,
+                                                         np.max(out[&#39;Power&#39;])*0.6, ax.get_ylim()[1]])
+                        ax.set_ylim(ylim)
+                        ax.set_xlim(xlim)
+                return out
+
+        def wavelet(self, Y, dt, pad=0, dj=-1, s0=-1, J1=-1, mother=-1, param=-1):
+                n1 = len(Y)
+        
+                if s0 == -1:
+                        s0 = 2 * dt
+                if dj == -1:
+                        dj = 1. / 4.
+                if J1 == -1:
+                        J1 = np.fix((np.log(n1 * dt / s0) / np.log(2)) / dj)
+                if mother == -1:
+                        mother = &#39;MORLET&#39;
+        
+                #....construct time series to analyze, pad if necessary
+                x = Y - np.mean(Y)
+                if pad == 1:
+                        base2 = np.fix(np.log(n1) / np.log(2) + 0.4999)  # power of 2 nearest to N
+                        x = np.concatenate((x, np.zeros(2 ** (base2 + 1) - n1)))
+        
+                n = len(x)
+        
+                #....construct wavenumber array used in transform [Eqn(5)]
+                kplus = np.arange(1, np.fix(n / 2 + 1))
+                kplus = (kplus * 2 * np.pi / (n * dt))
+                kminus = (-(kplus[0:-1])[::-1])
+                k = np.concatenate(([0.], kplus, kminus))
+        
+                #....compute FFT of the (padded) time series
+                f = np.fft.fft(x)  # [Eqn(3)]
+        
+                #....construct SCALE array &amp; empty PERIOD &amp; WAVE arrays
+                j = np.arange(0,J1+1)
+                scale = s0 * 2. ** (j * dj)
+                wave = np.zeros(shape=(J1 + 1, n), dtype=complex)  # define the wavelet array
+        
+                # loop through all scales and compute transform
+                for a1 in range(0, int(J1+1)):
+                        daughter, fourier_factor, coi, dofmin = self.wave_bases(mother, k, scale[a1], param)
+                        wave[a1, :] = np.fft.ifft(f * daughter)  # wavelet transform[Eqn(4)]
+        
+                period = fourier_factor * scale  #[Table(1)]
+                coi = coi * dt * np.concatenate((np.insert(np.arange((n1 + 1) / 2 - 1), [0], [1E-5]),
+                                                                                 np.insert(np.flipud(np.arange(0, n1 / 2 - 1)), [-1], [1E-5])))  # COI [Sec.3g]
+                wave = wave[:, :n1]  # get rid of padding before returning
+        
+                return wave, period, scale, coi
+
+        def wave_bases(self, mother, k, scale, param):
+                n = len(k)
+                kplus = np.array(k &gt; 0., dtype=float)
+        
+                if mother == &#39;MORLET&#39;:  #-----------------------------------  Morlet
+        
+                        if param == -1:
+                                param = 6.
+        
+                        k0 = np.copy(param)
+                        expnt = -(scale * k - k0) ** 2 / 2. * kplus
+                        norm = np.sqrt(scale * k[1]) * (np.pi ** (-0.25)) * np.sqrt(n)  # total energy=N   [Eqn(7)]
+                        daughter = norm * np.exp(expnt)
+                        daughter = daughter * kplus  # Heaviside step function
+                        fourier_factor = (4 * np.pi) / (k0 + np.sqrt(2 + k0 ** 2))  # Scale--&gt;Fourier [Sec.3h]
+                        coi = fourier_factor / np.sqrt(2)  # Cone-of-influence [Sec.3g]
+                        dofmin = 2  # Degrees of freedom
+                elif mother == &#39;PAUL&#39;:  #--------------------------------  Paul
+                        if param == -1:
+                                param = 4.
+                        m = param
+                        expnt = -scale * k * kplus
+                        norm = np.sqrt(scale * k[1]) * (2 ** m / np.sqrt(m*np.prod(np.arange(1, (2 * m))))) * np.sqrt(n)
+                        daughter = norm * ((scale * k) ** m) * np.exp(expnt) * kplus
+                        fourier_factor = 4 * np.pi / (2 * m + 1)
+                        coi = fourier_factor * np.sqrt(2)
+                        dofmin = 2
+                elif mother == &#39;DOG&#39;:  #--------------------------------  DOG
+                        if param == -1:
+                                param = 2.
+                        m = param
+                        expnt = -(scale * k) ** 2 / 2.0
+                        norm = np.sqrt(scale * k[1] / gamma(m + 0.5)) * np.sqrt(n)
+                        daughter = -norm * (1j ** m) * ((scale * k) ** m) * np.exp(expnt)
+                        fourier_factor = 2 * np.pi * np.sqrt(2. / (2 * m + 1))
+                        coi = fourier_factor / np.sqrt(2)
+                        dofmin = 1
+                else:
+                        print(&#39;Mother must be one of MORLET, PAUL, DOG&#39;)
+        
+                return daughter, fourier_factor, coi, dofmin
+                
+        def wave_signif(self, Y, dt, scale, sigtest=-1, lag1=-1, siglvl=-1, dof=-1, mother=-1, param=-1):
+                n1 = len(np.atleast_1d(Y))
+                J1 = len(scale) - 1
+                s0 = np.min(scale)
+                dj = np.log2(scale[1] / scale[0])
+        
+                if n1 == 1:
+                        variance = Y
+                else:
+                        variance = np.std(Y) ** 2
+        
+                if sigtest == -1:
+                        sigtest = 0
+                if lag1 == -1:
+                        lag1 = 0.0
+                if siglvl == -1:
+                        siglvl = 0.95
+                if mother == -1:
+                        mother = &#39;MORLET&#39;
+        
+                # get the appropriate parameters [see Table(2)]
+                if mother == &#39;MORLET&#39;:  #----------------------------------  Morlet
+                        empir = ([2., -1, -1, -1])
+                        if param == -1:
+                                param = 6.
+                                empir[1:] = ([0.776, 2.32, 0.60])
+                        k0 = param
+                        fourier_factor = (4 * np.pi) / (k0 + np.sqrt(2 + k0 ** 2))  # Scale--&gt;Fourier [Sec.3h]
+                elif mother == &#39;PAUL&#39;:
+                        empir = ([2, -1, -1, -1])
+                        if param == -1:
+                                param = 4
+                                empir[1:] = ([1.132, 1.17, 1.5])
+                        m = param
+                        fourier_factor = (4 * np.pi) / (2 * m + 1)
+                elif mother == &#39;DOG&#39;:  #-------------------------------------Paul
+                        empir = ([1., -1, -1, -1])
+                        if param == -1:
+                                param = 2.
+                                empir[1:] = ([3.541, 1.43, 1.4])
+                        elif param == 6:  #--------------------------------------DOG
+                                empir[1:] = ([1.966, 1.37, 0.97])
+                        m = param
+                        fourier_factor = 2 * np.pi * np.sqrt(2. / (2 * m + 1))
+                else:
+                        print(&#39;Mother must be one of MORLET, PAUL, DOG&#39;)
+        
+                period = scale * fourier_factor
+                dofmin = empir[0]  # Degrees of freedom with no smoothing
+                Cdelta = empir[1]  # reconstruction factor
+                gamma_fac = empir[2]  # time-decorrelation factor
+                dj0 = empir[3]  # scale-decorrelation factor
+        
+                freq = dt / period  # normalized frequency
+                fft_theor = (1 - lag1 ** 2) / (1 - 2 * lag1 * np.cos(freq * 2 * np.pi) + lag1 ** 2)  # [Eqn(16)]
+                fft_theor = variance * fft_theor  # include time-series variance
+                signif = fft_theor
+                if len(np.atleast_1d(dof)) == 1:
+                        if dof == -1:
+                                dof = dofmin
+        
+                if sigtest == 0:  # no smoothing, DOF=dofmin [Sec.4]
+                        dof = dofmin
+                        chisquare = self.chisquare_inv(siglvl, dof) / dof
+                        signif = fft_theor * chisquare  # [Eqn(18)]
+                elif sigtest == 1:  # time-averaged significance
+                        if len(np.atleast_1d(dof)) == 1:
+                                dof = np.zeros(J1) + dof
+                        dof[dof &lt; 1] = 1
+                        dof = dofmin * np.sqrt(1 + (dof * dt / gamma_fac / scale) ** 2)  # [Eqn(23)]
+                        dof[dof &lt; dofmin] = dofmin   # minimum DOF is dofmin
+                        for a1 in range(0, J1 + 1):
+                                chisquare = self.chisquare_inv(siglvl, dof[a1]) / dof[a1]
+                                signif[a1] = fft_theor[a1] * chisquare
+                        print(chisquare)
+                elif sigtest == 2:  # time-averaged significance
+                        if len(dof) != 2:
+                                print(&#39;ERROR: DOF must be set to [S1,S2], the range of scale-averages&#39;)
+                        if Cdelta == -1:
+                                print(&#39;ERROR: Cdelta &amp; dj0 not defined for &#39; + mother + &#39; with param = &#39; + str(param))
+        
+                        s1 = dof[0]
+                        s2 = dof[1]
+                        avg =  np.logical_and(scale &gt;= 2, scale &lt; 8)# scales between S1 &amp; S2
+                        navg = np.sum(np.array(np.logical_and(scale &gt;= 2, scale &lt; 8), dtype=int))
+                        if navg == 0:
+                                print(&#39;ERROR: No valid scales between &#39; + str(s1) + &#39; and &#39; + str(s2))
+                        Savg = 1. / np.sum(1. / scale[avg])  # [Eqn(25)]
+                        Smid = np.exp((np.log(s1) + np.log(s2)) / 2.)  # power-of-two midpoint
+                        dof = (dofmin * navg * Savg / Smid) * np.sqrt(1 + (navg * dj / dj0) ** 2)  # [Eqn(28)]
+                        fft_theor = Savg * np.sum(fft_theor[avg] / scale[avg])  # [Eqn(27)]
+                        chisquare = chisquare_inv(siglvl, dof) / dof
+                        signif = (dj * dt / Cdelta / Savg) * fft_theor * chisquare  # [Eqn(26)]
+                else:
+                        print(&#39;ERROR: sigtest must be either 0, 1, or 2&#39;)
+        
+                return signif
+
+        def chisquare_inv(self, P, V):
+
+                if (1 - P) &lt; 1E-4:
+                        print(&#39;P must be &lt; 0.9999&#39;)
+        
+                if P == 0.95 and V == 2:  # this is a no-brainer
+                        X = 5.9915
+                        return X
+        
+                MINN = 0.01  # hopefully this is small enough
+                MAXX = 1  # actually starts at 10 (see while loop below)
+                X = 1
+                TOLERANCE = 1E-4  # this should be accurate enough
+        
+                while (X + TOLERANCE) &gt;= MAXX:  # should only need to loop thru once
+                        MAXX = MAXX * 10.
+                # this calculates value for X, NORMALIZED by V
+                        X = fminbound(self.chisquare_solve, MINN, MAXX, args=(P,V), xtol=TOLERANCE )
+                        MINN = MAXX
+        
+                X = X * V  # put back in the goofy V factor
+        
+                return X  # end of code
+                
+        def chisquare_solve(self, XGUESS,P,V):
+
+                PGUESS = gammainc(V/2, V*XGUESS/2)  # incomplete Gamma function
+        
+                PDIFF = np.abs(PGUESS - P)            # error in calculated P
+        
+                TOL = 1E-4
+                if PGUESS &gt;= 1-TOL:  # if P is very close to 1 (i.e. a bad guess)
+                        PDIFF = XGUESS   # then just assign some big number like XGUESS
+        
+                return PDIFF
+                
+        def ifftFilter(self, sig, freqs, fs=250):
+                &#39;&#39;&#39;
+                Calculates the dft of signal and filters out the frequencies in
+                freqs from the result and reconstructs the original signal using 
+                the inverse fft without those frequencies
+                &#39;&#39;&#39;
+                from scipy import signal
+                origLen = len(sig)
+                nyq = fs / 2.0
+                fftRes = np.fft.fft(sig)
+                f = nyq * np.linspace(0, 1, len(fftRes)/2)
+                f = np.concatenate([f,f-nyq])           
+                
+                band = 0.0625
+                idx = np.zeros([len(freqs), len(f)]).astype(bool)
+                
+                for i,freq in enumerate(freqs):
+                        idx[i,:] = np.logical_and(np.abs(f)&lt;freq+band, np.abs(f)&gt;freq-band)
+                
+                pollutedIdx = np.sum(idx, 0)
+                fftRes[pollutedIdx] = np.mean(fftRes)
+                
+                reconSig = np.fft.ifft(fftRes)
+                        
+                
+
+        def filterForLaser(self, E=None, width=0.125, dip=15.0, stimFreq=6.66):
+                &#39;&#39;&#39;
+                In some of the optogenetic experiments I ran the frequency of laser
+                stimulation was at 6.66Hz - this method attempts to filter those
+                frequencies out
+                &#39;&#39;&#39;
+                from scipy.signal import kaiserord, firwin, filtfilt        
+                nyq = self.sample_rate / 2.
+                width = width / nyq
+                dip = dip
+                N, beta = kaiserord(dip, width)
+                print(&#34;N: {0}\nbeta: {1}&#34;.format(N, beta))
+                upper = np.ceil(nyq/stimFreq)
+                c = np.arange(stimFreq, upper*stimFreq, stimFreq)
+                dt = np.array([-0.125, 0.125])
+                cutoff_hz = dt[:, np.newaxis] + c[np.newaxis, :]
+                cutoff_hz = cutoff_hz.ravel()
+                cutoff_hz = np.append(cutoff_hz, nyq-1)
+                cutoff_hz.sort()
+                cutoff_hz_nyq = cutoff_hz / nyq
+                taps = firwin(N, cutoff_hz_nyq, window=(&#39;kaiser&#39;, beta))
+                if E is None:
+                        eeg = self.EEG.eeg
+                else:
+                        eeg = E
+                fx = filtfilt(taps, [1.0], eeg)
+                return fx
+                
+        def filterWithButter(self, data, low, high, fs, order=5):
+                from scipy.signal import butter, filtfilt
+                nyq = fs / 2.
+                lowcut = low / nyq
+                highcut = high / nyq
+                b, a = butter(order, [lowcut, highcut], btype=&#39;band&#39;)
+                y = filtfilt(b, a, data)
+                return y
+                                                                
+        def eeg_instant_freq_power(self, eeg=None, plot=True):
+                if eeg is None:
+                        eeg = self.EEG.eeg
+                else:
+                        eeg = eeg
+                filtRange = self.thetaRange
+                eegSampFreq = self.EEG.sample_rate
+                self.EEG.x1=filtRange[0]
+                self.EEG.x2=filtRange[1]
+                filteredEEG = self.eegfilter(E=eeg)
+                analyticEEG = signal.hilbert(filteredEEG)
+                phaseEEGWrpd = np.angle(analyticEEG)
+                phaseEEG = np.unwrap(phaseEEGWrpd)
+                ampEEG = np.abs(analyticEEG)
+                # calculate instantaneous freq
+                freqEEG = np.diff(phaseEEG) * eegSampFreq / (2 * np.pi)
+                freqEEGposHz = np.nanmean(signal.decimate(freqEEG, self.sampsPerPos))
+                ampEEGposHz = np.nanmean(signal.decimate(ampEEG, self.sampsPerPos))
+                phaseEEGposHz = np.nanmean(signal.decimate(phaseEEG, self.sampsPerPos))
+                out_dict = {&#39;freqEEGposHz&#39;: freqEEGposHz, &#39;ampEEGposHz&#39;: ampEEGposHz,
+                                        &#39;phaseEEGposHz&#39;: phaseEEGposHz, &#39;filteredEEG&#39;: filteredEEG,
+                                        &#39;phaseEEG&#39;: phaseEEG, &#39;ampEEG&#39;: ampEEG,
+                                        &#39;phaseEEGWrpd&#39;: phaseEEGWrpd}
+                if plot:
+                        times = np.linspace(0, len(eeg) / eegSampFreq, len(eeg))
+                        ys = (eeg, filteredEEG, np.real(analyticEEG), ampEEG, -ampEEG)
+                        fig = plt.figure(figsize=(20,5))
+                        ax = fig.add_subplot(111)
+                        ax.set_ylim(np.amin(ys), np.amax(ys))
+                        ax.set_xlim(np.amin(times), np.amax(times))
+                        line_segs = LineCollection([list(zip(times,y)) for y in ys],
+                                                                           colors=[[0.8,0.8,0.8,1],
+                                                                                                   [0.5,0.5,0.5,1],
+                                                                                                        [1,0,0,1], [0,0,1,1],
+                                                                                                        [0,0,1,1]],
+                                                                                   linestyles=&#39;solid&#39;)
+                        line_segs.set_array(times)
+                        ax.add_collection(line_segs)
+                        ax.set_xlabel(&#39;Time(s)&#39;)
+                        ax.set_ylabel(&#39;EEG(V)&#39;)
+                        scale = 1
+                        ax.plot(times, filteredEEG*scale, color=[0.5, 0.5, 0.5], rasterized=True)
+                        ax.plot(times, np.real(analyticEEG)*scale, color=&#39;r&#39;, rasterized=True)
+                        ax.plot(times, ampEEG*scale, color=&#39;b&#39;, rasterized=True)
+                        ax.plot(times, -ampEEG*scale, color=&#39;b&#39;, rasterized=True)
+                        s = np.nanmedian(ampEEG) / 50. * scale
+                        phaseInd = np.round(np.mod(phaseEEG, 2*np.pi) / (2 * np.pi) * 100)
+                        phaseInd[phaseInd==0] = 100
+                        S = cm.ScalarMappable()
+                        phaseImg = S.to_rgba(phaseInd)
+                        phaseImg = phaseImg[:, 0:3]
+                        ax.imshow(phaseImg, extent=[0, times[-1], -s, s])
+                        ax.set_aspect(2e8)
+                        plt.show()
+                return out_dict
+
+        def eeg_power_spectra(self, eeg=None, pos2use=&#39;all&#39;, **kwargs):
+                if eeg is None:
+                        eeg = self.EEG.eeg
+                else:
+                        eeg = eeg
+                if isinstance(pos2use, str):
+                        if &#39;all&#39; in pos2use:
+                                eeg = eeg
+                elif isinstance(pos2use, np.ndarray):
+                        # TODO: need to check this doesn&#39;t exceed pos len
+                        eeg = signal.decimate(eeg, self.sampsPerPos)
+                        eeg = eeg[pos2use]
+                out = self.power_spectrum(eeg=eeg, binWidthSecs=1/self.sample_rate,
+                                                                  **kwargs)
+                return out
+
+        def plv(self, eeg=None, forder=2, thetaband=[4, 8], gammaband=[30, 80],
+                        plot=True, **kwargs):
+                &#34;&#34;&#34;
+                Computes the phase-amplitude coupling (PAC) of nested oscillations. More
+                specifically this is the phase-locking value (PLV) between two nested
+                oscillations in EEG data, in this case theta (default between 4-8Hz) 
+                and gamma (defaults to 30-80Hz). A PLV of unity indicates perfect phase
+                locking (here PAC) and a value of zero indicates no locking (no PAC)
+                
+                Parameters
+                ----------
+                eeg: numpy array
+                        the eeg data itself. This is a 1-d array which can be masked or not
+                forder: int
+                        the order of the filter(s) applied to the eeg data
+                thetaband/ gammaband: list/ array
+                        the range of values to bandpass filter for for the theta and gamma
+                        ranges
+                plot: bool (default True)
+                        whether to plot the resulting binned up polar plot which shows the 
+                        amplitude of the gamma oscillation found at different phases of the 
+                        theta oscillation
+                Returns
+                -------
+                plv: float
+                        the value of the phase-amplitude coupling
+                
+                &#34;&#34;&#34;
+                if eeg is None:
+                        eeg = self.eeg
+                eeg = eeg - np.ma.mean(eeg)
+                if np.ma.is_masked(eeg):
+                        eeg = np.ma.compressed(eeg)
+                
+                lowfreq, highfreq, lowphase, highamp, highamp_f = self._getFreqPhase(eeg, forder, thetaband, gammaband)
+
+                highampphase = np.angle(signal.hilbert(highamp_f))
+                phasedf = highampphase - lowphase
+                phasedf = np.exp(1j * phasedf)
+                phasedf = np.angle(phasedf)
+                calcs = StatsCalcs()
+                plv = calcs.circ_r(phasedf)
+                th = np.linspace(0.0, 2*np.pi, 20, endpoint=False)
+                h, xe = np.histogram(phasedf, bins=20)
+                h = h / float(len(phasedf))
+                
+                if plot:
+                        fig = plt.figure()
+                        ax = fig.add_subplot(111, polar=True)
+                        w = np.pi / 10
+                        ax.bar(th, h, width = w, bottom=0.0)
+                return plv, th, h
+                
+        def modulationindex(self, eeg=None, nbins=20, forder=2,
+                                                thetaband=[4, 8], gammaband=[30, 80],
+                                                plot=True, **kwargs):
+                if eeg is None:
+                        eeg = self.eeg
+                eeg = eeg - np.ma.mean(eeg)
+                if np.ma.is_masked(eeg):
+                        eeg = np.ma.compressed(eeg)
+                _, _, lowphase, highamp, _= self._getFreqPhase(eeg, forder, thetaband, gammaband)
+                inc = 2*np.pi/nbins
+                a = np.arange(-np.pi+inc/2, np.pi, inc)
+                dt = np.array([-inc/2, inc/2])
+                pbins = a[:, np.newaxis] + dt[np.newaxis, :]
+                amp = np.zeros((nbins))
+                phaselen = np.arange(len(lowphase))
+                for i in xrange(nbins):
+                        pts = np.nonzero((lowphase &gt;= pbins[i,0]) * (lowphase &lt; pbins[i,1]) * phaselen)
+                        amp[i] = np.mean(highamp[pts])
+                amp = amp / np.sum(amp)
+                calcs = StatsCalcs()
+                mi = calcs.circ_r(pbins[:,1], amp)
+                if plot:
+                        fig = plt.figure()
+                        ax = fig.add_subplot(111, polar=True)
+                        w = np.pi / (nbins/2)
+                        ax.bar(pbins[:,1], amp, width=w)
+                        ax.set_title(&#34;Modulation index={0:.5f}&#34;.format(mi))
+                        fig.canvas.set_window_title(self.fname)
+                return mi
+                
+        def _getFreqPhase(self, eeg, ford, lowband, highband):
+                lowband = np.array(lowband, dtype=float)
+                highband = np.array(highband, dtype=float)
+                b, a = signal.butter(ford, lowband / (self.sample_rate / 2), btype=&#39;band&#39;)
+                e, f = signal.butter(ford, highband / (self.sample_rate / 2), btype=&#39;band&#39;)
+                lowfreq = signal.filtfilt(b, a, eeg, padtype=&#39;odd&#39;)
+                highfreq = signal.filtfilt(e, f, eeg, padtype=&#39;odd&#39;)
+                lowphase = np.angle(signal.hilbert(lowfreq))
+                highamp = np.abs(signal.hilbert(highfreq))
+                highamp_f = signal.filtfilt(b, a, highamp, padtype=&#39;odd&#39;)
+                return lowfreq, highfreq, lowphase, highamp, highamp_f
+                
+        def power_spectrum(self, eeg=None, plot=True, binWidthSecs=None,
+                                           maxFreq=None, pad2pow=None, ymax=None, **kwargs):
+                &#34;&#34;&#34;
+                Method used by eeg_power_spectra and intrinsic_freq_autoCorr
+                Signal in must be mean normalised already
+                &#34;&#34;&#34;
+                if eeg is None:
+                        eeg = self.eeg
+                else:
+                        eeg = eeg
+                if maxFreq is None:
+                        maxFreq = self.maxFreq
+                else:
+                        maxFreq = maxFreq
+                # Get raw power spectrum
+                nqLim = self.EEG.sample_rate / 2.
+                origLen = len(eeg)
+                if pad2pow is None:
+                        fftLen = int(np.power(2, self._nextpow2(origLen)))
+                else:
+                        fftLen = int(np.power(2, pad2pow))
+                fftHalfLen = int(fftLen / float(2) + 1)
+
+                fftRes = np.fft.fft(eeg, fftLen)
+                # get power density from fft and discard second half of spectrum
+                _power = np.power(np.abs(fftRes), 2) / origLen
+                power = np.delete(_power, np.s_[fftHalfLen::])
+                power[1:-2] = power[1:-2] * 2
+
+                # calculate freqs and crop spectrum to requested range
+                freqs = nqLim * np.linspace(0, 1, fftHalfLen)
+                freqs = freqs[freqs &lt;= maxFreq].T
+                power = power[0:len(freqs)]
+
+                # smooth spectrum using gaussian kernel
+                binsPerHz = (fftHalfLen - 1) / nqLim
+                kernelLen = np.round(self.smthKernelWidth * binsPerHz)
+                kernelSig = self.smthKernelSigma * binsPerHz
+                k = signal.gaussian(kernelLen, kernelSig) / (kernelLen/2/2)
+                power_sm = signal.fftconvolve(power, k[::-1], mode=&#39;same&#39;)
+
+                # calculate some metrics
+                # find max in theta band
+                spectrumMaskBand = np.logical_and(freqs &gt; self.thetaRange[0],
+                                                                                  freqs &lt; self.thetaRange[1])
+                bandMaxPower = np.max(power_sm[spectrumMaskBand])
+                maxBinInBand = np.argmax(power_sm[spectrumMaskBand])
+                bandFreqs = freqs[spectrumMaskBand]
+                freqAtBandMaxPower = bandFreqs[maxBinInBand]
+                self.maxBinInBand = maxBinInBand
+                self.freqAtBandMaxPower = freqAtBandMaxPower
+                self.bandMaxPower = bandMaxPower
+
+                # find power in small window around peak and divide by power in rest
+                # of spectrum to get snr
+                spectrumMaskPeak = np.logical_and(freqs &gt; freqAtBandMaxPower - self.sn2Width / 2,
+                                                                                  freqs &lt; freqAtBandMaxPower + self.sn2Width / 2)
+                s2n = np.nanmean(power_sm[spectrumMaskPeak]) / np.nanmean(power_sm[~spectrumMaskPeak])
+                self.freqs = freqs
+                self.power_sm = power_sm
+                self.spectrumMaskPeak = spectrumMaskPeak
+                if plot:
+                        fig = plt.figure()
+                        ax = fig.add_subplot(111)
+                        if ymax is None:
+                                ymax = np.min([2 * np.max(power), np.max(power_sm)])
+                                if ymax == 0:
+                                        ymax = 1
+                        ax.plot(freqs, power, c=[0.9, 0.9, 0.9])
+                        ax.hold(True)
+                        ax.plot(freqs, power_sm, &#39;k&#39;, lw=2)
+                        ax.axvline(self.thetaRange[0], c=&#39;b&#39;, ls=&#39;--&#39;)
+                        ax.axvline(self.thetaRange[1], c=&#39;b&#39;, ls=&#39;--&#39;)
+                        ax.stem([freqAtBandMaxPower], [bandMaxPower], c=&#39;r&#39;, lw=2)
+                        ax.fill_between(freqs, 0, power_sm, where=spectrumMaskPeak,
+                                                        color=&#39;r&#39;, alpha=0.25, zorder=25)
+                        ax.set_ylim(0, ymax)
+                        ax.set_xlim(0, self.xmax)
+                        ax.set_xlabel(&#39;Frequency (Hz)&#39;)
+                        ax.set_ylabel(&#39;Power density (W/Hz)&#39;)
+                out_dict = {&#39;maxFreq&#39;: freqAtBandMaxPower, &#39;Power&#39;: power_sm,
+                                        &#39;Freqs&#39;: freqs, &#39;s2n&#39;: s2n, &#39;Power_raw&#39;: power, &#39;k&#39;: k, &#39;kernelLen&#39;: kernelLen,
+                                        &#39;kernelSig&#39;: kernelSig, &#39;binsPerHz&#39;: binsPerHz, &#39;kernelLen&#39;: kernelLen}
+                return out_dict
+
+        def _nextpow2(self, val):
+                &#39;&#39;&#39;calculates the next power of 2 that will hold val&#39;&#39;&#39;
+                val = val - 1
+                val = (val &gt;&gt; 1) | val
+                val = (val &gt;&gt; 2) | val
+                val = (val &gt;&gt; 4) | val
+                val = (val &gt;&gt; 8) | val
+                val = (val &gt;&gt; 16) | val
+                val = (val &gt;&gt; 32) | val
+                return np.log2(val + 1)</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="ephysiopy.dacq2py.axonaIO.EEG" href="axonaIO.html#ephysiopy.dacq2py.axonaIO.EEG">EEG</a></li>
+<li><a title="ephysiopy.dacq2py.axonaIO.IO" href="axonaIO.html#ephysiopy.dacq2py.axonaIO.IO">IO</a></li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="ephysiopy.dacq2py.eegcalcs.EEGCalcs.chisquare_inv"><code class="name flex">
+<span>def <span class="ident">chisquare_inv</span></span>(<span>self, P, V)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def chisquare_inv(self, P, V):
+
+        if (1 - P) &lt; 1E-4:
+                print(&#39;P must be &lt; 0.9999&#39;)
+
+        if P == 0.95 and V == 2:  # this is a no-brainer
+                X = 5.9915
+                return X
+
+        MINN = 0.01  # hopefully this is small enough
+        MAXX = 1  # actually starts at 10 (see while loop below)
+        X = 1
+        TOLERANCE = 1E-4  # this should be accurate enough
+
+        while (X + TOLERANCE) &gt;= MAXX:  # should only need to loop thru once
+                MAXX = MAXX * 10.
+        # this calculates value for X, NORMALIZED by V
+                X = fminbound(self.chisquare_solve, MINN, MAXX, args=(P,V), xtol=TOLERANCE )
+                MINN = MAXX
+
+        X = X * V  # put back in the goofy V factor
+
+        return X  # end of code</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.eegcalcs.EEGCalcs.chisquare_solve"><code class="name flex">
+<span>def <span class="ident">chisquare_solve</span></span>(<span>self, XGUESS, P, V)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def chisquare_solve(self, XGUESS,P,V):
+
+        PGUESS = gammainc(V/2, V*XGUESS/2)  # incomplete Gamma function
+
+        PDIFF = np.abs(PGUESS - P)            # error in calculated P
+
+        TOL = 1E-4
+        if PGUESS &gt;= 1-TOL:  # if P is very close to 1 (i.e. a bad guess)
+                PDIFF = XGUESS   # then just assign some big number like XGUESS
+
+        return PDIFF</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.eegcalcs.EEGCalcs.eeg_instant_freq_power"><code class="name flex">
+<span>def <span class="ident">eeg_instant_freq_power</span></span>(<span>self, eeg=None, plot=True)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def eeg_instant_freq_power(self, eeg=None, plot=True):
+        if eeg is None:
+                eeg = self.EEG.eeg
+        else:
+                eeg = eeg
+        filtRange = self.thetaRange
+        eegSampFreq = self.EEG.sample_rate
+        self.EEG.x1=filtRange[0]
+        self.EEG.x2=filtRange[1]
+        filteredEEG = self.eegfilter(E=eeg)
+        analyticEEG = signal.hilbert(filteredEEG)
+        phaseEEGWrpd = np.angle(analyticEEG)
+        phaseEEG = np.unwrap(phaseEEGWrpd)
+        ampEEG = np.abs(analyticEEG)
+        # calculate instantaneous freq
+        freqEEG = np.diff(phaseEEG) * eegSampFreq / (2 * np.pi)
+        freqEEGposHz = np.nanmean(signal.decimate(freqEEG, self.sampsPerPos))
+        ampEEGposHz = np.nanmean(signal.decimate(ampEEG, self.sampsPerPos))
+        phaseEEGposHz = np.nanmean(signal.decimate(phaseEEG, self.sampsPerPos))
+        out_dict = {&#39;freqEEGposHz&#39;: freqEEGposHz, &#39;ampEEGposHz&#39;: ampEEGposHz,
+                                &#39;phaseEEGposHz&#39;: phaseEEGposHz, &#39;filteredEEG&#39;: filteredEEG,
+                                &#39;phaseEEG&#39;: phaseEEG, &#39;ampEEG&#39;: ampEEG,
+                                &#39;phaseEEGWrpd&#39;: phaseEEGWrpd}
+        if plot:
+                times = np.linspace(0, len(eeg) / eegSampFreq, len(eeg))
+                ys = (eeg, filteredEEG, np.real(analyticEEG), ampEEG, -ampEEG)
+                fig = plt.figure(figsize=(20,5))
+                ax = fig.add_subplot(111)
+                ax.set_ylim(np.amin(ys), np.amax(ys))
+                ax.set_xlim(np.amin(times), np.amax(times))
+                line_segs = LineCollection([list(zip(times,y)) for y in ys],
+                                                                   colors=[[0.8,0.8,0.8,1],
+                                                                                           [0.5,0.5,0.5,1],
+                                                                                                [1,0,0,1], [0,0,1,1],
+                                                                                                [0,0,1,1]],
+                                                                           linestyles=&#39;solid&#39;)
+                line_segs.set_array(times)
+                ax.add_collection(line_segs)
+                ax.set_xlabel(&#39;Time(s)&#39;)
+                ax.set_ylabel(&#39;EEG(V)&#39;)
+                scale = 1
+                ax.plot(times, filteredEEG*scale, color=[0.5, 0.5, 0.5], rasterized=True)
+                ax.plot(times, np.real(analyticEEG)*scale, color=&#39;r&#39;, rasterized=True)
+                ax.plot(times, ampEEG*scale, color=&#39;b&#39;, rasterized=True)
+                ax.plot(times, -ampEEG*scale, color=&#39;b&#39;, rasterized=True)
+                s = np.nanmedian(ampEEG) / 50. * scale
+                phaseInd = np.round(np.mod(phaseEEG, 2*np.pi) / (2 * np.pi) * 100)
+                phaseInd[phaseInd==0] = 100
+                S = cm.ScalarMappable()
+                phaseImg = S.to_rgba(phaseInd)
+                phaseImg = phaseImg[:, 0:3]
+                ax.imshow(phaseImg, extent=[0, times[-1], -s, s])
+                ax.set_aspect(2e8)
+                plt.show()
+        return out_dict</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.eegcalcs.EEGCalcs.eeg_power_spectra"><code class="name flex">
+<span>def <span class="ident">eeg_power_spectra</span></span>(<span>self, eeg=None, pos2use='all', **kwargs)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def eeg_power_spectra(self, eeg=None, pos2use=&#39;all&#39;, **kwargs):
+        if eeg is None:
+                eeg = self.EEG.eeg
+        else:
+                eeg = eeg
+        if isinstance(pos2use, str):
+                if &#39;all&#39; in pos2use:
+                        eeg = eeg
+        elif isinstance(pos2use, np.ndarray):
+                # TODO: need to check this doesn&#39;t exceed pos len
+                eeg = signal.decimate(eeg, self.sampsPerPos)
+                eeg = eeg[pos2use]
+        out = self.power_spectrum(eeg=eeg, binWidthSecs=1/self.sample_rate,
+                                                          **kwargs)
+        return out</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.eegcalcs.EEGCalcs.filterForLaser"><code class="name flex">
+<span>def <span class="ident">filterForLaser</span></span>(<span>self, E=None, width=0.125, dip=15.0, stimFreq=6.66)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>In some of the optogenetic experiments I ran the frequency of laser
+stimulation was at 6.66Hz - this method attempts to filter those
+frequencies out</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def filterForLaser(self, E=None, width=0.125, dip=15.0, stimFreq=6.66):
+        &#39;&#39;&#39;
+        In some of the optogenetic experiments I ran the frequency of laser
+        stimulation was at 6.66Hz - this method attempts to filter those
+        frequencies out
+        &#39;&#39;&#39;
+        from scipy.signal import kaiserord, firwin, filtfilt        
+        nyq = self.sample_rate / 2.
+        width = width / nyq
+        dip = dip
+        N, beta = kaiserord(dip, width)
+        print(&#34;N: {0}\nbeta: {1}&#34;.format(N, beta))
+        upper = np.ceil(nyq/stimFreq)
+        c = np.arange(stimFreq, upper*stimFreq, stimFreq)
+        dt = np.array([-0.125, 0.125])
+        cutoff_hz = dt[:, np.newaxis] + c[np.newaxis, :]
+        cutoff_hz = cutoff_hz.ravel()
+        cutoff_hz = np.append(cutoff_hz, nyq-1)
+        cutoff_hz.sort()
+        cutoff_hz_nyq = cutoff_hz / nyq
+        taps = firwin(N, cutoff_hz_nyq, window=(&#39;kaiser&#39;, beta))
+        if E is None:
+                eeg = self.EEG.eeg
+        else:
+                eeg = E
+        fx = filtfilt(taps, [1.0], eeg)
+        return fx</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.eegcalcs.EEGCalcs.filterWithButter"><code class="name flex">
+<span>def <span class="ident">filterWithButter</span></span>(<span>self, data, low, high, fs, order=5)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def filterWithButter(self, data, low, high, fs, order=5):
+        from scipy.signal import butter, filtfilt
+        nyq = fs / 2.
+        lowcut = low / nyq
+        highcut = high / nyq
+        b, a = butter(order, [lowcut, highcut], btype=&#39;band&#39;)
+        y = filtfilt(b, a, data)
+        return y</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.eegcalcs.EEGCalcs.ifftFilter"><code class="name flex">
+<span>def <span class="ident">ifftFilter</span></span>(<span>self, sig, freqs, fs=250)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Calculates the dft of signal and filters out the frequencies in
+freqs from the result and reconstructs the original signal using
+the inverse fft without those frequencies</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def ifftFilter(self, sig, freqs, fs=250):
+        &#39;&#39;&#39;
+        Calculates the dft of signal and filters out the frequencies in
+        freqs from the result and reconstructs the original signal using 
+        the inverse fft without those frequencies
+        &#39;&#39;&#39;
+        from scipy import signal
+        origLen = len(sig)
+        nyq = fs / 2.0
+        fftRes = np.fft.fft(sig)
+        f = nyq * np.linspace(0, 1, len(fftRes)/2)
+        f = np.concatenate([f,f-nyq])           
+        
+        band = 0.0625
+        idx = np.zeros([len(freqs), len(f)]).astype(bool)
+        
+        for i,freq in enumerate(freqs):
+                idx[i,:] = np.logical_and(np.abs(f)&lt;freq+band, np.abs(f)&gt;freq-band)
+        
+        pollutedIdx = np.sum(idx, 0)
+        fftRes[pollutedIdx] = np.mean(fftRes)
+        
+        reconSig = np.fft.ifft(fftRes)</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.eegcalcs.EEGCalcs.intrinsic_freq_autoCorr"><code class="name flex">
+<span>def <span class="ident">intrinsic_freq_autoCorr</span></span>(<span>self, spkTimes=None, posMask=None, maxFreq=25, acBinSize=0.002, acWindow=0.5, plot=True, **kwargs)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Be careful that if you've called dacq2py.Tetrode.getSpkTS()
+that they are divided by
+96000 to get into seconds before using here</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def intrinsic_freq_autoCorr(self, spkTimes=None, posMask=None, maxFreq=25,
+                                                        acBinSize=0.002, acWindow=0.5, plot=True,
+                                                        **kwargs):
+        &#34;&#34;&#34;
+        Be careful that if you&#39;ve called dacq2py.Tetrode.getSpkTS()
+        that they are divided by
+        96000 to get into seconds before using here
+        &#34;&#34;&#34;
+        acBinsPerPos = 1. / self.posSampFreq / acBinSize
+        acWindowSizeBins = np.round(acWindow / acBinSize)
+        binCentres = np.arange(0.5, len(posMask)*acBinsPerPos) * acBinSize
+        spkTrHist, _ = np.histogram(spkTimes, bins=binCentres)
+
+        # find start, end and length of each block of trues in posMask
+        idxArray = np.array([map(itemgetter(0), itemgetter(0, -1)(list(g))) + [k] for k, g in groupby(enumerate(posMask), itemgetter(1))])
+        chunkLens = np.diff(idxArray)[:, 0] + 1
+
+        # split the single histogram into individual chunks
+        splitIdx = np.nonzero(np.diff(posMask.astype(int)))[0]+1
+        splitMask = np.split(posMask, splitIdx)
+        splitSpkHist = np.split(spkTrHist, splitIdx * acBinsPerPos)
+        histChunks = []
+        for i in range(len(splitSpkHist)):
+                if np.all(splitMask[i]):
+                        if np.sum(splitSpkHist[i]) &gt; 2:
+                                histChunks.append(splitSpkHist[i])
+        autoCorrGrid = np.zeros((acWindowSizeBins + 1, len(histChunks)))
+        chunkLens = []
+        for i in range(len(histChunks)):
+                lenThisChunk = len(histChunks[i])
+                chunkLens.append(lenThisChunk)
+                tmp = np.zeros(lenThisChunk * 2)
+                tmp[lenThisChunk/2:lenThisChunk/2+lenThisChunk] = histChunks[i]
+                tmp2 = signal.fftconvolve(tmp, histChunks[i][::-1], mode=&#39;valid&#39;)
+                autoCorrGrid[:, i] = tmp2[lenThisChunk/2:lenThisChunk/2+acWindowSizeBins+1] / acBinsPerPos
+
+        totalLen = np.sum(chunkLens)
+        autoCorrSum = np.nansum(autoCorrGrid, 1) / totalLen
+        #lags = np.arange(0, acWindowSizeBins) * acBinSize
+        meanNormdAc = autoCorrSum[1::] - np.nanmean(autoCorrSum[1::])
+        out = self.power_spectrum(eeg=meanNormdAc, binWidthSecs=acBinSize,
+                                                          maxFreq=maxFreq, pad2pow=16, **kwargs)
+        out.update({&#39;meanNormdAc&#39;: meanNormdAc})
+        if plot:
+                fig = plt.gcf()
+                ax = fig.gca()
+                xlim = ax.get_xlim()
+                ylim = ax.get_ylim()
+                ax.imshow(autoCorrGrid,
+                                 extent=[maxFreq*0.6, maxFreq,
+                                                 np.max(out[&#39;Power&#39;])*0.6, ax.get_ylim()[1]])
+                ax.set_ylim(ylim)
+                ax.set_xlim(xlim)
+        return out</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.eegcalcs.EEGCalcs.modulationindex"><code class="name flex">
+<span>def <span class="ident">modulationindex</span></span>(<span>self, eeg=None, nbins=20, forder=2, thetaband=[4, 8], gammaband=[30, 80], plot=True, **kwargs)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def modulationindex(self, eeg=None, nbins=20, forder=2,
+                                        thetaband=[4, 8], gammaband=[30, 80],
+                                        plot=True, **kwargs):
+        if eeg is None:
+                eeg = self.eeg
+        eeg = eeg - np.ma.mean(eeg)
+        if np.ma.is_masked(eeg):
+                eeg = np.ma.compressed(eeg)
+        _, _, lowphase, highamp, _= self._getFreqPhase(eeg, forder, thetaband, gammaband)
+        inc = 2*np.pi/nbins
+        a = np.arange(-np.pi+inc/2, np.pi, inc)
+        dt = np.array([-inc/2, inc/2])
+        pbins = a[:, np.newaxis] + dt[np.newaxis, :]
+        amp = np.zeros((nbins))
+        phaselen = np.arange(len(lowphase))
+        for i in xrange(nbins):
+                pts = np.nonzero((lowphase &gt;= pbins[i,0]) * (lowphase &lt; pbins[i,1]) * phaselen)
+                amp[i] = np.mean(highamp[pts])
+        amp = amp / np.sum(amp)
+        calcs = StatsCalcs()
+        mi = calcs.circ_r(pbins[:,1], amp)
+        if plot:
+                fig = plt.figure()
+                ax = fig.add_subplot(111, polar=True)
+                w = np.pi / (nbins/2)
+                ax.bar(pbins[:,1], amp, width=w)
+                ax.set_title(&#34;Modulation index={0:.5f}&#34;.format(mi))
+                fig.canvas.set_window_title(self.fname)
+        return mi</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.eegcalcs.EEGCalcs.plv"><code class="name flex">
+<span>def <span class="ident">plv</span></span>(<span>self, eeg=None, forder=2, thetaband=[4, 8], gammaband=[30, 80], plot=True, **kwargs)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Computes the phase-amplitude coupling (PAC) of nested oscillations. More
+specifically this is the phase-locking value (PLV) between two nested
+oscillations in EEG data, in this case theta (default between 4-8Hz)
+and gamma (defaults to 30-80Hz). A PLV of unity indicates perfect phase
+locking (here PAC) and a value of zero indicates no locking (no PAC)</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>eeg</code></strong> :&ensp;<code>numpy</code> <code>array</code></dt>
+<dd>the eeg data itself. This is a 1-d array which can be masked or not</dd>
+<dt><strong><code>forder</code></strong> :&ensp;<code>int</code></dt>
+<dd>the order of the filter(s) applied to the eeg data</dd>
+<dt>thetaband/ gammaband: list/ array</dt>
+<dt>the range of values to bandpass filter for for the theta and gamma</dt>
+<dt>ranges</dt>
+<dt><strong><code>plot</code></strong> :&ensp;<code>bool</code> (default <code>True</code>)</dt>
+<dd>whether to plot the resulting binned up polar plot which shows the
+amplitude of the gamma oscillation found at different phases of the
+theta oscillation</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>plv</code></strong> :&ensp;<code>float</code></dt>
+<dd>the value of the phase-amplitude coupling</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plv(self, eeg=None, forder=2, thetaband=[4, 8], gammaband=[30, 80],
+                plot=True, **kwargs):
+        &#34;&#34;&#34;
+        Computes the phase-amplitude coupling (PAC) of nested oscillations. More
+        specifically this is the phase-locking value (PLV) between two nested
+        oscillations in EEG data, in this case theta (default between 4-8Hz) 
+        and gamma (defaults to 30-80Hz). A PLV of unity indicates perfect phase
+        locking (here PAC) and a value of zero indicates no locking (no PAC)
+        
+        Parameters
+        ----------
+        eeg: numpy array
+                the eeg data itself. This is a 1-d array which can be masked or not
+        forder: int
+                the order of the filter(s) applied to the eeg data
+        thetaband/ gammaband: list/ array
+                the range of values to bandpass filter for for the theta and gamma
+                ranges
+        plot: bool (default True)
+                whether to plot the resulting binned up polar plot which shows the 
+                amplitude of the gamma oscillation found at different phases of the 
+                theta oscillation
+        Returns
+        -------
+        plv: float
+                the value of the phase-amplitude coupling
+        
+        &#34;&#34;&#34;
+        if eeg is None:
+                eeg = self.eeg
+        eeg = eeg - np.ma.mean(eeg)
+        if np.ma.is_masked(eeg):
+                eeg = np.ma.compressed(eeg)
+        
+        lowfreq, highfreq, lowphase, highamp, highamp_f = self._getFreqPhase(eeg, forder, thetaband, gammaband)
+
+        highampphase = np.angle(signal.hilbert(highamp_f))
+        phasedf = highampphase - lowphase
+        phasedf = np.exp(1j * phasedf)
+        phasedf = np.angle(phasedf)
+        calcs = StatsCalcs()
+        plv = calcs.circ_r(phasedf)
+        th = np.linspace(0.0, 2*np.pi, 20, endpoint=False)
+        h, xe = np.histogram(phasedf, bins=20)
+        h = h / float(len(phasedf))
+        
+        if plot:
+                fig = plt.figure()
+                ax = fig.add_subplot(111, polar=True)
+                w = np.pi / 10
+                ax.bar(th, h, width = w, bottom=0.0)
+        return plv, th, h</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.eegcalcs.EEGCalcs.power_spectrum"><code class="name flex">
+<span>def <span class="ident">power_spectrum</span></span>(<span>self, eeg=None, plot=True, binWidthSecs=None, maxFreq=None, pad2pow=None, ymax=None, **kwargs)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Method used by eeg_power_spectra and intrinsic_freq_autoCorr
+Signal in must be mean normalised already</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def power_spectrum(self, eeg=None, plot=True, binWidthSecs=None,
+                                   maxFreq=None, pad2pow=None, ymax=None, **kwargs):
+        &#34;&#34;&#34;
+        Method used by eeg_power_spectra and intrinsic_freq_autoCorr
+        Signal in must be mean normalised already
+        &#34;&#34;&#34;
+        if eeg is None:
+                eeg = self.eeg
+        else:
+                eeg = eeg
+        if maxFreq is None:
+                maxFreq = self.maxFreq
+        else:
+                maxFreq = maxFreq
+        # Get raw power spectrum
+        nqLim = self.EEG.sample_rate / 2.
+        origLen = len(eeg)
+        if pad2pow is None:
+                fftLen = int(np.power(2, self._nextpow2(origLen)))
+        else:
+                fftLen = int(np.power(2, pad2pow))
+        fftHalfLen = int(fftLen / float(2) + 1)
+
+        fftRes = np.fft.fft(eeg, fftLen)
+        # get power density from fft and discard second half of spectrum
+        _power = np.power(np.abs(fftRes), 2) / origLen
+        power = np.delete(_power, np.s_[fftHalfLen::])
+        power[1:-2] = power[1:-2] * 2
+
+        # calculate freqs and crop spectrum to requested range
+        freqs = nqLim * np.linspace(0, 1, fftHalfLen)
+        freqs = freqs[freqs &lt;= maxFreq].T
+        power = power[0:len(freqs)]
+
+        # smooth spectrum using gaussian kernel
+        binsPerHz = (fftHalfLen - 1) / nqLim
+        kernelLen = np.round(self.smthKernelWidth * binsPerHz)
+        kernelSig = self.smthKernelSigma * binsPerHz
+        k = signal.gaussian(kernelLen, kernelSig) / (kernelLen/2/2)
+        power_sm = signal.fftconvolve(power, k[::-1], mode=&#39;same&#39;)
+
+        # calculate some metrics
+        # find max in theta band
+        spectrumMaskBand = np.logical_and(freqs &gt; self.thetaRange[0],
+                                                                          freqs &lt; self.thetaRange[1])
+        bandMaxPower = np.max(power_sm[spectrumMaskBand])
+        maxBinInBand = np.argmax(power_sm[spectrumMaskBand])
+        bandFreqs = freqs[spectrumMaskBand]
+        freqAtBandMaxPower = bandFreqs[maxBinInBand]
+        self.maxBinInBand = maxBinInBand
+        self.freqAtBandMaxPower = freqAtBandMaxPower
+        self.bandMaxPower = bandMaxPower
+
+        # find power in small window around peak and divide by power in rest
+        # of spectrum to get snr
+        spectrumMaskPeak = np.logical_and(freqs &gt; freqAtBandMaxPower - self.sn2Width / 2,
+                                                                          freqs &lt; freqAtBandMaxPower + self.sn2Width / 2)
+        s2n = np.nanmean(power_sm[spectrumMaskPeak]) / np.nanmean(power_sm[~spectrumMaskPeak])
+        self.freqs = freqs
+        self.power_sm = power_sm
+        self.spectrumMaskPeak = spectrumMaskPeak
+        if plot:
+                fig = plt.figure()
+                ax = fig.add_subplot(111)
+                if ymax is None:
+                        ymax = np.min([2 * np.max(power), np.max(power_sm)])
+                        if ymax == 0:
+                                ymax = 1
+                ax.plot(freqs, power, c=[0.9, 0.9, 0.9])
+                ax.hold(True)
+                ax.plot(freqs, power_sm, &#39;k&#39;, lw=2)
+                ax.axvline(self.thetaRange[0], c=&#39;b&#39;, ls=&#39;--&#39;)
+                ax.axvline(self.thetaRange[1], c=&#39;b&#39;, ls=&#39;--&#39;)
+                ax.stem([freqAtBandMaxPower], [bandMaxPower], c=&#39;r&#39;, lw=2)
+                ax.fill_between(freqs, 0, power_sm, where=spectrumMaskPeak,
+                                                color=&#39;r&#39;, alpha=0.25, zorder=25)
+                ax.set_ylim(0, ymax)
+                ax.set_xlim(0, self.xmax)
+                ax.set_xlabel(&#39;Frequency (Hz)&#39;)
+                ax.set_ylabel(&#39;Power density (W/Hz)&#39;)
+        out_dict = {&#39;maxFreq&#39;: freqAtBandMaxPower, &#39;Power&#39;: power_sm,
+                                &#39;Freqs&#39;: freqs, &#39;s2n&#39;: s2n, &#39;Power_raw&#39;: power, &#39;k&#39;: k, &#39;kernelLen&#39;: kernelLen,
+                                &#39;kernelSig&#39;: kernelSig, &#39;binsPerHz&#39;: binsPerHz, &#39;kernelLen&#39;: kernelLen}
+        return out_dict</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.eegcalcs.EEGCalcs.wave_bases"><code class="name flex">
+<span>def <span class="ident">wave_bases</span></span>(<span>self, mother, k, scale, param)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def wave_bases(self, mother, k, scale, param):
+        n = len(k)
+        kplus = np.array(k &gt; 0., dtype=float)
+
+        if mother == &#39;MORLET&#39;:  #-----------------------------------  Morlet
+
+                if param == -1:
+                        param = 6.
+
+                k0 = np.copy(param)
+                expnt = -(scale * k - k0) ** 2 / 2. * kplus
+                norm = np.sqrt(scale * k[1]) * (np.pi ** (-0.25)) * np.sqrt(n)  # total energy=N   [Eqn(7)]
+                daughter = norm * np.exp(expnt)
+                daughter = daughter * kplus  # Heaviside step function
+                fourier_factor = (4 * np.pi) / (k0 + np.sqrt(2 + k0 ** 2))  # Scale--&gt;Fourier [Sec.3h]
+                coi = fourier_factor / np.sqrt(2)  # Cone-of-influence [Sec.3g]
+                dofmin = 2  # Degrees of freedom
+        elif mother == &#39;PAUL&#39;:  #--------------------------------  Paul
+                if param == -1:
+                        param = 4.
+                m = param
+                expnt = -scale * k * kplus
+                norm = np.sqrt(scale * k[1]) * (2 ** m / np.sqrt(m*np.prod(np.arange(1, (2 * m))))) * np.sqrt(n)
+                daughter = norm * ((scale * k) ** m) * np.exp(expnt) * kplus
+                fourier_factor = 4 * np.pi / (2 * m + 1)
+                coi = fourier_factor * np.sqrt(2)
+                dofmin = 2
+        elif mother == &#39;DOG&#39;:  #--------------------------------  DOG
+                if param == -1:
+                        param = 2.
+                m = param
+                expnt = -(scale * k) ** 2 / 2.0
+                norm = np.sqrt(scale * k[1] / gamma(m + 0.5)) * np.sqrt(n)
+                daughter = -norm * (1j ** m) * ((scale * k) ** m) * np.exp(expnt)
+                fourier_factor = 2 * np.pi * np.sqrt(2. / (2 * m + 1))
+                coi = fourier_factor / np.sqrt(2)
+                dofmin = 1
+        else:
+                print(&#39;Mother must be one of MORLET, PAUL, DOG&#39;)
+
+        return daughter, fourier_factor, coi, dofmin</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.eegcalcs.EEGCalcs.wave_signif"><code class="name flex">
+<span>def <span class="ident">wave_signif</span></span>(<span>self, Y, dt, scale, sigtest=-1, lag1=-1, siglvl=-1, dof=-1, mother=-1, param=-1)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def wave_signif(self, Y, dt, scale, sigtest=-1, lag1=-1, siglvl=-1, dof=-1, mother=-1, param=-1):
+        n1 = len(np.atleast_1d(Y))
+        J1 = len(scale) - 1
+        s0 = np.min(scale)
+        dj = np.log2(scale[1] / scale[0])
+
+        if n1 == 1:
+                variance = Y
+        else:
+                variance = np.std(Y) ** 2
+
+        if sigtest == -1:
+                sigtest = 0
+        if lag1 == -1:
+                lag1 = 0.0
+        if siglvl == -1:
+                siglvl = 0.95
+        if mother == -1:
+                mother = &#39;MORLET&#39;
+
+        # get the appropriate parameters [see Table(2)]
+        if mother == &#39;MORLET&#39;:  #----------------------------------  Morlet
+                empir = ([2., -1, -1, -1])
+                if param == -1:
+                        param = 6.
+                        empir[1:] = ([0.776, 2.32, 0.60])
+                k0 = param
+                fourier_factor = (4 * np.pi) / (k0 + np.sqrt(2 + k0 ** 2))  # Scale--&gt;Fourier [Sec.3h]
+        elif mother == &#39;PAUL&#39;:
+                empir = ([2, -1, -1, -1])
+                if param == -1:
+                        param = 4
+                        empir[1:] = ([1.132, 1.17, 1.5])
+                m = param
+                fourier_factor = (4 * np.pi) / (2 * m + 1)
+        elif mother == &#39;DOG&#39;:  #-------------------------------------Paul
+                empir = ([1., -1, -1, -1])
+                if param == -1:
+                        param = 2.
+                        empir[1:] = ([3.541, 1.43, 1.4])
+                elif param == 6:  #--------------------------------------DOG
+                        empir[1:] = ([1.966, 1.37, 0.97])
+                m = param
+                fourier_factor = 2 * np.pi * np.sqrt(2. / (2 * m + 1))
+        else:
+                print(&#39;Mother must be one of MORLET, PAUL, DOG&#39;)
+
+        period = scale * fourier_factor
+        dofmin = empir[0]  # Degrees of freedom with no smoothing
+        Cdelta = empir[1]  # reconstruction factor
+        gamma_fac = empir[2]  # time-decorrelation factor
+        dj0 = empir[3]  # scale-decorrelation factor
+
+        freq = dt / period  # normalized frequency
+        fft_theor = (1 - lag1 ** 2) / (1 - 2 * lag1 * np.cos(freq * 2 * np.pi) + lag1 ** 2)  # [Eqn(16)]
+        fft_theor = variance * fft_theor  # include time-series variance
+        signif = fft_theor
+        if len(np.atleast_1d(dof)) == 1:
+                if dof == -1:
+                        dof = dofmin
+
+        if sigtest == 0:  # no smoothing, DOF=dofmin [Sec.4]
+                dof = dofmin
+                chisquare = self.chisquare_inv(siglvl, dof) / dof
+                signif = fft_theor * chisquare  # [Eqn(18)]
+        elif sigtest == 1:  # time-averaged significance
+                if len(np.atleast_1d(dof)) == 1:
+                        dof = np.zeros(J1) + dof
+                dof[dof &lt; 1] = 1
+                dof = dofmin * np.sqrt(1 + (dof * dt / gamma_fac / scale) ** 2)  # [Eqn(23)]
+                dof[dof &lt; dofmin] = dofmin   # minimum DOF is dofmin
+                for a1 in range(0, J1 + 1):
+                        chisquare = self.chisquare_inv(siglvl, dof[a1]) / dof[a1]
+                        signif[a1] = fft_theor[a1] * chisquare
+                print(chisquare)
+        elif sigtest == 2:  # time-averaged significance
+                if len(dof) != 2:
+                        print(&#39;ERROR: DOF must be set to [S1,S2], the range of scale-averages&#39;)
+                if Cdelta == -1:
+                        print(&#39;ERROR: Cdelta &amp; dj0 not defined for &#39; + mother + &#39; with param = &#39; + str(param))
+
+                s1 = dof[0]
+                s2 = dof[1]
+                avg =  np.logical_and(scale &gt;= 2, scale &lt; 8)# scales between S1 &amp; S2
+                navg = np.sum(np.array(np.logical_and(scale &gt;= 2, scale &lt; 8), dtype=int))
+                if navg == 0:
+                        print(&#39;ERROR: No valid scales between &#39; + str(s1) + &#39; and &#39; + str(s2))
+                Savg = 1. / np.sum(1. / scale[avg])  # [Eqn(25)]
+                Smid = np.exp((np.log(s1) + np.log(s2)) / 2.)  # power-of-two midpoint
+                dof = (dofmin * navg * Savg / Smid) * np.sqrt(1 + (navg * dj / dj0) ** 2)  # [Eqn(28)]
+                fft_theor = Savg * np.sum(fft_theor[avg] / scale[avg])  # [Eqn(27)]
+                chisquare = chisquare_inv(siglvl, dof) / dof
+                signif = (dj * dt / Cdelta / Savg) * fft_theor * chisquare  # [Eqn(26)]
+        else:
+                print(&#39;ERROR: sigtest must be either 0, 1, or 2&#39;)
+
+        return signif</code></pre>
+</details>
+</dd>
+<dt id="ephysiopy.dacq2py.eegcalcs.EEGCalcs.wavelet"><code class="name flex">
+<span>def <span class="ident">wavelet</span></span>(<span>self, Y, dt, pad=0, dj=-1, s0=-1, J1=-1, mother=-1, param=-1)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def wavelet(self, Y, dt, pad=0, dj=-1, s0=-1, J1=-1, mother=-1, param=-1):
+        n1 = len(Y)
+
+        if s0 == -1:
+                s0 = 2 * dt
+        if dj == -1:
+                dj = 1. / 4.
+        if J1 == -1:
+                J1 = np.fix((np.log(n1 * dt / s0) / np.log(2)) / dj)
+        if mother == -1:
+                mother = &#39;MORLET&#39;
+
+        #....construct time series to analyze, pad if necessary
+        x = Y - np.mean(Y)
+        if pad == 1:
+                base2 = np.fix(np.log(n1) / np.log(2) + 0.4999)  # power of 2 nearest to N
+                x = np.concatenate((x, np.zeros(2 ** (base2 + 1) - n1)))
+
+        n = len(x)
+
+        #....construct wavenumber array used in transform [Eqn(5)]
+        kplus = np.arange(1, np.fix(n / 2 + 1))
+        kplus = (kplus * 2 * np.pi / (n * dt))
+        kminus = (-(kplus[0:-1])[::-1])
+        k = np.concatenate(([0.], kplus, kminus))
+
+        #....compute FFT of the (padded) time series
+        f = np.fft.fft(x)  # [Eqn(3)]
+
+        #....construct SCALE array &amp; empty PERIOD &amp; WAVE arrays
+        j = np.arange(0,J1+1)
+        scale = s0 * 2. ** (j * dj)
+        wave = np.zeros(shape=(J1 + 1, n), dtype=complex)  # define the wavelet array
+
+        # loop through all scales and compute transform
+        for a1 in range(0, int(J1+1)):
+                daughter, fourier_factor, coi, dofmin = self.wave_bases(mother, k, scale[a1], param)
+                wave[a1, :] = np.fft.ifft(f * daughter)  # wavelet transform[Eqn(4)]
+
+        period = fourier_factor * scale  #[Table(1)]
+        coi = coi * dt * np.concatenate((np.insert(np.arange((n1 + 1) / 2 - 1), [0], [1E-5]),
+                                                                         np.insert(np.flipud(np.arange(0, n1 / 2 - 1)), [-1], [1E-5])))  # COI [Sec.3g]
+        wave = wave[:, :n1]  # get rid of padding before returning
+
+        return wave, period, scale, coi</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="ephysiopy.dacq2py.axonaIO.EEG" href="axonaIO.html#ephysiopy.dacq2py.axonaIO.EEG">EEG</a></b></code>:
+<ul class="hlist">
+<li><code><a title="ephysiopy.dacq2py.axonaIO.EEG.eegfilter" href="axonaIO.html#ephysiopy.dacq2py.axonaIO.EEG.eegfilter">eegfilter</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.axonaIO.EEG.getCluCut" href="axonaIO.html#ephysiopy.dacq2py.axonaIO.IO.getCluCut">getCluCut</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.axonaIO.EEG.getCut" href="axonaIO.html#ephysiopy.dacq2py.axonaIO.IO.getCut">getCut</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.axonaIO.EEG.getData" href="axonaIO.html#ephysiopy.dacq2py.axonaIO.IO.getData">getData</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.axonaIO.EEG.getHeader" href="axonaIO.html#ephysiopy.dacq2py.axonaIO.IO.getHeader">getHeader</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.axonaIO.EEG.getHeaderVal" href="axonaIO.html#ephysiopy.dacq2py.axonaIO.IO.getHeaderVal">getHeaderVal</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.axonaIO.EEG.nextpow2" href="axonaIO.html#ephysiopy.dacq2py.axonaIO.EEG.nextpow2">nextpow2</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.axonaIO.EEG.setData" href="axonaIO.html#ephysiopy.dacq2py.axonaIO.IO.setData">setData</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.axonaIO.EEG.setHeader" href="axonaIO.html#ephysiopy.dacq2py.axonaIO.IO.setHeader">setHeader</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.axonaIO.EEG.thetaAmpPhase" href="axonaIO.html#ephysiopy.dacq2py.axonaIO.EEG.thetaAmpPhase">thetaAmpPhase</a></code></li>
+</ul>
+</li>
+</ul>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="ephysiopy.dacq2py" href="index.html">ephysiopy.dacq2py</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="ephysiopy.dacq2py.eegcalcs.EEGCalcs" href="#ephysiopy.dacq2py.eegcalcs.EEGCalcs">EEGCalcs</a></code></h4>
+<ul class="">
+<li><code><a title="ephysiopy.dacq2py.eegcalcs.EEGCalcs.chisquare_inv" href="#ephysiopy.dacq2py.eegcalcs.EEGCalcs.chisquare_inv">chisquare_inv</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.eegcalcs.EEGCalcs.chisquare_solve" href="#ephysiopy.dacq2py.eegcalcs.EEGCalcs.chisquare_solve">chisquare_solve</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.eegcalcs.EEGCalcs.eeg_instant_freq_power" href="#ephysiopy.dacq2py.eegcalcs.EEGCalcs.eeg_instant_freq_power">eeg_instant_freq_power</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.eegcalcs.EEGCalcs.eeg_power_spectra" href="#ephysiopy.dacq2py.eegcalcs.EEGCalcs.eeg_power_spectra">eeg_power_spectra</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.eegcalcs.EEGCalcs.filterForLaser" href="#ephysiopy.dacq2py.eegcalcs.EEGCalcs.filterForLaser">filterForLaser</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.eegcalcs.EEGCalcs.filterWithButter" href="#ephysiopy.dacq2py.eegcalcs.EEGCalcs.filterWithButter">filterWithButter</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.eegcalcs.EEGCalcs.ifftFilter" href="#ephysiopy.dacq2py.eegcalcs.EEGCalcs.ifftFilter">ifftFilter</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.eegcalcs.EEGCalcs.intrinsic_freq_autoCorr" href="#ephysiopy.dacq2py.eegcalcs.EEGCalcs.intrinsic_freq_autoCorr">intrinsic_freq_autoCorr</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.eegcalcs.EEGCalcs.modulationindex" href="#ephysiopy.dacq2py.eegcalcs.EEGCalcs.modulationindex">modulationindex</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.eegcalcs.EEGCalcs.plv" href="#ephysiopy.dacq2py.eegcalcs.EEGCalcs.plv">plv</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.eegcalcs.EEGCalcs.power_spectrum" href="#ephysiopy.dacq2py.eegcalcs.EEGCalcs.power_spectrum">power_spectrum</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.eegcalcs.EEGCalcs.wave_bases" href="#ephysiopy.dacq2py.eegcalcs.EEGCalcs.wave_bases">wave_bases</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.eegcalcs.EEGCalcs.wave_signif" href="#ephysiopy.dacq2py.eegcalcs.EEGCalcs.wave_signif">wave_signif</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.eegcalcs.EEGCalcs.wavelet" href="#ephysiopy.dacq2py.eegcalcs.EEGCalcs.wavelet">wavelet</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.7.5</a>.</p>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad()</script>
+</body>
+</html>
