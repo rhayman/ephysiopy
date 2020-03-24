@@ -4,6 +4,10 @@
 Created on Thu Nov  9 17:04:38 2017
 
 @author: robin
+
+The classes contained in this module are supposed to be agnostic to recording format
+and encapsulate some generic mechanisms for producing things like spike timing
+autocorrelograms, power spectrum calculation and so on
 """
 import numpy as np
 from scipy import signal
@@ -19,7 +23,7 @@ from ephysiopy.dacq2py import tintcolours as tcols
 
 class SpikeCalcsGeneric(object):
     """
-    Generic class for processing and analysis of spiking data
+    Deals with the processing and analysis of spike timing data.
 
     Parameters
     ----------
