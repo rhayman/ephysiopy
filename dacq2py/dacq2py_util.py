@@ -16,7 +16,7 @@ import warnings
 from . import axonaIO
 from .tetrode_dict import TetrodeDict
 from ephysiopy.ephys_generic import binning
-from .fieldcalcs import FieldCalcs
+from ephysiopy.ephys_generic.ephys_generic import FieldCalcs
 from .spikecalcs import SpikeCalcs
 from .eegcalcs import EEGCalcs
 from .cluster import Kluster
@@ -35,6 +35,7 @@ warnings.filterwarnings("ignore",
 						message="invalid value encountered in divide")
 warnings.filterwarnings("ignore",
 						message="Casting complex values to real discards the imaginary part")
+
 class Trial(axonaIO.IO, SAC, dict):
 	'''
 	Providesm ethods to plot electrophysiology data acquired using the Axona DACQ recording system
@@ -167,7 +168,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		Checks for some automated yaml processing (see Dropbox/Science/Analysis/)
 		'''
 
-		for i in self.axona_files.iterkeys():
+		for i in self.axona_files:
 			if os.path.isfile(self.filename_root + i):
 				self['has_' + i[1:]] = True
 			else:
@@ -333,17 +334,17 @@ class Trial(axonaIO.IO, SAC, dict):
 				within every Phase.
 				"""
 				# phase_info : a dict for each phase that is active
-				phase_info = {'startTime': None, 'duration': None, 'name': None, 'pulseWidth': None, 'pulsePause': None};
-				stim_dict = {};
-				stim_patt_dict = {};
+				phase_info = {'startTime': None, 'duration': None, 'name': None, 'pulseWidth': None, 'pulsePause': None}
+				stim_dict = {}
+				stim_patt_dict = {}
 				for k,v in self.setheader.iteritems():
 					if k.startswith("stim_patternmask_"):
 						if (int(v) == 1):
 							# get the number of the phase
 							phase_num = k[-1]
-							stim_dict['Phase_' + phase_num] = phase_info.copy();
+							stim_dict['Phase_' + phase_num] = phase_info.copy()
 					if k.startswith("stim_patt_"):
-						stim_patt_dict[k] = v;
+						stim_patt_dict[k] = v
 				self.patt_dict = stim_patt_dict
 				for k,v in stim_dict.iteritems():
 					phase_num = k[-1]
@@ -353,14 +354,14 @@ class Trial(axonaIO.IO, SAC, dict):
 					if not (phase_name.startswith("Pause")):
 						# find the matching string in the stim_patt_dict
 						for kk,vv in stim_patt_dict.iteritems():
-							split_str = vv.split('"');
+							split_str = vv.split('"')
 							patt_name = split_str[1]
 							if (patt_name == phase_name):
 								ss = split_str[2].split()
 								stim_dict[k]['pulseWidth'] = int(ss[0])
 								stim_dict[k]['pulsePause'] = int(ss[2])
 				# make the dict ordered by Phase number
-				self.STM['stim_params'] = OrderedDict(sorted(stim_dict.items()));
+				self.STM['stim_params'] = OrderedDict(sorted(stim_dict.items()))
 			except IOError:
 				self._STM = None
 		return self._STM

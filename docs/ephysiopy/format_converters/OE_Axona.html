@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.7.5" />
 <title>ephysiopy.format_converters.OE_Axona API documentation</title>
-<meta name="description" content="Created on Fri Sep 27 12:08:10 2019 …" />
+<meta name="description" content="openephys to Axona file format conversion" />
 <link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
 <link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
@@ -20,18 +20,13 @@
 <h1 class="title">Module <code>ephysiopy.format_converters.OE_Axona</code></h1>
 </header>
 <section id="section-intro">
-<p>Created on Fri Sep 27 12:08:10 2019</p>
-<p>@author: robin</p>
+<p>openephys to Axona file format conversion</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-&#34;&#34;&#34;
-Created on Fri Sep 27 12:08:10 2019
-
-@author: robin
+<pre><code class="python">&#34;&#34;&#34;
+openephys to Axona file format conversion
 &#34;&#34;&#34;
 import numpy as np
 import os
@@ -44,7 +39,7 @@ import h5py
 
 class OE2Axona(object):
         &#34;&#34;&#34;
-
+        Converts openephys data recorded in the nwb format into Axona files
         &#34;&#34;&#34;
         def __init__(self, filename_root: str):
                 self.filename_root = filename_root # &#39;/home/robin/Data/experiment_1.nwb&#39; or whatever
@@ -459,14 +454,14 @@ class OE2Axona(object):
 <span>(</span><span>filename_root)</span>
 </code></dt>
 <dd>
-<section class="desc"></section>
+<section class="desc"><p>Converts openephys data recorded in the nwb format into Axona files</p></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class OE2Axona(object):
         &#34;&#34;&#34;
-
+        Converts openephys data recorded in the nwb format into Axona files
         &#34;&#34;&#34;
         def __init__(self, filename_root: str):
                 self.filename_root = filename_root # &#39;/home/robin/Data/experiment_1.nwb&#39; or whatever

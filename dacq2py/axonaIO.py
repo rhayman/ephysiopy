@@ -21,7 +21,7 @@ import math
 import os
 import pickle
 import fnmatch
-from ephysiopy.dacq2py.utils import smooth
+from ephysiopy.ephys_generic.utils import smooth
 from .spikecalcs import SpikeCalcs
 
 MAXSPEED = 4.0  # pos data speed filter in m/s
@@ -162,7 +162,6 @@ class IO(object):
 		Writes data to the given filename
 		Assumes the data is in the correct format
 		'''
-		encoding = "ISO-8859-1"
 		fType = os.path.splitext(filename_root)[1]
 		if fType in self.axona_files:
 			f = open(filename_root, 'rb+')
@@ -718,8 +717,9 @@ class Stim(dict, IO):
 		self.timebase = tb
 
 	def update(self, *args, **kwargs):
-		for k, v in dict(*args, **kwargs).iteritems():
-			self[k] = v
+		d = dict(*args, **kwargs)
+		for k in d.keys():
+			self[k] = d[k]
 
 	def __getitem__(self, key):
 		try:

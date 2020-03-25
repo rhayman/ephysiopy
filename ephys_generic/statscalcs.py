@@ -1,6 +1,6 @@
 """
 Mostly does circular statistics stuff but has some cool other
-functionality
+stuff
 """
 import numpy as np
 
@@ -9,7 +9,7 @@ class StatsCalcs():
 		pass
 	def circ_r(self, alpha, w=None, d=0, axis=0):
 		"""
-		Computes the mean resultant vector length for circular data
+		Computes the mean resultant vector length for circular data [1]_
 		
 		Parameters
 		----------
@@ -30,7 +30,7 @@ class StatsCalcs():
 			
 		References
 		----------
-		Statistical analysis of circular data, N.I.Fisher
+		.. [1] Statistical analysis of circular data, N.I.Fisher
 		Topics in circular statistics, S.R.Jamalamadaka et al.
 		Biostatistical Analysis, J.H.Zar
 		"""

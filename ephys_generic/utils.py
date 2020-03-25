@@ -1,16 +1,9 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Sep 20 17:00:57 2012
-
-@author: robin
-"""
 import numpy as np
 import scipy.interpolate
 import scipy.ndimage
 import math
 from scipy.signal import boxcar
 from scipy.signal import convolve
-
 
 def smooth(x, window_len=9, window='hanning'):
     """

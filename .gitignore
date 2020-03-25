@@ -10,6 +10,7 @@
 # Compiled binaries/ directories containing them
 bin/
 build/
+__pycache__/*
 
 # Other folders
 .vscode/

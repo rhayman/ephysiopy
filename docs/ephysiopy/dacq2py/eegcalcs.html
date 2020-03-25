@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.7.5" />
 <title>ephysiopy.dacq2py.eegcalcs API documentation</title>
-<meta name="description" content="Created on Mon Jun 18 18:31:31 2012 …" />
+<meta name="description" content="LFP-type analysis limmited at the moment to Axona file formats I think" />
 <link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
 <link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
@@ -20,17 +20,13 @@
 <h1 class="title">Module <code>ephysiopy.dacq2py.eegcalcs</code></h1>
 </header>
 <section id="section-intro">
-<p>Created on Mon Jun 18 18:31:31 2012</p>
-<p>@author: robin</p>
+<p>LFP-type analysis limmited at the moment to Axona file formats I think</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python"># -*- coding: utf-8 -*-
-&#34;&#34;&#34;
-Created on Mon Jun 18 18:31:31 2012
-
-@author: robin
+<pre><code class="python">&#34;&#34;&#34;
+LFP-type analysis limmited at the moment to Axona file formats I think
 &#34;&#34;&#34;
 import numpy as np
 import os
@@ -46,6 +42,9 @@ from scipy.special._ufuncs import gammainc, gamma
 from scipy.optimize import fminbound
 
 class EEGCalcs(EEGIO):
+        &#34;&#34;&#34;
+        Has some useful methods in particularly to do with theta-gamma phase coupling
+        &#34;&#34;&#34;
         def __init__(self, fname, eegType=&#39;eeg&#39;, thetaRange=[7,11], pad2pow=np.nan,
                                  smthKernelWidth=2, smthKernelSigma=0.1875, sn2Width=2,
                                  maxFreq=125, ymax=None, xmax=25):
@@ -514,7 +513,7 @@ class EEGCalcs(EEGIO):
                 if np.ma.is_masked(eeg):
                         eeg = np.ma.compressed(eeg)
                 
-                lowfreq, highfreq, lowphase, highamp, highamp_f = self._getFreqPhase(eeg, forder, thetaband, gammaband)
+                _, _, lowphase, _, highamp_f = self._getFreqPhase(eeg, forder, thetaband, gammaband)
 
                 highampphase = np.angle(signal.hilbert(highamp_f))
                 phasedf = highampphase - lowphase
@@ -686,17 +685,15 @@ class EEGCalcs(EEGIO):
 <span>(</span><span>fname, eegType='eeg', thetaRange=[7, 11], pad2pow=nan, smthKernelWidth=2, smthKernelSigma=0.1875, sn2Width=2, maxFreq=125, ymax=None, xmax=25)</span>
 </code></dt>
 <dd>
-<section class="desc"><p>Class for reading data from Axona data acquisition system. Also
-reads .clu files generated from KlustaKwik</p>
-<p>Class attributes:
-axona_files (dict): keys are axona format file suffixes
-and the values are used as numpy dtypes to read the data.
-NB it's assumed a .set file is <em>always</em> present</p></section>
+<section class="desc"><p>Has some useful methods in particularly to do with theta-gamma phase coupling</p></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class EEGCalcs(EEGIO):
+        &#34;&#34;&#34;
+        Has some useful methods in particularly to do with theta-gamma phase coupling
+        &#34;&#34;&#34;
         def __init__(self, fname, eegType=&#39;eeg&#39;, thetaRange=[7,11], pad2pow=np.nan,
                                  smthKernelWidth=2, smthKernelSigma=0.1875, sn2Width=2,
                                  maxFreq=125, ymax=None, xmax=25):
@@ -1165,7 +1162,7 @@ NB it's assumed a .set file is <em>always</em> present</p></section>
                 if np.ma.is_masked(eeg):
                         eeg = np.ma.compressed(eeg)
                 
-                lowfreq, highfreq, lowphase, highamp, highamp_f = self._getFreqPhase(eeg, forder, thetaband, gammaband)
+                _, _, lowphase, _, highamp_f = self._getFreqPhase(eeg, forder, thetaband, gammaband)
 
                 highampphase = np.angle(signal.hilbert(highamp_f))
                 phasedf = highampphase - lowphase
@@ -1745,7 +1742,7 @@ theta oscillation</dd>
         if np.ma.is_masked(eeg):
                 eeg = np.ma.compressed(eeg)
         
-        lowfreq, highfreq, lowphase, highamp, highamp_f = self._getFreqPhase(eeg, forder, thetaband, gammaband)
+        _, _, lowphase, _, highamp_f = self._getFreqPhase(eeg, forder, thetaband, gammaband)
 
         highampphase = np.angle(signal.hilbert(highamp_f))
         phasedf = highampphase - lowphase
