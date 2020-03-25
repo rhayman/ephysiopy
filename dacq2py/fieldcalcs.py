@@ -33,7 +33,7 @@ class FieldCalcs:
 			size in the y direction.
 		"""
 		n = int(n)
-		if not ny:
+		if ny is None:
 			ny = n
 		else:
 			ny = int(ny)
@@ -53,7 +53,7 @@ class FieldCalcs:
 				g = g[n, :]
 		improc = signal.convolve(im, g, mode='same')
 		improc[nan_idx] = np.nan
-		return improc    
+		return improc
 	
 	def limit_to_one(self, A, prc=50, min_dist=5):
 		"""
@@ -239,8 +239,6 @@ class FieldCalcs:
 		this is at least half the length of the longest side
 
 		'''
-
-		dwell = np.isfinite(A)
 		# need to know borders of the environment so we can see if a field
 		# touches the edges, and the perimeter length of the environment
 		# deal with square or circles differently
@@ -255,12 +253,10 @@ class FieldCalcs:
 			tmp[1:-1, 1:-1] = dist_mask
 			dists = ndimage.morphology.distance_transform_bf(tmp)
 			dists = dists[1:-1, 1:-1]
-			perimeter =  2.0 * radius * np.pi
 			borderMask = np.logical_xor(dists <= 0, dists < 2)
 			# open up the border mask a little
 			borderMask = skimage.morphology.binary_dilation(borderMask, skimage.morphology.disk(1))
 		elif 'square' in shape:
-			perimeter = np.sum(np.array(np.shape(A)*2))
 			borderMask[0:3, :] = 1
 			borderMask[-3:, :] = 1
 			borderMask[:, 0:3] = 1
@@ -320,7 +316,7 @@ class FieldCalcs:
 
 				fieldsToKeep = np.logical_or(fieldsToKeep, labels==i)
 		if debug:
-			fig, ax = plt.subplots(4,1,figsize=(3,9))
+			_, ax = plt.subplots(4,1,figsize=(3,9))
 			ax1 = ax[0]
 			ax2 = ax[1]
 			ax3 = ax[2]
@@ -435,7 +431,7 @@ class FieldCalcs:
 
 
 		nbrs = NearestNeighbors(n_neighbors=neighbours, algorithm='ball_tree').fit(peak_idx)
-		distances, indices = nbrs.kneighbors(peak_idx)
+		distances, _ = nbrs.kneighbors(peak_idx)
 		mean_field_distance = np.mean(distances[:, 1:neighbours])
 
 
@@ -449,7 +445,7 @@ class FieldCalcs:
 		"""
 		get some stats about the field ellipticity
 		"""
-		central_field_props, central_field, central_field_idx = self.limit_to_one(A, prc=50)
+		_, central_field, _ = self.limit_to_one(A, prc=50)
 		if central_field is None:
 			ellipse_ratio = np.nan
 		else:

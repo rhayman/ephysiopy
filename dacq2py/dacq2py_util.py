@@ -21,7 +21,7 @@ from .spikecalcs import SpikeCalcs
 from .eegcalcs import EEGCalcs
 from .cluster import Kluster
 from . import tintcolours as tcols
-from .gridcell import SAC
+from ephysiopy.ephys_generic.gridcell import SAC
 from itertools import combinations
 from mpl_toolkits.axes_grid1 import ImageGrid
 import skimage, skimage.morphology, skimage.feature

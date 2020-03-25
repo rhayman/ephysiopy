@@ -288,7 +288,7 @@ class RateMap(object):
 		nan_idx = np.isnan(im)
 		im[nan_idx] = 0
 		g = signal.boxcar(n) / float(n)
-		if ftype == 'boxcar':
+		if 'box' in ftype:
 			if im.ndim == 1:
 				g = signal.boxcar(n) / float(n)
 			elif im.ndim == 2:
@@ -297,7 +297,7 @@ class RateMap(object):
 			elif im.ndim == 3: # mutlidimensional binning
 				g = signal.boxcar([n, ny]) / float(n)
 				g = g[None, :, :]
-		elif ftype == 'gaussian':
+		elif 'gaussian' in ftype:
 			x, y = np.mgrid[-n:n+1, -ny:ny+1]
 			g = np.exp(-(x**2/float(n) + y**2/float(ny)))
 			g = g / g.sum()

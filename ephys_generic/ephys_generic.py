@@ -268,7 +268,7 @@ class SpikeCalcsGeneric(object):
         for i in range(1, len(yticks)-1):
             yticks[i].set_visible(False)
         histColor = [192/255.0,192/255.0,192/255.0]
-        histX = hist_ax.hist(x, bins=np.arange(self.event_window[0], self.event_window[1] + self._secs_per_bin, self._secs_per_bin),
+        hist_ax.hist(x, bins=np.arange(self.event_window[0], self.event_window[1] + self._secs_per_bin, self._secs_per_bin),
                              color=histColor, alpha=0.6, range=self.event_window, rasterized=True, histtype='stepfilled')
         hist_ax.set_ylabel("Spike count", labelpad=-2.5)
         plt.setp(hist_ax.get_xticklabels(), visible=False)
@@ -654,9 +654,8 @@ class PosCalcsGeneric(object):
                     good_data1 = np.ravel(xy.data[ok_idx,i+1])
                     xy.data[missing_idx,i] = np.interp(missing_idx,ok_idx,good_data)#,left=np.min(good_data),right=np.max(good_data)
                     xy.data[missing_idx,i+1] = np.interp(missing_idx,ok_idx,good_data1)
-                except ValueError as e:
+                except ValueError:
                     pass
-                    # print(e)
         xy.mask = 0
         print("{} bad/ jumpy positions were interpolated over".format(len(missing_idx)))#this is wrong i think
         return xy
@@ -1026,17 +1025,16 @@ class MapCalcsGeneric(object):
         speed_filt = np.ma.masked_where(speed_filt < minSpeed, speed_filt)
         speed_filt = np.ma.masked_where(speed_filt > maxSpeed, speed_filt)
         from ephysiopy.dacq2py import spikecalcs
-        S = spikecalcs.SpikeCalcs();
+        S = spikecalcs.SpikeCalcs()
         x1 = self.spk_pos_idx[self.spk_clusters==cluster]
         spk_sm = S.smoothSpikePosCount(x1, self.pos_ts.shape[0], sigma, None)
         spk_sm = np.ma.MaskedArray(spk_sm, mask=np.ma.getmask(speed_filt))
         from scipy import stats
-        result = stats.mstats.pearsonr(spk_sm, speed_filt)
+        stats.mstats.pearsonr(spk_sm, speed_filt)
         spd_dig  = np.digitize(speed_filt, spd_bins, right=True)
         mn_rate = np.array([np.ma.mean(spk_sm[spd_dig==i]) for i in range(0,len(spd_bins))])
         var = np.array([np.ma.std(spk_sm[spd_dig==i]) for i in range(0,len(spd_bins))])
-        count = np.array([np.ma.sum(spk_sm[spd_dig==i]) for i in range(0,len(spd_bins))])
-        # se = var / count
+        np.array([np.ma.sum(spk_sm[spd_dig==i]) for i in range(0,len(spd_bins))])
         if ax is not None:
             ax.errorbar(spd_bins, mn_rate * self.pos_sample_rate, yerr=var, color='k')
             ax.set_xlim(spd_bins[0], spd_bins[-1])
@@ -1055,14 +1053,14 @@ class MapCalcsGeneric(object):
         h = np.histogram2d(self.hdir, self.speed, [dir_bins,spd_bins],weights=w)
         b = binning.RateMap()
         im = b.blurImage(h[0],5,ftype='gaussian')
-        im = np.ma.MaskedArray(im);
+        im = np.ma.MaskedArray(im)
         # mask low rates...
         im = np.ma.masked_where(im<=1, im)
         # ... and where less than 0.5% of data is accounted for
         # all_sp_x_hd_binned = np.histogram2d(self.hdir, self.speed, [dir_bins,spd_bins])[0]
         # im = np.ma.masked_where(all_sp_x_hd_binned < (len(self.speed) * 0.005), im)
         x,y = np.meshgrid(dir_bins, spd_bins)
-        ax.pcolormesh(x,y,im.T);
+        ax.pcolormesh(x,y,im.T)
         ax.spines['right'].set_visible(False)
         ax.spines['top'].set_visible(False)
         plt.xticks([90,180,270], fontweight='normal', size=6)

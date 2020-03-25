@@ -26,7 +26,7 @@ import math
 import os
 import pickle
 import fnmatch
-from . import smoothdata as sm
+from ephysiopy.dacq2py.utils import smooth
 from .spikecalcs import SpikeCalcs
 
 MAXSPEED = 4.0  # pos data speed filter in m/s
@@ -149,16 +149,15 @@ class IO(object):
 
 		header - a dict, an empty version of which can be loaded using getEmptyHeader above
 		'''
-		encoding = "ISO-8859-1"
 		with open(filename_root, 'w') as f:
 			for key, val in header.items():
-				f.write(key)#, encoding))
-				f.write(" ")#, encoding))
+				f.write(key)
+				f.write(" ")
 				if val is None:
 					val = ""
-				f.write(val)#, encoding))
-				f.write('\r\n')#, encoding))
-			f.write('data_start')#, encoding))
+				f.write(val)
+				f.write('\r\n')
+			f.write('data_start')
 			f.write('\r\n')
 			f.write('data_end')
 			f.write('\r\n')
@@ -334,8 +333,8 @@ class Pos(IO):
 			pos2 = np.arange(0,self.npos-1)
 			if self.nLEDs == 1:
 				self.xy[0:2,pos1] = led_pos[0:2,pos1]
-				self.xy[0,:] = sm.smooth(self.xy[0,:],BOXCAR,'flat')
-				self.xy[1,:] = sm.smooth(self.xy[1,:],BOXCAR,'flat')
+				self.xy[0,:] = smooth(self.xy[0,:],BOXCAR,'flat')
+				self.xy[1,:] = smooth(self.xy[1,:],BOXCAR,'flat')
 				self.dir[pos2] = np.mod(((180/math.pi) * (np.arctan2(-self.xy[1,pos2+1] + self.xy[1,pos2],+self.xy[0,pos2+1]-self.xy[0,pos2]))), 360)
 				self.dir[-1] = self.dir[-2]
 				self.dir_disp = self.dir
@@ -346,7 +345,7 @@ class Pos(IO):
 				front_back_xy_sm = np.zeros([4,self.npos])
 				for i in range(len(front_back_xy_sm)):
 #                    front_back_xy_sm[i,pos1] = scipy.signal.convolve(led_pos[i, pos1], np.ones(BOXCAR) / BOXCAR, mode='same')
-					front_back_xy_sm[i,pos1] = sm.smooth(led_pos[i,pos1],BOXCAR,'flat')
+					front_back_xy_sm[i,pos1] = smooth(led_pos[i,pos1],BOXCAR,'flat')
 				correction = lightBearings[0]
 				self.dir[pos1] = np.mod((180/math.pi) * (np.arctan2(-front_back_xy_sm[1,pos1]+front_back_xy_sm[3,pos1],
 								  +front_back_xy_sm[0,pos1]-front_back_xy_sm[2,pos1])-correction),360)
@@ -463,7 +462,6 @@ class Pos(IO):
 						filterDict[key] = (45, 135)
 				else:
 					raise ValueError("filter must contain a key / value pair")
-					return
 			if 'speed' in key:
 				if filterDict[key][0] > filterDict[key][1]:
 					raise ValueError("First value must be less than the second one")

@@ -5,18 +5,18 @@ Created on Tue Nov 20 14:33:39 2012
 @author: robin
 
 Calculation of the various metrics for quantifying the behaviour of grid cells
-and some subsequent plots and so on
+and some graphical output etc
 """
 import numpy as np
 import scipy, scipy.io, scipy.signal
 import skimage, skimage.morphology, skimage.measure, skimage.feature, skimage.segmentation
 import matplotlib.pyplot as plt
-import warnings
 import matplotlib.cm as cm
-from .utils import rect
+from ephysiopy.dacq2py.utils import rect
 import mahotas
 import collections
 
+import warnings
 warnings.filterwarnings("ignore", message="invalid value encountered in sqrt")
 warnings.filterwarnings("ignore", message="invalid value encountered in subtract")
 warnings.filterwarnings("ignore", message="invalid value encountered in greater")
@@ -275,8 +275,11 @@ class SAC(object):
 		Hp = np.swapaxes(Hp, 1, 0)
 		Hs = np.swapaxes(Hs, 1, 0)
 
-		fHp = self.__blur_image__(Hp, boxcar)
-		fHs = self.__blur_image__(Hs, boxcar)
+		from ephysiopy.ephys_generic.binning import RateMap
+		R = RateMap()
+
+		fHp = R.blurImage(Hp, boxcar)
+		fHs = R.blurImage(Hs, boxcar)
 
 		H = fHs / fHp
 		H[Hp < Pthresh] = np.nan
@@ -792,40 +795,6 @@ class SAC(object):
 		res1=np.sqrt(_up/np.abs(down1))
 		res2=np.sqrt(_up/np.abs(down2))
 		return np.array([res1, res2])
-
-	def __blur_image__(self, im, n, ny=None, ftype='box'):
-		"""
-		Smooths an image with a filter
-
-		Parameters
-		----------
-		im : array_like
-			The array to be smoothed
-		n, ny : int
-			The size of the filter to do the smoothing with
-		ftype : str, optional
-			The type of filter to use. Legal values:
-			* 'box' - boxcar filter
-			* 'gauss' - gaussian filter
-		
-		Returns
-		-------
-		improc : array_like
-			The smoothed image
-		"""
-		#g = gauss_kern(n, sizey=ny)quit
-		# check for dimensionality of image to be blurred and form correct filter
-		if ftype == 'box':
-			if np.ndim(im) == 1:
-				g = scipy.signal.boxcar(n) / float(n)
-			elif np.ndim(im) == 2:
-				g = scipy.signal.boxcar([n, n]) / float(n)
-		elif ftype == 'gauss':
-			g = self.gauss_kern(n, sizey=ny)
-			if np.ndim(im) == 1:
-				g = g[n, :]
-		improc = scipy.signal.convolve(im, g, mode='same')
-		return improc
 
 	def __findPeakExtent__(self, A, peakID, peakCoord):
 		"""

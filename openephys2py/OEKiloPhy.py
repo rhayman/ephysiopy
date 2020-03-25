@@ -60,7 +60,7 @@ class KiloSortSession(object):
 		"""
 		self.fname_root = fname_root
 		import os
-		for d, c, f in os.walk(fname_root):
+		for d, _, f in os.walk(fname_root):
 			for ff in f:
 				if 'spike_times.npy' in ff:
 					self.fname_root = d
@@ -138,9 +138,12 @@ class OpenEphysBase(object):
 		else:
 			self.jumpmax = 100
 
+	def load(self, *args, **kwargs):
+		# Overridden by sub-classes
+		pass
+
 	def loadKilo(self):
 		# Loads a kilosort session
-		
 		kilodata = KiloSortSession(self.pname_root) # pname_root gets walked through and over-written with correct location of kiolsort data
 		kilodata.load()
 		kilodata.removeNoiseClusters()
@@ -388,7 +391,6 @@ class OpenEphysNPX(OpenEphysBase):
 		self.isBinary = True
 		import os
 		import re
-		pos_t_match = re.compile('Pos_Tracker-[0-9][0-9][0-9].[0-9]')
 		APdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].0')
 		LFPdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].1')
 		sync_message_file = None
@@ -466,7 +468,7 @@ class OpenEphysNPX(OpenEphysBase):
 		import matplotlib.colors as colors
 		from matplotlib.pyplot import cm
 		from mpl_toolkits.axes_grid1 import make_axes_locatable
-		fig, spectoAx = plt.subplots()
+		_, spectoAx = plt.subplots()
 		spectoAx.pcolormesh(x, y, spec_data, edgecolors='face', cmap='bone',norm=colors.LogNorm())
 		spectoAx.set_xlim(0, maxFreq)
 		spectoAx.set_ylim(channel_map[0], channel_map[-1])
@@ -631,7 +633,8 @@ class OpenEphysNWB(OpenEphysBase):
 		np.savetxt('position.txt', out, delimiter=',', fmt=['%3.3i','%3.3i','%3.3f'])
 
 	def plotPos(self, jumpmax=None, show=True):
-		super().plotPos(jumpmax, show)
+		xy = super().plotPos(jumpmax, show)
+		return xy
 
 	def plotMaps(self, plot_type='map', **kwargs):
 		super().plotMaps(plot_type, **kwargs)
