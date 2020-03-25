@@ -1,12 +1,8 @@
-# -*- coding: utf-8 -*-
 """
-Created on Tue Nov 20 14:33:39 2012
-
-@author: robin
-
 Calculation of the various metrics for quantifying the behaviour of grid cells
 and some graphical output etc
 """
+
 import numpy as np
 import scipy, scipy.io, scipy.signal
 import skimage, skimage.morphology, skimage.measure, skimage.feature, skimage.segmentation

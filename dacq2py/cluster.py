@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 '''
-Created on Mon Jun 18 18:31:31 2012
-
-@author: robin
+Clustering of data using KlustaKwik but only with data recorded using the Axona
+recording system
 '''
 import numpy as np
 import os

@@ -1,10 +1,5 @@
-# -*- coding: utf-8 -*-
 """
-Created on Thu Apr 12 17:44:50 2012
-
-@author: robin
-
-Defines classes and methods for working with Axona electrophysiological
+Classes and methods for working with Axona electrophysiological
 recording data.
 
 IO - main i/o class for reading Axona files and additionally .clu files

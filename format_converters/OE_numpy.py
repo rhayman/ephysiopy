@@ -1,9 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Fri Sep 27 12:08:10 2019
-
-@author: robin
+openephys to numpy file conversion 
 """
 import numpy as np
 import os
@@ -16,7 +12,9 @@ import h5py
 
 class OE2Numpy(object):
 	"""
+	Converts openephys data recorded in the nwb format into numpy files
 
+	NB Only exports the LFP and TTL files at the moment
 	"""
 	def __init__(self, filename_root: str):
 		self.filename_root = filename_root # '/home/robin/Data/experiment_1.nwb' or whatever
@@ -61,7 +59,6 @@ class OE2Numpy(object):
 		recording_name - the name of the recording in the nwb file NB the default has changed in different versions of OE from 'recording0' to 'recording1'
 		'''
 		if os.path.isfile(filename_root):
-			root_filename = os.path.splitext(self.experiment_name)[0]
 			OE_data = OEKiloPhy.OpenEphysNWB(self.dirname)
 			print("Loading nwb data...")
 			OE_data.load(self.dirname, session_name=self.experiment_name, recording_name=recording_name, loadspikes=False, loadraw=True)

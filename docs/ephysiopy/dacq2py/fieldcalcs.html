@@ -61,7 +61,7 @@ class FieldCalcs:
                         size in the y direction.
                 &#34;&#34;&#34;
                 n = int(n)
-                if not ny:
+                if ny is None:
                         ny = n
                 else:
                         ny = int(ny)
@@ -81,7 +81,7 @@ class FieldCalcs:
                                 g = g[n, :]
                 improc = signal.convolve(im, g, mode=&#39;same&#39;)
                 improc[nan_idx] = np.nan
-                return improc    
+                return improc
         
         def limit_to_one(self, A, prc=50, min_dist=5):
                 &#34;&#34;&#34;
@@ -267,8 +267,6 @@ class FieldCalcs:
                 this is at least half the length of the longest side
 
                 &#39;&#39;&#39;
-
-                dwell = np.isfinite(A)
                 # need to know borders of the environment so we can see if a field
                 # touches the edges, and the perimeter length of the environment
                 # deal with square or circles differently
@@ -283,12 +281,10 @@ class FieldCalcs:
                         tmp[1:-1, 1:-1] = dist_mask
                         dists = ndimage.morphology.distance_transform_bf(tmp)
                         dists = dists[1:-1, 1:-1]
-                        perimeter =  2.0 * radius * np.pi
                         borderMask = np.logical_xor(dists &lt;= 0, dists &lt; 2)
                         # open up the border mask a little
                         borderMask = skimage.morphology.binary_dilation(borderMask, skimage.morphology.disk(1))
                 elif &#39;square&#39; in shape:
-                        perimeter = np.sum(np.array(np.shape(A)*2))
                         borderMask[0:3, :] = 1
                         borderMask[-3:, :] = 1
                         borderMask[:, 0:3] = 1
@@ -348,7 +344,7 @@ class FieldCalcs:
 
                                 fieldsToKeep = np.logical_or(fieldsToKeep, labels==i)
                 if debug:
-                        fig, ax = plt.subplots(4,1,figsize=(3,9))
+                        _, ax = plt.subplots(4,1,figsize=(3,9))
                         ax1 = ax[0]
                         ax2 = ax[1]
                         ax3 = ax[2]
@@ -463,7 +459,7 @@ class FieldCalcs:
 
 
                 nbrs = NearestNeighbors(n_neighbors=neighbours, algorithm=&#39;ball_tree&#39;).fit(peak_idx)
-                distances, indices = nbrs.kneighbors(peak_idx)
+                distances, _ = nbrs.kneighbors(peak_idx)
                 mean_field_distance = np.mean(distances[:, 1:neighbours])
 
 
@@ -477,7 +473,7 @@ class FieldCalcs:
                 &#34;&#34;&#34;
                 get some stats about the field ellipticity
                 &#34;&#34;&#34;
-                central_field_props, central_field, central_field_idx = self.limit_to_one(A, prc=50)
+                _, central_field, _ = self.limit_to_one(A, prc=50)
                 if central_field is None:
                         ellipse_ratio = np.nan
                 else:
@@ -808,7 +804,7 @@ class FieldCalcs:
                         size in the y direction.
                 &#34;&#34;&#34;
                 n = int(n)
-                if not ny:
+                if ny is None:
                         ny = n
                 else:
                         ny = int(ny)
@@ -828,7 +824,7 @@ class FieldCalcs:
                                 g = g[n, :]
                 improc = signal.convolve(im, g, mode=&#39;same&#39;)
                 improc[nan_idx] = np.nan
-                return improc    
+                return improc
         
         def limit_to_one(self, A, prc=50, min_dist=5):
                 &#34;&#34;&#34;
@@ -1014,8 +1010,6 @@ class FieldCalcs:
                 this is at least half the length of the longest side
 
                 &#39;&#39;&#39;
-
-                dwell = np.isfinite(A)
                 # need to know borders of the environment so we can see if a field
                 # touches the edges, and the perimeter length of the environment
                 # deal with square or circles differently
@@ -1030,12 +1024,10 @@ class FieldCalcs:
                         tmp[1:-1, 1:-1] = dist_mask
                         dists = ndimage.morphology.distance_transform_bf(tmp)
                         dists = dists[1:-1, 1:-1]
-                        perimeter =  2.0 * radius * np.pi
                         borderMask = np.logical_xor(dists &lt;= 0, dists &lt; 2)
                         # open up the border mask a little
                         borderMask = skimage.morphology.binary_dilation(borderMask, skimage.morphology.disk(1))
                 elif &#39;square&#39; in shape:
-                        perimeter = np.sum(np.array(np.shape(A)*2))
                         borderMask[0:3, :] = 1
                         borderMask[-3:, :] = 1
                         borderMask[:, 0:3] = 1
@@ -1095,7 +1087,7 @@ class FieldCalcs:
 
                                 fieldsToKeep = np.logical_or(fieldsToKeep, labels==i)
                 if debug:
-                        fig, ax = plt.subplots(4,1,figsize=(3,9))
+                        _, ax = plt.subplots(4,1,figsize=(3,9))
                         ax1 = ax[0]
                         ax2 = ax[1]
                         ax3 = ax[2]
@@ -1210,7 +1202,7 @@ class FieldCalcs:
 
 
                 nbrs = NearestNeighbors(n_neighbors=neighbours, algorithm=&#39;ball_tree&#39;).fit(peak_idx)
-                distances, indices = nbrs.kneighbors(peak_idx)
+                distances, _ = nbrs.kneighbors(peak_idx)
                 mean_field_distance = np.mean(distances[:, 1:neighbours])
 
 
@@ -1224,7 +1216,7 @@ class FieldCalcs:
                 &#34;&#34;&#34;
                 get some stats about the field ellipticity
                 &#34;&#34;&#34;
-                central_field_props, central_field, central_field_idx = self.limit_to_one(A, prc=50)
+                _, central_field, _ = self.limit_to_one(A, prc=50)
                 if central_field is None:
                         ellipse_ratio = np.nan
                 else:
@@ -1726,8 +1718,6 @@ this is at least half the length of the longest side</p></section>
         this is at least half the length of the longest side
 
         &#39;&#39;&#39;
-
-        dwell = np.isfinite(A)
         # need to know borders of the environment so we can see if a field
         # touches the edges, and the perimeter length of the environment
         # deal with square or circles differently
@@ -1742,12 +1732,10 @@ this is at least half the length of the longest side</p></section>
                 tmp[1:-1, 1:-1] = dist_mask
                 dists = ndimage.morphology.distance_transform_bf(tmp)
                 dists = dists[1:-1, 1:-1]
-                perimeter =  2.0 * radius * np.pi
                 borderMask = np.logical_xor(dists &lt;= 0, dists &lt; 2)
                 # open up the border mask a little
                 borderMask = skimage.morphology.binary_dilation(borderMask, skimage.morphology.disk(1))
         elif &#39;square&#39; in shape:
-                perimeter = np.sum(np.array(np.shape(A)*2))
                 borderMask[0:3, :] = 1
                 borderMask[-3:, :] = 1
                 borderMask[:, 0:3] = 1
@@ -1807,7 +1795,7 @@ this is at least half the length of the longest side</p></section>
 
                         fieldsToKeep = np.logical_or(fieldsToKeep, labels==i)
         if debug:
-                fig, ax = plt.subplots(4,1,figsize=(3,9))
+                _, ax = plt.subplots(4,1,figsize=(3,9))
                 ax1 = ax[0]
                 ax2 = ax[1]
                 ax3 = ax[2]
@@ -1964,7 +1952,7 @@ contour. Default False</dd>
 
 
         nbrs = NearestNeighbors(n_neighbors=neighbours, algorithm=&#39;ball_tree&#39;).fit(peak_idx)
-        distances, indices = nbrs.kneighbors(peak_idx)
+        distances, _ = nbrs.kneighbors(peak_idx)
         mean_field_distance = np.mean(distances[:, 1:neighbours])
 
 
@@ -1978,7 +1966,7 @@ contour. Default False</dd>
         &#34;&#34;&#34;
         get some stats about the field ellipticity
         &#34;&#34;&#34;
-        central_field_props, central_field, central_field_idx = self.limit_to_one(A, prc=50)
+        _, central_field, _ = self.limit_to_one(A, prc=50)
         if central_field is None:
                 ellipse_ratio = np.nan
         else:

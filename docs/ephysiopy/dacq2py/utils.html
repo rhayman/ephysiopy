@@ -39,6 +39,75 @@ import math
 from scipy.signal import boxcar
 from scipy.signal import convolve
 
+
+def smooth(x, window_len=9, window=&#39;hanning&#39;):
+    &#34;&#34;&#34;
+        Smooth the data using a window with requested size.
+    
+    This method is based on the convolution of a scaled window with the signal.
+    The signal is prepared by introducing reflected copies of the signal 
+    (with the window size) in both ends so that transient parts are minimized
+    in the begining and end part of the output signal.
+    
+    Parameters
+        ----------
+        x : array_like
+                the input signal 
+        window_len : int
+                The length of the smoothing window
+        window : str
+                The type of window from &#39;flat&#39;, &#39;hanning&#39;, &#39;hamming&#39;, &#39;bartlett&#39;, &#39;blackman&#39;
+                &#39;flat&#39; window will produce a moving average smoothing.
+
+    Returns
+        -------
+    out : The smoothed signal
+        
+    Example
+        -------
+
+    &gt;&gt;&gt; t=linspace(-2,2,0.1)
+    &gt;&gt;&gt; x=sin(t)+randn(len(t))*0.1
+    &gt;&gt;&gt; y=smooth(x)
+    
+    See Also
+        --------
+    
+    numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
+    scipy.signal.lfilter
+ 
+    TODO: the window parameter could be the window itself if an array instead of a string   
+    &#34;&#34;&#34;
+
+    if type(x) == type([]):
+        x = np.array(x)
+
+    if x.ndim != 1:
+        raise ValueError(&#34;smooth only accepts 1 dimension arrays.&#34;)
+
+    if x.size &lt; window_len:
+        raise ValueError(&#34;Input vector needs to be bigger than window size.&#34;)
+    if window_len &lt; 3:
+        return x
+
+    if (window_len % 2) == 0:
+        window_len = window_len + 1
+
+    if not window in [&#39;flat&#39;, &#39;hanning&#39;, &#39;hamming&#39;, &#39;bartlett&#39;, &#39;blackman&#39;]:
+        raise ValueError(
+            &#34;Window is on of &#39;flat&#39;, &#39;hanning&#39;, &#39;hamming&#39;, &#39;bartlett&#39;, &#39;blackman&#39;&#34;)
+
+    s = np.r_[2*x[0]-x[window_len:1:-1], x, 2*x[-1]-x[-1:-window_len:-1]]
+
+    if window == &#39;flat&#39;:  # moving average
+        w = np.ones(window_len, &#39;d&#39;)
+    else:
+        w = eval(&#39;np.&#39;+window+&#39;(window_len)&#39;)
+    from astropy.convolution import convolve
+    y = convolve(x, w/w.sum(), normalize_kernel=False, boundary=&#39;extend&#39;)
+    # return the smoothed signal
+    return y
+
 def blur_image(im, n, ny=None, ftype=&#39;boxcar&#39;):
         &#34;&#34;&#34; blurs the image by convolving with a filter (&#39;gaussian&#39; or
                 &#39;boxcar&#39;) of
@@ -133,11 +202,21 @@ def rect(r, w, deg=0):
         return r * np.cos(w), r * np.sin(w)
         
 def polar(x, y, deg=0): 
-        &#34;&#34;&#34; Convert from rectangular (x,y) to polar (r,w) 
-        r = sqrt(x^2 + y^2) 
-        w = arctan(y/x) = [-\pi,\pi] = [-180,180]
         &#34;&#34;&#34;
-        # radian if deg=0; degree if deg=1 
+        Converts from rectangular coordinates to polar ones
+
+        Parameters
+        ----------
+        x, y : array_like, list_like
+                The x and y coordinates
+        deg : int
+                radian if deg=0; degree if deg=1
+
+        Returns
+        -------
+        p : array_like
+                The polar version of x and y    
+        &#34;&#34;&#34;
         if deg:
                 return np.hypot(x, y), 180.0 * np.arctan2(y, x) / np.pi
         else:
@@ -179,101 +258,7 @@ class bcolors:
                 self.OKGREEN = &#39;&#39;
                 self.WARNING = &#39;&#39;
                 self.FAIL = &#39;&#39;
-                self.ENDC = &#39;&#39;
-                
-class AutoVivification(dict):
-        &#34;&#34;&#34;Implementation of perl&#39;s autovivification feature.&#34;&#34;&#34;
-        def __getitem__(self, item):
-                try:
-                        return dict.__getitem__(self, item)
-                except KeyError:
-                        value = self[item] = type(self)()
-                        return value
-                        
-                        &#39;&#39;&#39;
-                        EXAMPLE:
-                                a = AutoVivification()
-                                
-                                a[1][2][3] = 4
-                                a[1][3][3] = 5
-                                a[1][2][&#39;test&#39;] = 6
-                                
-                                print a
-                                
-                                {1: {2: {&#39;test&#39;: 6, 3: 4}, 3: {3: 5}}}
-                        &#39;&#39;&#39;
-
-
-class oneDsmooth:
-         
-        def smooth(self,x,window_len=11,window=&#39;hanning&#39;):
-                &#34;&#34;&#34;smooth the data using a window with requested size.
-                
-                This method is based on the convolution of a scaled window with the signal.
-                The signal is prepared by introducing reflected copies of the signal 
-                (with the window size) in both ends so that transient parts are minimized
-                in the begining and end part of the output signal.
-                
-                input:
-                        x: the input signal 
-                        window_len: the dimension of the smoothing window; should be an odd integer
-                        window: the type of window from &#39;flat&#39;, &#39;hanning&#39;, &#39;hamming&#39;, &#39;bartlett&#39;, &#39;blackman&#39;
-                                flat window will produce a moving average smoothing.
-        
-                output:
-                        the smoothed signal
-                        
-                example:
-        
-                t=linspace(-2,2,0.1)
-                x=sin(t)+randn(len(t))*0.1
-                y=smooth(x)
-                
-                see also: 
-                
-                numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
-                scipy.signal.lfilter
-         
-                TODO: the window parameter could be the window itself if an array instead of a string
-                NOTE: length(output) != length(input), to correct this: return y[(window_len/2-1):-(window_len/2)] instead of just y.
-                &#34;&#34;&#34;
-        
-                if x.ndim != 1:
-                        raise ValueError(&#34;smooth only accepts 1 dimension arrays.&#34;)
-        
-                if x.size &lt; window_len:
-                        raise ValueError(&#34;Input vector needs to be bigger than window size.&#34;)
-        
-        
-                if window_len&lt;3:
-                        return x
-        
-        
-                if not window in [&#39;flat&#39;, &#39;hanning&#39;, &#39;hamming&#39;, &#39;bartlett&#39;, &#39;blackman&#39;]:
-                        raise ValueError(&#34;Window is on of &#39;flat&#39;, &#39;hanning&#39;, &#39;hamming&#39;, &#39;bartlett&#39;, &#39;blackman&#39;&#34;)
-        
-        
-                s=np.r_[x[window_len-1:0:-1],x,x[-1:-window_len:-1]]
-                #print(len(s))
-                if window == &#39;flat&#39;: #moving average
-                        w=np.ones(window_len,&#39;d&#39;)
-                else:
-                        w=eval(&#39;numpy.&#39;+window+&#39;(window_len)&#39;)
-        
-                y=np.convolve(w/w.sum(),s,mode=&#39;valid&#39;)
-                return y
-class parselist():     
-        def ranges(self, seq):
-                start, end = seq[0], seq[0]
-                count = start
-                for item in seq:
-                        if not count == item:
-                                yield start, end
-                                start, end = item, item
-                                count = item
-                        end = item
-                        count += 1
-                yield start, end</code></pre>
+                self.ENDC = &#39;&#39;</code></pre>
 </details>
 </section>
 <section>
@@ -374,19 +359,39 @@ in a function.</p></section>
 <span>def <span class="ident">polar</span></span>(<span>x, y, deg=0)</span>
 </code></dt>
 <dd>
-<section class="desc"><p>Convert from rectangular (x,y) to polar (r,w)
-r = sqrt(x^2 + y^2)
-w = arctan(y/x) = [-\pi,\pi] = [-180,180]</p></section>
+<section class="desc"><p>Converts from rectangular coordinates to polar ones</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>x</code></strong>, <strong><code>y</code></strong> :&ensp;<code>array_like</code>, <code>list_like</code></dt>
+<dd>The x and y coordinates</dd>
+<dt><strong><code>deg</code></strong> :&ensp;<code>int</code></dt>
+<dd>radian if deg=0; degree if deg=1</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>p</code></strong> :&ensp;<code>array_like</code></dt>
+<dd>The polar version of x and y</dd>
+</dl></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def polar(x, y, deg=0): 
-        &#34;&#34;&#34; Convert from rectangular (x,y) to polar (r,w) 
-        r = sqrt(x^2 + y^2) 
-        w = arctan(y/x) = [-\pi,\pi] = [-180,180]
         &#34;&#34;&#34;
-        # radian if deg=0; degree if deg=1 
+        Converts from rectangular coordinates to polar ones
+
+        Parameters
+        ----------
+        x, y : array_like, list_like
+                The x and y coordinates
+        deg : int
+                radian if deg=0; degree if deg=1
+
+        Returns
+        -------
+        p : array_like
+                The polar version of x and y    
+        &#34;&#34;&#34;
         if deg:
                 return np.hypot(x, y), 180.0 * np.arctan2(y, x) / np.pi
         else:
@@ -464,6 +469,111 @@ any rate it encapsulates a task in a function.</p></section>
         return np.cumsum(ret)</code></pre>
 </details>
 </dd>
+<dt id="ephysiopy.dacq2py.utils.smooth"><code class="name flex">
+<span>def <span class="ident">smooth</span></span>(<span>x, window_len=9, window='hanning')</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Smooth the data using a window with requested size.</p>
+<p>This method is based on the convolution of a scaled window with the signal.
+The signal is prepared by introducing reflected copies of the signal
+(with the window size) in both ends so that transient parts are minimized
+in the begining and end part of the output signal.</p>
+<p>Parameters
+----------
+x : array_like
+the input signal
+window_len : int
+The length of the smoothing window
+window : str
+The type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
+'flat' window will produce a moving average smoothing.</p>
+<p>Returns
+-------
+out : The smoothed signal</p>
+<p>Example
+-------</p>
+<pre><code>&gt;&gt;&gt; t=linspace(-2,2,0.1)
+&gt;&gt;&gt; x=sin(t)+randn(len(t))*0.1
+&gt;&gt;&gt; y=smooth(x)
+</code></pre>
+<p>See Also
+--------</p>
+<p>numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
+scipy.signal.lfilter</p>
+<p>TODO: the window parameter could be the window itself if an array instead of a string</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def smooth(x, window_len=9, window=&#39;hanning&#39;):
+    &#34;&#34;&#34;
+        Smooth the data using a window with requested size.
+    
+    This method is based on the convolution of a scaled window with the signal.
+    The signal is prepared by introducing reflected copies of the signal 
+    (with the window size) in both ends so that transient parts are minimized
+    in the begining and end part of the output signal.
+    
+    Parameters
+        ----------
+        x : array_like
+                the input signal 
+        window_len : int
+                The length of the smoothing window
+        window : str
+                The type of window from &#39;flat&#39;, &#39;hanning&#39;, &#39;hamming&#39;, &#39;bartlett&#39;, &#39;blackman&#39;
+                &#39;flat&#39; window will produce a moving average smoothing.
+
+    Returns
+        -------
+    out : The smoothed signal
+        
+    Example
+        -------
+
+    &gt;&gt;&gt; t=linspace(-2,2,0.1)
+    &gt;&gt;&gt; x=sin(t)+randn(len(t))*0.1
+    &gt;&gt;&gt; y=smooth(x)
+    
+    See Also
+        --------
+    
+    numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
+    scipy.signal.lfilter
+ 
+    TODO: the window parameter could be the window itself if an array instead of a string   
+    &#34;&#34;&#34;
+
+    if type(x) == type([]):
+        x = np.array(x)
+
+    if x.ndim != 1:
+        raise ValueError(&#34;smooth only accepts 1 dimension arrays.&#34;)
+
+    if x.size &lt; window_len:
+        raise ValueError(&#34;Input vector needs to be bigger than window size.&#34;)
+    if window_len &lt; 3:
+        return x
+
+    if (window_len % 2) == 0:
+        window_len = window_len + 1
+
+    if not window in [&#39;flat&#39;, &#39;hanning&#39;, &#39;hamming&#39;, &#39;bartlett&#39;, &#39;blackman&#39;]:
+        raise ValueError(
+            &#34;Window is on of &#39;flat&#39;, &#39;hanning&#39;, &#39;hamming&#39;, &#39;bartlett&#39;, &#39;blackman&#39;&#34;)
+
+    s = np.r_[2*x[0]-x[window_len:1:-1], x, 2*x[-1]-x[-1:-window_len:-1]]
+
+    if window == &#39;flat&#39;:  # moving average
+        w = np.ones(window_len, &#39;d&#39;)
+    else:
+        w = eval(&#39;np.&#39;+window+&#39;(window_len)&#39;)
+    from astropy.convolution import convolve
+    y = convolve(x, w/w.sum(), normalize_kernel=False, boundary=&#39;extend&#39;)
+    # return the smoothed signal
+    return y</code></pre>
+</details>
+</dd>
 <dt id="ephysiopy.dacq2py.utils.spiral"><code class="name flex">
 <span>def <span class="ident">spiral</span></span>(<span>self, X, Y)</span>
 </code></dt>
@@ -504,43 +614,6 @@ for original code and question/ solution(s)</p></section>
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="ephysiopy.dacq2py.utils.AutoVivification"><code class="flex name class">
-<span>class <span class="ident">AutoVivification</span></span>
-<span>(</span><span>...)</span>
-</code></dt>
-<dd>
-<section class="desc"><p>Implementation of perl's autovivification feature.</p></section>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class AutoVivification(dict):
-        &#34;&#34;&#34;Implementation of perl&#39;s autovivification feature.&#34;&#34;&#34;
-        def __getitem__(self, item):
-                try:
-                        return dict.__getitem__(self, item)
-                except KeyError:
-                        value = self[item] = type(self)()
-                        return value
-                        
-                        &#39;&#39;&#39;
-                        EXAMPLE:
-                                a = AutoVivification()
-                                
-                                a[1][2][3] = 4
-                                a[1][3][3] = 5
-                                a[1][2][&#39;test&#39;] = 6
-                                
-                                print a
-                                
-                                {1: {2: {&#39;test&#39;: 6, 3: 4}, 3: {3: 5}}}
-                        &#39;&#39;&#39;</code></pre>
-</details>
-<h3>Ancestors</h3>
-<ul class="hlist">
-<li>builtins.dict</li>
-</ul>
-</dd>
 <dt id="ephysiopy.dacq2py.utils.bcolors"><code class="flex name class">
 <span>class <span class="ident">bcolors</span></span>
 </code></dt>
@@ -615,213 +688,6 @@ for original code and question/ solution(s)</p></section>
 </dd>
 </dl>
 </dd>
-<dt id="ephysiopy.dacq2py.utils.oneDsmooth"><code class="flex name class">
-<span>class <span class="ident">oneDsmooth</span></span>
-</code></dt>
-<dd>
-<section class="desc"></section>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class oneDsmooth:
-         
-        def smooth(self,x,window_len=11,window=&#39;hanning&#39;):
-                &#34;&#34;&#34;smooth the data using a window with requested size.
-                
-                This method is based on the convolution of a scaled window with the signal.
-                The signal is prepared by introducing reflected copies of the signal 
-                (with the window size) in both ends so that transient parts are minimized
-                in the begining and end part of the output signal.
-                
-                input:
-                        x: the input signal 
-                        window_len: the dimension of the smoothing window; should be an odd integer
-                        window: the type of window from &#39;flat&#39;, &#39;hanning&#39;, &#39;hamming&#39;, &#39;bartlett&#39;, &#39;blackman&#39;
-                                flat window will produce a moving average smoothing.
-        
-                output:
-                        the smoothed signal
-                        
-                example:
-        
-                t=linspace(-2,2,0.1)
-                x=sin(t)+randn(len(t))*0.1
-                y=smooth(x)
-                
-                see also: 
-                
-                numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
-                scipy.signal.lfilter
-         
-                TODO: the window parameter could be the window itself if an array instead of a string
-                NOTE: length(output) != length(input), to correct this: return y[(window_len/2-1):-(window_len/2)] instead of just y.
-                &#34;&#34;&#34;
-        
-                if x.ndim != 1:
-                        raise ValueError(&#34;smooth only accepts 1 dimension arrays.&#34;)
-        
-                if x.size &lt; window_len:
-                        raise ValueError(&#34;Input vector needs to be bigger than window size.&#34;)
-        
-        
-                if window_len&lt;3:
-                        return x
-        
-        
-                if not window in [&#39;flat&#39;, &#39;hanning&#39;, &#39;hamming&#39;, &#39;bartlett&#39;, &#39;blackman&#39;]:
-                        raise ValueError(&#34;Window is on of &#39;flat&#39;, &#39;hanning&#39;, &#39;hamming&#39;, &#39;bartlett&#39;, &#39;blackman&#39;&#34;)
-        
-        
-                s=np.r_[x[window_len-1:0:-1],x,x[-1:-window_len:-1]]
-                #print(len(s))
-                if window == &#39;flat&#39;: #moving average
-                        w=np.ones(window_len,&#39;d&#39;)
-                else:
-                        w=eval(&#39;numpy.&#39;+window+&#39;(window_len)&#39;)
-        
-                y=np.convolve(w/w.sum(),s,mode=&#39;valid&#39;)
-                return y</code></pre>
-</details>
-<h3>Methods</h3>
-<dl>
-<dt id="ephysiopy.dacq2py.utils.oneDsmooth.smooth"><code class="name flex">
-<span>def <span class="ident">smooth</span></span>(<span>self, x, window_len=11, window='hanning')</span>
-</code></dt>
-<dd>
-<section class="desc"><p>smooth the data using a window with requested size.</p>
-<p>This method is based on the convolution of a scaled window with the signal.
-The signal is prepared by introducing reflected copies of the signal
-(with the window size) in both ends so that transient parts are minimized
-in the begining and end part of the output signal.</p>
-<p>input:
-x: the input signal
-window_len: the dimension of the smoothing window; should be an odd integer
-window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
-flat window will produce a moving average smoothing.</p>
-<p>output:
-the smoothed signal</p>
-<p>example:</p>
-<p>t=linspace(-2,2,0.1)
-x=sin(t)+randn(len(t))*0.1
-y=smooth(x)</p>
-<p>see also: </p>
-<p>numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
-scipy.signal.lfilter</p>
-<p>TODO: the window parameter could be the window itself if an array instead of a string
-NOTE: length(output) != length(input), to correct this: return y[(window_len/2-1):-(window_len/2)] instead of just y.</p></section>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def smooth(self,x,window_len=11,window=&#39;hanning&#39;):
-        &#34;&#34;&#34;smooth the data using a window with requested size.
-        
-        This method is based on the convolution of a scaled window with the signal.
-        The signal is prepared by introducing reflected copies of the signal 
-        (with the window size) in both ends so that transient parts are minimized
-        in the begining and end part of the output signal.
-        
-        input:
-                x: the input signal 
-                window_len: the dimension of the smoothing window; should be an odd integer
-                window: the type of window from &#39;flat&#39;, &#39;hanning&#39;, &#39;hamming&#39;, &#39;bartlett&#39;, &#39;blackman&#39;
-                        flat window will produce a moving average smoothing.
-
-        output:
-                the smoothed signal
-                
-        example:
-
-        t=linspace(-2,2,0.1)
-        x=sin(t)+randn(len(t))*0.1
-        y=smooth(x)
-        
-        see also: 
-        
-        numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
-        scipy.signal.lfilter
- 
-        TODO: the window parameter could be the window itself if an array instead of a string
-        NOTE: length(output) != length(input), to correct this: return y[(window_len/2-1):-(window_len/2)] instead of just y.
-        &#34;&#34;&#34;
-
-        if x.ndim != 1:
-                raise ValueError(&#34;smooth only accepts 1 dimension arrays.&#34;)
-
-        if x.size &lt; window_len:
-                raise ValueError(&#34;Input vector needs to be bigger than window size.&#34;)
-
-
-        if window_len&lt;3:
-                return x
-
-
-        if not window in [&#39;flat&#39;, &#39;hanning&#39;, &#39;hamming&#39;, &#39;bartlett&#39;, &#39;blackman&#39;]:
-                raise ValueError(&#34;Window is on of &#39;flat&#39;, &#39;hanning&#39;, &#39;hamming&#39;, &#39;bartlett&#39;, &#39;blackman&#39;&#34;)
-
-
-        s=np.r_[x[window_len-1:0:-1],x,x[-1:-window_len:-1]]
-        #print(len(s))
-        if window == &#39;flat&#39;: #moving average
-                w=np.ones(window_len,&#39;d&#39;)
-        else:
-                w=eval(&#39;numpy.&#39;+window+&#39;(window_len)&#39;)
-
-        y=np.convolve(w/w.sum(),s,mode=&#39;valid&#39;)
-        return y</code></pre>
-</details>
-</dd>
-</dl>
-</dd>
-<dt id="ephysiopy.dacq2py.utils.parselist"><code class="flex name class">
-<span>class <span class="ident">parselist</span></span>
-</code></dt>
-<dd>
-<section class="desc"></section>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class parselist():     
-        def ranges(self, seq):
-                start, end = seq[0], seq[0]
-                count = start
-                for item in seq:
-                        if not count == item:
-                                yield start, end
-                                start, end = item, item
-                                count = item
-                        end = item
-                        count += 1
-                yield start, end</code></pre>
-</details>
-<h3>Methods</h3>
-<dl>
-<dt id="ephysiopy.dacq2py.utils.parselist.ranges"><code class="name flex">
-<span>def <span class="ident">ranges</span></span>(<span>self, seq)</span>
-</code></dt>
-<dd>
-<section class="desc"></section>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def ranges(self, seq):
-        start, end = seq[0], seq[0]
-        count = start
-        for item in seq:
-                if not count == item:
-                        yield start, end
-                        start, end = item, item
-                        count = item
-                end = item
-                count += 1
-        yield start, end</code></pre>
-</details>
-</dd>
-</dl>
-</dd>
 </dl>
 </section>
 </article>
@@ -843,14 +709,12 @@ NOTE: length(output) != length(input), to correct this: return y[(window_len/2-1
 <li><code><a title="ephysiopy.dacq2py.utils.polar" href="#ephysiopy.dacq2py.utils.polar">polar</a></code></li>
 <li><code><a title="ephysiopy.dacq2py.utils.rect" href="#ephysiopy.dacq2py.utils.rect">rect</a></code></li>
 <li><code><a title="ephysiopy.dacq2py.utils.repeat_ind" href="#ephysiopy.dacq2py.utils.repeat_ind">repeat_ind</a></code></li>
+<li><code><a title="ephysiopy.dacq2py.utils.smooth" href="#ephysiopy.dacq2py.utils.smooth">smooth</a></code></li>
 <li><code><a title="ephysiopy.dacq2py.utils.spiral" href="#ephysiopy.dacq2py.utils.spiral">spiral</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
-<li>
-<h4><code><a title="ephysiopy.dacq2py.utils.AutoVivification" href="#ephysiopy.dacq2py.utils.AutoVivification">AutoVivification</a></code></h4>
-</li>
 <li>
 <h4><code><a title="ephysiopy.dacq2py.utils.bcolors" href="#ephysiopy.dacq2py.utils.bcolors">bcolors</a></code></h4>
 <ul class="two-column">
@@ -861,18 +725,6 @@ NOTE: length(output) != length(input), to correct this: return y[(window_len/2-1
 <li><code><a title="ephysiopy.dacq2py.utils.bcolors.OKGREEN" href="#ephysiopy.dacq2py.utils.bcolors.OKGREEN">OKGREEN</a></code></li>
 <li><code><a title="ephysiopy.dacq2py.utils.bcolors.WARNING" href="#ephysiopy.dacq2py.utils.bcolors.WARNING">WARNING</a></code></li>
 <li><code><a title="ephysiopy.dacq2py.utils.bcolors.disable" href="#ephysiopy.dacq2py.utils.bcolors.disable">disable</a></code></li>
-</ul>
-</li>
-<li>
-<h4><code><a title="ephysiopy.dacq2py.utils.oneDsmooth" href="#ephysiopy.dacq2py.utils.oneDsmooth">oneDsmooth</a></code></h4>
-<ul class="">
-<li><code><a title="ephysiopy.dacq2py.utils.oneDsmooth.smooth" href="#ephysiopy.dacq2py.utils.oneDsmooth.smooth">smooth</a></code></li>
-</ul>
-</li>
-<li>
-<h4><code><a title="ephysiopy.dacq2py.utils.parselist" href="#ephysiopy.dacq2py.utils.parselist">parselist</a></code></h4>
-<ul class="">
-<li><code><a title="ephysiopy.dacq2py.utils.parselist.ranges" href="#ephysiopy.dacq2py.utils.parselist.ranges">ranges</a></code></li>
 </ul>
 </li>
 </ul>

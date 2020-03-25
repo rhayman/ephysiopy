@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
 """
-Created on Mon Jun 18 18:31:31 2012
-
-@author: robin
+LFP-type analysis limmited at the moment to Axona file formats I think
 """
 import numpy as np
 import os
@@ -18,6 +15,9 @@ from scipy.special._ufuncs import gammainc, gamma
 from scipy.optimize import fminbound
 
 class EEGCalcs(EEGIO):
+	"""
+	Has some useful methods in particularly to do with theta-gamma phase coupling
+	"""
 	def __init__(self, fname, eegType='eeg', thetaRange=[7,11], pad2pow=np.nan,
 				 smthKernelWidth=2, smthKernelSigma=0.1875, sn2Width=2,
 				 maxFreq=125, ymax=None, xmax=25):
@@ -486,7 +486,7 @@ class EEGCalcs(EEGIO):
 		if np.ma.is_masked(eeg):
 			eeg = np.ma.compressed(eeg)
 		
-		lowfreq, highfreq, lowphase, highamp, highamp_f = self._getFreqPhase(eeg, forder, thetaband, gammaband)
+		_, _, lowphase, _, highamp_f = self._getFreqPhase(eeg, forder, thetaband, gammaband)
 
 		highampphase = np.angle(signal.hilbert(highamp_f))
 		phasedf = highampphase - lowphase

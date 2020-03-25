@@ -314,7 +314,7 @@ class RateMap(object):
                 nan_idx = np.isnan(im)
                 im[nan_idx] = 0
                 g = signal.boxcar(n) / float(n)
-                if ftype == &#39;boxcar&#39;:
+                if &#39;box&#39; in ftype:
                         if im.ndim == 1:
                                 g = signal.boxcar(n) / float(n)
                         elif im.ndim == 2:
@@ -323,7 +323,7 @@ class RateMap(object):
                         elif im.ndim == 3: # mutlidimensional binning
                                 g = signal.boxcar([n, ny]) / float(n)
                                 g = g[None, :, :]
-                elif ftype == &#39;gaussian&#39;:
+                elif &#39;gaussian&#39; in ftype:
                         x, y = np.mgrid[-n:n+1, -ny:ny+1]
                         g = np.exp(-(x**2/float(n) + y**2/float(ny)))
                         g = g / g.sum()
@@ -926,7 +926,7 @@ per bin in the case of directional binning</dd>
                 nan_idx = np.isnan(im)
                 im[nan_idx] = 0
                 g = signal.boxcar(n) / float(n)
-                if ftype == &#39;boxcar&#39;:
+                if &#39;box&#39; in ftype:
                         if im.ndim == 1:
                                 g = signal.boxcar(n) / float(n)
                         elif im.ndim == 2:
@@ -935,7 +935,7 @@ per bin in the case of directional binning</dd>
                         elif im.ndim == 3: # mutlidimensional binning
                                 g = signal.boxcar([n, ny]) / float(n)
                                 g = g[None, :, :]
-                elif ftype == &#39;gaussian&#39;:
+                elif &#39;gaussian&#39; in ftype:
                         x, y = np.mgrid[-n:n+1, -ny:ny+1]
                         g = np.exp(-(x**2/float(n) + y**2/float(ny)))
                         g = g / g.sum()
@@ -1376,7 +1376,7 @@ def smoothingType(self):
         nan_idx = np.isnan(im)
         im[nan_idx] = 0
         g = signal.boxcar(n) / float(n)
-        if ftype == &#39;boxcar&#39;:
+        if &#39;box&#39; in ftype:
                 if im.ndim == 1:
                         g = signal.boxcar(n) / float(n)
                 elif im.ndim == 2:
@@ -1385,7 +1385,7 @@ def smoothingType(self):
                 elif im.ndim == 3: # mutlidimensional binning
                         g = signal.boxcar([n, ny]) / float(n)
                         g = g[None, :, :]
-        elif ftype == &#39;gaussian&#39;:
+        elif &#39;gaussian&#39; in ftype:
                 x, y = np.mgrid[-n:n+1, -ny:ny+1]
                 g = np.exp(-(x**2/float(n) + y**2/float(ny)))
                 g = g / g.sum()

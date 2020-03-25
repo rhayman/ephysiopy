@@ -1,7 +1,6 @@
 """
-Created on Mon Jun 18 18:31:31 2012
-
-@author: robin
+Mostly does circular statistics stuff but has some cool other
+functionality
 """
 import numpy as np
 

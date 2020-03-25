@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
-Created on Mon Jun 18 18:31:31 2012
-
-@author: robin
+Various metrics performed on ratemaps treating them mostly as images
+i.e. mostly ignoring the underlying spiking
 """
 import numpy as np
 from scipy import signal, spatial, misc, ndimage

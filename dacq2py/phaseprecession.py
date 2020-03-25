@@ -1,8 +1,11 @@
-# -*- coding: utf-8 -*-
 """
-Created on Mon Jun 18 18:31:31 2012
+Mostly a total rip-off of code written by Ali Jeewajee for his paper on
+2D phase precession in place and grid cells [1]_
 
-@author: robin
+.. [1] Jeewajee A, Barry C, Douchamps V, Manson D, Lever C, Burgess N. Theta phase
+precession of grid and place cell firing in open environments. Philos Trans R Soc
+Lond B Biol Sci. 2013 Dec 23;369(1635):20120532. doi: 10.1098/rstb.2012.0532.
+
 """
 import numpy as np
 import skimage

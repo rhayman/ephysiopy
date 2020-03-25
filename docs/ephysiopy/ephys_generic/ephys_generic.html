@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.7.5" />
 <title>ephysiopy.ephys_generic.ephys_generic API documentation</title>
-<meta name="description" content="Created on Thu Nov
-9 17:04:38 2017 …" />
+<meta name="description" content="The classes contained in this module are supposed to be agnostic to recording format
+and encapsulate some generic mechanisms for producing things like …" />
 <link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
 <link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
@@ -21,20 +21,19 @@
 <h1 class="title">Module <code>ephysiopy.ephys_generic.ephys_generic</code></h1>
 </header>
 <section id="section-intro">
-<p>Created on Thu Nov
-9 17:04:38 2017</p>
-<p>@author: robin</p>
+<p>The classes contained in this module are supposed to be agnostic to recording format
+and encapsulate some generic mechanisms for producing things like spike timing
+autocorrelograms, power spectrum calculation and so on</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+<pre><code class="python">&#34;&#34;&#34;
+The classes contained in this module are supposed to be agnostic to recording format
+and encapsulate some generic mechanisms for producing things like spike timing
+autocorrelograms, power spectrum calculation and so on
 &#34;&#34;&#34;
-Created on Thu Nov  9 17:04:38 2017
 
-@author: robin
-&#34;&#34;&#34;
 import numpy as np
 from scipy import signal
 import warnings
@@ -49,7 +48,7 @@ from ephysiopy.dacq2py import tintcolours as tcols
 
 class SpikeCalcsGeneric(object):
     &#34;&#34;&#34;
-    Generic class for processing and analysis of spiking data
+    Deals with the processing and analysis of spike timing data.
 
     Parameters
     ----------
@@ -294,7 +293,7 @@ class SpikeCalcsGeneric(object):
         for i in range(1, len(yticks)-1):
             yticks[i].set_visible(False)
         histColor = [192/255.0,192/255.0,192/255.0]
-        histX = hist_ax.hist(x, bins=np.arange(self.event_window[0], self.event_window[1] + self._secs_per_bin, self._secs_per_bin),
+        hist_ax.hist(x, bins=np.arange(self.event_window[0], self.event_window[1] + self._secs_per_bin, self._secs_per_bin),
                              color=histColor, alpha=0.6, range=self.event_window, rasterized=True, histtype=&#39;stepfilled&#39;)
         hist_ax.set_ylabel(&#34;Spike count&#34;, labelpad=-2.5)
         plt.setp(hist_ax.get_xticklabels(), visible=False)
@@ -680,9 +679,8 @@ class PosCalcsGeneric(object):
                     good_data1 = np.ravel(xy.data[ok_idx,i+1])
                     xy.data[missing_idx,i] = np.interp(missing_idx,ok_idx,good_data)#,left=np.min(good_data),right=np.max(good_data)
                     xy.data[missing_idx,i+1] = np.interp(missing_idx,ok_idx,good_data1)
-                except ValueError as e:
+                except ValueError:
                     pass
-                    # print(e)
         xy.mask = 0
         print(&#34;{} bad/ jumpy positions were interpolated over&#34;.format(len(missing_idx)))#this is wrong i think
         return xy
@@ -1052,17 +1050,16 @@ class MapCalcsGeneric(object):
         speed_filt = np.ma.masked_where(speed_filt &lt; minSpeed, speed_filt)
         speed_filt = np.ma.masked_where(speed_filt &gt; maxSpeed, speed_filt)
         from ephysiopy.dacq2py import spikecalcs
-        S = spikecalcs.SpikeCalcs();
+        S = spikecalcs.SpikeCalcs()
         x1 = self.spk_pos_idx[self.spk_clusters==cluster]
         spk_sm = S.smoothSpikePosCount(x1, self.pos_ts.shape[0], sigma, None)
         spk_sm = np.ma.MaskedArray(spk_sm, mask=np.ma.getmask(speed_filt))
         from scipy import stats
-        result = stats.mstats.pearsonr(spk_sm, speed_filt)
+        stats.mstats.pearsonr(spk_sm, speed_filt)
         spd_dig  = np.digitize(speed_filt, spd_bins, right=True)
         mn_rate = np.array([np.ma.mean(spk_sm[spd_dig==i]) for i in range(0,len(spd_bins))])
         var = np.array([np.ma.std(spk_sm[spd_dig==i]) for i in range(0,len(spd_bins))])
-        count = np.array([np.ma.sum(spk_sm[spd_dig==i]) for i in range(0,len(spd_bins))])
-        # se = var / count
+        np.array([np.ma.sum(spk_sm[spd_dig==i]) for i in range(0,len(spd_bins))])
         if ax is not None:
             ax.errorbar(spd_bins, mn_rate * self.pos_sample_rate, yerr=var, color=&#39;k&#39;)
             ax.set_xlim(spd_bins[0], spd_bins[-1])
@@ -1081,14 +1078,14 @@ class MapCalcsGeneric(object):
         h = np.histogram2d(self.hdir, self.speed, [dir_bins,spd_bins],weights=w)
         b = binning.RateMap()
         im = b.blurImage(h[0],5,ftype=&#39;gaussian&#39;)
-        im = np.ma.MaskedArray(im);
+        im = np.ma.MaskedArray(im)
         # mask low rates...
         im = np.ma.masked_where(im&lt;=1, im)
         # ... and where less than 0.5% of data is accounted for
         # all_sp_x_hd_binned = np.histogram2d(self.hdir, self.speed, [dir_bins,spd_bins])[0]
         # im = np.ma.masked_where(all_sp_x_hd_binned &lt; (len(self.speed) * 0.005), im)
         x,y = np.meshgrid(dir_bins, spd_bins)
-        ax.pcolormesh(x,y,im.T);
+        ax.pcolormesh(x,y,im.T)
         ax.spines[&#39;right&#39;].set_visible(False)
         ax.spines[&#39;top&#39;].set_visible(False)
         plt.xticks([90,180,270], fontweight=&#39;normal&#39;, size=6)
@@ -1870,17 +1867,16 @@ method defined</p>
         speed_filt = np.ma.masked_where(speed_filt &lt; minSpeed, speed_filt)
         speed_filt = np.ma.masked_where(speed_filt &gt; maxSpeed, speed_filt)
         from ephysiopy.dacq2py import spikecalcs
-        S = spikecalcs.SpikeCalcs();
+        S = spikecalcs.SpikeCalcs()
         x1 = self.spk_pos_idx[self.spk_clusters==cluster]
         spk_sm = S.smoothSpikePosCount(x1, self.pos_ts.shape[0], sigma, None)
         spk_sm = np.ma.MaskedArray(spk_sm, mask=np.ma.getmask(speed_filt))
         from scipy import stats
-        result = stats.mstats.pearsonr(spk_sm, speed_filt)
+        stats.mstats.pearsonr(spk_sm, speed_filt)
         spd_dig  = np.digitize(speed_filt, spd_bins, right=True)
         mn_rate = np.array([np.ma.mean(spk_sm[spd_dig==i]) for i in range(0,len(spd_bins))])
         var = np.array([np.ma.std(spk_sm[spd_dig==i]) for i in range(0,len(spd_bins))])
-        count = np.array([np.ma.sum(spk_sm[spd_dig==i]) for i in range(0,len(spd_bins))])
-        # se = var / count
+        np.array([np.ma.sum(spk_sm[spd_dig==i]) for i in range(0,len(spd_bins))])
         if ax is not None:
             ax.errorbar(spd_bins, mn_rate * self.pos_sample_rate, yerr=var, color=&#39;k&#39;)
             ax.set_xlim(spd_bins[0], spd_bins[-1])
@@ -1899,14 +1895,14 @@ method defined</p>
         h = np.histogram2d(self.hdir, self.speed, [dir_bins,spd_bins],weights=w)
         b = binning.RateMap()
         im = b.blurImage(h[0],5,ftype=&#39;gaussian&#39;)
-        im = np.ma.MaskedArray(im);
+        im = np.ma.MaskedArray(im)
         # mask low rates...
         im = np.ma.masked_where(im&lt;=1, im)
         # ... and where less than 0.5% of data is accounted for
         # all_sp_x_hd_binned = np.histogram2d(self.hdir, self.speed, [dir_bins,spd_bins])[0]
         # im = np.ma.masked_where(all_sp_x_hd_binned &lt; (len(self.speed) * 0.005), im)
         x,y = np.meshgrid(dir_bins, spd_bins)
-        ax.pcolormesh(x,y,im.T);
+        ax.pcolormesh(x,y,im.T)
         ax.spines[&#39;right&#39;].set_visible(False)
         ax.spines[&#39;top&#39;].set_visible(False)
         plt.xticks([90,180,270], fontweight=&#39;normal&#39;, size=6)
@@ -2042,14 +2038,14 @@ def spk_clusters(self):
     h = np.histogram2d(self.hdir, self.speed, [dir_bins,spd_bins],weights=w)
     b = binning.RateMap()
     im = b.blurImage(h[0],5,ftype=&#39;gaussian&#39;)
-    im = np.ma.MaskedArray(im);
+    im = np.ma.MaskedArray(im)
     # mask low rates...
     im = np.ma.masked_where(im&lt;=1, im)
     # ... and where less than 0.5% of data is accounted for
     # all_sp_x_hd_binned = np.histogram2d(self.hdir, self.speed, [dir_bins,spd_bins])[0]
     # im = np.ma.masked_where(all_sp_x_hd_binned &lt; (len(self.speed) * 0.005), im)
     x,y = np.meshgrid(dir_bins, spd_bins)
-    ax.pcolormesh(x,y,im.T);
+    ax.pcolormesh(x,y,im.T)
     ax.spines[&#39;right&#39;].set_visible(False)
     ax.spines[&#39;top&#39;].set_visible(False)
     plt.xticks([90,180,270], fontweight=&#39;normal&#39;, size=6)
@@ -2084,17 +2080,16 @@ details</p></section>
     speed_filt = np.ma.masked_where(speed_filt &lt; minSpeed, speed_filt)
     speed_filt = np.ma.masked_where(speed_filt &gt; maxSpeed, speed_filt)
     from ephysiopy.dacq2py import spikecalcs
-    S = spikecalcs.SpikeCalcs();
+    S = spikecalcs.SpikeCalcs()
     x1 = self.spk_pos_idx[self.spk_clusters==cluster]
     spk_sm = S.smoothSpikePosCount(x1, self.pos_ts.shape[0], sigma, None)
     spk_sm = np.ma.MaskedArray(spk_sm, mask=np.ma.getmask(speed_filt))
     from scipy import stats
-    result = stats.mstats.pearsonr(spk_sm, speed_filt)
+    stats.mstats.pearsonr(spk_sm, speed_filt)
     spd_dig  = np.digitize(speed_filt, spd_bins, right=True)
     mn_rate = np.array([np.ma.mean(spk_sm[spd_dig==i]) for i in range(0,len(spd_bins))])
     var = np.array([np.ma.std(spk_sm[spd_dig==i]) for i in range(0,len(spd_bins))])
-    count = np.array([np.ma.sum(spk_sm[spd_dig==i]) for i in range(0,len(spd_bins))])
-    # se = var / count
+    np.array([np.ma.sum(spk_sm[spd_dig==i]) for i in range(0,len(spd_bins))])
     if ax is not None:
         ax.errorbar(spd_bins, mn_rate * self.pos_sample_rate, yerr=var, color=&#39;k&#39;)
         ax.set_xlim(spd_bins[0], spd_bins[-1])
@@ -2365,9 +2360,8 @@ functions (postprocesspos being the main one).</p></section>
                     good_data1 = np.ravel(xy.data[ok_idx,i+1])
                     xy.data[missing_idx,i] = np.interp(missing_idx,ok_idx,good_data)#,left=np.min(good_data),right=np.max(good_data)
                     xy.data[missing_idx,i+1] = np.interp(missing_idx,ok_idx,good_data1)
-                except ValueError as e:
+                except ValueError:
                     pass
-                    # print(e)
         xy.mask = 0
         print(&#34;{} bad/ jumpy positions were interpolated over&#34;.format(len(missing_idx)))#this is wrong i think
         return xy
@@ -2508,9 +2502,8 @@ functions (postprocesspos being the main one).</p></section>
                 good_data1 = np.ravel(xy.data[ok_idx,i+1])
                 xy.data[missing_idx,i] = np.interp(missing_idx,ok_idx,good_data)#,left=np.min(good_data),right=np.max(good_data)
                 xy.data[missing_idx,i+1] = np.interp(missing_idx,ok_idx,good_data1)
-            except ValueError as e:
+            except ValueError:
                 pass
-                # print(e)
     xy.mask = 0
     print(&#34;{} bad/ jumpy positions were interpolated over&#34;.format(len(missing_idx)))#this is wrong i think
     return xy</code></pre>
@@ -2750,7 +2743,7 @@ into Axona format 50Hz data</p></section>
 <span>(</span><span>spike_times, waveforms=None, **kwargs)</span>
 </code></dt>
 <dd>
-<section class="desc"><p>Generic class for processing and analysis of spiking data</p>
+<section class="desc"><p>Deals with the processing and analysis of spike timing data.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>spike_times</code></strong> :&ensp;<code>array_like</code></dt>
@@ -2769,7 +2762,7 @@ a 4 x nSpikes x nSamples (4 for tetrode-based analysis)</dd>
 </summary>
 <pre><code class="python">class SpikeCalcsGeneric(object):
     &#34;&#34;&#34;
-    Generic class for processing and analysis of spiking data
+    Deals with the processing and analysis of spike timing data.
 
     Parameters
     ----------
@@ -3014,7 +3007,7 @@ a 4 x nSpikes x nSamples (4 for tetrode-based analysis)</dd>
         for i in range(1, len(yticks)-1):
             yticks[i].set_visible(False)
         histColor = [192/255.0,192/255.0,192/255.0]
-        histX = hist_ax.hist(x, bins=np.arange(self.event_window[0], self.event_window[1] + self._secs_per_bin, self._secs_per_bin),
+        hist_ax.hist(x, bins=np.arange(self.event_window[0], self.event_window[1] + self._secs_per_bin, self._secs_per_bin),
                              color=histColor, alpha=0.6, range=self.event_window, rasterized=True, histtype=&#39;stepfilled&#39;)
         hist_ax.set_ylabel(&#34;Spike count&#34;, labelpad=-2.5)
         plt.setp(hist_ax.get_xticklabels(), visible=False)
@@ -3400,7 +3393,7 @@ Used to help classify a neruons type (principal, interneuron etc)</p>
     for i in range(1, len(yticks)-1):
         yticks[i].set_visible(False)
     histColor = [192/255.0,192/255.0,192/255.0]
-    histX = hist_ax.hist(x, bins=np.arange(self.event_window[0], self.event_window[1] + self._secs_per_bin, self._secs_per_bin),
+    hist_ax.hist(x, bins=np.arange(self.event_window[0], self.event_window[1] + self._secs_per_bin, self._secs_per_bin),
                          color=histColor, alpha=0.6, range=self.event_window, rasterized=True, histtype=&#39;stepfilled&#39;)
     hist_ax.set_ylabel(&#34;Spike count&#34;, labelpad=-2.5)
     plt.setp(hist_ax.get_xticklabels(), visible=False)

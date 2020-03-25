@@ -1,9 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Fri Sep 27 12:08:10 2019
-
-@author: robin
+openephys to Axona file format conversion
 """
 import numpy as np
 import os
@@ -16,7 +12,7 @@ import h5py
 
 class OE2Axona(object):
 	"""
-
+	Converts openephys data recorded in the nwb format into Axona files
 	"""
 	def __init__(self, filename_root: str):
 		self.filename_root = filename_root # '/home/robin/Data/experiment_1.nwb' or whatever

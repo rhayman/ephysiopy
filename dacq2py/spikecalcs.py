@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
-Created on Mon Jun 18 18:31:31 2012
-
-@author: robin
+A lot of the functionality here has been more generically implemented
+in the ephys_generic.ephys_generic.SpikeCalcsGeneric class
 """
 import numpy as np
 import warnings

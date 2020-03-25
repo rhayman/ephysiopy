@@ -96,7 +96,7 @@ class KiloSortSession(object):
                 &#34;&#34;&#34;
                 self.fname_root = fname_root
                 import os
-                for d, c, f in os.walk(fname_root):
+                for d, _, f in os.walk(fname_root):
                         for ff in f:
                                 if &#39;spike_times.npy&#39; in ff:
                                         self.fname_root = d
@@ -174,9 +174,12 @@ class OpenEphysBase(object):
                 else:
                         self.jumpmax = 100
 
+        def load(self, *args, **kwargs):
+                # Overridden by sub-classes
+                pass
+
         def loadKilo(self):
                 # Loads a kilosort session
-                
                 kilodata = KiloSortSession(self.pname_root) # pname_root gets walked through and over-written with correct location of kiolsort data
                 kilodata.load()
                 kilodata.removeNoiseClusters()
@@ -424,7 +427,6 @@ class OpenEphysNPX(OpenEphysBase):
                 self.isBinary = True
                 import os
                 import re
-                pos_t_match = re.compile(&#39;Pos_Tracker-[0-9][0-9][0-9].[0-9]&#39;)
                 APdata_match = re.compile(&#39;Neuropix-PXI-[0-9][0-9][0-9].0&#39;)
                 LFPdata_match = re.compile(&#39;Neuropix-PXI-[0-9][0-9][0-9].1&#39;)
                 sync_message_file = None
@@ -502,7 +504,7 @@ class OpenEphysNPX(OpenEphysBase):
                 import matplotlib.colors as colors
                 from matplotlib.pyplot import cm
                 from mpl_toolkits.axes_grid1 import make_axes_locatable
-                fig, spectoAx = plt.subplots()
+                _, spectoAx = plt.subplots()
                 spectoAx.pcolormesh(x, y, spec_data, edgecolors=&#39;face&#39;, cmap=&#39;bone&#39;,norm=colors.LogNorm())
                 spectoAx.set_xlim(0, maxFreq)
                 spectoAx.set_ylim(channel_map[0], channel_map[-1])
@@ -667,7 +669,8 @@ class OpenEphysNWB(OpenEphysBase):
                 np.savetxt(&#39;position.txt&#39;, out, delimiter=&#39;,&#39;, fmt=[&#39;%3.3i&#39;,&#39;%3.3i&#39;,&#39;%3.3f&#39;])
 
         def plotPos(self, jumpmax=None, show=True):
-                super().plotPos(jumpmax, show)
+                xy = super().plotPos(jumpmax, show)
+                return xy
 
         def plotMaps(self, plot_type=&#39;map&#39;, **kwargs):
                 super().plotMaps(plot_type, **kwargs)
@@ -876,7 +879,7 @@ called in another way i.e. binary format a la Neuropixels</p></section>
                 &#34;&#34;&#34;
                 self.fname_root = fname_root
                 import os
-                for d, c, f in os.walk(fname_root):
+                for d, _, f in os.walk(fname_root):
                         for ff in f:
                                 if &#39;spike_times.npy&#39; in ff:
                                         self.fname_root = d
@@ -1035,9 +1038,12 @@ concept but it forms the backbone for two other classes (OpenEphysNPX &amp; Open
                 else:
                         self.jumpmax = 100
 
+        def load(self, *args, **kwargs):
+                # Overridden by sub-classes
+                pass
+
         def loadKilo(self):
                 # Loads a kilosort session
-                
                 kilodata = KiloSortSession(self.pname_root) # pname_root gets walked through and over-written with correct location of kiolsort data
                 kilodata.load()
                 kilodata.removeNoiseClusters()
@@ -1269,6 +1275,20 @@ concept but it forms the backbone for two other classes (OpenEphysNPX &amp; Open
 </ul>
 <h3>Methods</h3>
 <dl>
+<dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.load"><code class="name flex">
+<span>def <span class="ident">load</span></span>(<span>self, *args, **kwargs)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def load(self, *args, **kwargs):
+        # Overridden by sub-classes
+        pass</code></pre>
+</details>
+</dd>
 <dt id="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.loadKilo"><code class="name flex">
 <span>def <span class="ident">loadKilo</span></span>(<span>self)</span>
 </code></dt>
@@ -1280,7 +1300,6 @@ concept but it forms the backbone for two other classes (OpenEphysNPX &amp; Open
 </summary>
 <pre><code class="python">def loadKilo(self):
         # Loads a kilosort session
-        
         kilodata = KiloSortSession(self.pname_root) # pname_root gets walked through and over-written with correct location of kiolsort data
         kilodata.load()
         kilodata.removeNoiseClusters()
@@ -1654,7 +1673,6 @@ gridcell.SAC.getMeasures is saved for each cluster - this is passed to MapCalcsG
                 self.isBinary = True
                 import os
                 import re
-                pos_t_match = re.compile(&#39;Pos_Tracker-[0-9][0-9][0-9].[0-9]&#39;)
                 APdata_match = re.compile(&#39;Neuropix-PXI-[0-9][0-9][0-9].0&#39;)
                 LFPdata_match = re.compile(&#39;Neuropix-PXI-[0-9][0-9][0-9].1&#39;)
                 sync_message_file = None
@@ -1732,7 +1750,7 @@ gridcell.SAC.getMeasures is saved for each cluster - this is passed to MapCalcsG
                 import matplotlib.colors as colors
                 from matplotlib.pyplot import cm
                 from mpl_toolkits.axes_grid1 import make_axes_locatable
-                fig, spectoAx = plt.subplots()
+                _, spectoAx = plt.subplots()
                 spectoAx.pcolormesh(x, y, spec_data, edgecolors=&#39;face&#39;, cmap=&#39;bone&#39;,norm=colors.LogNorm())
                 spectoAx.set_xlim(0, maxFreq)
                 spectoAx.set_ylim(channel_map[0], channel_map[-1])
@@ -1827,7 +1845,6 @@ See <a href="https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/166789121/Fl
         self.isBinary = True
         import os
         import re
-        pos_t_match = re.compile(&#39;Pos_Tracker-[0-9][0-9][0-9].[0-9]&#39;)
         APdata_match = re.compile(&#39;Neuropix-PXI-[0-9][0-9][0-9].0&#39;)
         LFPdata_match = re.compile(&#39;Neuropix-PXI-[0-9][0-9][0-9].1&#39;)
         sync_message_file = None
@@ -1958,7 +1975,7 @@ See <a href="https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/166789121/Fl
         import matplotlib.colors as colors
         from matplotlib.pyplot import cm
         from mpl_toolkits.axes_grid1 import make_axes_locatable
-        fig, spectoAx = plt.subplots()
+        _, spectoAx = plt.subplots()
         spectoAx.pcolormesh(x, y, spec_data, edgecolors=&#39;face&#39;, cmap=&#39;bone&#39;,norm=colors.LogNorm())
         spectoAx.set_xlim(0, maxFreq)
         spectoAx.set_ylim(channel_map[0], channel_map[-1])
@@ -2137,7 +2154,8 @@ Should contain the settings.xml file and the .nwb file</p></section>
                 np.savetxt(&#39;position.txt&#39;, out, delimiter=&#39;,&#39;, fmt=[&#39;%3.3i&#39;,&#39;%3.3i&#39;,&#39;%3.3f&#39;])
 
         def plotPos(self, jumpmax=None, show=True):
-                super().plotPos(jumpmax, show)
+                xy = super().plotPos(jumpmax, show)
+                return xy
 
         def plotMaps(self, plot_type=&#39;map&#39;, **kwargs):
                 super().plotMaps(plot_type, **kwargs)
@@ -2668,6 +2686,7 @@ the 6 accelerometer channels)</dd>
 <li>
 <h4><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase">OpenEphysBase</a></code></h4>
 <ul class="two-column">
+<li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.load" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.load">load</a></code></li>
 <li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.loadKilo" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.loadKilo">loadKilo</a></code></li>
 <li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotEEGPower" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotEEGPower">plotEEGPower</a></code></li>
 <li><code><a title="ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotEventEEG" href="#ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotEventEEG">plotEventEEG</a></code></li>
