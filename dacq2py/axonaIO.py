@@ -1,19 +1,6 @@
 """
 Classes and methods for working with Axona electrophysiological
 recording data.
-
-IO - main i/o class for reading Axona files and additionally .clu files
-generated from KlustaKwik
-
-Pos - does all the pos post-processing such as interpolating bad positions
-and smoothing the data using the relevant filters etc
-
-Tetrode - processes tetrode data. By default converts the raw values to volts.
-Also can get timestamps, unique clusters etc
-
-EEG - for eeg data. Also converts to volts and can do powerspectra and filter
-for theta etc. TODO: needs expanding to include spectrogram
-
 """
 import scipy, scipy.interpolate, scipy.stats, scipy.ndimage, scipy.signal
 import numpy as np
@@ -36,14 +23,20 @@ empty_headers = {
 }
 
 class IO(object):
-	'''Class for reading data from Axona data acquisition system. Also
-	reads .clu files generated from KlustaKwik
+	"""
+	Axona data I/O. Also reads .clu files generated from KlustaKwik
 
-	Class attributes:
-	axona_files (dict): keys are axona format file suffixes
-	and the values are used as numpy dtypes to read the data.
-	NB it's assumed a .set file is *always* present
-	'''
+	Class variables:
+	* tetrode_files : dict
+		Keys are '.1', '.2' etc from 1 to 16 and the values is a custom
+		dtype used to read Axona tetrode files
+	* other_files : dict
+		Keys are axona format file suffixes ('.pos', '.eeg', etc) and
+		the values are numpy dtypes ('int16' etc) used to read the data.
+	* axona_files : dict
+		Is the combination of the above two dictionaries
+	"""
+
 	tetrode_files = dict.fromkeys(["." + str(i) for i in range(1, 17)], [('ts', '>i'), ('waveform', '50b')])
 	other_files = {'.pos': [('ts', '>i'), ('pos', '>8h')],
 				   '.eeg': [('eeg', '=b')],
@@ -59,9 +52,6 @@ class IO(object):
 	def __init__(self, filename_root=''):
 		self.filename_root = filename_root
 
-	'''
-	These path to these files are given in __init__.py
-	'''
 	@staticmethod
 	def getEmptyHeader(ftype: str)->dict:
 		pname = empty_headers.get(ftype, '')
@@ -70,18 +60,20 @@ class IO(object):
 				return pickle.load(f)
 
 	def getData(self, filename_root):
-		'''
+		"""
 		Returns the data part of an Axona data file i.e. from "data_start" to
 		"data_end"
+
 		Parameters
-		----------------------
-		input:  str
-				fully qualified path name to the data file
+		----------
+		input :  str
+			Fully qualified path name to the data file
+		
 		Returns
-		---------
-		output: numpy.array
-				the data part of whatever file was fed in. Format specified from file type
-		'''
+		-------
+		output : ndarray
+			The data part of whatever file was fed in
+		"""
 		n_samps = -1
 		fType = os.path.splitext(filename_root)[1]
 		if fType in self.axona_files:
@@ -108,14 +100,38 @@ class IO(object):
 		return a
 
 	def getCluCut(self, tet):
-		'''Load a clu file and return as an array of integers'''
+		"""
+		Load a clu file and return as an array of integers
+
+		Parameters
+		----------
+		tet : int
+			The tetrode the clu file relates to
+
+		Returns
+		-------
+		out : ndarray
+			Data read from the clu file
+		"""
 		filename_root = self.filename_root + '.' + 'clu.' + str(tet)
 		dt = np.dtype([('data', '<i')])
 		clu_data = np.loadtxt(filename_root, dtype=dt)
 		return clu_data['data'][1::]  # first entry is number of clusters found
 
 	def getCut(self, tet):
-		'''Returns the cut file as a list of integers'''
+		"""
+		Returns the cut file as a list of integers
+
+		Parameters
+		----------
+		tet : int
+			The tetrode the cut file relates to
+		
+		Returns
+		-------
+		out : ndarray
+			The data read from the cut file
+		"""
 		a = []
 		filename_root = self.filename_root + '_' + str(tet) + '.cut'
 		if not os.path.exists(filename_root):
@@ -134,16 +150,18 @@ class IO(object):
 		return a
 
 	def setHeader(self, filename_root: str, header: dict):
-		'''
+		"""
 		Writes out the header to the specified file
 
 		Parameters
 		------------
-		filename_root - a fully qualified path to a file with the relevant suffix at
-		the end (e.g. ".set", ".pos" or whatever)
+		filename_root : str
+			A fully qualified path to a file with the relevant suffix at
+			the end (e.g. ".set", ".pos" or whatever)
 
-		header - a dict, an empty version of which can be loaded using getEmptyHeader above
-		'''
+		header : dict
+			An empty version of which can be loaded using getEmptyHeader() above
+		"""
 		with open(filename_root, 'w') as f:
 			for key, val in header.items():
 				f.write(key)
@@ -158,10 +176,17 @@ class IO(object):
 			f.write('\r\n')
 
 	def setData(self, filename_root: str, data: np.array):
-		'''
-		Writes data to the given filename
-		Assumes the data is in the correct format
-		'''
+		"""
+		Writes Axona format data to the given filename
+
+		Parameters
+		----------
+		filename_root : str
+			The fully qualified filename including the suffix
+
+		data : ndarray
+			The data that will be saved
+		"""
 		fType = os.path.splitext(filename_root)[1]
 		if fType in self.axona_files:
 			f = open(filename_root, 'rb+')
@@ -177,17 +202,19 @@ class IO(object):
 			f.close()
 
 	def getHeader(self, filename_root):
-		'''
-		Returns the header of a specified data file as a dictionary
+		"""
+		Reads and returns the header of a specified data file as a dictionary
 
 		Parameters
-		------------
-		filename_root (str) - fully qualified filename of Axona type
+		----------
+		filename_root : str
+			Fully qualified filename of Axona type
 
 		Returns
 		-------
-		A dictionary with key - value pairs of the header part of an Axona type file
-		'''
+		headerDict : dict
+			key - value pairs of the header part of an Axona type file
+		"""
 		with open(filename_root, 'rb') as f:
 			data = f.read()
 			f.close()
@@ -208,10 +235,21 @@ class IO(object):
 		return headerDict
 
 	def getHeaderVal(self, header, key):
-		'''
-		Given a header and a key value string ('timebase', 'sample_rate', etc)
-		returns the associated value
-		'''
+		"""
+		Get a value from the header as an int
+
+		Parameters
+		----------
+		header : dict
+			The header dictionary to read
+		key : str
+			The key to look up
+
+		Returns
+		-------
+		value : int
+			The value of `key` as an int
+		"""
 		tmp = header[key]
 		val = tmp.split(' ')
 		val = val[0].split('.')
@@ -220,6 +258,21 @@ class IO(object):
 
 
 class Pos(IO):
+	"""
+	Processs position data recorded with the Axona recording system
+
+	Parameters
+	----------
+	filename_root : str
+		The basename of the file i.e mytrial as opposed to mytrial.pos
+	
+	Notes
+	-----
+	Currently the only arg that does anything is 'cm' which will convert
+	the xy data to cm, assuming that the pixels per metre value has been
+	set correctly
+	"""
+
 	def __init__(self, filename_root, *args, **kwargs):
 		self.filename_root = filename_root
 		self.header = self.getHeader(filename_root + '.pos')
@@ -276,8 +329,13 @@ class Pos(IO):
 			pass
 
 	def postprocesspos(self):
-		'''post processes position data
-		something isn't quite right here at least with 2 led data'''
+		"""
+		Post processes position data
+		
+		Calls a few of the other methods in this class that deal with
+		led swaps, impossibly fast points etc
+		"""
+
 		if self.posProcessed is True:
 			return
 		elif self.posProcessed is False:
@@ -361,14 +419,21 @@ class Pos(IO):
 			self.posProcessed = True
 
 	def ledspeedFilter(self,led_pos,max_ppm_per_sample):
-		'''
+		"""
 		Filters for impossibly fast tracked points
-		input: masked led_pos array [x1,y1,x2,y2]
-		max_ppm_per_sample
-		led = big or small (1 or 2)
-		output: number of jumpy points
-		masked led_pos
-		'''
+
+		Parameters
+		----------
+		led_pos : np.ma.MaskedArray
+			Masked led_pos array [x1,y1,x2,y2]
+		max_ppm_per_sample : int
+			The maximum distance (in pixels) that points are allowed to jump
+
+		Returns
+		-------
+		led_pos : np.ma.MaskedArray
+			The filtered data
+		"""
 		max_ppms_sqd = max_ppm_per_sample ** 2
 		for i in range(0,len(led_pos),2):
 			ok_pos = led_pos[i,:]
@@ -380,12 +445,22 @@ class Pos(IO):
 		return led_pos
 
 	def ledswapFilter(self,led_pos,led_pix):
-		'''Checks for led swapping in 2-spot mode
-		input: led_pos - a masked array of dims [4 x nPosSamples]
-		format is x1,y1,x2,y2
-		mskd_pix - a masked array of dims [2 x nPosSamples]
-		format is nPix1, nPix2
-		output: list of swapped positions'''
+		"""
+		Checks for led swapping in 2-spot mode
+
+		Parameters
+		----------
+		led_pos : np.ma.MaskedArray
+			Masked array of dims [4 x nPosSamples]
+		led_pix : np.ma.MaskedArray
+			The number of pixels tracked for each LED.
+			Has dimensions [2 x nPosSamples]
+
+		Returns
+		-------
+		swap_list : ndarray
+			Array of swapped positions
+		"""
 		thresh = 5
 		mean_npix = led_pix.mean(axis=1).data
 		std_npix = led_pix.std(axis=1).data
@@ -403,10 +478,19 @@ class Pos(IO):
 		return swap_list
 
 	def interpNans(self,led_pos):
-		'''interpolates over missing values with the specified
-		boxcar
-		input: masked array (led_pos)
-		output: smoothed, unmasked array (led_pos)'''
+		"""
+		Interpolates over missing values
+
+		Parameters
+		----------
+		led_pos : np.ma.MaskedArray
+			The LED positions
+
+		Returns
+		-------
+		output : np.ma.MaskedArray
+			The smoothed, unmasked array
+		"""
 		for i in range(0,len(led_pos),2):
 			missing = led_pos[i:i+2].mask.any(axis=0)
 			ok = np.logical_not(missing)
@@ -420,25 +504,27 @@ class Pos(IO):
 		led_pos.mask = 0
 		return led_pos
 	def filterPos(self, filterDict):
-		'''
-		Filters position data depending on the filter specified in fType
-		Inputs:
-		filterDict - a dict which contains the type(s) of filter to be used and the
-		range of values to filter for. Values are pairs specifying the range
-		of values to filter for NB can take multiple filters and iteratively apply them
-		legal values are:
+		"""
+		Filters position data depending on the specified filter
+		
 		Parameters
-		------------
-		'dir' - the directional range to filter for NB this can contain 'w','e','s' or 'n'
-		'speed' - min and max speed to filter for
-		'xrange' - min and max values to filter x pos values
-		'yrange' - same as xrange but for y pos
-		'time' - the times to keep / remove specified in ms
+		----------
+		filterDict : dict
+			Contains the type(s) of filter to be used and the
+			range of values to filter for. Values are pairs specifying the range
+			of values to filter for NB can take multiple filters and iteratively apply them
+			legal values are:
+			* 'dir' - the directional range to filter for NB this can contain 'w','e','s' or 'n'
+			* 'speed' - min and max speed to filter for
+			* 'xrange' - min and max values to filter x pos values
+			* 'yrange' - same as xrange but for y pos
+			* 'time' - the times to keep / remove specified in ms
 
 		Returns
 		--------
-		the filtered indices i.e. those that should be kept
-		'''
+		pos_index_to_keep : ndarray
+			The position indices that should be kept
+		"""
 		if filterDict is None:
 			return
 		nSamples = int(self.header['num_pos_samples'])
@@ -490,6 +576,22 @@ class Pos(IO):
 		return np.expand_dims(np.any(~bool_arr, axis=0), 0)
 
 class Tetrode(IO, SpikeCalcs):
+	"""
+	Processes tetrode files recorded with the Axona recording system
+
+	Mostly this class deals with interpolating tetrode and position timestamps
+	and getting indices for particular clusters.
+
+	Paraeters
+	---------
+	filename_root : str
+		The fully qualified name of the file without it's suffix
+	tetrode : int
+		The number of the tetrode
+	volts : bool, optional
+		Whether to convert the data values volts. Default True
+	"""
+
 	def __init__(self, filename_root, tetrode, volts=True):
 		self.filename_root = filename_root
 		self.tetrode = tetrode
@@ -530,16 +632,30 @@ class Tetrode(IO, SpikeCalcs):
 		self.pos_samples = None
 
 	def getSpkTS(self):
-		'''
-		Returns the list of timestamps a series of spike events occured on a tetrode
-		'''
+		"""
+		Return all the timestamps for all the spikes on the tetrode
+		"""
 		return np.ma.compressed(self.spk_ts)
 
 	def getClustTS(self, cluster=None):
-		'''
-		Returns the timestamps for a cluster on a tetrode
-		'''
-		# Return all of the timestamps if no cluster given
+		"""
+		Returns the timestamps for a cluster on the tetrode
+
+		Parameters
+		----------
+		cluster : int
+			The cluster whose timestamps we want
+		
+		Returns
+		-------
+		clustTS : ndarray
+			The timestamps
+		
+		Notes
+		-----
+		If None is supplied as input then all timestamps for all clusters
+		is returned i.e. getSpkTS() is called
+		"""
 		if cluster is None:
 			clustTS = self.getSpkTS()
 		else:
@@ -555,24 +671,45 @@ class Tetrode(IO, SpikeCalcs):
 		return clustTS
 
 	def getPosSamples(self):
-		'''
+		"""
 		Returns the pos samples at which the spikes were captured
-		'''
+		"""
 		self.pos_samples = np.floor(self.getSpkTS() / float(self.timebase) * self.posSampleRate).astype(int)
 		return np.ma.compressed(self.pos_samples)
 
 	def getClustSpks(self, cluster):
-		'''
-		Returns the waveforms of the asked for cluster
-		'''
+		"""
+		Returns the waveforms of `cluster`
+
+		Parameters
+		----------
+		cluster : int
+			The cluster whose waveforms we want
+
+		Returns
+		-------
+		waveforms : ndarray
+			The waveforms on all 4 electrodes of the tgtrode so the shape of
+			the returned array is [nClusterSpikes, 4, 50]
+		"""
 		if self.cut is None:
 			self.getClustTS(cluster)
 		return self.waveforms[self.cut==cluster, :, :]#taking the mean of this along axis=0 gives mean waveform on each channel for a cluster
 
 	def getClustIdx(self, cluster):
-		'''
-		Returns the pos samples corresponding to the cluster
-		'''
+		"""
+		Get the indices of the position samples corresponding to the cluster
+
+		Parameters
+		----------
+		cluster : int
+			The cluster whose position indices we want
+		
+		Returns
+		-------
+		pos_samples : ndarray
+			The indices of the position samples, dtype is int
+		"""
 		if self.cut is None:
 			try:
 				cut = np.array(self.getCut(self.tetrode), dtype=int)
@@ -585,10 +722,9 @@ class Tetrode(IO, SpikeCalcs):
 		return self.pos_samples[self.cut == cluster].astype(int)
 
 	def getUniqueClusters(self):
-		'''
-		Returns an array of the unique clusters in the cut file associated
-		with the tetrode
-		'''
+		"""
+		Returns the unique clusters
+		"""
 		if self.cut is None:
 			try:
 				cut = np.array(self.getCut(self.tetrode), dtype=int)
@@ -602,6 +738,17 @@ class Tetrode(IO, SpikeCalcs):
 
 
 class EEG(IO):
+	"""
+	Processes eeg data collected with the Axona recording system
+
+	Paramters
+	---------
+	filename_root : str
+		The fully qualified filename without the suffix
+	eeg_file, egf : int
+		Whether to read the 'eeg' file or the 'egf' file. 0 is False, 1 is True
+	"""
+
 	def __init__(self, filename_root, eeg_file=1, egf=0):
 		self.showfigs = 0
 		self.filename_root = filename_root
@@ -663,10 +810,23 @@ class EEG(IO):
 		self.x2 = 12
 
 	def eegfilter(self, E=None):
-		'''filters the eeg using a 251-tap bandpass (6-12Hz) blackman filter
+		"""
+		Filter the LFP signal
+
+		Filters the eeg using a 251-tap bandpass (6-12Hz) blackman filter
 		between the values given in x1 and x2: defaults to filtering between theta
 		frequency (6-12Hz)
-		'''
+
+		Parameters
+		----------
+		E : ndarray
+			The LFP signal
+		
+		Returns
+		-------
+		filtEEG : ndarray
+			The filtered LFP signal
+		"""
 		if E is None:
 			E = self.eeg
 		nyquist = self.sample_rate / 2.
@@ -679,11 +839,14 @@ class EEG(IO):
 			return filtEEG
 
 	def thetaAmpPhase(self, fx=None):
-		'''
-		extracts the amplitude (phase?) of the EEG signal after it has been filtered
-		by the thetafilter method above
-		'''
-		# extract the real part of the analytic signal using the hilbert transform
+		"""
+		Extracts the amplitude and instantaneous frequency of the LFP
+
+		Parameters
+		----------
+		fs : ndarray
+			The filtered LFP signal, typically filtered using eegfilter()
+		"""
 		if fx is None:
 			fx = self.eegfilter(E=self.eeg)
 		analytic = scipy.signal.hilbert(fx)
@@ -694,7 +857,19 @@ class EEG(IO):
 		self.thAmp = np.abs(analytic)
 
 	def nextpow2(self, val):
-		'''calculates the next power of 2 that will hold val'''
+		"""
+		Calculates the next power of 2 that will hold val
+
+		Parameters
+		----------
+		val : int
+			The value to find the next power of 2 of
+
+		Returns
+		-------
+		out : ndarray
+			The next power of 2 that contains val
+		"""
 		val = val - 1
 		val = (val >> 1) | val
 		val = (val >> 2) | val
@@ -705,6 +880,14 @@ class EEG(IO):
 		return np.log2(val + 1)
 
 class Stim(dict, IO):
+	"""
+	Processes the stimulation data recorded using Axona
+
+	Parameters
+	----------
+	filename_root : str
+		The fully qualified filename without the suffix
+	"""
 	def __init__(self, filename_root, *args, **kwargs):
 		self.update(*args, **kwargs)
 		self.filename_root = filename_root
@@ -732,21 +915,28 @@ class Stim(dict, IO):
 		dict.__setitem__(self, key, val)
 
 	def getTS(self):
+		"""
+		Gets the timestamps of the on events
+		"""
 		return self['on'] / int(self.timebase / 1000)# in ms
 
 	def getPosIdx(self):
-		'''
-		these get* methods will only work once the Stim object has been
-		instantiated from within the dacq2py_util.Trial class - see its _STM
-		property there for details about what this update entails
-		'''
+		"""
+		Gets the position indices of the on events
+		"""
 		scale = self.timebase / float(self['posSampRate'])
 		return self['on'] / scale
 
 	def getEEGIdx(self):
+		"""
+		Gets the EEG indices of the on events
+		"""
 		scale = self.timebase / float(self['eegSampRate'])
 		return (self['on'] / scale).astype(int)
 
 	def getEGFIdx(self):
+		"""
+		Gets the EGF indices of the on events
+		"""
 		scale = self.timebase / float(self['egfSampRate'])
 		return (self['on'] / scale).astype(int)

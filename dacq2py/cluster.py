@@ -7,16 +7,13 @@ import os
 from subprocess import Popen, PIPE
 
 class Kluster():
-	'''
+	"""
 	Runs KlustaKwik (KK) against data recorded on the Axona dacqUSB recording
 	system
+	"""
 
-	Inherits from axonaIO.Tetrode to allow for mask construction (for the
-	newer version of KK) and easy access to some relevant information (e.g
-	number of spikes recorded)
-	'''
 	def __init__(self, filename, tet_num, feature_array):
-		'''
+		"""
 		Inherits from dacq2py.IO so as to be able to load .set file for fmask
 		construction (ie remove grounded channels, eeg channels etc)
 
@@ -29,7 +26,7 @@ class Kluster():
 			the tetrode number
 		feature_array : numpy.aray
 			array containing the features to be put into the fet file
-		'''
+		"""
 
 		self.filename = filename
 		self.tet_num = tet_num
@@ -39,10 +36,10 @@ class Kluster():
 		self.feature_mask = None
 
 	def make_fet(self):
-		'''
+		"""
 		Creates and writes a .fet.n file for reading in  to KlustaKwik given
 		the array input a
-		'''
+		"""
 
 		fet_filename = self.filename + '.fet.' + str(self.tet_num)
 		with open(fet_filename, 'w') as f:
@@ -51,7 +48,7 @@ class Kluster():
 			np.savetxt(f, self.feature_array, fmt='%1.5f')
 
 	def get_mask(self):
-		'''
+		"""
 		Returns a feature mask based on unused channels, eeg recordings etc
 		Loads the set file associated with the trial and creates two dicts
 		containing the mode on each channel and the channels which contain the
@@ -66,7 +63,7 @@ class Kluster():
 		The collectMask key in the Axona .set file corresponds to whether or
 		not a tetrode was kept in the recording - use this also to construct
 		the feature mask
-		'''
+		"""
 
 		#  use the feature array a to calculate which channels to include etc
 		sums = np.sum(self.feature_array, 0)
@@ -80,7 +77,7 @@ class Kluster():
 		return feature_mask
 
 	def make_fmask(self, feature_mask):
-		'''
+		"""
 		Create a .fmask.n file for use in the new (01/09/14) KlustaKwik program
 		where n denotes tetrode id
 
@@ -96,7 +93,7 @@ class Kluster():
 		"The .fmask file is a text file, every line of which is a vector of
 		length the number of features, in which 1 denotes unmasked and 0
 		denotes masked, and values between 0 and 1 indicate partial masking"
-		'''
+		"""
 
 		fmask_filename = self.filename + '.fmask.' + str(self.tet_num)
 		mask = np.tile(feature_mask, (self.feature_array.shape[0], 1))
@@ -106,10 +103,10 @@ class Kluster():
 			np.savetxt(f, mask, fmt='%1d')
 
 	def kluster(self):
-		'''
+		"""
 		Using a .fet.n file this makes a system call to KlustaKwik (KK) which
 		clusters data and saves istributional ' + str(self.distribution)
-		'''
+		"""
 
 		# specify path to KlustaKwik exe
 		# NB THIS IS NOW SPECIFIED IN THE __init__.py FILE AT THE HEAD OF THIS

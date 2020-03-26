@@ -38,7 +38,7 @@ warnings.filterwarnings("ignore",
 
 class Trial(axonaIO.IO, SAC, dict):
 	'''
-	Providesm ethods to plot electrophysiology data acquired using the Axona DACQ recording system
+	Provides methods to plot electrophysiology data acquired using the Axona DACQ recording system
 	and methods to extract some measures from that data
 
 	The actual loading of the data is done lazily i.e. only when you ask for
@@ -52,15 +52,15 @@ class Trial(axonaIO.IO, SAC, dict):
 			Absolute location on the filesystem of the set of files without a suffix
 		basename : str
 			Basename of the set of files without a suffix (everything after the last trailing slash)
-		EEG : dacq2py.axonaIO.EEG class
+		EEG : dacq2py.axonaIO.EEG 
 			Containing data from .eeg file
-		EGF : dacq2py.axonaIO.EEG class
+		EGF : dacq2py.axonaIO.EEG 
 			Containing data from .egf file
-		STM : dacq2py.axonaIO.Stim class
+		STM : dacq2py.axonaIO.Stim 
 			Contains stimulation data (timestamps mostly) and header + some additions work done below
-		POS : dacq2py.axonaIO.Pos class
+		POS : dacq2py.axonaIO.Pos 
 			Contains raw and post-processed position data (xy, dir, speed etc) & header
-		TETRODE : extension of Pythons dict class"
+		TETRODE : extension of Pythons dict "
 			Each value is an instance of dacq2py.axonaIO.Tetrode. Contains
 			methods to get cluster spike times, cluster indices etc
 		posFilter : dict
