@@ -179,7 +179,7 @@ recording data.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>filename_root</strong> (<em>str</em>) – The fully qualified filename without the suffix</p></li>
-<li><p><strong>eeg_file, egf</strong> (<em>int</em>) – Whether to read the ‘eeg’ file or the ‘egf’ file. 0 is False, 1 is True</p></li>
+<li><p><strong>egf</strong> (<em>eeg_file</em><em>,</em>) – Whether to read the ‘eeg’ file or the ‘egf’ file. 0 is False, 1 is True</p></li>
 </ul>
 </dd>
 </dl>
@@ -565,7 +565,7 @@ and getting indices for particular clusters.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>filename_root</strong> (<em>str</em>) – The fully qualified name of the file without it’s suffix</p></li>
 <li><p><strong>tetrode</strong> (<em>int</em>) – The number of the tetrode</p></li>
-<li><p><strong>volts</strong> (<em>bool, optional</em>) – Whether to convert the data values volts. Default True</p></li>
+<li><p><strong>volts</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to convert the data values volts. Default True</p></li>
 </ul>
 </dd>
 </dl>
@@ -722,12 +722,11 @@ position data (say plotting the path the animal took in the trial) is the
 position data actually loaded. The class also uses as attibutes several
 instances of subpackages (binning.Ratemap for example) so that the code
 could be made more modular.</p>
-<dl class="field-list">
+<dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul>
+<dd class="field-odd"><ul class="simple">
 <li><p><strong>filename_root</strong> (<em>str</em>) – Absolute location on the filesystem of the set of files without a suffix</p></li>
-<li><p><strong>Attributes</strong> –</p>
-<dl class="simple">
+<li><p><strong>Attributes</strong> – <dl class="simple">
 <dt>filename_root<span class="classifier">str</span></dt><dd><p>Absolute location on the filesystem of the set of files without a suffix</p>
 </dd>
 <dt>basename<span class="classifier">str</span></dt><dd><p>Basename of the set of files without a suffix (everything after the last trailing slash)</p>
@@ -753,7 +752,7 @@ methods to get cluster spike times, cluster indices etc</p>
 </dd>
 </dl>
 <p>ratemap : dacq2py.binning.Ratemap class instance</p>
-</li>
+</p></li>
 </ul>
 </dd>
 </dl>
@@ -780,53 +779,29 @@ methods to get cluster spike times, cluster indices etc</p>
 <dl class="method">
 <dt id="ephysiopy.dacq2py.dacq2py_util.Trial.EEG">
 <em class="property">property </em><code class="sig-name descname">EEG</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.EEG" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>eeg data and header</p>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>self.EEG</p>
-</dd>
-</dl>
+<dd><p>returns: eeg data and header
+:rtype: self.EEG</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ephysiopy.dacq2py.dacq2py_util.Trial.EGF">
 <em class="property">property </em><code class="sig-name descname">EGF</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.EGF" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>eeg data and header from .egf file</p>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>self.EGF</p>
-</dd>
-</dl>
+<dd><p>returns: eeg data and header from .egf file
+:rtype: self.EGF</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ephysiopy.dacq2py.dacq2py_util.Trial.POS">
 <em class="property">property </em><code class="sig-name descname">POS</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.POS" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>Contains raw and post-processed position data</p>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>self.POS</p>
-</dd>
-</dl>
+<dd><p>returns: Contains raw and post-processed position data
+:rtype: self.POS</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ephysiopy.dacq2py.dacq2py_util.Trial.STM">
 <em class="property">property </em><code class="sig-name descname">STM</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.STM" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>Stimulation data and header + some extras parsed from pos, eeg and set files</p>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>self.Stim</p>
-</dd>
-</dl>
+<dd><p>returns: Stimulation data and header + some extras parsed from pos, eeg and set files
+:rtype: self.Stim</p>
 </dd></dl>
 
 <dl class="method">
@@ -835,8 +810,8 @@ methods to get cluster spike times, cluster indices etc</p>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>min_speed</strong> (<em>float</em>)</p></li>
-<li><p><strong>plot</strong> (<em>bool</em>)</p></li>
+<li><p><strong>min_speed</strong> (<em>float</em>) – </p></li>
+<li><p><strong>plot</strong> (<em>bool</em>) – </p></li>
 </ul>
 </dd>
 </dl>
@@ -851,9 +826,9 @@ but can also deal with circular environments as well as square ones</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>tetrode</strong> (<em>int</em>)</p></li>
-<li><p><strong>cluster</strong> (<em>int</em>)</p></li>
-<li><p><strong>debug</strong> (<em>bool</em>)</p></li>
+<li><p><strong>tetrode</strong> (<em>int</em>) – </p></li>
+<li><p><strong>cluster</strong> (<em>int</em>) – </p></li>
+<li><p><strong>debug</strong> (<em>bool</em>) – </p></li>
 </ul>
 </dd>
 </dl>
@@ -873,8 +848,8 @@ the run and the duration of each run</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>tetrode</strong> (<em>int</em>)</p></li>
-<li><p><strong>cluster</strong> (<em>int</em>)</p></li>
+<li><p><strong>tetrode</strong> (<em>int</em>) – </p></li>
+<li><p><strong>cluster</strong> (<em>int</em>) – </p></li>
 <li><p><strong>binsize</strong> (<em>int</em>) – size of bins (cms)</p></li>
 </ul>
 </dd>
@@ -905,8 +880,8 @@ the run and the duration of each run</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>tetrode</strong> (<em>int</em>)</p></li>
-<li><p><strong>cluster</strong> (<em>int</em>)</p></li>
+<li><p><strong>tetrode</strong> (<em>int</em>) – </p></li>
+<li><p><strong>cluster</strong> (<em>int</em>) – </p></li>
 <li><p><strong>dt</strong> (<em>tuple</em>) – the window of time in ms to examine zeroed on the event of interest
 i.e. the first value will probably be negative as in the default example</p></li>
 <li><p><strong>hist</strong> (<em>bool</em>) – not sure</p></li>
@@ -1068,14 +1043,15 @@ statscalcs.py)</p>
 <code class="sig-name descname">klustakwik</code><span class="sig-paren">(</span><em class="sig-param">d</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ephysiopy/dacq2py/dacq2py_util.html#Trial.klustakwik"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.klustakwik" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calls two methods below (kluster and getPC) to run klustakwik on
 a given tetrode with nFet number of features (for the PCA)</p>
-<dl class="field-list">
+<dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>d</strong> (<em>dict</em>) – Specifies the vector of features to be used in
+<dd class="field-odd"><p><strong>d</strong> (<em>dict</em>) – <p>Specifies the vector of features to be used in
 clustering. Each key is the identity of a tetrode (i.e. 1, 2 etc)</p>
 <blockquote>
 <div><p>and the values are the features used to do the clustering for that tetrode (i.e.</p>
 </div></blockquote>
-<p>‘PC1’, ‘PC2’, ‘Amp’ (amplitude) etc</p>
+<p>’PC1’, ‘PC2’, ‘Amp’ (amplitude) etc</p>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1088,7 +1064,7 @@ clustering. Each key is the identity of a tetrode (i.e. 1, 2 etc)</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>tetrode</strong> (<em>int</em>) – the tetrode cluster space to plot</p></li>
-<li><p><strong>clusters</strong> (<em>int or list or np.array</em>) – the clusters to colour in</p></li>
+<li><p><strong>clusters</strong> (<em>int</em><em> or </em><em>list</em><em> or </em><em>np.array</em>) – the clusters to colour in</p></li>
 <li><p><strong>ax</strong> (<em>matplotlib.pyplot.axis</em>) – the axis to plot into</p></li>
 <li><p><strong>bins</strong> (<em>int</em>) – the number of bins to use in the histogram</p></li>
 <li><p><strong>**kwargs</strong> – can include a param keyword for the parameter to construct the
@@ -1112,8 +1088,8 @@ valid key in the getParam method of the Tetrode class</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>tetrode</strong> (<em>int</em>)</p></li>
-<li><p><strong>cluster</strong> (<em>int</em>)</p></li>
+<li><p><strong>tetrode</strong> (<em>int</em>) – </p></li>
+<li><p><strong>cluster</strong> (<em>int</em>) – </p></li>
 <li><p><strong>maptype</strong> (<em>str</em>) – Valid values include ‘rmap’, ‘polar’, ‘xcorr’</p></li>
 </ul>
 </dd>
@@ -1176,18 +1152,22 @@ produced if this is None</p></li>
 <code class="sig-name descname">plotFreqVSpeed</code><span class="sig-paren">(</span><em class="sig-param">minSp=5</em>, <em class="sig-param">maxSp=50</em>, <em class="sig-param">spStep=5</em>, <em class="sig-param">ax=None</em>, <em class="sig-param">laserFilter=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ephysiopy/dacq2py/dacq2py_util.html#Trial.plotFreqVSpeed"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.plotFreqVSpeed" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plots running speed vs eeg frequencies and does linear regression. Also adds position sample histogram
 TODO: filter out negative frequencies - do this as default in EEG class
-:Parameters: * <strong>minSp</strong> (<em>int</em>) – speeds below this are ignored</p>
+:param minSp: speeds below this are ignored
+:type minSp: int
+:param maxSp: speeds above this are ignored
+:type maxSp: int
+:param spStep: the bin width for speed
+:type spStep: int
+:param ax: the axes in which to plot
+:type ax: matplotlib.axes
+:param laser: whether to filter for laser on/ off events</p>
 <blockquote>
-<div><ul class="simple">
-<li><p><strong>maxSp</strong> (<em>int</em>) – speeds above this are ignored</p></li>
-<li><p><strong>spStep</strong> (<em>int</em>) – the bin width for speed</p></li>
-<li><p><strong>ax</strong> (<em>matplotlib.axes</em>) – the axes in which to plot</p></li>
-<li><p><strong>laser</strong> (<em>int or None</em>) – whether to filter for laser on/ off events
-None means no filtering at all
+<div><p>None means no filtering at all
 1 means laser is on and data is filtered for on periods
-0 means filter for laser off periods</p></li>
-</ul>
+0 means filter for laser off periods</p>
 </div></blockquote>
+<dl class="field-list simple">
+</dl>
 </dd></dl>
 
 <dl class="method">
@@ -1198,8 +1178,8 @@ and the outlying bits (outside the mask area used to calculate gridness) in blac
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>tetrode</strong> (<em>int</em>)</p></li>
-<li><p><strong>cluster</strong> (<em>int</em>)</p></li>
+<li><p><strong>tetrode</strong> (<em>int</em>) – </p></li>
+<li><p><strong>cluster</strong> (<em>int</em>) – </p></li>
 <li><p><strong>ax</strong> (<em>matplotlib.pyplot.axis</em>) – plots into this axis</p></li>
 <li><p><strong>binsize</strong> (<em>int</em>) – size of bins (cms)</p></li>
 </ul>
@@ -1212,13 +1192,13 @@ and the outlying bits (outside the mask area used to calculate gridness) in blac
 <code class="sig-name descname">plotMap</code><span class="sig-paren">(</span><em class="sig-param">tetrode</em>, <em class="sig-param">clusters</em>, <em class="sig-param">ax=None</em>, <em class="sig-param">var2bin='pos'</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ephysiopy/dacq2py/dacq2py_util.html#Trial.plotMap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.plotMap" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plots a ratemap for a given tetrode and cluster
 Wrapper for _plotMap() so multiple clusters can be plotted</p>
-<dl class="field-list">
+<dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul>
+<dd class="field-odd"><ul class="simple">
 <li><p><strong>tetrode</strong> (<em>int</em>) – the tetrode you want to look at</p></li>
-<li><p><strong>cluster</strong> (<em>int, 1xn array/ list</em>) – a single number or list (or 1xn array) of the clusters to plot</p></li>
-<li><p><strong>ax</strong> (<em>optional, defaults to None. Which axis to add the plot to; if None</em>) – then a new figure window is produced</p></li>
-<li><p><strong>**kwargs</strong> – extra arguments include:
+<li><p><strong>cluster</strong> (<em>int</em><em>, </em><em>1xn array/ list</em>) – a single number or list (or 1xn array) of the clusters to plot</p></li>
+<li><p><strong>ax</strong> (<em>optional</em><em>, </em><em>defaults to None. Which axis to add the plot to; if None</em>) – then a new figure window is produced</p></li>
+<li><p><strong>**kwargs</strong> – <p>extra arguments include:
 ‘bar’ - for use with directional data to produce a polar
 histogram plot
 ‘add_peak_rate’ - bool
@@ -1235,7 +1215,7 @@ arrays</p>
 <dt>smooth<span class="classifier">bool, optional. Defaults to true. Whether to smooth the data or</span></dt><dd><p>not</p>
 </dd>
 </dl>
-</li>
+</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -1282,13 +1262,12 @@ to the min/ max of x/y extent of path</p>
 <dd><p>Plots theta phase of spikes in a place field (found using _getFieldLims)
 as individual colours for each run through the field
 TODO: broken
-:Parameters: * <strong>tetrode</strong> (<em>int</em>)</p>
-<blockquote>
-<div><ul class="simple">
-<li><p><strong>cluster</strong> (<em>int</em>)</p></li>
-<li><p><strong>ax</strong> (<em>matplotlib.Axes</em>)</p></li>
-</ul>
-</div></blockquote>
+:param tetrode:
+:type tetrode: int
+:param cluster:
+:type cluster: int
+:param ax:
+:type ax: matplotlib.Axes</p>
 </dd></dl>
 
 <dl class="method">
@@ -1298,9 +1277,9 @@ TODO: broken
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>tetrode</strong> (<em>int</em>)</p></li>
-<li><p><strong>cluster</strong> (<em>int</em>)</p></li>
-<li><p><strong>ax</strong> (<em>matplotlib.Axes</em>)</p></li>
+<li><p><strong>tetrode</strong> (<em>int</em>) – </p></li>
+<li><p><strong>cluster</strong> (<em>int</em>) – </p></li>
+<li><p><strong>ax</strong> (<em>matplotlib.Axes</em>) – </p></li>
 </ul>
 </dd>
 </dl>
@@ -1314,13 +1293,13 @@ separate figure windows</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>tetrode</strong> (<em>int</em>)</p></li>
-<li><p><strong>cluster</strong> (<em>int</em>)</p></li>
+<li><p><strong>tetrode</strong> (<em>int</em>) – </p></li>
+<li><p><strong>cluster</strong> (<em>int</em>) – </p></li>
 <li><p><strong>dt</strong> (<em>2-tuple</em>) – the window of time in ms to examine zeroed on the event of interest
 i.e. the first value will probably be negative as in the default example</p></li>
 <li><p><strong>prc_max</strong> (<em>float</em>) – the proportion of firing the cell has to ‘lose’ to count as
 silent; a float between 0 and 1</p></li>
-<li><p><strong>ax - matplotlib.Axes</strong> – the axes to plot into. If not provided a new figure is created</p></li>
+<li><p><strong>- matplotlib.Axes</strong> (<em>ax</em>) – the axes to plot into. If not provided a new figure is created</p></li>
 <li><p><strong>ms_per_bin</strong> (<em>int</em>) – The number of milliseconds in each bin of the raster plot</p></li>
 <li><p><strong>histtype</strong> (<em>str</em>) – either ‘count’ or ‘rate’ - the resulting histogram plotted above the raster plot will
 consist of either the counts of spikes in ms_per_bin or the mean rate
@@ -1346,7 +1325,7 @@ details</p>
 <li><p><strong>maxSpeed</strong> (<em>float</em>) – speeds above this value are masked and not used</p></li>
 <li><p><strong>sigma</strong> (<em>float</em>) – the standard deviation of the gaussian used to smooth the spike
 train</p></li>
-<li><p><strong>shuffle</strong> (<em>bool, default False</em>) – Whether to calculate the significance of the speed score or not
+<li><p><strong>shuffle</strong> (<em>bool</em><em>, </em><em>default False</em>) – Whether to calculate the significance of the speed score or not
 This is done by calculating the correlation between speed and
 the shuffled spike train for nShuffles where the shuffles are only allowed with the
 window (trial_start + minTime) : (trial_end - minTime). Default is
@@ -1367,9 +1346,9 @@ cell against running speed</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>tetrode</strong> (<em>int</em>)</p></li>
-<li><p><strong>cluster</strong> (<em>int</em>)</p></li>
-<li><p><strong>minSpeed</strong> (<em>float</em>)</p></li>
+<li><p><strong>tetrode</strong> (<em>int</em>) – </p></li>
+<li><p><strong>cluster</strong> (<em>int</em>) – </p></li>
+<li><p><strong>minSpeed</strong> (<em>float</em>) – </p></li>
 <li><p><strong>sigma</strong> (<em>float</em>) – The width of the smoothing kernel applied to the spike train to smooth it</p></li>
 </ul>
 </dd>
@@ -1383,8 +1362,8 @@ cell against running speed</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>tetrode</strong> (<em>int</em>)</p></li>
-<li><p><strong>cluster</strong> (<em>int</em>)</p></li>
+<li><p><strong>tetrode</strong> (<em>int</em>) – </p></li>
+<li><p><strong>cluster</strong> (<em>int</em>) – </p></li>
 <li><p><strong>ax</strong> (<em>matplotlib.pyplot.axis</em>) – plots into this axis</p></li>
 <li><p><strong>binsize</strong> (<em>int</em>) – size of bins (cms)</p></li>
 </ul>
@@ -1400,11 +1379,11 @@ cell against running speed</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>eegType</strong> (<em>str</em>) – Whether to do use .eeg file or .egf file. Defaults to eeg</p></li>
-<li><p><strong>ymin / ymax</strong> (<em>int</em>) – Minimum/ maximum frequency (y-axis) to plot</p></li>
-<li><p><strong>ax</strong> (<em>matplotlib.pyplot.axis]</em>) – Which axis to add the plot to. If None a new figure window is produced</p></li>
+<li><p><strong>/ ymax</strong> (<em>ymin</em>) – Minimum/ maximum frequency (y-axis) to plot</p></li>
+<li><p><strong>ax</strong> (<em>matplotlib.pyplot.axis</em><em>]</em>) – Which axis to add the plot to. If None a new figure window is produced</p></li>
 <li><p><strong>secsPerBin</strong> (<em>int</em>) – Size of the x-axis bins</p></li>
 <li><p><strong>laser</strong> (<em>bool</em>) – Whether to filter the eeg for laser stimulation events</p></li>
-<li><p><strong>width/ dip</strong> (<em>float</em>) – Parameters for Kaisser filter in eegcalcs.EEGCalcs - see there
+<li><p><strong>dip</strong> (<em>width/</em>) – Parameters for Kaisser filter in eegcalcs.EEGCalcs - see there
 for definition</p></li>
 </ul>
 </dd>
@@ -1426,8 +1405,8 @@ cluster(s)</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>tetrode</strong> (<em>int</em>) – the tetrode you want to look at</p></li>
-<li><p><strong>cluster</strong> (<em>int, 1xn array/ list</em>) – a single number or list (or 1xn array) of the clusters to plot</p></li>
-<li><p><strong>clamp</strong> (<em>bool, optional</em>) – whether to restrict the plot to the self._xlims and self_ylims
+<li><p><strong>cluster</strong> (<em>int</em><em>, </em><em>1xn array/ list</em>) – a single number or list (or 1xn array) of the clusters to plot</p></li>
+<li><p><strong>clamp</strong> (<em>bool</em><em>, </em><em>optional</em>) – whether to restrict the plot to the self._xlims and self_ylims
 property</p></li>
 <li><p><strong>ax</strong> (<em>matplotlib.Axes</em>) – defaults to None. Which axis to add the plot to.
 If None a new figure window is produced</p></li>
@@ -1446,8 +1425,8 @@ ratio between the x and y axes is 100</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>tetrode</strong> (<em>int</em>)</p></li>
-<li><p><strong>clusters</strong> (<em>int or list</em>)</p></li>
+<li><p><strong>tetrode</strong> (<em>int</em>) – </p></li>
+<li><p><strong>clusters</strong> (<em>int</em><em> or </em><em>list</em>) – </p></li>
 <li><p><strong>ax</strong> (<em>matplotlib.Axes</em>) – the axes to plot into. If None a new figure window is created.</p></li>
 </ul>
 </dd>
@@ -1462,8 +1441,8 @@ TODO: needs to be able to take in two tetrodes &amp; make sure Trange in ms</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>tetrode</strong> (<em>int</em>)</p></li>
-<li><p><strong>clusters</strong> (<em>int or list</em>)</p></li>
+<li><p><strong>tetrode</strong> (<em>int</em>) – </p></li>
+<li><p><strong>clusters</strong> (<em>int</em><em> or </em><em>list</em>) – </p></li>
 <li><p><strong>ax</strong> (<em>matplotlib.Axes</em>) – The axes to plot into. If None a new figure window is created</p></li>
 <li><p><strong>TRange</strong> (<em>two-tuple</em>) – The range over which to examine the events. Zero time is the occurance of the event</p></li>
 <li><p><strong>bins</strong> (<em>int</em>) – The number of bins to assign the data to</p></li>
@@ -1522,14 +1501,8 @@ Keys are strings such as ‘speed’, ‘time’ etc. Values are n x 2 arrays of
 <dl class="method">
 <dt id="ephysiopy.dacq2py.dacq2py_util.Trial.setheader">
 <em class="property">property </em><code class="sig-name descname">setheader</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.setheader" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p><strong>self.dict</strong> – Matches contents of .set file with keys and values all mapped as strings</p>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>dict</p>
-</dd>
-</dl>
+<dd><p>returns: <strong>self.dict</strong> – Matches contents of .set file with keys and values all mapped as strings
+:rtype: dict</p>
 </dd></dl>
 
 <dl class="method">
@@ -1537,7 +1510,7 @@ Keys are strings such as ‘speed’, ‘time’ etc. Values are n x 2 arrays of
 <code class="sig-name descname">tortuosity</code><span class="sig-paren">(</span><em class="sig-param">xy=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ephysiopy/dacq2py/dacq2py_util.html#Trial.tortuosity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.tortuosity" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>xy - numpy.array</strong> – 2xm matrix of xy positions. Default is None so will use this
+<dd class="field-odd"><p><strong>- numpy.array</strong> (<em>xy</em>) – 2xm matrix of xy positions. Default is None so will use this
 instances xy array in POS</p>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -1629,9 +1602,9 @@ locking (here PAC) and a value of zero indicates no locking (no PAC)</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>eeg</strong> (<em>numpy array</em>) – the eeg data itself. This is a 1-d array which can be masked or not</p></li>
 <li><p><strong>forder</strong> (<em>int</em>) – the order of the filter(s) applied to the eeg data</p></li>
-<li><p><strong>thetaband/ gammaband</strong> (<em>list/ array</em>) – the range of values to bandpass filter for for the theta and gamma
+<li><p><strong>gammaband</strong> (<em>thetaband/</em>) – the range of values to bandpass filter for for the theta and gamma
 ranges</p></li>
-<li><p><strong>plot</strong> (<em>bool (default True)</em>) – whether to plot the resulting binned up polar plot which shows the
+<li><p><strong>plot</strong> (<em>bool</em><em> (</em><em>default True</em><em>)</em>) – whether to plot the resulting binned up polar plot which shows the
 amplitude of the gamma oscillation found at different phases of the
 theta oscillation</p></li>
 </ul>
@@ -1717,15 +1690,14 @@ calculated on the principal components of the energy in a spike matrix</p>
 <dt id="ephysiopy.dacq2py.spikecalcs.SpikeCalcs.getParam">
 <code class="sig-name descname">getParam</code><span class="sig-paren">(</span><em class="sig-param">waveforms=None</em>, <em class="sig-param">param='Amp'</em>, <em class="sig-param">t=200</em>, <em class="sig-param">fet=1</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ephysiopy/dacq2py/spikecalcs.html#SpikeCalcs.getParam"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs.getParam" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the requested parameter from a spike train as a numpy array</p>
-<dl class="field-list">
+<dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul>
-<li><p><strong>waveforms - numpy array</strong> – Shape of array can be an nSpikes x nSamples
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>- numpy array</strong> (<em>waveforms</em>) – Shape of array can be an nSpikes x nSamples
 OR
 a nSpikes x nElectrodes x nSamples</p></li>
-<li><p><strong>param - str</strong> –</p>
-<dl class="simple">
-<dt>Valid values are:</dt><dd><p>‘Amp’ - peak-to-trough amplitude (default)
+<li><p><strong>- str</strong> (<em>param</em>) – <dl class="simple">
+<dt>Valid values are:</dt><dd><p>’Amp’ - peak-to-trough amplitude (default)
 ‘P’ - height of peak
 ‘T’ - depth of trough
 ‘Vt’ height at time t
@@ -1734,9 +1706,9 @@ a nSpikes x nElectrodes x nSamples</p></li>
 ‘PCA’ - first n fet principal components (defaults to 1)</p>
 </dd>
 </dl>
-</li>
-<li><p><strong>t - int</strong> – The time used for Vt</p></li>
-<li><p><strong>fet - int</strong> – The number of principal components (used with param ‘PCA’)</p></li>
+</p></li>
+<li><p><strong>- int</strong> (<em>fet</em>) – The time used for Vt</p></li>
+<li><p><strong>- int</strong> – The number of principal components (used with param ‘PCA’)</p></li>
 </ul>
 </dd>
 </dl>
@@ -1881,9 +1853,9 @@ their sum (data is binned into 5ms bins)</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>x1 - 1d np.array list of spike times</strong></p></li>
-<li><p><strong>x2 - (optional) 1d np.array of spike times</strong></p></li>
-<li><p><strong>Trange - 1x2 np.array for range of times to bin up. Defaults</strong> – to [-500, +500]</p></li>
+<li><p><strong>- 1d np.array list of spike times</strong> (<em>x1</em>) – </p></li>
+<li><p><strong>-</strong><strong> (</strong><strong>optional</strong><strong>) </strong><strong>1d np.array of spike times</strong> (<em>x2</em>) – </p></li>
+<li><p><strong>- 1x2 np.array for range of times to bin up. Defaults</strong> (<em>Trange</em>) – to [-500, +500]</p></li>
 </ul>
 </dd>
 </dl>

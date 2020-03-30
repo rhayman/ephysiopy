@@ -185,7 +185,7 @@ We can make up some of the info and ignore other bits</p>
 <dd><p>Does the spike conversion from OE Spike Sorter format to Axona format tetrode files</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>hdf5_tetrode_data - h5py._hl.group.Group - this kind of looks like a dictionary and can, it seems,</strong> – be treated as one more or less (see <a class="reference external" href="http://docs.h5py.org/en/stable/high/group.html">http://docs.h5py.org/en/stable/high/group.html</a>).</p>
+<dd class="field-odd"><p><strong>- h5py._hl.group.Group - this kind of looks like a dictionary and can</strong><strong>, </strong><strong>it seems</strong><strong>,</strong> (<em>hdf5_tetrode_data</em>) – be treated as one more or less (see <a class="reference external" href="http://docs.h5py.org/en/stable/high/group.html">http://docs.h5py.org/en/stable/high/group.html</a>).</p>
 </dd>
 </dl>
 </dd></dl>
@@ -197,9 +197,9 @@ We can make up some of the info and ignore other bits</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>channel - int</strong></p></li>
-<li><p><strong>lfp_type - str. Legal values are ‘egf’ or ‘eeg’</strong></p></li>
-<li><p><strong>gain - int. Multiplier for the lfp data</strong></p></li>
+<li><p><strong>- int</strong> (<em>channel</em>) – </p></li>
+<li><p><strong>- str. Legal values are 'egf'</strong><strong> or </strong><strong>'eeg'</strong> (<em>lfp_type</em>) – </p></li>
+<li><p><strong>- int. Multiplier for the lfp data</strong> (<em>gain</em>) – </p></li>
 </ul>
 </dd>
 </dl>
@@ -229,8 +229,8 @@ relevant for converting to Axona file formats</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>filename_root - fuly qualified name of the nwb file</strong></p></li>
-<li><p><strong>recording_name - the name of the recording in the nwb file NB the default has changed in different versions of OE from ‘recording0’ to ‘recording1’</strong></p></li>
+<li><p><strong>- fuly qualified name of the nwb file</strong> (<em>filename_root</em>) – </p></li>
+<li><p><strong>- the name of the recording in the nwb file NB the default has changed in different versions of OE from 'recording0' to 'recording1'</strong> (<em>recording_name</em>) – </p></li>
 </ul>
 </dd>
 </dl>
@@ -245,7 +245,7 @@ take a value of either ‘egf’ or ‘eeg’
 gain is the scaling factor</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>hdf5_continuous_data - np.array with dtype as np.int16</strong></p>
+<dd class="field-odd"><p><strong>- np.array with dtype as np.int16</strong> (<em>hdf5_continuous_data</em>) – </p>
 </dd>
 </dl>
 </dd></dl>
@@ -317,8 +317,8 @@ relevant for converting to Axona file formats</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>filename_root - fuly qualified name of the nwb file</strong></p></li>
-<li><p><strong>recording_name - the name of the recording in the nwb file NB the default has changed in different versions of OE from ‘recording0’ to ‘recording1’</strong></p></li>
+<li><p><strong>- fuly qualified name of the nwb file</strong> (<em>filename_root</em>) – </p></li>
+<li><p><strong>- the name of the recording in the nwb file NB the default has changed in different versions of OE from 'recording0' to 'recording1'</strong> (<em>recording_name</em>) – </p></li>
 </ul>
 </dd>
 </dl>

@@ -10,7 +10,7 @@ Welcome to ephysiopy's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   readme
+   .. include:: ../README.md
 
 Indices and tables
 ==================

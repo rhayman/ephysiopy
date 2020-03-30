@@ -177,22 +177,22 @@ any particular recording format</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>xy</strong> (<em>array_like, optional</em>) – The xy data, usually given as a 2 x n sample numpy array</p></li>
-<li><p><strong>hdir</strong> (<em>array_like, optional</em>) – The head direction data, usualy a 1 x n sample numpy array</p></li>
-<li><p><strong>speed</strong> (<em>array_like, optional</em>) – Similar to hdir</p></li>
-<li><p><strong>pos_weights</strong> (<em>array_like, optional</em>) – A 1D numpy array n samples long which is used to weight a particular
+<li><p><strong>xy</strong> (<em>array_like</em><em>, </em><em>optional</em>) – The xy data, usually given as a 2 x n sample numpy array</p></li>
+<li><p><strong>hdir</strong> (<em>array_like</em><em>, </em><em>optional</em>) – The head direction data, usualy a 1 x n sample numpy array</p></li>
+<li><p><strong>speed</strong> (<em>array_like</em><em>, </em><em>optional</em>) – Similar to hdir</p></li>
+<li><p><strong>pos_weights</strong> (<em>array_like</em><em>, </em><em>optional</em>) – A 1D numpy array n samples long which is used to weight a particular
 position sample when binning data. For example, if there were 5 positions
 recorded and a cell spiked once in position 2 and 5 times in position 3 and
 nothing anywhere else then pos_weights looks like: [0 0 1 5 0]
 In the case of binning up position this will be an array of mostly just 1’s
 unless there are some positions you want excluded for some reason</p></li>
-<li><p><strong>ppm</strong> (<em>int, optional</em>) – Pixels per metre. Specifies how many camera pixels per metre so this,
+<li><p><strong>ppm</strong> (<em>int</em><em>, </em><em>optional</em>) – Pixels per metre. Specifies how many camera pixels per metre so this,
 in combination with cmsPerBin, will determine how many bins there are
 in the rate map</p></li>
-<li><p><strong>xyInCms</strong> (<em>bool, optional, default False</em>) – Whether the positional data is in cms</p></li>
-<li><p><strong>cmsPerBin</strong> (<em>int, optional, default 3</em>) – How many cms on a side each bin is in a rate map OR the number of degrees
+<li><p><strong>xyInCms</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default False</em>) – Whether the positional data is in cms</p></li>
+<li><p><strong>cmsPerBin</strong> (<em>int</em><em>, </em><em>optional</em><em>, </em><em>default 3</em>) – How many cms on a side each bin is in a rate map OR the number of degrees
 per bin in the case of directional binning</p></li>
-<li><p><strong>smooth_sz</strong> (<em>int, optional, default = 5</em>) – The width of the smoothing kernel for smoothing rate maps</p></li>
+<li><p><strong>smooth_sz</strong> (<em>int</em><em>, </em><em>optional</em><em>, </em><em>default = 5</em>) – The width of the smoothing kernel for smoothing rate maps</p></li>
 </ul>
 </dd>
 </dl>
@@ -211,7 +211,7 @@ per bin in the case of directional binning</p></li>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>im</strong> (<em>array_like</em>) – The array to smooth</p></li>
-<li><p><strong>n, ny</strong> (<em>int</em>) – The size of the smoothing kernel</p></li>
+<li><p><strong>ny</strong> (<em>n</em><em>,</em>) – The size of the smoothing kernel</p></li>
 <li><p><strong>ftype</strong> (<em>str</em>) – The type of smoothing kernel. Either ‘boxcar’ or ‘gaussian’</p></li>
 </ul>
 </dd>
@@ -241,10 +241,10 @@ per bin in the case of directional binning</p></li>
 position weights. For example, if there were 5 positions
 recorded and a cell spiked once in position 2 and 5 times in position 3 and
 nothing anywhere else then pos_weights looks like: [0 0 1 5 0]</p></li>
-<li><p><strong>varType</strong> (<em>str, optional, default ‘xy’</em>) – The variable to bin up. Legal values are: ‘xy’, ‘dir’, and ‘speed’</p></li>
-<li><p><strong>mapType</strong> (<em>str, optional, default ‘rate’</em>) – If ‘rate’ then the binned up spikes are divided by varType. Otherwise return
+<li><p><strong>varType</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default 'xy'</em>) – The variable to bin up. Legal values are: ‘xy’, ‘dir’, and ‘speed’</p></li>
+<li><p><strong>mapType</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default 'rate'</em>) – If ‘rate’ then the binned up spikes are divided by varType. Otherwise return
 binned up position. Options are ‘rate’ or ‘pos’</p></li>
-<li><p><strong>smoothing</strong> (<em>bool, optional, default True</em>) – Whether to smooth the data or not</p></li>
+<li><p><strong>smoothing</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default True</em>) – Whether to smooth the data or not</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -321,7 +321,7 @@ defined by low and high</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>low, high</strong> (<em>float</em>) – The lower and upper bounds of the bandpass filter</p></li>
+<li><p><strong>high</strong> (<em>low</em><em>,</em>) – The lower and upper bounds of the bandpass filter</p></li>
 <li><p><strong>order</strong> (<em>int</em>) – The order of the filter</p></li>
 </ul>
 </dd>
@@ -342,7 +342,7 @@ defined by low and high</p>
 <dd><p>Calculates the power spectrum of self.sig</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>None</strong></p>
+<dd class="field-odd"><p><strong>None</strong> – </p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p><dl class="simple">
@@ -373,7 +373,7 @@ defined by low and high</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>event_ts</strong> (<em>array_like</em>) – The event timestamps in seconds</p></li>
-<li><p><strong>event_window</strong> (<em>2-tuple, default = (-0.05, 0.1)</em>) – The pre- and post-stimulus window to examine. In seconds.
+<li><p><strong>event_window</strong> (<em>2-tuple</em><em>, </em><em>default =</em><em> (</em><em>-0.05</em><em>, </em><em>0.1</em><em>)</em>) – The pre- and post-stimulus window to examine. In seconds.
 Defaults to the previous 50ms and the subsequent 100ms</p></li>
 <li><p><strong>stim_width</strong> (<em>float</em>) – The duration of the stimulus. Used for plotting</p></li>
 <li><p><strong>sample_rate</strong> (<em>float</em>) – The sample rate of the events</p></li>
@@ -636,7 +636,7 @@ analysis of data.</p>
 <li><p><strong>hdir</strong> (<em>array_like</em>) – The head direction data usually a 1D numpy array</p></li>
 <li><p><strong>pos_ts</strong> (<em>array_like</em>) – 1D array of timestamps in seconds</p></li>
 <li><p><strong>spk_ts</strong> (<em>array_like</em>) – 1D array of timestamps in seconds</p></li>
-<li><p><strong>plot_type</strong> (<em>str or list</em>) – Determines the plots produced. Legal values:
+<li><p><strong>plot_type</strong> (<em>str</em><em> or </em><em>list</em>) – Determines the plots produced. Legal values:
 [‘map’,’path’,’hdir’,’sac’, ‘speed’]</p></li>
 </ul>
 </dd>
@@ -714,7 +714,7 @@ Uses numpys masked arrays for dealing with bad positions, filtering etc</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>x, y</strong> (<em>array_like</em>) – The x and y positions.</p></li>
+<li><p><strong>y</strong> (<em>x</em><em>,</em>) – The x and y positions.</p></li>
 <li><p><strong>ppm</strong> (<em>int</em>) – Pixels per metre</p></li>
 <li><p><strong>cm</strong> (<em>boolean</em>) – Whether everything is converted into cms or not</p></li>
 <li><p><strong>jumpmax</strong> (<em>int</em>) – Jumps in position (pixel coords) greater than this are bad</p></li>
@@ -840,7 +840,7 @@ into Axona format 50Hz data</p>
 <li><p><strong>spike_times</strong> (<em>array_like</em>) – the times of ‘spikes’ in the trial
 this should be all spikes as the cluster identity vector _spk_clusters
 is used to pick out the right spikes</p></li>
-<li><p><strong>waveforms</strong> (<em>np.array, optional</em>) – not sure on shape yet but will be something like a
+<li><p><strong>waveforms</strong> (<em>np.array</em><em>, </em><em>optional</em>) – not sure on shape yet but will be something like a
 a 4 x nSpikes x nSamples (4 for tetrode-based analysis)</p></li>
 </ul>
 </dd>
@@ -914,7 +914,7 @@ Used to help classify a neruons type (principal, interneuron etc)</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>clusters</strong> (<em>list</em>) – The clusters to plot</p></li>
-<li><p><strong>fig</strong> (<em>matplotlib.figure instance, optional, default None</em>) – If provided the figure will contain all the axes</p></li>
+<li><p><strong>fig</strong> (<em>matplotlib.figure instance</em><em>, </em><em>optional</em><em>, </em><em>default None</em>) – If provided the figure will contain all the axes</p></li>
 </ul>
 </dd>
 </dl>
@@ -964,7 +964,7 @@ Used to help classify a neruons type (principal, interneuron etc)</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>x1, x2</strong> (<em>array_like</em>) – The times of the spikes emitted by the cluster(s)
+<li><p><strong>x2</strong> (<em>x1</em><em>,</em>) – The times of the spikes emitted by the cluster(s)
 NB must be signed int to accomodate negative times</p></li>
 <li><p><strong>Trange</strong> (<em>array_like</em>) – Range of times to bin up. Defaults to [-500, +500] in ms</p></li>
 </ul>
@@ -1019,7 +1019,7 @@ If 3D then the first two dimensions are x
 and y and the third (last dimension) is ‘stack’ of ratemaps</p></li>
 <li><p><strong>nodwell</strong> (<em>array_like</em>) – A boolean array corresponding the bins in the ratemap that
 weren’t visited. See Notes below.</p></li>
-<li><p><strong>tol</strong> (<em>float, optional</em>) – Values below this are set to zero to deal with v small values
+<li><p><strong>tol</strong> (<em>float</em><em>, </em><em>optional</em>) – Values below this are set to zero to deal with v small values
 thrown up by the fft. Default 1e-10</p></li>
 </ul>
 </dd>
@@ -1044,13 +1044,13 @@ thrown up by the fft. Default 1e-10</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>A, B</strong> (<em>array_like</em>) – Either 2 or 3D. In the former it is simply the binned up ratemap
+<li><p><strong>B</strong> (<em>A</em><em>,</em>) – Either 2 or 3D. In the former it is simply the binned up ratemap
 where the two dimensions correspond to x and y.
 If 3D then the first two dimensions are x
 and y and the third (last dimension) is ‘stack’ of ratemaps</p></li>
-<li><p><strong>nodwell_A, nodwell_B</strong> (<em>array_like</em>) – A boolean array corresponding the bins in the ratemap that
+<li><p><strong>nodwell_B</strong> (<em>nodwell_A</em><em>,</em>) – A boolean array corresponding the bins in the ratemap that
 weren’t visited. See Notes below.</p></li>
-<li><p><strong>tol</strong> (<em>float, optional</em>) – Values below this are set to zero to deal with v small values
+<li><p><strong>tol</strong> (<em>float</em><em>, </em><em>optional</em>) – Values below this are set to zero to deal with v small values
 thrown up by the fft. Default 1e-10</p></li>
 </ul>
 </dd>
@@ -1110,14 +1110,14 @@ a paper by Matt Nolan…</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>A</strong> (<em>array_like</em>) – The spatial autocorrelogram (SAC)</p></li>
-<li><p><strong>maxima</strong> (<em>str, optional</em>) – The method used to detect the peaks in the SAC.
+<li><p><strong>maxima</strong> (<em>str</em><em>, </em><em>optional</em>) – The method used to detect the peaks in the SAC.
 Legal values are ‘single’ and ‘centroid’. Default ‘centroid’</p></li>
-<li><p><strong>field_extent_method</strong> (<em>int, optional</em>) – The method used to delimit the regions of interest in the SAC
+<li><p><strong>field_extent_method</strong> (<em>int</em><em>, </em><em>optional</em>) – The method used to delimit the regions of interest in the SAC
 Legal values:
 * 1 - uses the half height of the ROI peak to limit field extent
 * 2 - uses a watershed method to limit field extent
 Default 2</p></li>
-<li><p><strong>allProps</strong> (<em>bool, optional</em>) – Whether to return a dictionary that contains the attempt to fit an
+<li><p><strong>allProps</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to return a dictionary that contains the attempt to fit an
 ellipse around the edges of the central size peaks. See below
 Default True</p></li>
 </ul>
@@ -1153,7 +1153,7 @@ grid score.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>image</strong> (<em>array_like</em>) – The spatial autocorrelogram</p></li>
-<li><p><strong>step</strong> (<em>int, optional</em>) – The amount to rotate the SAC by in each step of the rotational correlation
+<li><p><strong>step</strong> (<em>int</em><em>, </em><em>optional</em>) – The amount to rotate the SAC by in each step of the rotational correlation
 procedure</p></li>
 </ul>
 </dd>
@@ -1212,7 +1212,7 @@ populated in getmeasures() to make a pretty picture</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>A</strong> (<em>array_like</em>) – The spatial autocorrelogram</p></li>
 <li><p><strong>inDict</strong> (<em>dict</em>) – The dictionary calculated in getmeasures</p></li>
-<li><p><strong>ax</strong> (<em>matplotlib.axes._subplots.AxesSubplot, optional</em>) – If given the plot will get drawn in these axes. Default None</p></li>
+<li><p><strong>ax</strong> (<em>matplotlib.axes._subplots.AxesSubplot</em><em>, </em><em>optional</em>) – If given the plot will get drawn in these axes. Default None</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -1233,15 +1233,15 @@ populated in getmeasures() to make a pretty picture</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>xy</strong> (<em>array_like</em>) – The position data</p></li>
 <li><p><strong>spkIdx</strong> (<em>array_like</em>) – The indices in xy where the cell fired</p></li>
-<li><p><strong>ppm</strong> (<em>int, optional</em>) – The camera pixels per metre. Default 365</p></li>
-<li><p><strong>winSize</strong> (<em>int, optional</em>) – The window size for the temporal search</p></li>
-<li><p><strong>pos_sample_rate</strong> (<em>int, optional</em>) – The rate at which position was sampled. Default 50</p></li>
-<li><p><strong>nbins</strong> (<em>int, optional</em>) – The number of bins for creating the resulting ratemap. Default 71</p></li>
-<li><p><strong>boxcar</strong> (<em>int, optional</em>) – The size of the smoothing kernel to smooth ratemaps. Default 5</p></li>
-<li><p><strong>Pthresh</strong> (<em>int, optional</em>) – The cut=off for values in the ratemap; values &lt; Pthresh become nans.
+<li><p><strong>ppm</strong> (<em>int</em><em>, </em><em>optional</em>) – The camera pixels per metre. Default 365</p></li>
+<li><p><strong>winSize</strong> (<em>int</em><em>, </em><em>optional</em>) – The window size for the temporal search</p></li>
+<li><p><strong>pos_sample_rate</strong> (<em>int</em><em>, </em><em>optional</em>) – The rate at which position was sampled. Default 50</p></li>
+<li><p><strong>nbins</strong> (<em>int</em><em>, </em><em>optional</em>) – The number of bins for creating the resulting ratemap. Default 71</p></li>
+<li><p><strong>boxcar</strong> (<em>int</em><em>, </em><em>optional</em>) – The size of the smoothing kernel to smooth ratemaps. Default 5</p></li>
+<li><p><strong>Pthresh</strong> (<em>int</em><em>, </em><em>optional</em>) – The cut=off for values in the ratemap; values &lt; Pthresh become nans.
 Default 100</p></li>
-<li><p><strong>downsampfreq</strong> (<em>int, optional</em>) – How much to downsample. Default 50</p></li>
-<li><p><strong>plot</strong> (<em>bool, optional</em>) – Whether to show a plot of the result. Default False</p></li>
+<li><p><strong>downsampfreq</strong> (<em>int</em><em>, </em><em>optional</em>) – How much to downsample. Default 50</p></li>
+<li><p><strong>plot</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to show a plot of the result. Default False</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -1291,9 +1291,9 @@ and for axial data all angles must be doubled.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>alpha</strong> (<em>array or list</em>) – sample of angles in radians</p></li>
-<li><p><strong>w</strong> (<em>array or list</em>) – counts in the case of binned data. Must be same length as alpha</p></li>
-<li><p><strong>d</strong> (<em>array or list</em>) – spacing of bin centres for binned data; if supplied, correction
+<li><p><strong>alpha</strong> (<em>array</em><em> or </em><em>list</em>) – sample of angles in radians</p></li>
+<li><p><strong>w</strong> (<em>array</em><em> or </em><em>list</em>) – counts in the case of binned data. Must be same length as alpha</p></li>
+<li><p><strong>d</strong> (<em>array</em><em> or </em><em>list</em>) – spacing of bin centres for binned data; if supplied, correction
 factor is used to correct for bias in estimation of r, in radians</p></li>
 <li><p><strong>axis</strong> (<em>int</em>) – the dimension along which to compute, Default is 0</p></li>
 </ul>
@@ -1450,7 +1450,7 @@ in a function.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>x, y</strong> (<em>array_like, list_like</em>) – The x and y coordinates</p></li>
+<li><p><strong>y</strong> (<em>x</em><em>,</em>) – The x and y coordinates</p></li>
 <li><p><strong>deg</strong> (<em>int</em>) – radian if deg=0; degree if deg=1</p></li>
 </ul>
 </dd>
