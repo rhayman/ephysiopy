@@ -12,6 +12,8 @@ Welcome to ephysiopy's documentation!
 
    source/README.md
 
+   source/modules
+
 Indices and tables
 ==================
 

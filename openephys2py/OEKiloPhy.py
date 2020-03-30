@@ -264,13 +264,12 @@ class OpenEphysBase(object):
 		Parameters
 		----------
 		plot_type : str or list
-			The kind of plot to produce
-			 Valid strings include:
+			The kind of plot to produce.  Valid strings include:
 			* 'map' - just ratemap plotted
 			* 'path' - just spikes on path
 			* 'both' - both of the above
 			* 'all' - both spikes on path, ratemap & SAC plotted
-		
+
 		Notes
 		-----
 		Valid keyword arguments include:
@@ -280,6 +279,7 @@ class OpenEphysBase(object):
 			i.e. this overwrites the 'good_clusters' value in self.kilodata
 		* 'save_grid_summary_location' - bool; if present the dictionary returned from
 			gridcell.SAC.getMeasures is saved for each cluster - this is passed to MapCalcsGeneric
+
 		"""
 		if self.kilodata is None:
 			self.loadKilo()
