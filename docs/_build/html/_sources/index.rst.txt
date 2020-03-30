@@ -12,6 +12,9 @@ Welcome to ephysiopy's documentation!
 
    source/README.md
 
+.. automodule:: ephysiopy
+   :members:
+
 Indices and tables
 ==================
 
