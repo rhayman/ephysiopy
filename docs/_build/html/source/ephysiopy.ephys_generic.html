@@ -83,21 +83,15 @@
               
             
             
-              <!-- Local TOC -->
-              <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">ephysiopy.ephys_generic package</a><ul>
-<li><a class="reference internal" href="#submodules">Submodules</a></li>
-<li><a class="reference internal" href="#module-ephysiopy.ephys_generic.binning">ephysiopy.ephys_generic.binning module</a></li>
-<li><a class="reference internal" href="#module-ephysiopy.ephys_generic.ephys_generic">ephysiopy.ephys_generic.ephys_generic module</a></li>
-<li><a class="reference internal" href="#module-ephysiopy.ephys_generic.gridcell">ephysiopy.ephys_generic.gridcell module</a></li>
-<li><a class="reference internal" href="#ephysiopy-ephys-generic-phaseprecession-module">ephysiopy.ephys_generic.phaseprecession module</a></li>
-<li><a class="reference internal" href="#module-ephysiopy.ephys_generic.statscalcs">ephysiopy.ephys_generic.statscalcs module</a></li>
-<li><a class="reference internal" href="#module-ephysiopy.ephys_generic.utils">ephysiopy.ephys_generic.utils module</a></li>
-<li><a class="reference internal" href="#module-ephysiopy.ephys_generic">Module contents</a></li>
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="README.html">Synopsis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="README.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="README.html#code-example">Code Example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="README.html#motivation">Motivation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="README.html#contributors">Contributors</a></li>
 </ul>
-</li>
-</ul>
-</div>
+
             
           
         </div>
@@ -1451,41 +1445,41 @@ any rate it encapsulates a task in a function.</p>
 <dl class="function">
 <dt id="ephysiopy.ephys_generic.utils.smooth">
 <code class="sig-prename descclassname">ephysiopy.ephys_generic.utils.</code><code class="sig-name descname">smooth</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">window_len=9</em>, <em class="sig-param">window='hanning'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ephysiopy/ephys_generic/utils.html#smooth"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ephysiopy.ephys_generic.utils.smooth" title="Permalink to this definition">¶</a></dt>
-<dd><blockquote>
-<div><p>Smooth the data using a window with requested size.</p>
-</div></blockquote>
+<dd><p>Smooth the data using a window with requested size.</p>
 <p>This method is based on the convolution of a scaled window with the signal.
 The signal is prepared by introducing reflected copies of the signal
 (with the window size) in both ends so that transient parts are minimized
 in the begining and end part of the output signal.</p>
-<dl class="simple">
-<dt>Parameters</dt><dd><dl class="simple">
-<dt>x<span class="classifier">array_like</span></dt><dd><p>the input signal</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>array_like</em>) – the input signal</p></li>
+<li><p><strong>window_len</strong> (<em>int</em>) – The length of the smoothing window</p></li>
+<li><p><strong>window</strong> (<em>str</em>) – The type of window from ‘flat’, ‘hanning’, ‘hamming’, ‘bartlett’, ‘blackman’
+‘flat’ window will produce a moving average smoothing.</p></li>
+</ul>
 </dd>
-<dt>window_len<span class="classifier">int</span></dt><dd><p>The length of the smoothing window</p>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>out</strong></p>
 </dd>
-<dt>window<span class="classifier">str</span></dt><dd><p>The type of window from ‘flat’, ‘hanning’, ‘hamming’, ‘bartlett’, ‘blackman’
-‘flat’ window will produce a moving average smoothing.</p>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>The smoothed signal</p>
 </dd>
 </dl>
-</dd>
-<dt>Returns</dt><dd></dd>
-</dl>
-<p>out : The smoothed signal</p>
-<dl class="simple">
-<dt>Example</dt><dd></dd>
-</dl>
+<p class="rubric">Example</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">t</span><span class="o">=</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mf">0.1</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">x</span><span class="o">=</span><span class="n">sin</span><span class="p">(</span><span class="n">t</span><span class="p">)</span><span class="o">+</span><span class="n">randn</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">))</span><span class="o">*</span><span class="mf">0.1</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">y</span><span class="o">=</span><span class="n">smooth</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
 </pre></div>
 </div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.hanning()</span></code>, <code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.hamming()</span></code>, <code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.bartlett()</span></code>, <code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.blackman()</span></code>, <code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.convolve()</span></code>, <code class="xref py py-func docutils literal notranslate"><span class="pre">scipy.signal.lfilter()</span></code></p>
 <dl class="simple">
-<dt>See Also</dt><dd></dd>
+<dt><code class="xref py py-func docutils literal notranslate"><span class="pre">TODO()</span></code></dt><dd><p>the window parameter could be the window itself if an array instead of a string</p>
+</dd>
 </dl>
-<p>numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
-scipy.signal.lfilter</p>
-<p>TODO: the window parameter could be the window itself if an array instead of a string</p>
+</div>
 </dd></dl>
 
 <dl class="function">

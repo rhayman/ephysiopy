@@ -83,15 +83,15 @@
               
             
             
-              <!-- Local TOC -->
-              <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">ephysiopy package</a><ul>
-<li><a class="reference internal" href="#subpackages">Subpackages</a></li>
-<li><a class="reference internal" href="#module-ephysiopy">Module contents</a></li>
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="README.html">Synopsis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="README.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="README.html#code-example">Code Example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="README.html#motivation">Motivation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="README.html#contributors">Contributors</a></li>
 </ul>
-</li>
-</ul>
-</div>
+
             
           
         </div>
@@ -202,6 +202,91 @@
 </div>
 <div class="section" id="module-ephysiopy">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-ephysiopy" title="Permalink to this headline">¶</a></h2>
+<p>## Synopsis</p>
+<p>Tools for the analysis of electrophysiological data collected with the Axona or openephys recording systems.</p>
+<p>## Installation</p>
+<p>ephysiopy requires python3.6 or greater. The easiest way to install is using pip:</p>
+<p>&gt; python3 -m pip install ephysiopy</p>
+<p>Or similar.</p>
+<p>This will install all the pre-requisites, which are as follows:</p>
+<ul class="simple">
+<li><p>numpy</p></li>
+<li><p>scipy</p></li>
+<li><p>matplotlib</p></li>
+<li><p>scikits-learn</p></li>
+<li><p>[astropy](<a class="reference external" href="http://www.astropy.org/">http://www.astropy.org/</a>) (for NaN-friendly convolution)</p></li>
+<li><p>skimage</p></li>
+<li><p>[mahotas](<a class="reference external" href="http://mahotas.readthedocs.org/en/latest/">http://mahotas.readthedocs.org/en/latest/</a>)</p></li>
+<li><p>h5py</p></li>
+</ul>
+<p>I haven’t yet tried this in a conda like environment but a quick google shows it should be pretty easy.</p>
+<p>## Code Example</p>
+<p>For openephys-type analysis there are two main entry classes depending on whether you are doing
+Neuropixels or tetrode-based analysis. Both classes inherit from the same
+parent class (OpenEphysBase) and so share a high degree of overlap in what they can do.</p>
+<p>For Neuropixels:</p>
+<p><code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">from</span> <span class="pre">ephysiopy.openephys2py.OEKiloPhy</span> <span class="pre">import</span> <span class="pre">OpenEphysNPX</span>
+<span class="pre">npx</span> <span class="pre">=</span> <span class="pre">OpenEphysNPX(&quot;/path/to/top_level&quot;)</span>
+<span class="pre">`</span></code></p>
+<p>The “/path/to/top_level” bit here means that if your directory hierarchy looks like this:</p>
+<p><code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">├──</span> <span class="pre">settings.xml</span>
+<span class="pre">├──</span> <span class="pre">2020-03-20_12-40-15</span>
+<span class="pre">|</span>&#160;&#160;&#160; <span class="pre">└──</span> <span class="pre">experiment1</span>
+<span class="pre">|</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">└──</span> <span class="pre">recording1</span>
+<span class="pre">|</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">├──</span> <span class="pre">structure.oebin</span>
+<span class="pre">|</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">├──</span> <span class="pre">sync_messages.txt</span>
+<span class="pre">|</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">├──</span> <span class="pre">continuous</span>
+<span class="pre">|</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">|</span>&#160;&#160; <span class="pre">└──</span> <span class="pre">Neuropix-PXI-107.0</span>
+<span class="pre">|</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">|</span>&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">└──</span> <span class="pre">continuous.dat</span>
+<span class="pre">|</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">└──</span> <span class="pre">events</span>
+<span class="pre">`</span></code></p>
+<p>Then OpenEphysNPX should be instantiated as follows:</p>
+<p><code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">npx</span> <span class="pre">=</span> <span class="pre">OpenEphysNPX(&quot;2020-03-20_12-40-15&quot;)</span>
+<span class="pre">`</span></code></p>
+<p>When you load the data the directory structure is iterated over to find files such as sync_messages.txt and settings.xml and so on. The data is loaded by calling the load method:</p>
+<p><code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">npx.load()</span>
+<span class="pre">`</span></code></p>
+<p>The same principles apply to the OpenEphysNWB class - as the name suggests this is for use with data recorded in the [.nwb format](<a class="reference external" href="https://www.nwb.org/">https://www.nwb.org/</a>)</p>
+<p>When data is recorded using the [PosTracker](<a class="reference external" href="https://github.com/rhayman/PosTracker">https://github.com/rhayman/PosTracker</a>) plugin for openephys, the position data recorded using that plugin is also loaded, which means plots of position can be produced:</p>
+<p><code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">npx.plotPos()</span>
+<span class="pre">`</span></code></p>
+<p>For ratemaps and so on you call plotMaps() which can take several arguments to make maps of different types. See the documentation for the base class for details (OpenEphysBase)</p>
+<p>The main entry class for Axona related analysis is “Trial” contained in ephysiopy.dacq2py.dacq2py_util i.e.</p>
+<p><code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">from</span> <span class="pre">ephysiopy.dacq2py.dacq2py_util</span> <span class="pre">import</span> <span class="pre">Trial</span>
+<span class="pre">T</span> <span class="pre">=</span> <span class="pre">Trial(&quot;/path/to/dataset/mytrial&quot;)</span>
+<span class="pre">`</span></code></p>
+<p>The “usual” Axona dataset includes the following files:</p>
+<ul class="simple">
+<li><p>mytrial.set</p></li>
+<li><p>mytrial.1</p></li>
+<li><p>mytrial.2</p></li>
+<li><p>mytrial.3</p></li>
+<li><p>mytrial.4</p></li>
+<li><p>mytrial.pos</p></li>
+<li><p>mytrial.eeg</p></li>
+</ul>
+<p>Note that you shouldn’t specify a suffix when constructing the filename in the code example above.</p>
+<p>You can now start analysing your data! i.e.</p>
+<p><code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">T.plotEEGPower()</span>
+<span class="pre">T.plotMap(tetrode=1,</span> <span class="pre">cluster=4)</span>
+<span class="pre">`</span></code></p>
+<p>## Motivation</p>
+<p>Analysis using Axona’s Tint cluster cutting program or phy/ phy2 (openephys) is great but limited. This extends that functionality.</p>
+<p>Optional packages include:</p>
+<ul class="simple">
+<li><p>[klustakwik](<a class="reference external" href="https://github.com/klusta-team/klustakwik">https://github.com/klusta-team/klustakwik</a>)</p></li>
+</ul>
+<p>Download the files and extract to a folder and make sure it’s on your Python path
+NB this is limited to data recorded using Axona as it has now been superceded by tools such as KiloSort/ KiloSort2 etc.</p>
+<p>## Contributors</p>
+<p>Robin Hayman.</p>
 </div>
 </div>
 

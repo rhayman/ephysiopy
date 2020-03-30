@@ -6,15 +6,15 @@ from scipy.signal import boxcar
 from scipy.signal import convolve
 
 def smooth(x, window_len=9, window='hanning'):
-    """
+	"""
 	Smooth the data using a window with requested size.
-    
-    This method is based on the convolution of a scaled window with the signal.
-    The signal is prepared by introducing reflected copies of the signal 
-    (with the window size) in both ends so that transient parts are minimized
-    in the begining and end part of the output signal.
-    
-    Parameters
+	
+	This method is based on the convolution of a scaled window with the signal.
+	The signal is prepared by introducing reflected copies of the signal 
+	(with the window size) in both ends so that transient parts are minimized
+	in the begining and end part of the output signal.
+	
+	Parameters
 	----------
 	x : array_like
 		the input signal 
@@ -24,52 +24,52 @@ def smooth(x, window_len=9, window='hanning'):
 		The type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
 		'flat' window will produce a moving average smoothing.
 
-    Returns
+	Returns
 	-------
-    out : The smoothed signal
-        
-    Example
+	out : The smoothed signal
+		
+	Example
 	-------
-    >>> t=linspace(-2,2,0.1)
-    >>> x=sin(t)+randn(len(t))*0.1
-    >>> y=smooth(x)
-    
-    See Also
+	>>> t=linspace(-2,2,0.1)
+	>>> x=sin(t)+randn(len(t))*0.1
+	>>> y=smooth(x)
+	
+	See Also
 	--------
-    numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
-    scipy.signal.lfilter
+	numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
+	scipy.signal.lfilter
  
-    TODO: the window parameter could be the window itself if an array instead of a string   
-    """
+	TODO: the window parameter could be the window itself if an array instead of a string   
+	"""
 
-    if type(x) == type([]):
-        x = np.array(x)
+	if type(x) == type([]):
+		x = np.array(x)
 
-    if x.ndim != 1:
-        raise ValueError("smooth only accepts 1 dimension arrays.")
+	if x.ndim != 1:
+		raise ValueError("smooth only accepts 1 dimension arrays.")
 
-    if x.size < window_len:
-        raise ValueError("Input vector needs to be bigger than window size.")
-    if window_len < 3:
-        return x
+	if x.size < window_len:
+		raise ValueError("Input vector needs to be bigger than window size.")
+	if window_len < 3:
+		return x
 
-    if (window_len % 2) == 0:
-        window_len = window_len + 1
+	if (window_len % 2) == 0:
+		window_len = window_len + 1
 
-    if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
-        raise ValueError(
-            "Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
+	if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
+		raise ValueError(
+			"Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
 
-    s = np.r_[2*x[0]-x[window_len:1:-1], x, 2*x[-1]-x[-1:-window_len:-1]]
+	s = np.r_[2*x[0]-x[window_len:1:-1], x, 2*x[-1]-x[-1:-window_len:-1]]
 
-    if window == 'flat':  # moving average
-        w = np.ones(window_len, 'd')
-    else:
-        w = eval('np.'+window+'(window_len)')
-    from astropy.convolution import convolve
-    y = convolve(x, w/w.sum(), normalize_kernel=False, boundary='extend')
-    # return the smoothed signal
-    return y
+	if window == 'flat':  # moving average
+		w = np.ones(window_len, 'd')
+	else:
+		w = eval('np.'+window+'(window_len)')
+	from astropy.convolution import convolve
+	y = convolve(x, w/w.sum(), normalize_kernel=False, boundary='extend')
+	# return the smoothed signal
+	return y
 
 def blur_image(im, n, ny=None, ftype='boxcar'):
 	""" blurs the image by convolving with a filter ('gaussian' or

@@ -83,8 +83,15 @@
               
             
             
-              <!-- Local TOC -->
-              <div class="local-toc"></div>
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../source/README.html">Synopsis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../source/README.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../source/README.html#code-example">Code Example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../source/README.html#motivation">Motivation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../source/README.html#contributors">Contributors</a></li>
+</ul>
+
             
           
         </div>
@@ -154,15 +161,15 @@
 <span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="kn">import</span> <span class="n">convolve</span>
 
 <div class="viewcode-block" id="smooth"><a class="viewcode-back" href="../../../source/ephysiopy.ephys_generic.html#ephysiopy.ephys_generic.utils.smooth">[docs]</a><span class="k">def</span> <span class="nf">smooth</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">window_len</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="s1">&#39;hanning&#39;</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+	<span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">	Smooth the data using a window with requested size.</span>
-<span class="sd">    </span>
-<span class="sd">    This method is based on the convolution of a scaled window with the signal.</span>
-<span class="sd">    The signal is prepared by introducing reflected copies of the signal </span>
-<span class="sd">    (with the window size) in both ends so that transient parts are minimized</span>
-<span class="sd">    in the begining and end part of the output signal.</span>
-<span class="sd">    </span>
-<span class="sd">    Parameters</span>
+<span class="sd">	</span>
+<span class="sd">	This method is based on the convolution of a scaled window with the signal.</span>
+<span class="sd">	The signal is prepared by introducing reflected copies of the signal </span>
+<span class="sd">	(with the window size) in both ends so that transient parts are minimized</span>
+<span class="sd">	in the begining and end part of the output signal.</span>
+<span class="sd">	</span>
+<span class="sd">	Parameters</span>
 <span class="sd">	----------</span>
 <span class="sd">	x : array_like</span>
 <span class="sd">		the input signal </span>
@@ -172,52 +179,52 @@
 <span class="sd">		The type of window from &#39;flat&#39;, &#39;hanning&#39;, &#39;hamming&#39;, &#39;bartlett&#39;, &#39;blackman&#39;</span>
 <span class="sd">		&#39;flat&#39; window will produce a moving average smoothing.</span>
 
-<span class="sd">    Returns</span>
+<span class="sd">	Returns</span>
 <span class="sd">	-------</span>
-<span class="sd">    out : The smoothed signal</span>
-<span class="sd">        </span>
-<span class="sd">    Example</span>
+<span class="sd">	out : The smoothed signal</span>
+<span class="sd">		</span>
+<span class="sd">	Example</span>
 <span class="sd">	-------</span>
-<span class="sd">    &gt;&gt;&gt; t=linspace(-2,2,0.1)</span>
-<span class="sd">    &gt;&gt;&gt; x=sin(t)+randn(len(t))*0.1</span>
-<span class="sd">    &gt;&gt;&gt; y=smooth(x)</span>
-<span class="sd">    </span>
-<span class="sd">    See Also</span>
+<span class="sd">	&gt;&gt;&gt; t=linspace(-2,2,0.1)</span>
+<span class="sd">	&gt;&gt;&gt; x=sin(t)+randn(len(t))*0.1</span>
+<span class="sd">	&gt;&gt;&gt; y=smooth(x)</span>
+<span class="sd">	</span>
+<span class="sd">	See Also</span>
 <span class="sd">	--------</span>
-<span class="sd">    numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve</span>
-<span class="sd">    scipy.signal.lfilter</span>
+<span class="sd">	numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve</span>
+<span class="sd">	scipy.signal.lfilter</span>
 <span class="sd"> </span>
-<span class="sd">    TODO: the window parameter could be the window itself if an array instead of a string   </span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">	TODO: the window parameter could be the window itself if an array instead of a string   </span>
+<span class="sd">	&quot;&quot;&quot;</span>
 
-    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="nb">type</span><span class="p">([]):</span>
-        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="nb">type</span><span class="p">([]):</span>
+		<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;smooth only accepts 1 dimension arrays.&quot;</span><span class="p">)</span>
+	<span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;smooth only accepts 1 dimension arrays.&quot;</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;</span> <span class="n">window_len</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Input vector needs to be bigger than window size.&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">window_len</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">x</span>
+	<span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;</span> <span class="n">window_len</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Input vector needs to be bigger than window size.&quot;</span><span class="p">)</span>
+	<span class="k">if</span> <span class="n">window_len</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+		<span class="k">return</span> <span class="n">x</span>
 
-    <span class="k">if</span> <span class="p">(</span><span class="n">window_len</span> <span class="o">%</span> <span class="mi">2</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="n">window_len</span> <span class="o">=</span> <span class="n">window_len</span> <span class="o">+</span> <span class="mi">1</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">window_len</span> <span class="o">%</span> <span class="mi">2</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+		<span class="n">window_len</span> <span class="o">=</span> <span class="n">window_len</span> <span class="o">+</span> <span class="mi">1</span>
 
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">window</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;flat&#39;</span><span class="p">,</span> <span class="s1">&#39;hanning&#39;</span><span class="p">,</span> <span class="s1">&#39;hamming&#39;</span><span class="p">,</span> <span class="s1">&#39;bartlett&#39;</span><span class="p">,</span> <span class="s1">&#39;blackman&#39;</span><span class="p">]:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="s2">&quot;Window is on of &#39;flat&#39;, &#39;hanning&#39;, &#39;hamming&#39;, &#39;bartlett&#39;, &#39;blackman&#39;&quot;</span><span class="p">)</span>
+	<span class="k">if</span> <span class="ow">not</span> <span class="n">window</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;flat&#39;</span><span class="p">,</span> <span class="s1">&#39;hanning&#39;</span><span class="p">,</span> <span class="s1">&#39;hamming&#39;</span><span class="p">,</span> <span class="s1">&#39;bartlett&#39;</span><span class="p">,</span> <span class="s1">&#39;blackman&#39;</span><span class="p">]:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+			<span class="s2">&quot;Window is on of &#39;flat&#39;, &#39;hanning&#39;, &#39;hamming&#39;, &#39;bartlett&#39;, &#39;blackman&#39;&quot;</span><span class="p">)</span>
 
-    <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="n">window_len</span><span class="p">:</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">x</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="n">window_len</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+	<span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="n">window_len</span><span class="p">:</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">x</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="n">window_len</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
 
-    <span class="k">if</span> <span class="n">window</span> <span class="o">==</span> <span class="s1">&#39;flat&#39;</span><span class="p">:</span>  <span class="c1"># moving average</span>
-        <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">window_len</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">w</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="s1">&#39;np.&#39;</span><span class="o">+</span><span class="n">window</span><span class="o">+</span><span class="s1">&#39;(window_len)&#39;</span><span class="p">)</span>
-    <span class="kn">from</span> <span class="nn">astropy.convolution</span> <span class="kn">import</span> <span class="n">convolve</span>
-    <span class="n">y</span> <span class="o">=</span> <span class="n">convolve</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">w</span><span class="o">/</span><span class="n">w</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span> <span class="n">normalize_kernel</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">boundary</span><span class="o">=</span><span class="s1">&#39;extend&#39;</span><span class="p">)</span>
-    <span class="c1"># return the smoothed signal</span>
-    <span class="k">return</span> <span class="n">y</span></div>
+	<span class="k">if</span> <span class="n">window</span> <span class="o">==</span> <span class="s1">&#39;flat&#39;</span><span class="p">:</span>  <span class="c1"># moving average</span>
+		<span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">window_len</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span><span class="p">)</span>
+	<span class="k">else</span><span class="p">:</span>
+		<span class="n">w</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="s1">&#39;np.&#39;</span><span class="o">+</span><span class="n">window</span><span class="o">+</span><span class="s1">&#39;(window_len)&#39;</span><span class="p">)</span>
+	<span class="kn">from</span> <span class="nn">astropy.convolution</span> <span class="kn">import</span> <span class="n">convolve</span>
+	<span class="n">y</span> <span class="o">=</span> <span class="n">convolve</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">w</span><span class="o">/</span><span class="n">w</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span> <span class="n">normalize_kernel</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">boundary</span><span class="o">=</span><span class="s1">&#39;extend&#39;</span><span class="p">)</span>
+	<span class="c1"># return the smoothed signal</span>
+	<span class="k">return</span> <span class="n">y</span></div>
 
 <div class="viewcode-block" id="blur_image"><a class="viewcode-back" href="../../../source/ephysiopy.ephys_generic.html#ephysiopy.ephys_generic.utils.blur_image">[docs]</a><span class="k">def</span> <span class="nf">blur_image</span><span class="p">(</span><span class="n">im</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">ny</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ftype</span><span class="o">=</span><span class="s1">&#39;boxcar&#39;</span><span class="p">):</span>
 	<span class="sd">&quot;&quot;&quot; blurs the image by convolving with a filter (&#39;gaussian&#39; or</span>
