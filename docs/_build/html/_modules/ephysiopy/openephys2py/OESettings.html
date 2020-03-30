@@ -1,0 +1,510 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ephysiopy.openephys2py.OESettings &mdash; ephysiopy 1.5.55 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> ephysiopy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.5
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">ephysiopy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>ephysiopy.openephys2py.OESettings</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for ephysiopy.openephys2py.OESettings</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Classes for parsing information contained in the settings.xml</span>
+<span class="sd">file that is saved when recording with the openephys system.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">xml.etree.cElementTree</span> <span class="k">as</span> <span class="nn">ET</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">xml.etree.ElementTree</span> <span class="k">as</span> <span class="nn">ET</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span><span class="p">,</span> <span class="n">defaultdict</span>
+
+<div class="viewcode-block" id="ChannelInfo"><a class="viewcode-back" href="../../../source/ephysiopy.openephys2py.html#ephysiopy.openephys2py.OESettings.ChannelInfo">[docs]</a><span class="k">class</span> <span class="nc">ChannelInfo</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Documents the information attached to each channel</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_number</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_gain</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_param</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_record</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_audio</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lowcut</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_highcut</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span>
+    <span class="nd">@name</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">val</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">number</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_number</span>
+    <span class="nd">@number</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">number</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_number</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">gain</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gain</span>
+    <span class="nd">@gain</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">gain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_gain</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">param</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param</span>
+    <span class="nd">@param</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">param</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_param</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">record</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_record</span>
+    <span class="nd">@record</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_record</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">audio</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_audio</span>
+    <span class="nd">@audio</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">audio</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_audio</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">lowcut</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lowcut</span>
+    <span class="nd">@lowcut</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">lowcut</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lowcut</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">highcut</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_highcut</span>
+    <span class="nd">@highcut</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">highcut</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_highcut</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">val</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="BandpassFilter"><a class="viewcode-back" href="../../../source/ephysiopy.openephys2py.html#ephysiopy.openephys2py.OESettings.BandpassFilter">[docs]</a><span class="k">class</span> <span class="nc">BandpassFilter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Documents the Bandpass Filter plugin</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nodeId</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_channels</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># becomes a list of int</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lowcuts</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># becomes list of int</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_highcuts</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># ditto</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">nodeId</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nodeId</span>
+    <span class="nd">@nodeId</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">nodeId</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nodeId</span> <span class="o">=</span> <span class="n">val</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">channels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channels</span>
+    <span class="nd">@channels</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">channels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_channels</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">val</span><span class="p">]</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">lowcuts</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lowcuts</span>
+    <span class="nd">@lowcuts</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">lowcuts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lowcuts</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">val</span><span class="p">]</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">highcuts</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_highcuts</span>
+    <span class="nd">@highcuts</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">highcuts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_highcuts</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">val</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Electrode"><a class="viewcode-back" href="../../../source/ephysiopy.openephys2py.html#ephysiopy.openephys2py.OESettings.Electrode">[docs]</a><span class="k">class</span> <span class="nc">Electrode</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Documents the ELECTRODE entries in the settings.xml file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nChannels</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># int</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prePeakSamples</span> <span class="o">=</span> <span class="mi">8</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_postPeakSamples</span> <span class="o">=</span> <span class="mi">32</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_id</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_subChannels</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># becomes a list of int</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_subChannelsThresh</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># becomes a list of float</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_subChannelsActive</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># becomes a list of bool</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">nChannels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nChannels</span>
+    <span class="nd">@nChannels</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">nChannels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nChannels</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">prePeakSamples</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prePeakSamples</span>
+    <span class="nd">@prePeakSamples</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">prePeakSamples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prePeakSamples</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">postPeakSamples</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_postPeakSamples</span>
+    <span class="nd">@postPeakSamples</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">postPeakSamples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_postPeakSamples</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_id</span>
+    <span class="nd">@id</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_id</span> <span class="o">=</span> <span class="n">val</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">subChannels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subChannels</span>
+    <span class="nd">@subChannels</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">subChannels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_subChannels</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">val</span><span class="p">]</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">subChannelsThresh</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subChannelsThresh</span>
+    <span class="nd">@subChannelsThresh</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">subChannelsThresh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_subChannelsThresh</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">val</span><span class="p">]</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">subChannelsActive</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subChannelsActive</span>
+    <span class="nd">@subChannelsActive</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">subChannelsActive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_subChannelsActive</span> <span class="o">=</span> <span class="p">[</span><span class="nb">bool</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">))</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">val</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Settings"><a class="viewcode-back" href="../../../source/ephysiopy.openephys2py.html#ephysiopy.openephys2py.OESettings.Settings">[docs]</a><span class="k">class</span> <span class="nc">Settings</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Groups together the other classes in this module and does the actual</span>
+<span class="sd">    parsing of the settings.xml file</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    pname : str</span>
+<span class="sd">        The pathname to the top-level directory, typically in form of YYYY-MM-DD_HH-MM-SS</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pname</span> <span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="kn">import</span> <span class="nn">os</span>
+        <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">pname</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">ff</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s1">&#39;settings.xml&#39;</span> <span class="ow">in</span> <span class="n">ff</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;settings.xml&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tree</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fpga_nodeId</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        It&#39;s not uncommon to have &gt; 1 of the same type of processor, i.e.</span>
+<span class="sd">        2 x bandpass filter to look at LFP and APs. This deals with that...</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">processors</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">electrodes</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tracker_params</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stimcontrol_params</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bandpass_params</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+<div class="viewcode-block" id="Settings.load"><a class="viewcode-back" href="../../../source/ephysiopy.openephys2py.html#ephysiopy.openephys2py.OESettings.Settings.load">[docs]</a>    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a handle to the basic xml document</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tree</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">ElementTree</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span></div>
+<div class="viewcode-block" id="Settings.parse"><a class="viewcode-back" href="../../../source/ephysiopy.openephys2py.html#ephysiopy.openephys2py.OESettings.Settings.parse">[docs]</a>    <span class="k">def</span> <span class="nf">parse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parses the basic information attached to the FPGA module</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="n">tag</span><span class="o">=</span><span class="s1">&#39;PROCESSOR&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">processors</span><span class="p">[</span><span class="n">elem</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span>
+        <span class="c1"># in a try / except because might be Neuropixels probe so no Rhythm FPGA</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">fpga_items</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">processors</span><span class="p">[</span><span class="s1">&#39;Sources/Rhythm FPGA&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fpga_nodeId</span> <span class="o">=</span> <span class="n">fpga_items</span><span class="p">[</span><span class="s1">&#39;NodeId&#39;</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">pass</span></div>
+<div class="viewcode-block" id="Settings.parsePos"><a class="viewcode-back" href="../../../source/ephysiopy.openephys2py.html#ephysiopy.openephys2py.OESettings.Settings.parsePos">[docs]</a>    <span class="k">def</span> <span class="nf">parsePos</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parses the information attached to the PosTracker plugin I wrote</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">processors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parse</span><span class="p">()</span>
+        <span class="n">children</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">processors</span><span class="p">[</span><span class="s1">&#39;Sources/Pos Tracker&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getchildren</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">children</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;Parameters&#39;</span> <span class="ow">in</span> <span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tracker_params</span> <span class="o">=</span> <span class="n">child</span><span class="o">.</span><span class="n">attrib</span>
+        <span class="c1"># convert string values to ints</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tracker_params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([</span><span class="n">k</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracker_params</span><span class="o">.</span><span class="n">items</span><span class="p">())</span></div>
+<div class="viewcode-block" id="Settings.parseSpikeSorter"><a class="viewcode-back" href="../../../source/ephysiopy.openephys2py.html#ephysiopy.openephys2py.OESettings.Settings.parseSpikeSorter">[docs]</a>    <span class="k">def</span> <span class="nf">parseSpikeSorter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parses data attached to each ELECTRODE object in the xml tree</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">processors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parse</span><span class="p">()</span>
+        <span class="n">electrode_info</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">processors</span><span class="p">[</span><span class="s1">&#39;Filters/Spike Sorter&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">iter</span><span class="p">():</span>
+            <span class="k">if</span> <span class="s1">&#39;SpikeSorter&#39;</span> <span class="ow">in</span> <span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">grandchild</span> <span class="ow">in</span> <span class="n">child</span><span class="o">.</span><span class="n">iter</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="s1">&#39;ELECTRODE&#39;</span> <span class="o">==</span> <span class="n">grandchild</span><span class="o">.</span><span class="n">tag</span><span class="p">:</span>
+                        <span class="k">for</span> <span class="n">this_electrode</span> <span class="ow">in</span> <span class="n">grandchild</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="s1">&#39;ELECTRODE&#39;</span><span class="p">):</span>
+                            <span class="n">info_obj</span> <span class="o">=</span> <span class="n">Electrode</span><span class="p">()</span>
+                            <span class="n">info_obj</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">this_electrode</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
+                            <span class="n">info_obj</span><span class="o">.</span><span class="n">nChannels</span> <span class="o">=</span> <span class="n">this_electrode</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;numChannels&#39;</span><span class="p">)</span>
+                            <span class="n">info_obj</span><span class="o">.</span><span class="n">prePeakSamples</span> <span class="o">=</span> <span class="n">this_electrode</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;prePeakSamples&#39;</span><span class="p">)</span>
+                            <span class="n">info_obj</span><span class="o">.</span><span class="n">postPeakSamples</span> <span class="o">=</span> <span class="n">this_electrode</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;postPeakSamples&#39;</span><span class="p">)</span>
+                            <span class="n">info_obj</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">this_electrode</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;electrodeID&#39;</span><span class="p">)</span>
+                            <span class="n">subchan</span> <span class="o">=</span> <span class="p">[]</span>
+                            <span class="n">subchanThresh</span> <span class="o">=</span> <span class="p">[]</span>
+                            <span class="n">subchanActive</span> <span class="o">=</span> <span class="p">[]</span>
+                            <span class="k">for</span> <span class="n">greatgrandchild</span> <span class="ow">in</span> <span class="n">grandchild</span><span class="o">.</span><span class="n">iter</span><span class="p">():</span>
+                                <span class="k">if</span> <span class="s1">&#39;SUBCHANNEL&#39;</span> <span class="o">==</span> <span class="n">greatgrandchild</span><span class="o">.</span><span class="n">tag</span><span class="p">:</span>
+                                    <span class="k">for</span> <span class="n">schan</span> <span class="ow">in</span> <span class="n">greatgrandchild</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="s1">&#39;SUBCHANNEL&#39;</span><span class="p">):</span>
+                                        <span class="n">subchan</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">schan</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ch&#39;</span><span class="p">))</span>
+                                        <span class="n">subchanThresh</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">schan</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;thresh&#39;</span><span class="p">))</span>
+                                        <span class="n">subchanActive</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">schan</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;isActive&#39;</span><span class="p">))</span>
+
+                            <span class="n">info_obj</span><span class="o">.</span><span class="n">subChannels</span> <span class="o">=</span> <span class="n">subchan</span>
+                            <span class="n">info_obj</span><span class="o">.</span><span class="n">subChannelsThresh</span> <span class="o">=</span> <span class="n">subchanThresh</span>
+                            <span class="n">info_obj</span><span class="o">.</span><span class="n">subChannelsActive</span> <span class="o">=</span> <span class="n">subchanActive</span>
+                            <span class="n">electrode_info</span><span class="p">[</span><span class="n">info_obj</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">info_obj</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">electrodes</span> <span class="o">=</span> <span class="n">electrode_info</span></div>
+
+<div class="viewcode-block" id="Settings.parseStimControl"><a class="viewcode-back" href="../../../source/ephysiopy.openephys2py.html#ephysiopy.openephys2py.OESettings.Settings.parseStimControl">[docs]</a>    <span class="k">def</span> <span class="nf">parseStimControl</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parses information attached to the StimControl module I wrote</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">processors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parse</span><span class="p">()</span>
+        <span class="n">children</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">processors</span><span class="p">[</span><span class="s1">&#39;Sinks/StimControl&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getchildren</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">children</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;Parameters&#39;</span> <span class="ow">in</span> <span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">stimcontrol_params</span> <span class="o">=</span> <span class="n">child</span><span class="o">.</span><span class="n">attrib</span>
+        <span class="c1"># convert string values to ints</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stimcontrol_params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([</span><span class="n">k</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stimcontrol_params</span><span class="o">.</span><span class="n">items</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="Settings.parseChannels"><a class="viewcode-back" href="../../../source/ephysiopy.openephys2py.html#ephysiopy.openephys2py.OESettings.Settings.parseChannels">[docs]</a>    <span class="k">def</span> <span class="nf">parseChannels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parses data attached to each channel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">processors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parse</span><span class="p">()</span>
+        <span class="n">channel_info</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">chan_info</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">processors</span><span class="p">[</span><span class="s1">&#39;Sources/Rhythm FPGA&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">iter</span><span class="p">():</span>
+            <span class="k">if</span> <span class="s1">&#39;CHANNEL_INFO&#39;</span> <span class="ow">in</span> <span class="n">chan_info</span><span class="o">.</span><span class="n">tag</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">this_chan</span> <span class="ow">in</span> <span class="n">chan_info</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="s1">&#39;CHANNEL&#39;</span><span class="p">):</span>
+                    <span class="n">info_obj</span> <span class="o">=</span> <span class="n">ChannelInfo</span><span class="p">()</span>
+                    <span class="n">info_obj</span><span class="o">.</span><span class="n">number</span> <span class="o">=</span> <span class="n">this_chan</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;number&#39;</span><span class="p">)</span>
+                    <span class="n">info_obj</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">this_chan</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
+                    <span class="n">info_obj</span><span class="o">.</span><span class="n">gain</span> <span class="o">=</span> <span class="n">this_chan</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;gain&#39;</span><span class="p">)</span>
+                    <span class="n">channel_info</span><span class="p">[</span><span class="n">info_obj</span><span class="o">.</span><span class="n">number</span><span class="p">]</span> <span class="o">=</span> <span class="n">info_obj</span>
+            <span class="k">if</span> <span class="s1">&#39;CHANNEL&#39;</span> <span class="ow">in</span> <span class="n">chan_info</span><span class="o">.</span><span class="n">tag</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">chan_state</span> <span class="ow">in</span> <span class="n">chan_info</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="s1">&#39;CHANNEL&#39;</span><span class="p">):</span>
+                    <span class="n">num</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">chan_state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;number&#39;</span><span class="p">))</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">channel_info</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">num</span><span class="p">:</span>
+                            <span class="n">info_obj</span> <span class="o">=</span> <span class="n">channel_info</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                            <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">chan_state</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="s1">&#39;SELECTIONSTATE&#39;</span><span class="p">):</span>
+                                <span class="n">info_obj</span><span class="o">.</span><span class="n">param</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;param&#39;</span><span class="p">)</span>
+                                <span class="n">info_obj</span><span class="o">.</span><span class="n">record</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;record&#39;</span><span class="p">)</span>
+                            <span class="n">channel_info</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">info_obj</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channel_info</span> <span class="o">=</span> <span class="n">channel_info</span></div>
+
+<div class="viewcode-block" id="Settings.parseBandpassFilters"><a class="viewcode-back" href="../../../source/ephysiopy.openephys2py.html#ephysiopy.openephys2py.OESettings.Settings.parseBandpassFilters">[docs]</a>    <span class="k">def</span> <span class="nf">parseBandpassFilters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parse the bandpass filter information</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">processors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parse</span><span class="p">()</span>
+        <span class="n">bandpass_info</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">bpf</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">processors</span><span class="p">[</span><span class="s1">&#39;Filters/Bandpass Filter&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="s1">&#39;PROCESSOR&#39;</span> <span class="ow">in</span> <span class="n">bpf</span><span class="o">.</span><span class="n">tag</span><span class="p">:</span>
+                <span class="n">this_bpf</span> <span class="o">=</span> <span class="n">BandpassFilter</span><span class="p">()</span>
+                <span class="n">this_bpf</span><span class="o">.</span><span class="n">nodeId</span> <span class="o">=</span> <span class="n">bpf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;NodeId&#39;</span><span class="p">)</span>
+                <span class="n">channels</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">bpf</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="s1">&#39;CHANNEL&#39;</span><span class="p">):</span>
+                    <span class="n">this_chan</span> <span class="o">=</span> <span class="n">ChannelInfo</span><span class="p">()</span>
+                    <span class="n">this_chan</span><span class="o">.</span><span class="n">number</span> <span class="o">=</span> <span class="n">child</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;number&#39;</span><span class="p">)</span>
+                    <span class="n">this_chan</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">child</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">child</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="s1">&#39;SELECTIONSTATE&#39;</span><span class="p">):</span>
+                        <span class="n">this_chan</span><span class="o">.</span><span class="n">param</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;param&#39;</span><span class="p">)</span>
+                        <span class="n">this_chan</span><span class="o">.</span><span class="n">record</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;record&#39;</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">params</span> <span class="ow">in</span> <span class="n">child</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="s1">&#39;PARAMETERS&#39;</span><span class="p">):</span>
+                        <span class="n">this_chan</span><span class="o">.</span><span class="n">lowcut</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;lowcut&#39;</span><span class="p">)</span>
+                        <span class="n">this_chan</span><span class="o">.</span><span class="n">highcut</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;highcut&#39;</span><span class="p">)</span>
+                    <span class="n">channels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">this_chan</span><span class="p">)</span>
+                    <span class="n">bandpass_info</span><span class="p">[</span><span class="n">this_bpf</span><span class="o">.</span><span class="n">nodeId</span><span class="p">]</span> <span class="o">=</span> <span class="n">channels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bandpass_params</span> <span class="o">=</span> <span class="n">bandpass_info</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Robin Hayman
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

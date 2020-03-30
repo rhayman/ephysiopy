@@ -1,0 +1,754 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ephysiopy.ephys_generic.binning &mdash; ephysiopy 1.5.55 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> ephysiopy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.5
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">ephysiopy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>ephysiopy.ephys_generic.binning</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for ephysiopy.ephys_generic.binning</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">signal</span>
+<span class="kn">from</span> <span class="nn">astropy</span> <span class="kn">import</span> <span class="n">convolution</span> <span class="c1"># deals with nans unlike other convs</span>
+
+<div class="viewcode-block" id="RateMap"><a class="viewcode-back" href="../../../source/ephysiopy.ephys_generic.html#ephysiopy.ephys_generic.binning.RateMap">[docs]</a><span class="k">class</span> <span class="nc">RateMap</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">	Bins up positional data (xy, head direction etc) and produces rate maps</span>
+<span class="sd">	of the relevant kind. This is a generic class meant to be independent of</span>
+<span class="sd">	any particular recording format</span>
+
+<span class="sd">	Parameters</span>
+<span class="sd">	----------</span>
+<span class="sd">	xy : array_like, optional</span>
+<span class="sd">		The xy data, usually given as a 2 x n sample numpy array</span>
+<span class="sd">	hdir : array_like, optional</span>
+<span class="sd">		The head direction data, usualy a 1 x n sample numpy array</span>
+<span class="sd">	speed : array_like, optional</span>
+<span class="sd">		Similar to hdir</span>
+<span class="sd">	pos_weights : array_like, optional</span>
+<span class="sd">		A 1D numpy array n samples long which is used to weight a particular</span>
+<span class="sd">		position sample when binning data. For example, if there were 5 positions</span>
+<span class="sd">		recorded and a cell spiked once in position 2 and 5 times in position 3 and</span>
+<span class="sd">		nothing anywhere else then pos_weights looks like: [0 0 1 5 0]</span>
+<span class="sd">		In the case of binning up position this will be an array of mostly just 1&#39;s</span>
+<span class="sd">		unless there are some positions you want excluded for some reason</span>
+<span class="sd">	ppm : int, optional</span>
+<span class="sd">		Pixels per metre. Specifies how many camera pixels per metre so this,</span>
+<span class="sd">		in combination with cmsPerBin, will determine how many bins there are</span>
+<span class="sd">		in the rate map</span>
+<span class="sd">	xyInCms : bool, optional, default False</span>
+<span class="sd">		Whether the positional data is in cms</span>
+<span class="sd">	cmsPerBin : int, optional, default 3</span>
+<span class="sd">		How many cms on a side each bin is in a rate map OR the number of degrees</span>
+<span class="sd">		per bin in the case of directional binning</span>
+<span class="sd">	smooth_sz : int, optional, default = 5</span>
+<span class="sd">		The width of the smoothing kernel for smoothing rate maps</span>
+
+<span class="sd">	Notes</span>
+<span class="sd">	----</span>
+<span class="sd">	There are several instance variables you can set, see below</span>
+<span class="sd">	</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xy</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">hdir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">speed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pos_weights</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ppm</span><span class="o">=</span><span class="mi">430</span><span class="p">,</span> <span class="n">xyInCms</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">cmsPerBin</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">smooth_sz</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">xy</span> <span class="o">=</span> <span class="n">xy</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">dir</span> <span class="o">=</span> <span class="n">hdir</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">speed</span> <span class="o">=</span> <span class="n">speed</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">__pos_weights</span> <span class="o">=</span> <span class="n">pos_weights</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">__ppm</span> <span class="o">=</span> <span class="n">ppm</span> <span class="c1">#pixels per metre</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">__cmsPerBin</span> <span class="o">=</span> <span class="n">cmsPerBin</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">__inCms</span> <span class="o">=</span> <span class="n">xyInCms</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">__binsize__</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># has setter and getter - see below</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">__smooth_sz</span> <span class="o">=</span> <span class="n">smooth_sz</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">__smoothingType</span> <span class="o">=</span> <span class="s1">&#39;gaussian&#39;</span> <span class="c1"># &#39;boxcar&#39; or &#39;gaussian&#39;</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">whenToSmooth</span> <span class="o">=</span> <span class="s1">&#39;before&#39;</span> <span class="c1"># or &#39;after&#39;</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">inCms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="c1"># Whether the units are in cms or not</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__inCms</span>
+
+	<span class="nd">@inCms</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">inCms</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">__inCms</span> <span class="o">=</span> <span class="n">value</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">ppm</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="c1"># Get the current pixels per metre (ppm)</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ppm</span>
+
+	<span class="nd">@ppm</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">ppm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">__ppm</span> <span class="o">=</span> <span class="n">value</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">__binsize__</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__calcBinSize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cmsPerBin</span><span class="p">)</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">binsize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="c1"># Returns binsize calculated in __calcBinSize and based on cmsPerBin</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__binsize__</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="k">try</span><span class="p">:</span>
+				<span class="bp">self</span><span class="o">.</span><span class="n">__binsize__</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__calcBinSize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cmsPerBin</span><span class="p">)</span>
+			<span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+				<span class="bp">self</span><span class="o">.</span><span class="n">__binsize__</span> <span class="o">=</span> <span class="kc">None</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__binsize__</span>
+
+	<span class="nd">@binsize</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">binsize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">__binsize__</span> <span class="o">=</span> <span class="n">value</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">pos_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		The &#39;weights&#39; used as an argument to np.histogram* for binning up position</span>
+<span class="sd">		Mostly this is just an array of 1&#39;s equal to the length of the pos</span>
+<span class="sd">		data, but usefully can be adjusted when masking data in the trial</span>
+<span class="sd">		by</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pos_weights</span>
+
+	<span class="nd">@pos_weights</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">pos_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">__pos_weights</span> <span class="o">=</span> <span class="n">value</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">cmsPerBin</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="c1"># The number of cms per bin of the binned up map</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__cmsPerBin</span>
+
+	<span class="nd">@cmsPerBin</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">cmsPerBin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">__cmsPerBin</span> <span class="o">=</span> <span class="n">value</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">__binsize__</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__calcBinSize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cmsPerBin</span><span class="p">)</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">smooth_sz</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="c1"># The size of the smoothing window applied to the binned data (1D or 2D)</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__smooth_sz</span>
+
+	<span class="nd">@smooth_sz</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">smooth_sz</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">__smooth_sz</span> <span class="o">=</span> <span class="n">value</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">smoothingType</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="c1"># The type of smoothing to do - legal values are &#39;boxcar&#39; or &#39;gaussian&#39;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__smoothingType</span>
+
+	<span class="nd">@smoothingType</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">smoothingType</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">__smoothingType</span> <span class="o">=</span> <span class="n">value</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">pixelsPerBin</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="c1"># Calculates the number of camera pixels per bin of the binned data</span>
+		<span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;inCms&#39;</span><span class="p">):</span>
+			<span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;cmsPerBin&#39;</span><span class="p">)</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="k">return</span> <span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;ppm&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="mf">100.</span><span class="p">)</span> <span class="o">*</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;cmsPerBin&#39;</span><span class="p">)</span>
+
+	<span class="k">def</span> <span class="nf">__calcBinSize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmsPerBin</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		Aims to get the right number of bins for x and y dims given the ppm</span>
+<span class="sd">		in the set header and the x and y extent</span>
+
+<span class="sd">		Parameters</span>
+<span class="sd">		----------</span>
+<span class="sd">		cmsPerBin : int, optional, default = 3</span>
+<span class="sd">			The number of cms per bin OR degrees in the case of directional binning</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="n">x_lims</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xy</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xy</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+		<span class="n">y_lims</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xy</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xy</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+		<span class="n">ppb</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;pixelsPerBin&#39;</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">binsize</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">y_lims</span><span class="p">)</span> <span class="o">/</span> <span class="n">ppb</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+								 <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">x_lims</span><span class="p">)</span> <span class="o">/</span> <span class="n">ppb</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">)</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">binsize</span>
+
+<div class="viewcode-block" id="RateMap.getMap"><a class="viewcode-back" href="../../../source/ephysiopy.ephys_generic.html#ephysiopy.ephys_generic.binning.RateMap.getMap">[docs]</a>	<span class="k">def</span> <span class="nf">getMap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spkWeights</span><span class="p">,</span> <span class="n">varType</span><span class="o">=</span><span class="s1">&#39;xy&#39;</span><span class="p">,</span> <span class="n">mapType</span><span class="o">=</span><span class="s1">&#39;rate&#39;</span><span class="p">,</span> <span class="n">smoothing</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		Bins up the variable type varType and returns a tuple of (rmap, binnedPositionDir) or</span>
+<span class="sd">		(rmap, binnedPostionX, binnedPositionY)</span>
+
+<span class="sd">		Parameters</span>
+<span class="sd">		----------</span>
+<span class="sd">		spkWeights : array_like</span>
+<span class="sd">			Shape equal to number of positions samples captured and consists of</span>
+<span class="sd">			position weights. For example, if there were 5 positions</span>
+<span class="sd">			recorded and a cell spiked once in position 2 and 5 times in position 3 and</span>
+<span class="sd">			nothing anywhere else then pos_weights looks like: [0 0 1 5 0]</span>
+<span class="sd">		varType : str, optional, default &#39;xy&#39;</span>
+<span class="sd">			The variable to bin up. Legal values are: &#39;xy&#39;, &#39;dir&#39;, and &#39;speed&#39;</span>
+<span class="sd">		mapType : str, optional, default &#39;rate&#39;</span>
+<span class="sd">			If &#39;rate&#39; then the binned up spikes are divided by varType. Otherwise return</span>
+<span class="sd">			binned up position. Options are &#39;rate&#39; or &#39;pos&#39;</span>
+<span class="sd">		smoothing : bool, optional, default True</span>
+<span class="sd">			Whether to smooth the data or not</span>
+
+<span class="sd">		Returns</span>
+<span class="sd">		-------</span>
+<span class="sd">		binned_data, binned_pos : tuple</span>
+<span class="sd">			This is either a 2-tuple or a 3-tuple depening on whether binned pos</span>
+<span class="sd">			(mapType is &#39;pos&#39;) or binned spikes (mapType is &#39;rate&#39;) is asked for,</span>
+<span class="sd">			respectively</span>
+
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="n">sample</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">varType</span><span class="p">)</span>
+		<span class="k">assert</span><span class="p">(</span><span class="n">sample</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="c1"># might happen if head direction not supplied for example</span>
+
+		<span class="k">if</span> <span class="s1">&#39;xy&#39;</span> <span class="ow">in</span> <span class="n">varType</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">binsize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__calcBinSize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cmsPerBin</span><span class="p">)</span>
+		<span class="k">elif</span> <span class="s1">&#39;dir&#39;</span> <span class="ow">in</span> <span class="n">varType</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">binsize</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">360</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">cmsPerBin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cmsPerBin</span><span class="p">)</span>
+		<span class="k">elif</span> <span class="s1">&#39;speed&#39;</span> <span class="ow">in</span> <span class="n">varType</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">binsize</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+		<span class="n">binned_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__binData</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">binsize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos_weights</span><span class="p">)</span>
+
+		<span class="k">if</span> <span class="n">binned_pos</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="c1"># directional binning</span>
+			<span class="n">binned_pos_edges</span> <span class="o">=</span> <span class="n">binned_pos</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+			<span class="n">binned_pos</span> <span class="o">=</span> <span class="n">binned_pos</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+		<span class="k">elif</span> <span class="n">binned_pos</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+			<span class="n">binned_pos_edges</span> <span class="o">=</span> <span class="p">(</span><span class="n">binned_pos</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+			<span class="n">binned_pos</span> <span class="o">=</span> <span class="n">binned_pos</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+		<span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">binned_pos</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+			<span class="n">binned_pos_edges</span> <span class="o">=</span> <span class="n">binned_pos</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+			<span class="n">binned_pos</span> <span class="o">=</span> <span class="n">binned_pos</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+		<span class="n">nanIdx</span> <span class="o">=</span> <span class="n">binned_pos</span> <span class="o">==</span> <span class="mi">0</span>
+
+		<span class="k">if</span> <span class="s1">&#39;pos&#39;</span> <span class="ow">in</span> <span class="n">mapType</span><span class="p">:</span> <span class="c1">#return just binned up position</span>
+			<span class="k">if</span> <span class="n">smoothing</span><span class="p">:</span>
+				<span class="k">if</span> <span class="s1">&#39;dir&#39;</span> <span class="ow">in</span> <span class="n">varType</span><span class="p">:</span>
+					<span class="n">binned_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__circPadSmooth</span><span class="p">(</span><span class="n">binned_pos</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">smooth_sz</span><span class="p">)</span>
+				<span class="k">else</span><span class="p">:</span>
+					<span class="n">binned_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">blurImage</span><span class="p">(</span><span class="n">binned_pos</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">smooth_sz</span><span class="p">,</span> <span class="n">ftype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">smoothingType</span><span class="p">)</span>
+			<span class="k">return</span> <span class="n">binned_pos</span><span class="p">,</span> <span class="n">binned_pos_edges</span>
+		<span class="n">binned_spk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__binData</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">binsize</span><span class="p">,</span> <span class="n">spkWeights</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+		<span class="c1"># binned_spk is returned as a tuple of the binned data and the bin</span>
+		<span class="c1"># edges</span>
+		<span class="k">if</span> <span class="s1">&#39;after&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">whenToSmooth</span><span class="p">:</span>
+			<span class="n">rmap</span> <span class="o">=</span> <span class="n">binned_spk</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">binned_pos</span>
+			<span class="k">if</span> <span class="s1">&#39;dir&#39;</span> <span class="ow">in</span> <span class="n">varType</span><span class="p">:</span>
+				<span class="n">rmap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__circPadSmooth</span><span class="p">(</span><span class="n">rmap</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">smooth_sz</span><span class="p">)</span>
+			<span class="k">else</span><span class="p">:</span>
+				<span class="n">rmap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">blurImage</span><span class="p">(</span><span class="n">rmap</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">smooth_sz</span><span class="p">,</span> <span class="n">ftype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">smoothingType</span><span class="p">)</span>
+		<span class="k">else</span><span class="p">:</span> <span class="c1"># default case</span>
+			<span class="k">if</span> <span class="ow">not</span> <span class="n">smoothing</span><span class="p">:</span>
+				<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">binned_pos_edges</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="c1">#directional map</span>
+					<span class="k">return</span> <span class="n">binned_spk</span> <span class="o">/</span> <span class="n">binned_pos</span><span class="p">,</span> <span class="n">binned_pos_edges</span>
+				<span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">binned_pos_edges</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+					<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">binned_spk</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">object</span><span class="p">):</span> <span class="c1">#__binData returns np.object when binning multiple clusters</span>
+						<span class="n">nClusters</span> <span class="o">=</span> <span class="n">spkWeights</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+						<span class="n">multi_binned_spks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">binsize</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">binsize</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">nClusters</span><span class="p">])</span>
+						<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nClusters</span><span class="p">):</span>
+							<span class="n">multi_binned_spks</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">binned_spk</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+						<span class="k">return</span> <span class="n">multi_binned_spks</span> <span class="o">/</span> <span class="n">binned_pos</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="n">binned_pos_edges</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">binned_pos_edges</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+					<span class="k">else</span><span class="p">:</span>
+						<span class="k">return</span> <span class="n">binned_spk</span> <span class="o">/</span> <span class="n">binned_pos</span><span class="p">,</span> <span class="n">binned_pos_edges</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">binned_pos_edges</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+			<span class="k">if</span> <span class="s1">&#39;dir&#39;</span> <span class="ow">in</span> <span class="n">varType</span><span class="p">:</span>
+				<span class="n">binned_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__circPadSmooth</span><span class="p">(</span><span class="n">binned_pos</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">smooth_sz</span><span class="p">)</span>
+				<span class="n">binned_spk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__circPadSmooth</span><span class="p">(</span><span class="n">binned_spk</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">smooth_sz</span><span class="p">)</span>
+				<span class="k">if</span> <span class="n">spkWeights</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+					<span class="n">rmap</span> <span class="o">=</span> <span class="n">binned_spk</span> <span class="o">/</span> <span class="n">binned_pos</span>
+				<span class="k">elif</span> <span class="n">spkWeights</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+					<span class="n">rmap</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">spkWeights</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">binned_pos</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+					<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">spkWeights</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+						<span class="n">rmap</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">binned_spk</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">binned_pos</span>
+			<span class="k">else</span><span class="p">:</span>
+				<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">binned_spk</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">object</span><span class="p">):</span> <span class="c1">#__binData returns np.object when binning multiple clusters</span>
+					<span class="n">binned_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">blurImage</span><span class="p">(</span><span class="n">binned_pos</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">smooth_sz</span><span class="p">,</span> <span class="n">ftype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">smoothingType</span><span class="p">)</span>
+					<span class="k">if</span> <span class="n">binned_spk</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+						<span class="k">pass</span>
+					<span class="k">elif</span> <span class="p">(</span><span class="n">binned_spk</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span> <span class="ow">or</span> <span class="n">binned_spk</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">):</span>
+						<span class="n">binned_spk_tmp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">binned_spk</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">binned_spk</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">binned_spk</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
+						<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">binned_spk</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+							<span class="n">binned_spk_tmp</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">binned_spk</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+						<span class="n">binned_spk</span> <span class="o">=</span> <span class="n">binned_spk_tmp</span>
+					<span class="n">binned_spk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">blurImage</span><span class="p">(</span><span class="n">binned_spk</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">smooth_sz</span><span class="p">,</span> <span class="n">ftype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">smoothingType</span><span class="p">)</span>
+					<span class="n">rmap</span> <span class="o">=</span> <span class="n">binned_spk</span> <span class="o">/</span> <span class="n">binned_pos</span>
+					<span class="k">if</span> <span class="n">rmap</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&lt;=</span> <span class="mi">2</span><span class="p">:</span>
+						<span class="n">rmap</span><span class="p">[</span><span class="n">nanIdx</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+					<span class="k">elif</span> <span class="n">rmap</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+						<span class="n">rmap</span><span class="p">[:,</span><span class="n">nanIdx</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+		<span class="k">return</span> <span class="n">rmap</span><span class="p">,</span> <span class="n">binned_pos_edges</span></div>
+
+<div class="viewcode-block" id="RateMap.blurImage"><a class="viewcode-back" href="../../../source/ephysiopy.ephys_generic.html#ephysiopy.ephys_generic.binning.RateMap.blurImage">[docs]</a>	<span class="k">def</span> <span class="nf">blurImage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">im</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">ny</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ftype</span><span class="o">=</span><span class="s1">&#39;boxcar&#39;</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		Smooths a 2D image by convolving with a filter</span>
+
+<span class="sd">		Parameters</span>
+<span class="sd">		----------</span>
+<span class="sd">		im : array_like</span>
+<span class="sd">			The array to smooth</span>
+<span class="sd">		n, ny : int</span>
+<span class="sd">			The size of the smoothing kernel</span>
+<span class="sd">		ftype : str</span>
+<span class="sd">			The type of smoothing kernel. Either &#39;boxcar&#39; or &#39;gaussian&#39;</span>
+
+<span class="sd">		Returns</span>
+<span class="sd">		-------</span>
+<span class="sd">		res: array_like</span>
+<span class="sd">			The smoothed vector with shape the same as im</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">ny</span><span class="p">:</span>
+			<span class="n">ny</span> <span class="o">=</span> <span class="n">n</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="n">ny</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ny</span><span class="p">)</span>
+		<span class="c1">#  keep track of nans</span>
+		<span class="n">nan_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">im</span><span class="p">)</span>
+		<span class="n">im</span><span class="p">[</span><span class="n">nan_idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+		<span class="n">g</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">boxcar</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+		<span class="k">if</span> <span class="s1">&#39;box&#39;</span> <span class="ow">in</span> <span class="n">ftype</span><span class="p">:</span>
+			<span class="k">if</span> <span class="n">im</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+				<span class="n">g</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">boxcar</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+			<span class="k">elif</span> <span class="n">im</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+				<span class="n">g</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">boxcar</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+				<span class="n">g</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+			<span class="k">elif</span> <span class="n">im</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span> <span class="c1"># mutlidimensional binning</span>
+				<span class="n">g</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">boxcar</span><span class="p">([</span><span class="n">n</span><span class="p">,</span> <span class="n">ny</span><span class="p">])</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+				<span class="n">g</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
+		<span class="k">elif</span> <span class="s1">&#39;gaussian&#39;</span> <span class="ow">in</span> <span class="n">ftype</span><span class="p">:</span>
+			<span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="o">-</span><span class="n">n</span><span class="p">:</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="n">ny</span><span class="p">:</span><span class="n">ny</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+			<span class="n">g</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">+</span> <span class="n">y</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="n">ny</span><span class="p">)))</span>
+			<span class="n">g</span> <span class="o">=</span> <span class="n">g</span> <span class="o">/</span> <span class="n">g</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+			<span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">ndim</span><span class="p">(</span><span class="n">im</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+				<span class="n">g</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="p">:]</span>
+		<span class="n">improc</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="n">im</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;same&#39;</span><span class="p">)</span>
+		<span class="n">improc</span><span class="p">[</span><span class="n">nan_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+		<span class="k">return</span> <span class="n">improc</span></div>
+
+	<span class="k">def</span> <span class="nf">__binData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">var</span><span class="p">,</span> <span class="n">bin_edges</span><span class="p">,</span> <span class="n">weights</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		Bins data taking account of possible multi-dimensionality</span>
+
+<span class="sd">		Parameters</span>
+<span class="sd">		----------</span>
+<span class="sd">		var : array_like</span>
+<span class="sd">			The variable to bin</span>
+<span class="sd">		bin_edges : array_like</span>
+<span class="sd">			The edges of the data - see numpys histogramdd for more</span>
+<span class="sd">		weights : array_like</span>
+<span class="sd">			The weights attributed to the samples in var</span>
+<span class="sd">		</span>
+<span class="sd">		Returns</span>
+<span class="sd">		-------</span>
+<span class="sd">		ndhist : 2-tuple</span>
+<span class="sd">			Think this always returns a two-tuple of the binned variable and</span>
+<span class="sd">			the bin edges - need to check to be sure...		</span>
+
+<span class="sd">		Notes</span>
+<span class="sd">		-----</span>
+<span class="sd">		This breaks compatability with numpys histogramdd</span>
+<span class="sd">		In the 2d histogram case below I swap the axes around so that x and y</span>
+<span class="sd">		are binned in the &#39;normal&#39; format i.e. so x appears horizontally and y</span>
+<span class="sd">		vertically. </span>
+<span class="sd">		Multi-binning issue is dealt with awkwardly through checking</span>
+<span class="sd">		the dimensionality of the weights array - &#39;normally&#39; this would be 1 dim</span>
+<span class="sd">		but when multiple clusters are being binned it will be 2 dim. In that case</span>
+<span class="sd">		np.apply_along_axis functionality is applied. The spike weights in</span>
+<span class="sd">		that case might be created like so:</span>
+
+<span class="sd">		&gt;&gt;&gt; spk_W = np.zeros(shape=[len(trial.nClusters), trial.npos])</span>
+<span class="sd">		&gt;&gt;&gt; for i, cluster in enumerate(trial.clusters):</span>
+<span class="sd">		&gt;&gt;&gt;		x1 = trial.getClusterIdx(cluster)</span>
+<span class="sd">		&gt;&gt;&gt;		spk_W[i, :] = np.bincount(x1, minlength=trial.npos)</span>
+
+<span class="sd">		This can then be fed into this fcn something like so:</span>
+
+<span class="sd">		&gt;&gt;&gt; rng = np.array((np.ma.min(trial.POS.xy, 1).data, np.ma.max(rial.POS.xy, 1).data))</span>
+<span class="sd">		&gt;&gt;&gt; h = __binData(var=trial.POS.xy, bin_edges=np.array([64, 64]), weights=spk_W, rng=rng)</span>
+
+<span class="sd">		Returned will be a tuple containing the binned up data and the bin edges for x and y (obv this will be the same for all</span>
+<span class="sd">		entries of h)</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="n">weights</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+		<span class="n">dims</span> <span class="o">=</span> <span class="n">weights</span><span class="o">.</span><span class="n">ndim</span>
+		<span class="n">orig_dims</span> <span class="o">=</span> <span class="n">weights</span><span class="o">.</span><span class="n">ndim</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">dims</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">var</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">):</span>
+			<span class="n">var</span> <span class="o">=</span> <span class="n">var</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span>
+			<span class="n">bin_edges</span> <span class="o">=</span> <span class="n">bin_edges</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span>
+		<span class="k">elif</span> <span class="p">(</span><span class="n">dims</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">var</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">):</span>
+			<span class="n">var</span> <span class="o">=</span> <span class="n">var</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span>
+			<span class="n">bin_edges</span> <span class="o">=</span> <span class="n">bin_edges</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="n">var</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flipud</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+		<span class="n">ndhist</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">apply_along_axis</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">histogramdd</span><span class="p">(</span><span class="n">var</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">bin_edges</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="n">weights</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+		<span class="k">if</span> <span class="n">ndhist</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+			<span class="k">if</span> <span class="n">var</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span> <span class="c1"># 1-dimenstional spike weights and xy</span>
+				<span class="k">return</span> <span class="n">ndhist</span>
+		<span class="k">if</span> <span class="n">ndhist</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+			<span class="c1"># a single map has been asked for, pos, single map or dir</span>
+			<span class="k">return</span> <span class="n">ndhist</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ndhist</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+		<span class="k">elif</span> <span class="n">ndhist</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+			<span class="k">if</span> <span class="n">orig_dims</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="c1"># directional binning</span>
+				<span class="k">return</span> <span class="n">ndhist</span>
+			<span class="c1"># multi-dimensional binning</span>
+			<span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">ndhist</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">ndhist</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ndhist</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+			<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ndhist</span><span class="p">)):</span>
+				<span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="n">ndhist</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+			<span class="k">return</span> <span class="n">result</span><span class="p">,</span> <span class="n">ndhist</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+
+	<span class="k">def</span> <span class="nf">__circPadSmooth</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">var</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">ny</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		Smooths a vector by convolving with a gaussian</span>
+<span class="sd">		Mirror reflects the start and end of the vector to</span>
+<span class="sd">		deal with edge effects</span>
+
+<span class="sd">		Parameters</span>
+<span class="sd">		----------</span>
+<span class="sd">		var : array_like</span>
+<span class="sd">			The vector to smooth</span>
+<span class="sd">		n, ny : int</span>
+<span class="sd">			Size of the smoothing (sigma in gaussian)</span>
+
+<span class="sd">		Returns</span>
+<span class="sd">		-------</span>
+<span class="sd">		res : array_like</span>
+<span class="sd">			The smoothed vector with shape the same as var</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+
+		<span class="n">tn</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+		<span class="n">t2</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">tn</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span>
+		<span class="n">var</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">var</span><span class="p">[</span><span class="n">t2</span><span class="p">:</span><span class="n">tn</span><span class="p">],</span> <span class="n">var</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">t2</span><span class="p">]))</span>
+		<span class="k">if</span> <span class="n">ny</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="n">ny</span> <span class="o">=</span> <span class="n">n</span>
+		<span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="o">-</span><span class="n">n</span><span class="p">:</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="n">ny</span><span class="p">:</span><span class="n">ny</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+		<span class="n">g</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">+</span> <span class="n">y</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="n">ny</span><span class="p">)))</span>
+		<span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">ndim</span><span class="p">(</span><span class="n">var</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+			<span class="n">g</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="p">:]</span>
+		<span class="n">g</span> <span class="o">=</span> <span class="n">g</span> <span class="o">/</span> <span class="n">g</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+		<span class="n">improc</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;same&#39;</span><span class="p">)</span>
+		<span class="n">improc</span> <span class="o">=</span> <span class="n">improc</span><span class="p">[</span><span class="n">tn</span><span class="o">-</span><span class="n">t2</span><span class="p">:</span><span class="n">tn</span><span class="o">-</span><span class="n">t2</span><span class="o">+</span><span class="n">tn</span><span class="p">]</span>
+		<span class="k">return</span> <span class="n">improc</span>
+
+	<span class="k">def</span> <span class="nf">__circularStructure</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">radius</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		Generates a circular binary structure for use with morphological</span>
+<span class="sd">		operations such as ndimage.binary_dilation etc</span>
+
+<span class="sd">		This is only used in this implementation for adaptively binning</span>
+<span class="sd">		ratemaps for use with information theoretic measures (Skaggs etc)</span>
+
+<span class="sd">		Parameters</span>
+<span class="sd">		----------</span>
+<span class="sd">		radius : int</span>
+<span class="sd">			the size of the circular structure</span>
+
+<span class="sd">		Returns</span>
+<span class="sd">		-------</span>
+<span class="sd">		res : array_like</span>
+<span class="sd">			Binary structure with shape [(radius*2) + 1,(radius*2) + 1]</span>
+
+<span class="sd">		See Also</span>
+<span class="sd">		--------</span>
+<span class="sd">		RateMap.__adpativeMap</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="n">crad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">radius</span><span class="o">-</span><span class="mf">0.5</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">)</span>
+		<span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="o">-</span><span class="n">crad</span><span class="p">:</span><span class="n">crad</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="n">crad</span><span class="p">:</span><span class="n">crad</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+		<span class="n">maxxy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="nb">abs</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+		<span class="n">minxy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="nb">abs</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+
+		<span class="n">m1</span> <span class="o">=</span> <span class="p">((</span><span class="n">radius</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">maxxy</span><span class="o">+</span><span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">minxy</span><span class="o">-</span><span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">minxy</span><span class="o">-</span><span class="mf">0.5</span><span class="p">)</span> <span class="o">+</span>
+			  <span class="p">(</span><span class="n">radius</span><span class="o">**</span><span class="mi">2</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="n">maxxy</span><span class="o">+</span><span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">minxy</span><span class="o">-</span><span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span>
+			  <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">radius</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="p">(</span><span class="n">maxxy</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
+										 <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">))))</span>
+		<span class="n">m2</span> <span class="o">=</span> <span class="p">((</span><span class="n">radius</span><span class="o">**</span><span class="mi">2</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">maxxy</span><span class="o">-</span><span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">minxy</span><span class="o">+</span><span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">minxy</span><span class="o">+</span><span class="mf">0.5</span><span class="p">)</span> <span class="o">+</span>
+			  <span class="p">(</span><span class="n">radius</span><span class="o">**</span><span class="mi">2</span> <span class="o">&lt;=</span> <span class="p">(</span><span class="n">maxxy</span><span class="o">-</span><span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">minxy</span><span class="o">+</span><span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span>
+			  <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">radius</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="p">(</span><span class="n">maxxy</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
+										 <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">))))</span>
+
+		<span class="n">sgrid</span> <span class="o">=</span> <span class="p">((</span><span class="n">radius</span><span class="o">**</span><span class="mi">2</span><span class="o">*</span><span class="p">(</span><span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arcsin</span><span class="p">(</span><span class="n">m2</span><span class="o">/</span><span class="n">radius</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">arcsin</span><span class="p">(</span><span class="n">m1</span><span class="o">/</span><span class="n">radius</span><span class="p">))</span> <span class="o">+</span>
+			  <span class="mf">0.25</span><span class="o">*</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">arcsin</span><span class="p">(</span><span class="n">m2</span><span class="o">/</span><span class="n">radius</span><span class="p">))</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">arcsin</span><span class="p">(</span><span class="n">m1</span><span class="o">/</span><span class="n">radius</span><span class="p">))))</span> <span class="o">-</span>
+			 <span class="p">(</span><span class="n">maxxy</span><span class="o">-</span><span class="mf">0.5</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">m2</span><span class="o">-</span><span class="n">m1</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">m1</span><span class="o">-</span><span class="n">minxy</span><span class="o">+</span><span class="mf">0.5</span><span class="p">))</span> <span class="o">*</span>
+			 <span class="p">((((</span><span class="n">radius</span><span class="o">**</span><span class="mi">2</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">maxxy</span><span class="o">+</span><span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">minxy</span><span class="o">+</span><span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">&amp;</span>
+			 <span class="p">(</span><span class="n">radius</span><span class="o">**</span><span class="mi">2</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">maxxy</span><span class="o">-</span><span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">minxy</span><span class="o">-</span><span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span> <span class="o">|</span>
+			 <span class="p">((</span><span class="n">minxy</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">maxxy</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">&lt;</span> <span class="n">radius</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">maxxy</span><span class="o">+</span><span class="mf">0.5</span> <span class="o">&gt;=</span> <span class="n">radius</span><span class="p">))))</span> <span class="p">)</span>
+
+		<span class="n">sgrid</span> <span class="o">=</span> <span class="n">sgrid</span> <span class="o">+</span> <span class="p">((</span><span class="n">maxxy</span><span class="o">+</span><span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">minxy</span><span class="o">+</span><span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">&lt;</span> <span class="n">radius</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+		<span class="n">sgrid</span><span class="p">[</span><span class="n">crad</span><span class="p">,</span><span class="n">crad</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="n">radius</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+		<span class="k">if</span> <span class="p">((</span><span class="n">crad</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">radius</span> <span class="o">&gt;</span> <span class="n">crad</span><span class="o">-</span><span class="mf">0.5</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">radius</span><span class="o">**</span><span class="mi">2</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">crad</span><span class="o">-</span><span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="mf">0.25</span><span class="p">)):</span>
+			<span class="n">m1</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">radius</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="p">(</span><span class="n">crad</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+			<span class="n">m1n</span> <span class="o">=</span> <span class="n">m1</span><span class="o">/</span><span class="n">radius</span>
+			<span class="n">sg0</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="p">(</span><span class="n">radius</span><span class="o">**</span><span class="mi">2</span><span class="o">*</span><span class="p">(</span><span class="mf">0.5</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">arcsin</span><span class="p">(</span><span class="n">m1n</span><span class="p">)</span> <span class="o">+</span> <span class="mf">0.25</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">arcsin</span><span class="p">(</span><span class="n">m1n</span><span class="p">)))</span><span class="o">-</span><span class="n">m1</span><span class="o">*</span><span class="p">(</span><span class="n">crad</span><span class="o">-</span><span class="mf">0.5</span><span class="p">))</span>
+			<span class="n">sgrid</span><span class="p">[</span><span class="mi">2</span><span class="o">*</span><span class="n">crad</span><span class="p">,</span><span class="n">crad</span><span class="p">]</span>   <span class="o">=</span> <span class="n">sg0</span>
+			<span class="n">sgrid</span><span class="p">[</span><span class="n">crad</span><span class="p">,</span><span class="mi">2</span><span class="o">*</span><span class="n">crad</span><span class="p">]</span>   <span class="o">=</span> <span class="n">sg0</span>
+			<span class="n">sgrid</span><span class="p">[</span><span class="n">crad</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>        <span class="o">=</span> <span class="n">sg0</span>
+			<span class="n">sgrid</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">crad</span><span class="p">]</span>        <span class="o">=</span> <span class="n">sg0</span>
+			<span class="n">sgrid</span><span class="p">[</span><span class="mi">2</span><span class="o">*</span><span class="n">crad</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="n">crad</span><span class="p">]</span> <span class="o">=</span> <span class="n">sgrid</span><span class="p">[</span><span class="mi">2</span><span class="o">*</span><span class="n">crad</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="n">crad</span><span class="p">]</span> <span class="o">-</span> <span class="n">sg0</span>
+			<span class="n">sgrid</span><span class="p">[</span><span class="n">crad</span><span class="p">,</span><span class="mi">2</span><span class="o">*</span><span class="n">crad</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">sgrid</span><span class="p">[</span><span class="n">crad</span><span class="p">,</span><span class="mi">2</span><span class="o">*</span><span class="n">crad</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">sg0</span>
+			<span class="n">sgrid</span><span class="p">[</span><span class="n">crad</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>        <span class="o">=</span> <span class="n">sgrid</span><span class="p">[</span><span class="n">crad</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>        <span class="o">-</span> <span class="n">sg0</span>
+			<span class="n">sgrid</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="n">crad</span><span class="p">]</span>        <span class="o">=</span> <span class="n">sgrid</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="n">crad</span><span class="p">]</span>        <span class="o">-</span> <span class="n">sg0</span>
+
+		<span class="n">sgrid</span><span class="p">[</span><span class="n">crad</span><span class="p">,</span><span class="n">crad</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">sgrid</span><span class="p">[</span><span class="n">crad</span><span class="p">,</span><span class="n">crad</span><span class="p">],</span><span class="mi">1</span><span class="p">)</span>
+		<span class="n">kernel</span> <span class="o">=</span> <span class="n">sgrid</span><span class="o">/</span><span class="n">sgrid</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+		<span class="k">return</span> <span class="n">kernel</span>
+
+	<span class="k">def</span> <span class="nf">__adaptiveMap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos_binned</span><span class="p">,</span> <span class="n">spk_binned</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">200</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		Produces a ratemap that has been adaptively binned according to the</span>
+<span class="sd">		algorithm described in Skaggs et al., 1996) [1]_.</span>
+
+<span class="sd">		Parameters</span>
+<span class="sd">		----------</span>
+<span class="sd">		pos_binned : array_like</span>
+<span class="sd">			The binned positional data. For example that returned from getMap</span>
+<span class="sd">			above with mapType as &#39;pos&#39;</span>
+<span class="sd">		spk_binned : array_like</span>
+<span class="sd">			The binned spikes</span>
+<span class="sd">		alpha : int, optional, default = 200</span>
+<span class="sd">			A scaling parameter determing the amount of occupancy to aim at</span>
+<span class="sd">			in each bin</span>
+
+<span class="sd">		Returns</span>
+<span class="sd">		-------</span>
+<span class="sd">		Returns adaptively binned spike and pos maps. Use to generate Skaggs</span>
+<span class="sd">		information measure</span>
+
+<span class="sd">		Notes</span>
+<span class="sd">		-----</span>
+<span class="sd">		Positions with high rates mean proportionately less error than those</span>
+<span class="sd">		with low rates, so this tries to even the playing field a bit. This is the</span>
+<span class="sd">		kind of binning that should be used for calculations of spatial info</span>
+<span class="sd">		as with the skaggsInfo method in the fieldcalcs class (see below)</span>
+<span class="sd">		alpha is a scaling parameter that might need tweaking for different</span>
+<span class="sd">		data sets.</span>
+<span class="sd">		From the paper:</span>
+<span class="sd">			The data [are] first binned</span>
+<span class="sd">			into a 64 X 64 grid of spatial locations, and then the firing rate</span>
+<span class="sd">			at each point in this grid was calculated by expanding a circle</span>
+<span class="sd">			around the point until the following criterion was met:</span>
+<span class="sd">				Nspks &gt; alpha / (Nocc^2 * r^2)</span>
+<span class="sd">			where Nspks is the number of spikes emitted in a circle of radius</span>
+<span class="sd">			r (in bins), Nocc is the number of occupancy samples, alpha is the</span>
+<span class="sd">			scaling parameter</span>
+<span class="sd">			The firing rate in the given bin is then calculated as:</span>
+<span class="sd">				sample_rate * (Nspks / Nocc)</span>
+<span class="sd">		</span>
+<span class="sd">		References</span>
+<span class="sd">		----------</span>
+<span class="sd">		.. [1] W. E. Skaggs, B. L. McNaughton, K. M. Gothard &amp; E. J. Markus</span>
+<span class="sd">			&quot;An Information-Theoretic Approach to Deciphering the Hippocampal Code&quot;</span>
+<span class="sd">			Neural Information Processing Systems, 1993.</span>
+<span class="sd">				</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="c1">#  assign output arrays</span>
+		<span class="n">smthdPos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">pos_binned</span><span class="p">)</span>
+		<span class="n">smthdSpk</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">spk_binned</span><span class="p">)</span>
+		<span class="n">smthdRate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">pos_binned</span><span class="p">)</span>
+		<span class="n">idx</span> <span class="o">=</span> <span class="n">pos_binned</span> <span class="o">==</span> <span class="mi">0</span>
+		<span class="n">pos_binned</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+		<span class="n">spk_binned</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+		<span class="n">visited</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">pos_binned</span><span class="p">)</span>
+		<span class="n">visited</span><span class="p">[</span><span class="n">pos_binned</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+		<span class="c1"># array to check which bins have made it</span>
+		<span class="n">binCheck</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">pos_binned</span><span class="p">)</span>
+		<span class="n">maxR</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">pos_binned</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+		<span class="n">r</span> <span class="o">=</span> <span class="mi">1</span>
+		<span class="k">while</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="o">~</span><span class="n">binCheck</span><span class="p">):</span>
+			<span class="k">if</span> <span class="n">r</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">maxR</span> <span class="o">/</span> <span class="mi">2</span><span class="p">):</span>
+				<span class="n">smthdPos</span><span class="p">[</span><span class="o">~</span><span class="n">binCheck</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+				<span class="n">smthdSpk</span><span class="p">[</span><span class="o">~</span><span class="n">binCheck</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+				<span class="k">break</span>
+			<span class="c1"># create the filter kernel</span>
+			<span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__circularStructure</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+			<span class="n">h</span><span class="p">[</span><span class="n">h</span> <span class="o">&gt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">h</span><span class="p">)</span> <span class="o">/</span> <span class="mf">3.0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+			<span class="n">h</span><span class="p">[</span><span class="n">h</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+			<span class="c1"># filter the arrays using astropys convolution</span>
+			<span class="n">filtPos</span> <span class="o">=</span> <span class="n">convolution</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="n">pos_binned</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">boundary</span><span class="o">=</span><span class="s1">&#39;None&#39;</span><span class="p">)</span>
+			<span class="n">filtSpk</span> <span class="o">=</span> <span class="n">convolution</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="n">spk_binned</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">boundary</span><span class="o">=</span><span class="s1">&#39;None&#39;</span><span class="p">)</span>
+			<span class="n">filtVisited</span> <span class="o">=</span> <span class="n">convolution</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="n">visited</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">boundary</span><span class="o">=</span><span class="s1">&#39;None&#39;</span><span class="p">)</span>
+			<span class="c1"># get the bins which made it through this iteration</span>
+			<span class="n">trueBins</span> <span class="o">=</span> <span class="n">alpha</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">filtSpk</span><span class="p">)</span> <span class="o">*</span> <span class="n">filtPos</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">r</span>
+			<span class="n">trueBins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">trueBins</span><span class="p">,</span> <span class="o">~</span><span class="n">binCheck</span><span class="p">)</span>
+			<span class="c1"># insert values where true</span>
+			<span class="n">smthdPos</span><span class="p">[</span><span class="n">trueBins</span><span class="p">]</span> <span class="o">=</span> <span class="n">filtPos</span><span class="p">[</span><span class="n">trueBins</span><span class="p">]</span> <span class="o">/</span> <span class="n">filtVisited</span><span class="p">[</span><span class="n">trueBins</span><span class="p">]</span>
+			<span class="n">smthdSpk</span><span class="p">[</span><span class="n">trueBins</span><span class="p">]</span> <span class="o">=</span> <span class="n">filtSpk</span><span class="p">[</span><span class="n">trueBins</span><span class="p">]</span> <span class="o">/</span> <span class="n">filtVisited</span><span class="p">[</span><span class="n">trueBins</span><span class="p">]</span>
+			<span class="n">binCheck</span><span class="p">[</span><span class="n">trueBins</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+			<span class="n">r</span> <span class="o">+=</span> <span class="mi">1</span>
+		<span class="n">smthdRate</span> <span class="o">=</span> <span class="n">smthdSpk</span> <span class="o">/</span> <span class="n">smthdPos</span>
+		<span class="n">smthdRate</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+		<span class="n">smthdSpk</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+		<span class="n">smthdPos</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+		<span class="k">return</span> <span class="n">smthdRate</span><span class="p">,</span> <span class="n">smthdSpk</span><span class="p">,</span> <span class="n">smthdPos</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Robin Hayman
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

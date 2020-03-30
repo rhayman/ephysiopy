@@ -1,0 +1,387 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ephysiopy.ephys_generic.statscalcs &mdash; ephysiopy 1.5.55 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> ephysiopy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.5
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">ephysiopy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>ephysiopy.ephys_generic.statscalcs</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for ephysiopy.ephys_generic.statscalcs</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Mostly does circular statistics stuff but has some cool other</span>
+<span class="sd">stuff</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<div class="viewcode-block" id="StatsCalcs"><a class="viewcode-back" href="../../../source/ephysiopy.ephys_generic.html#ephysiopy.ephys_generic.statscalcs.StatsCalcs">[docs]</a><span class="k">class</span> <span class="nc">StatsCalcs</span><span class="p">():</span>
+	<span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">pass</span>
+<div class="viewcode-block" id="StatsCalcs.circ_r"><a class="viewcode-back" href="../../../source/ephysiopy.ephys_generic.html#ephysiopy.ephys_generic.statscalcs.StatsCalcs.circ_r">[docs]</a>	<span class="k">def</span> <span class="nf">circ_r</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">w</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">d</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		Computes the mean resultant vector length for circular data [1]_</span>
+<span class="sd">		</span>
+<span class="sd">		Parameters</span>
+<span class="sd">		----------</span>
+<span class="sd">		alpha: array or list</span>
+<span class="sd">			sample of angles in radians</span>
+<span class="sd">		w: array or list</span>
+<span class="sd">			counts in the case of binned data. Must be same length as alpha</span>
+<span class="sd">		d: array or list</span>
+<span class="sd">			spacing of bin centres for binned data; if supplied, correction</span>
+<span class="sd">			factor is used to correct for bias in estimation of r, in radians</span>
+<span class="sd">		axis: int</span>
+<span class="sd">			the dimension along which to compute, Default is 0</span>
+
+<span class="sd">		Returns</span>
+<span class="sd">		-------</span>
+<span class="sd">		r: float</span>
+<span class="sd">			the mean resultant vector length</span>
+<span class="sd">			</span>
+<span class="sd">		References</span>
+<span class="sd">		----------</span>
+<span class="sd">		.. [1] Statistical analysis of circular data, N.I.Fisher</span>
+<span class="sd">		Topics in circular statistics, S.R.Jamalamadaka et al.</span>
+<span class="sd">		Biostatistical Analysis, J.H.Zar</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="n">w</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">w</span><span class="p">))</span>
+		<span class="c1">#TODO: error check for size constancy</span>
+		<span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">alpha</span><span class="p">))</span>
+		<span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+		<span class="k">if</span> <span class="n">d</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+			<span class="n">c</span> <span class="o">=</span> <span class="n">d</span><span class="o">/</span><span class="mf">2.</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">d</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span>
+			<span class="n">r</span> <span class="o">=</span> <span class="n">c</span> <span class="o">*</span> <span class="n">r</span>
+		<span class="k">return</span> <span class="n">r</span></div>
+		
+<div class="viewcode-block" id="StatsCalcs.mean_resultant_vector"><a class="viewcode-back" href="../../../source/ephysiopy.ephys_generic.html#ephysiopy.ephys_generic.statscalcs.StatsCalcs.mean_resultant_vector">[docs]</a>	<span class="k">def</span> <span class="nf">mean_resultant_vector</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">angles</span><span class="p">):</span>
+		<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">		Calculate the mean resultant length and direction for angles</span>
+<span class="sd">		</span>
+<span class="sd">		Parameters</span>
+<span class="sd">		----------</span>
+<span class="sd">		angles: np.array</span>
+<span class="sd">			sample of angles in radians</span>
+<span class="sd">		</span>
+<span class="sd">		Returns</span>
+<span class="sd">		-------</span>
+<span class="sd">		r: float</span>
+<span class="sd">			the mean resultant vector length</span>
+<span class="sd">		th: float</span>
+<span class="sd">			the mean resultant vector direction</span>
+<span class="sd">		&#39;&#39;&#39;</span>
+		<span class="n">S</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">angles</span><span class="p">))</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">angles</span><span class="p">)))</span>
+		<span class="n">C</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">angles</span><span class="p">))</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">angles</span><span class="p">)))</span>
+		<span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">S</span><span class="p">,</span> <span class="n">C</span><span class="p">)</span>
+		<span class="n">th</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan</span><span class="p">(</span><span class="n">S</span> <span class="o">/</span> <span class="n">C</span><span class="p">)</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">C</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
+			<span class="n">th</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">+</span> <span class="n">th</span>
+		<span class="k">return</span> <span class="n">r</span><span class="p">,</span> <span class="n">th</span></div>
+		
+<div class="viewcode-block" id="StatsCalcs.V_test"><a class="viewcode-back" href="../../../source/ephysiopy.ephys_generic.html#ephysiopy.ephys_generic.statscalcs.StatsCalcs.V_test">[docs]</a>	<span class="k">def</span> <span class="nf">V_test</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">angles</span><span class="p">,</span> <span class="n">test_direction</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		Taken from &#39;100 Statistical Tests&#39; G.J.Kanji, 2006 Sage Publications</span>
+<span class="sd">		Test is also known as the modified Rayleigh test</span>
+
+<span class="sd">		angles is a vector of angular values in degrees</span>
+<span class="sd">		test_direction is a single angular value in degrees</span>
+<span class="sd">		The Watson U2 tests whether the observed angles have a tendency to</span>
+<span class="sd">		cluster around a given angle indicating a lack of randomness in the</span>
+<span class="sd">		distribution</span>
+<span class="sd">		Limitations:</span>
+<span class="sd">			For grouped data the length of the mean vector must be adjusted,</span>
+<span class="sd">			and for axial data all angles must be doubled.</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">angles</span><span class="p">)</span>
+		<span class="n">x_hat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">angles</span><span class="p">)))</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+		<span class="n">y_hat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">angles</span><span class="p">)))</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+		<span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">x_hat</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">y_hat</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+		<span class="n">theta_hat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arctan</span><span class="p">(</span><span class="n">y_hat</span> <span class="o">/</span> <span class="n">x_hat</span><span class="p">))</span>
+		<span class="k">if</span> <span class="n">theta_hat</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+			<span class="n">theta_hat</span> <span class="o">=</span> <span class="n">theta_hat</span> <span class="o">+</span> <span class="mi">360</span>
+		<span class="n">v_squiggle</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">theta_hat</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">test_direction</span><span class="p">))</span>
+		<span class="n">V</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n</span><span class="p">)</span> <span class="o">*</span> <span class="n">v_squiggle</span>
+		<span class="k">return</span> <span class="n">V</span></div>
+
+<div class="viewcode-block" id="StatsCalcs.duplicates_as_complex"><a class="viewcode-back" href="../../../source/ephysiopy.ephys_generic.html#ephysiopy.ephys_generic.statscalcs.StatsCalcs.duplicates_as_complex">[docs]</a>	<span class="k">def</span> <span class="nf">duplicates_as_complex</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">already_sorted</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot; Example:</span>
+<span class="sd">			x = [9.9    9.9     12.3    15.2    15.2    15.2    ]</span>
+<span class="sd">			ret=[9.9+0j 9.9+1j  12.3+0j 15.2+0j 15.2+1j 15.2+2j ]</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">already_sorted</span><span class="p">:</span>
+			<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+		<span class="n">is_start</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span><span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+		<span class="n">is_start</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">is_start</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">x</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+		<span class="n">labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">is_start</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span>
+		<span class="n">sub_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span> <span class="o">-</span> <span class="n">is_start</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">][</span><span class="n">labels</span><span class="p">]</span>
+		<span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">sub_idx</span></div>
+
+<div class="viewcode-block" id="StatsCalcs.watsonsU2"><a class="viewcode-back" href="../../../source/ephysiopy.ephys_generic.html#ephysiopy.ephys_generic.statscalcs.StatsCalcs.watsonsU2">[docs]</a>	<span class="k">def</span> <span class="nf">watsonsU2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+		<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">		Taken from &#39;100 Statistical Tests&#39; G.J.Kanji, 2006 Sage Publications</span>
+<span class="sd">		To test whether two samples from circular observations differ</span>
+<span class="sd">		significantly from each other with regard to mean direction or angular</span>
+<span class="sd">		variance.</span>
+<span class="sd">		Limitation</span>
+<span class="sd">		Both samples must come from a continuous distribution. In the case of</span>
+<span class="sd">		grouping the class interval should not exceed 5.</span>
+<span class="sd">		&#39;&#39;&#39;</span>
+		<span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">a</span><span class="p">))</span>
+		<span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">b</span><span class="p">))</span>
+		<span class="n">n_a</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+		<span class="n">n_b</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+		<span class="n">N</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">n_a</span> <span class="o">+</span> <span class="n">n_b</span><span class="p">)</span>
+		<span class="n">a_complex</span><span class="p">,</span> <span class="n">b_complex</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">duplicates_as_complex</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">duplicates_as_complex</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+		<span class="n">a_and_b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">union1d</span><span class="p">(</span><span class="n">a_complex</span><span class="p">,</span><span class="n">b_complex</span><span class="p">)</span>
+
+		<span class="c1"># get index for a</span>
+		<span class="n">a_ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">a_and_b</span><span class="p">),</span><span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+		<span class="n">a_ind</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">a_and_b</span><span class="p">,</span><span class="n">a_complex</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">1</span>
+		<span class="n">a_ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">a_ind</span><span class="p">)</span>
+
+		<span class="c1"># same for b</span>
+		<span class="n">b_ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">a_and_b</span><span class="p">),</span><span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+		<span class="n">b_ind</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">a_and_b</span><span class="p">,</span><span class="n">b_complex</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">1</span>
+		<span class="n">b_ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">b_ind</span><span class="p">)</span>
+
+		<span class="n">d_k</span> <span class="o">=</span> <span class="p">(</span><span class="n">a_ind</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">n_a</span><span class="p">))</span> <span class="o">-</span> <span class="p">(</span><span class="n">b_ind</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">n_b</span><span class="p">))</span>
+
+		<span class="n">d_k_sq</span> <span class="o">=</span> <span class="n">d_k</span> <span class="o">**</span> <span class="mi">2</span>
+
+		<span class="n">U2</span> <span class="o">=</span> <span class="p">((</span><span class="n">n_a</span><span class="o">*</span><span class="n">n_b</span><span class="p">)</span> <span class="o">/</span> <span class="n">N</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">d_k_sq</span><span class="p">)</span> <span class="o">-</span> <span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">d_k</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">N</span><span class="p">))</span>
+		<span class="k">return</span> <span class="n">U2</span></div>
+
+
+<div class="viewcode-block" id="StatsCalcs.watsonsU2n"><a class="viewcode-back" href="../../../source/ephysiopy.ephys_generic.html#ephysiopy.ephys_generic.statscalcs.StatsCalcs.watsonsU2n">[docs]</a>	<span class="k">def</span> <span class="nf">watsonsU2n</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">angles</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		Taken from &#39;100 Statistical Tests&#39; G.J.Kanji, 2006 Sage Publications</span>
+
+<span class="sd">		To test whether the given distribution fits a random sample of angular values</span>
+<span class="sd">		Limitations:</span>
+<span class="sd">			This test is suitable for both unimodal and the multimodal cases.</span>
+<span class="sd">			It can be used as a test for randomness.</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="n">angles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">angles</span><span class="p">)</span>
+		<span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">angles</span><span class="p">)</span>
+		<span class="n">Vi</span> <span class="o">=</span> <span class="n">angles</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="mi">360</span><span class="p">)</span>
+		<span class="n">sum_Vi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Vi</span><span class="p">)</span>
+		<span class="n">sum_sq_Vi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Vi</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+		<span class="n">Ci</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span> <span class="o">-</span> <span class="mi">1</span>
+		<span class="n">sum_Ci_Vi_ov_n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Ci</span> <span class="o">*</span> <span class="n">Vi</span> <span class="o">/</span> <span class="n">n</span><span class="p">)</span>
+		<span class="n">V_bar</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">n</span><span class="p">))</span> <span class="o">*</span> <span class="n">sum_Vi</span>
+		<span class="n">U2n</span> <span class="o">=</span> <span class="n">sum_sq_Vi</span> <span class="o">-</span> <span class="n">sum_Ci_Vi_ov_n</span> <span class="o">+</span> <span class="p">(</span><span class="n">n</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">V_bar</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+		<span class="n">test_vals</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;0.1&#39;</span><span class="p">:</span> <span class="mf">0.152</span><span class="p">,</span> <span class="s1">&#39;0.05&#39;</span><span class="p">:</span> <span class="mf">0.187</span><span class="p">,</span> <span class="s1">&#39;0.025&#39;</span><span class="p">:</span> <span class="mf">0.221</span><span class="p">,</span> <span class="s1">&#39;0.01&#39;</span><span class="p">:</span> <span class="mf">0.267</span><span class="p">,</span> <span class="s1">&#39;0.005&#39;</span><span class="p">:</span> <span class="mf">0.302</span><span class="p">}</span>
+		<span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">test_vals</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+			<span class="k">if</span> <span class="n">U2n</span> <span class="o">&gt;</span> <span class="n">val</span><span class="p">:</span>
+				<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;The Watsons U2 statistic is </span><span class="si">{0}</span><span class="s1"> which is greater than</span><span class="se">\n</span><span class="s1"> the critical value of </span><span class="si">{1}</span><span class="s1"> at p=</span><span class="si">{2}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">U2n</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">key</span><span class="p">))</span>
+			<span class="k">else</span><span class="p">:</span>
+				<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;The Watsons U2 statistic is not significant at p=</span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
+				<span class="k">return</span></div>
+
+<div class="viewcode-block" id="StatsCalcs.watsonWilliams"><a class="viewcode-back" href="../../../source/ephysiopy.ephys_generic.html#ephysiopy.ephys_generic.statscalcs.StatsCalcs.watsonWilliams">[docs]</a>	<span class="k">def</span> <span class="nf">watsonWilliams</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+		<span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+		<span class="n">m</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+		<span class="n">N</span> <span class="o">=</span> <span class="n">n</span> <span class="o">+</span> <span class="n">m</span>
+		<span class="c1">#v_1 = 1 # needed to do p-value lookup in table of critical values of F distribution</span>
+		<span class="c1">#v_2 = N - 2 # needed to do p-value lookup in table of critical values of F distribution</span>
+		<span class="n">C_1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">a</span><span class="p">)))</span>
+		<span class="n">S_1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">a</span><span class="p">)))</span>
+		<span class="n">C_2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">b</span><span class="p">)))</span>
+		<span class="n">S_2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">b</span><span class="p">)))</span>
+		<span class="n">C</span> <span class="o">=</span> <span class="n">C_1</span> <span class="o">+</span> <span class="n">C_2</span>
+		<span class="n">S</span> <span class="o">=</span> <span class="n">S_1</span> <span class="o">+</span> <span class="n">S_2</span>
+		<span class="n">R_1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">C_1</span><span class="p">,</span> <span class="n">S_1</span><span class="p">)</span>
+		<span class="n">R_2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">C_2</span><span class="p">,</span> <span class="n">S_2</span><span class="p">)</span>
+		<span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">S</span><span class="p">)</span>
+		<span class="n">R_hat</span> <span class="o">=</span> <span class="p">(</span><span class="n">R_1</span> <span class="o">+</span> <span class="n">R_2</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+		<span class="kn">import</span> <span class="nn">os</span>
+		<span class="n">fid</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span> <span class="s1">&#39;mle_von_mises_vals.txt&#39;</span><span class="p">)</span>
+		<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fid</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+			<span class="n">mle_von_mises</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+		<span class="n">mle_von_mises</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">mle_von_mises</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+		<span class="n">k_hat</span> <span class="o">=</span> <span class="n">mle_von_mises</span><span class="p">[(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">mle_von_mises</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">R_hat</span><span class="p">))</span><span class="o">.</span><span class="n">argmin</span><span class="p">(),</span> <span class="mi">1</span><span class="p">]</span>
+		<span class="n">g</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="mi">3</span> <span class="o">/</span> <span class="mi">8</span> <span class="o">*</span> <span class="n">k_hat</span><span class="p">)</span>
+		<span class="n">F</span> <span class="o">=</span> <span class="n">g</span> <span class="o">*</span> <span class="p">(</span><span class="n">N</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">((</span><span class="n">R_1</span> <span class="o">+</span> <span class="n">R_2</span> <span class="o">-</span> <span class="n">R</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">N</span> <span class="o">-</span> <span class="p">(</span><span class="n">R_1</span> <span class="o">+</span> <span class="n">R_2</span><span class="p">)))</span>
+		<span class="k">return</span> <span class="n">F</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Robin Hayman
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

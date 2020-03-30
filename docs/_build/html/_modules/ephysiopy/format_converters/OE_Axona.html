@@ -1,0 +1,603 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ephysiopy.format_converters.OE_Axona &mdash; ephysiopy 1.5.55 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> ephysiopy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.5
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">ephysiopy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>ephysiopy.format_converters.OE_Axona</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for ephysiopy.format_converters.OE_Axona</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">openephys to Axona file format conversion</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pylab</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">ephysiopy.dacq2py</span> <span class="kn">import</span> <span class="n">axonaIO</span>
+<span class="kn">from</span> <span class="nn">ephysiopy.ephys_generic.ephys_generic</span> <span class="kn">import</span> <span class="n">PosCalcsGeneric</span>
+<span class="kn">from</span> <span class="nn">ephysiopy.openephys2py</span> <span class="kn">import</span> <span class="n">OEKiloPhy</span><span class="p">,</span> <span class="n">OESettings</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">signal</span>
+<span class="kn">import</span> <span class="nn">h5py</span>
+
+<div class="viewcode-block" id="OE2Axona"><a class="viewcode-back" href="../../../source/ephysiopy.format_converters.html#ephysiopy.format_converters.OE_Axona.OE2Axona">[docs]</a><span class="k">class</span> <span class="nc">OE2Axona</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">	Converts openephys data recorded in the nwb format into Axona files</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename_root</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">filename_root</span> <span class="o">=</span> <span class="n">filename_root</span> <span class="c1"># &#39;/home/robin/Data/experiment_1.nwb&#39; or whatever</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">dirname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">filename_root</span><span class="p">)</span> <span class="c1"># &#39;/home/robin/Data&#39;</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">experiment_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filename_root</span><span class="p">)</span> <span class="c1"># &#39;experiment_1.nwb&#39;</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">recording_name</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># will become &#39;recording1&#39; etc</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">OE_data</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># will become an instance of OEKiloPhy.OpenEphysNWB</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_settings</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># will become an instance of OESettings.Settings</span>
+		<span class="c1"># Create a basename for Axona file names e.g.&#39;/home/robin/Data/experiment_1&#39;</span>
+		<span class="c1"># that we can append &#39;.pos&#39; or &#39;.eeg&#39; or whatever onto</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">axona_root_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dirname</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">experiment_name</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">AxonaData</span> <span class="o">=</span> <span class="n">axonaIO</span><span class="o">.</span><span class="n">IO</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axona_root_name</span> <span class="o">+</span> <span class="s2">&quot;.pos&quot;</span><span class="p">)</span> <span class="c1"># need to instantiated now for later</span>
+		<span class="c1"># THIS IS TEMPORARY AND WILL BE MORE USER-SPECIFIABLE IN THE FUTURE</span>
+		<span class="c1"># it is used to scale the spikes</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">hp_gain</span> <span class="o">=</span> <span class="mi">500</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">lp_gain</span> <span class="o">=</span> <span class="mi">15000</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">bitvolts</span> <span class="o">=</span> <span class="mf">0.195</span>
+		<span class="c1"># if left as None some default values for the next 3 params are loaded from top-level __init__.py</span>
+		<span class="c1"># these are only used in self.__filterLFP__</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">fs</span> <span class="o">=</span> <span class="kc">None</span>
+		<span class="c1"># if lfp_channel is set to None then the .set file will reflect that no EEG was recorded</span>
+		<span class="c1"># this should mean that you can load data into Tint without a .eeg file</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">lfp_channel</span> <span class="o">=</span> <span class="mi">1</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">lfp_lowcut</span> <span class="o">=</span> <span class="kc">None</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">lfp_highcut</span> <span class="o">=</span> <span class="kc">None</span>
+		<span class="c1"># set the tetrodes to record from</span>
+		<span class="c1"># defaults to 1 through 4 - see self.makeSetData below</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">tetrodes</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;1&#39;</span><span class="p">,</span><span class="s1">&#39;2&#39;</span><span class="p">,</span><span class="s1">&#39;3&#39;</span><span class="p">,</span><span class="s1">&#39;4&#39;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="OE2Axona.resample"><a class="viewcode-back" href="../../../source/ephysiopy.format_converters.html#ephysiopy.format_converters.OE_Axona.OE2Axona.resample">[docs]</a>	<span class="k">def</span> <span class="nf">resample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">src_rate</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">dst_rate</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+		<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">		Upsamples data using FFT</span>
+<span class="sd">		&#39;&#39;&#39;</span>
+		<span class="n">denom</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">gcd</span><span class="p">(</span><span class="n">dst_rate</span><span class="p">,</span> <span class="n">src_rate</span><span class="p">)</span>
+		<span class="n">new_data</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">resample_poly</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dst_rate</span><span class="o">/</span><span class="n">denom</span><span class="p">,</span> <span class="n">src_rate</span><span class="o">/</span><span class="n">denom</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+		<span class="k">return</span> <span class="n">new_data</span></div>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">settings</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">		Loads the settings data from the settings.xml file</span>
+<span class="sd">		&#39;&#39;&#39;</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_settings</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">_settings</span> <span class="o">=</span> <span class="n">OESettings</span><span class="o">.</span><span class="n">Settings</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dirname</span><span class="p">)</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_settings</span>
+
+	<span class="nd">@settings</span><span class="o">.</span><span class="n">setter</span>
+	<span class="k">def</span> <span class="nf">settings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_settings</span> <span class="o">=</span> <span class="n">value</span>
+
+<div class="viewcode-block" id="OE2Axona.getOEData"><a class="viewcode-back" href="../../../source/ephysiopy.format_converters.html#ephysiopy.format_converters.OE_Axona.OE2Axona.getOEData">[docs]</a>	<span class="k">def</span> <span class="nf">getOEData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename_root</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">recording_name</span><span class="o">=</span><span class="s1">&#39;recording1&#39;</span><span class="p">)</span><span class="o">-&gt;</span><span class="nb">dict</span><span class="p">:</span>
+		<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">		Loads the nwb file names in filename_root and returns a dict containing some of the nwb data</span>
+<span class="sd">		relevant for converting to Axona file formats</span>
+
+<span class="sd">		Parameters</span>
+<span class="sd">		----------------</span>
+<span class="sd">		filename_root - fuly qualified name of the nwb file</span>
+<span class="sd">		recording_name - the name of the recording in the nwb file NB the default has changed in different versions of OE from &#39;recording0&#39; to &#39;recording1&#39;</span>
+<span class="sd">		&#39;&#39;&#39;</span>
+		<span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">filename_root</span><span class="p">):</span>
+			<span class="n">root_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">experiment_name</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+			<span class="n">OE_data</span> <span class="o">=</span> <span class="n">OEKiloPhy</span><span class="o">.</span><span class="n">OpenEphysNWB</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dirname</span><span class="p">)</span>
+			<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Loading nwb data...&quot;</span><span class="p">)</span>
+			<span class="n">OE_data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pname_root</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dirname</span><span class="p">,</span> <span class="n">session_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">experiment_name</span><span class="p">,</span> <span class="n">recording_name</span><span class="o">=</span><span class="n">recording_name</span><span class="p">,</span> <span class="n">loadspikes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">loadraw</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+			<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Loaded nwb data from: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filename_root</span><span class="p">))</span>
+			<span class="c1"># It&#39;s likely that spikes have been collected after the last position sample</span>
+			<span class="c1"># due to buffering issues I can&#39;t be bothered to resolve. Get the last pos</span>
+			<span class="c1"># timestamps here and check that spikes don&#39;t go beyond this when writing data</span>
+			<span class="c1"># out later</span>
+			<span class="c1"># Also the pos and spike data timestamps almost never start at 0 as the user</span>
+			<span class="c1"># usually acquires data for a while before recording. Grab the first timestamp</span>
+			<span class="c1"># here with a view to subtracting this from everything (including the spike data)</span>
+			<span class="c1"># and figuring out what to keep later</span>
+			<span class="n">first_pos_ts</span> <span class="o">=</span> <span class="n">OE_data</span><span class="o">.</span><span class="n">xyTS</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+			<span class="n">last_pos_ts</span> <span class="o">=</span> <span class="n">OE_data</span><span class="o">.</span><span class="n">xyTS</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">first_pos_ts</span> <span class="o">=</span> <span class="n">first_pos_ts</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">last_pos_ts</span> <span class="o">=</span> <span class="n">last_pos_ts</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">recording_name</span> <span class="o">=</span> <span class="n">recording_name</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">OE_data</span> <span class="o">=</span> <span class="n">OE_data</span>
+			<span class="k">return</span> <span class="n">OE_data</span></div>
+
+<div class="viewcode-block" id="OE2Axona.exportSetFile"><a class="viewcode-back" href="../../../source/ephysiopy.format_converters.html#ephysiopy.format_converters.OE_Axona.OE2Axona.exportSetFile">[docs]</a>	<span class="k">def</span> <span class="nf">exportSetFile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+		<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">		Wrapper for makeSetData below</span>
+<span class="sd">		&#39;&#39;&#39;</span>
+		<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Exporting set file data...&quot;</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">makeSetData</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+		<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Done exporting set file.&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="OE2Axona.exportPos"><a class="viewcode-back" href="../../../source/ephysiopy.format_converters.html#ephysiopy.format_converters.OE_Axona.OE2Axona.exportPos">[docs]</a>	<span class="k">def</span> <span class="nf">exportPos</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ppm</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">jumpmax</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">as_text</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+		<span class="c1">#</span>
+		<span class="c1"># Step 1) Deal with the position data first:</span>
+		<span class="c1">#</span>
+		<span class="c1"># Grab the settings of the pos tracker and do some post-processing on the position</span>
+		<span class="c1"># data (discard jumpy data, do some smoothing etc)</span>
+		<span class="c1"># settings = OESettings.Settings(os.path.join(self.dirname, &#39;settings.xml&#39;))</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">parsePos</span><span class="p">()</span>
+		<span class="n">posProcessor</span> <span class="o">=</span> <span class="n">PosCalcsGeneric</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">OE_data</span><span class="o">.</span><span class="n">xy</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">OE_data</span><span class="o">.</span><span class="n">xy</span><span class="p">[:,</span><span class="mi">1</span><span class="p">],</span> <span class="n">ppm</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="n">jumpmax</span><span class="p">)</span>
+		<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Post-processing position data...&quot;</span><span class="p">)</span>
+		<span class="n">xy</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">posProcessor</span><span class="o">.</span><span class="n">postprocesspos</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">tracker_params</span><span class="p">)</span>
+		<span class="n">xy</span> <span class="o">=</span> <span class="n">xy</span><span class="o">.</span><span class="n">T</span>
+		<span class="k">if</span> <span class="n">as_text</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+			<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Beginning export of position data to text format...&quot;</span><span class="p">)</span>
+			<span class="n">pos_file_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axona_root_name</span> <span class="o">+</span> <span class="s2">&quot;.txt&quot;</span>
+			<span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">pos_file_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">OE_data</span><span class="o">.</span><span class="n">xy</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;%1.u&#39;</span><span class="p">)</span>
+			<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Completed export of position data&quot;</span><span class="p">)</span>
+			<span class="k">return</span>
+		<span class="c1"># Do the upsampling of both xy and the timestamps</span>
+		<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Beginning export of position data to Axona format...&quot;</span><span class="p">)</span>
+		<span class="n">axona_pos_file_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axona_root_name</span> <span class="o">+</span> <span class="s2">&quot;.pos&quot;</span>
+		<span class="n">axona_pos_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">convertPosData</span><span class="p">(</span><span class="n">xy</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">OE_data</span><span class="o">.</span><span class="n">xyTS</span><span class="p">)</span>
+		<span class="c1"># make sure pos data length is same as duration * num_samples</span>
+		<span class="n">axona_pos_data</span> <span class="o">=</span> <span class="n">axona_pos_data</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">last_pos_ts</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">first_pos_ts</span><span class="p">)</span><span class="o">*</span><span class="mi">50</span><span class="p">]</span>
+		<span class="c1"># Create an empty header for the pos data</span>
+		<span class="n">pos_header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">AxonaData</span><span class="o">.</span><span class="n">getEmptyHeader</span><span class="p">(</span><span class="s2">&quot;pos&quot;</span><span class="p">)</span>
+		<span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">pos_header</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+			<span class="k">if</span> <span class="s1">&#39;min_x&#39;</span> <span class="ow">in</span> <span class="n">key</span><span class="p">:</span>
+				<span class="n">pos_header</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">tracker_params</span><span class="p">[</span><span class="s1">&#39;LeftBorder&#39;</span><span class="p">])</span>
+			<span class="k">if</span> <span class="s1">&#39;min_y&#39;</span> <span class="ow">in</span> <span class="n">key</span><span class="p">:</span>
+				<span class="n">pos_header</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">tracker_params</span><span class="p">[</span><span class="s1">&#39;TopBorder&#39;</span><span class="p">])</span>
+			<span class="k">if</span> <span class="s1">&#39;max_x&#39;</span> <span class="ow">in</span> <span class="n">key</span><span class="p">:</span>
+				<span class="n">pos_header</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">tracker_params</span><span class="p">[</span><span class="s1">&#39;RightBorder&#39;</span><span class="p">])</span>
+			<span class="k">if</span> <span class="s1">&#39;max_y&#39;</span> <span class="ow">in</span> <span class="n">key</span><span class="p">:</span>
+				<span class="n">pos_header</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">tracker_params</span><span class="p">[</span><span class="s1">&#39;BottomBorder&#39;</span><span class="p">])</span>
+		<span class="n">pos_header</span><span class="p">[</span><span class="s1">&#39;duration&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">last_pos_ts</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">first_pos_ts</span><span class="p">))</span>
+		<span class="c1"># Rest of this stuff probably won&#39;t change so should be defaulted in the loaded file</span>
+		<span class="c1"># (see axonaIO.py)</span>
+		<span class="n">pos_header</span><span class="p">[</span><span class="s1">&#39;num_colours&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;4&#39;</span>
+		<span class="n">pos_header</span><span class="p">[</span><span class="s1">&#39;sw_version&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;1.2.2.1&#39;</span>
+		<span class="n">pos_header</span><span class="p">[</span><span class="s1">&#39;timebase&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;50 hz&#39;</span>
+		<span class="n">pos_header</span><span class="p">[</span><span class="s1">&#39;sample_rate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;50.0 hz&#39;</span>
+		<span class="n">pos_header</span><span class="p">[</span><span class="s1">&#39;pos_format&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;t,x1,y1,x2,y2,numpix1,numpix2&#39;</span>
+		<span class="n">pos_header</span><span class="p">[</span><span class="s1">&#39;bytes_per_coord&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;2&#39;</span>
+		<span class="n">pos_header</span><span class="p">[</span><span class="s1">&#39;EEG_samples_per_position&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;5&#39;</span>
+		<span class="n">pos_header</span><span class="p">[</span><span class="s1">&#39;bytes_per_timestamp&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;4&#39;</span>
+		<span class="n">pos_header</span><span class="p">[</span><span class="s1">&#39;pixels_per_metre&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ppm</span><span class="p">)</span>
+		<span class="n">pos_header</span><span class="p">[</span><span class="s1">&#39;num_pos_samples&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">axona_pos_data</span><span class="p">))</span>
+		<span class="n">pos_header</span><span class="p">[</span><span class="s1">&#39;bearing_colour_1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;210&#39;</span>
+		<span class="n">pos_header</span><span class="p">[</span><span class="s1">&#39;bearing_colour_2&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;30&#39;</span>
+		<span class="n">pos_header</span><span class="p">[</span><span class="s1">&#39;bearing_colour_3&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;0&#39;</span>
+		<span class="n">pos_header</span><span class="p">[</span><span class="s1">&#39;bearing_colour_4&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;0&#39;</span>
+		<span class="n">pos_header</span><span class="p">[</span><span class="s1">&#39;pixels_per_metre&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ppm</span><span class="p">)</span>
+
+		<span class="bp">self</span><span class="o">.</span><span class="n">writePos2AxonaFormat</span><span class="p">(</span><span class="n">pos_header</span><span class="p">,</span> <span class="n">axona_pos_data</span><span class="p">)</span>
+		<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Exported position data to Axona format&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="OE2Axona.exportSpikes"><a class="viewcode-back" href="../../../source/ephysiopy.format_converters.html#ephysiopy.format_converters.OE_Axona.OE2Axona.exportSpikes">[docs]</a>	<span class="k">def</span> <span class="nf">exportSpikes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Beginning conversion of spiking data...&quot;</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">convertSpikeData</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">OE_data</span><span class="o">.</span><span class="n">nwbData</span><span class="p">[</span><span class="s1">&#39;acquisition&#39;</span><span class="p">][</span><span class="s1">&#39;timeseries&#39;</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">recording_name</span><span class="p">][</span><span class="s1">&#39;spikes&#39;</span><span class="p">])</span>
+		<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Completed exporting spiking data&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="OE2Axona.exportLFP"><a class="viewcode-back" href="../../../source/ephysiopy.format_converters.html#ephysiopy.format_converters.OE_Axona.OE2Axona.exportLFP">[docs]</a>	<span class="k">def</span> <span class="nf">exportLFP</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">lfp_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">gain</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+		<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">		Export LFP data to file</span>
+
+<span class="sd">		Parameters</span>
+<span class="sd">		-----------</span>
+<span class="sd">		channel - int</span>
+<span class="sd">		lfp_type - str. Legal values are &#39;egf&#39; or &#39;eeg&#39;</span>
+<span class="sd">		gain - int. Multiplier for the lfp data</span>
+<span class="sd">		&#39;&#39;&#39;</span>
+		<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Beginning conversion and exporting of LFP data...&quot;</span><span class="p">)</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">fpga_nodeId</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">parse</span><span class="p">()</span>
+		<span class="n">fpgaNode</span> <span class="o">=</span> <span class="s1">&#39;processor&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">fpga_nodeId</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">fpga_nodeId</span><span class="p">)</span>
+		<span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">OE_data</span><span class="o">.</span><span class="n">nwbData</span><span class="p">[</span><span class="s1">&#39;acquisition&#39;</span><span class="p">][</span><span class="s1">&#39;timeseries&#39;</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">recording_name</span><span class="p">][</span><span class="s1">&#39;continuous&#39;</span><span class="p">][</span><span class="n">fpgaNode</span><span class="p">][</span><span class="s1">&#39;data&#39;</span><span class="p">][:,</span> <span class="n">channel</span><span class="p">]</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">makeLFPData</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">eeg_type</span><span class="o">=</span><span class="n">lfp_type</span><span class="p">,</span> <span class="n">gain</span><span class="o">=</span><span class="n">gain</span><span class="p">)</span>
+		<span class="c1"># if the set file has been created then update which channel contains the eeg record so</span>
+		<span class="c1"># that the gain can be loaded correctly when using dacq2py_util</span>
+
+		<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Completed exporting LFP data to &quot;</span> <span class="o">+</span> <span class="n">lfp_type</span> <span class="o">+</span> <span class="s2">&quot; format&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="OE2Axona.convertPosData"><a class="viewcode-back" href="../../../source/ephysiopy.format_converters.html#ephysiopy.format_converters.OE_Axona.OE2Axona.convertPosData">[docs]</a>	<span class="k">def</span> <span class="nf">convertPosData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xy</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">,</span> <span class="n">xy_ts</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">:</span>
+		<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">		Perform the conversion of the array parts of the data</span>
+<span class="sd">		NB As well as upsampling the data to the Axona pos sampling rate (50Hz)</span>
+<span class="sd">		we have to insert some columns into the pos array as Axona format expects it like:</span>
+<span class="sd">		pos_format: t,x1,y1,x2,y2,numpix1,numpix2</span>
+<span class="sd">		We can make up some of the info and ignore other bits</span>
+<span class="sd">		&#39;&#39;&#39;</span>
+		<span class="n">n_new_pts</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">last_pos_ts</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">first_pos_ts</span><span class="p">)</span> <span class="o">*</span> <span class="mi">50</span><span class="p">))</span>
+		<span class="n">t</span> <span class="o">=</span> <span class="n">xy_ts</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">first_pos_ts</span>
+		<span class="n">new_ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">t</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n_new_pts</span><span class="p">)</span>
+		<span class="n">new_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">new_ts</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">xy</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+		<span class="n">new_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">new_ts</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">xy</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>
+		<span class="c1"># Expand the pos bit of the data to be returned to make it look like Axona data</span>
+		<span class="n">new_pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">new_x</span><span class="p">,</span> <span class="n">new_y</span><span class="p">])</span><span class="o">.</span><span class="n">T</span>
+		<span class="n">new_pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">new_pos</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">new_pos</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1023</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">new_pos</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">new_pos</span><span class="p">)]</span>
+		<span class="n">new_pos</span><span class="p">[:,</span> <span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="mi">40</span> <span class="c1"># just made this value up - it&#39;s numpix i think</span>
+		<span class="n">new_pos</span><span class="p">[:,</span> <span class="mi">6</span><span class="p">]</span> <span class="o">=</span> <span class="mi">40</span> <span class="c1"># same</span>
+		<span class="c1"># Squeeze this data into Axona pos format array</span>
+		<span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">AxonaData</span><span class="o">.</span><span class="n">axona_files</span><span class="p">[</span><span class="s1">&#39;.pos&#39;</span><span class="p">]</span>
+		<span class="n">new_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_new_pts</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dt</span><span class="p">)</span>
+		<span class="c1"># Timestamps in Axona are time in seconds * sample_rate</span>
+		<span class="n">new_data</span><span class="p">[</span><span class="s1">&#39;ts&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_ts</span> <span class="o">*</span> <span class="mi">50</span>
+		<span class="n">new_data</span><span class="p">[</span><span class="s1">&#39;pos&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_pos</span>
+		<span class="k">return</span> <span class="n">new_data</span></div>
+
+<div class="viewcode-block" id="OE2Axona.convertSpikeData"><a class="viewcode-back" href="../../../source/ephysiopy.format_converters.html#ephysiopy.format_converters.OE_Axona.OE2Axona.convertSpikeData">[docs]</a>	<span class="k">def</span> <span class="nf">convertSpikeData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hdf5_tetrode_data</span><span class="p">:</span> <span class="n">h5py</span><span class="o">.</span><span class="n">_hl</span><span class="o">.</span><span class="n">group</span><span class="o">.</span><span class="n">Group</span><span class="p">):</span>
+		<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">		Does the spike conversion from OE Spike Sorter format to Axona format tetrode files</span>
+
+<span class="sd">		Parameters</span>
+<span class="sd">		-----------</span>
+<span class="sd">		hdf5_tetrode_data - h5py._hl.group.Group - this kind of looks like a dictionary and can, it seems,</span>
+<span class="sd">								be treated as one more or less (see http://docs.h5py.org/en/stable/high/group.html).</span>
+<span class="sd">		&#39;&#39;&#39;</span>
+		<span class="c1"># First lets get the datatype for tetrode files as this will be the same for all tetrodes...</span>
+		<span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">AxonaData</span><span class="o">.</span><span class="n">axona_files</span><span class="p">[</span><span class="s1">&#39;.1&#39;</span><span class="p">]</span>
+		<span class="c1"># ... and a basic header for the tetrode file that use for each tetrode file, changing only the num_spikes value</span>
+		<span class="n">header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">AxonaData</span><span class="o">.</span><span class="n">getEmptyHeader</span><span class="p">(</span><span class="s2">&quot;tetrode&quot;</span><span class="p">)</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;duration&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">last_pos_ts</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">first_pos_ts</span><span class="p">))</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;sw_version&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;1.1.0&#39;</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;num_chans&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;4&#39;</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;timebase&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;96000 hz&#39;</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;bytes_per_timestamp&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;4&#39;</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;samples_per_spike&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;50&#39;</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;sample_rate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;48000 hz&#39;</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;bytes_per_sample&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;1&#39;</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;spike_format&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;t,ch1,t,ch2,t,ch3,t,ch4&#39;</span>
+
+		<span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">hdf5_tetrode_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+			<span class="n">spiking_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">hdf5_tetrode_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">))</span>
+			<span class="n">timestamps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">hdf5_tetrode_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;timestamps&#39;</span><span class="p">))</span>
+			<span class="c1"># check if any of the spiking data is captured before/ after the first/ last bit of position data</span>
+			<span class="c1"># if there is then discard this as we potentially have no valid position to align the spike to :(</span>
+			<span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span><span class="n">timestamps</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">first_pos_ts</span><span class="p">,</span> <span class="n">timestamps</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_pos_ts</span><span class="p">)</span>
+			<span class="n">spiking_data</span> <span class="o">=</span> <span class="n">spiking_data</span><span class="p">[</span><span class="o">~</span><span class="n">idx</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
+			<span class="n">timestamps</span> <span class="o">=</span> <span class="n">timestamps</span><span class="p">[</span><span class="o">~</span><span class="n">idx</span><span class="p">]</span>
+			<span class="c1"># subtract the first pos timestamp from the spiking timestamps</span>
+			<span class="n">timestamps</span> <span class="o">=</span> <span class="n">timestamps</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">first_pos_ts</span>
+			<span class="c1"># get the number of spikes here for use below in the header</span>
+			<span class="n">num_spikes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">timestamps</span><span class="p">)</span>
+			<span class="c1"># repeat the timestamps in tetrode multiples ready for Axona export</span>
+			<span class="n">new_timestamps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">timestamps</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+			<span class="n">new_spiking_data</span> <span class="o">=</span> <span class="n">spiking_data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+			<span class="c1"># Convert to microvolts...</span>
+			<span class="n">new_spiking_data</span> <span class="o">=</span> <span class="n">new_spiking_data</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">bitvolts</span>
+			<span class="c1"># And upsample the spikes...</span>
+			<span class="n">new_spiking_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="n">new_spiking_data</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+			<span class="c1"># ... and scale appropriately for Axona and invert as OE seems to be inverted wrt Axona</span>
+			<span class="n">new_spiking_data</span> <span class="o">=</span> <span class="n">new_spiking_data</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hp_gain</span><span class="o">/</span><span class="mi">4</span><span class="o">/</span><span class="mf">128.0</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+			<span class="c1"># ... scale them to the gains specified somewhere (not sure where / how to do this yet)</span>
+			<span class="n">shp</span> <span class="o">=</span> <span class="n">new_spiking_data</span><span class="o">.</span><span class="n">shape</span>
+			<span class="c1"># then reshape them as Axona wants them a bit differently</span>
+			<span class="n">new_spiking_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">new_spiking_data</span><span class="p">,</span> <span class="p">[</span><span class="n">shp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">shp</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">shp</span><span class="p">[</span><span class="mi">2</span><span class="p">]])</span>
+			<span class="c1"># Cap any values outside the range of int8</span>
+			<span class="n">new_spiking_data</span><span class="p">[</span><span class="n">new_spiking_data</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mi">128</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">128</span>
+			<span class="n">new_spiking_data</span><span class="p">[</span><span class="n">new_spiking_data</span> <span class="o">&gt;</span> <span class="mi">127</span><span class="p">]</span> <span class="o">=</span> <span class="mi">127</span>
+			<span class="c1"># create the new array</span>
+			<span class="n">new_tetrode_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">new_timestamps</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dt</span><span class="p">)</span>
+			<span class="n">new_tetrode_data</span><span class="p">[</span><span class="s1">&#39;ts&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_timestamps</span> <span class="o">*</span> <span class="mi">96000</span>
+			<span class="n">new_tetrode_data</span><span class="p">[</span><span class="s1">&#39;waveform&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_spiking_data</span>
+			<span class="c1"># change the header num_spikes field</span>
+			<span class="n">header</span><span class="p">[</span><span class="s1">&#39;num_spikes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">num_spikes</span><span class="p">)</span>
+			<span class="n">i_tetnum</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;electrode&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+			<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Exporting tetrode </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i_tetnum</span><span class="p">))</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">writeTetrodeData</span><span class="p">(</span><span class="n">i_tetnum</span><span class="p">,</span> <span class="n">header</span><span class="p">,</span> <span class="n">new_tetrode_data</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="OE2Axona.makeLFPData"><a class="viewcode-back" href="../../../source/ephysiopy.format_converters.html#ephysiopy.format_converters.OE_Axona.OE2Axona.makeLFPData">[docs]</a>	<span class="k">def</span> <span class="nf">makeLFPData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hdf5_continuous_data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">,</span> <span class="n">eeg_type</span><span class="o">=</span><span class="s1">&#39;eeg&#39;</span><span class="p">,</span> <span class="n">gain</span><span class="o">=</span><span class="mi">5000</span><span class="p">):</span>
+		<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">		Downsamples the data in hdf5_continuous_data and saves the result</span>
+<span class="sd">		as either an egf or eeg file depending on the choice of either eeg_type which can</span>
+<span class="sd">		take a value of either &#39;egf&#39; or &#39;eeg&#39;</span>
+<span class="sd">		gain is the scaling factor</span>
+
+<span class="sd">		Parameters</span>
+<span class="sd">		----------</span>
+<span class="sd">		hdf5_continuous_data - np.array with dtype as np.int16</span>
+<span class="sd">		&#39;&#39;&#39;</span>
+		<span class="k">if</span> <span class="n">eeg_type</span> <span class="o">==</span> <span class="s1">&#39;eeg&#39;</span><span class="p">:</span>
+			<span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">AxonaData</span><span class="o">.</span><span class="n">axona_files</span><span class="p">[</span><span class="s1">&#39;.eeg&#39;</span><span class="p">]</span>
+			<span class="n">header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">AxonaData</span><span class="o">.</span><span class="n">getEmptyHeader</span><span class="p">(</span><span class="s2">&quot;eeg&quot;</span><span class="p">)</span>
+			<span class="n">header</span><span class="p">[</span><span class="s1">&#39;EEG_samples_per_position&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;5&#39;</span>
+			<span class="n">header</span><span class="p">[</span><span class="s1">&#39;sample_rate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;250.0 hz&#39;</span>
+			<span class="n">header</span><span class="p">[</span><span class="s1">&#39;bytes_per_sample&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;1&#39;</span>
+			<span class="n">dst_rate</span> <span class="o">=</span> <span class="mi">250</span>
+			<span class="n">sample_key</span> <span class="o">=</span> <span class="s1">&#39;num_EEG_samples&#39;</span>
+		<span class="k">elif</span> <span class="n">eeg_type</span> <span class="o">==</span> <span class="s1">&#39;egf&#39;</span><span class="p">:</span>
+			<span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">AxonaData</span><span class="o">.</span><span class="n">axona_files</span><span class="p">[</span><span class="s1">&#39;.egf&#39;</span><span class="p">]</span>
+			<span class="n">header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">AxonaData</span><span class="o">.</span><span class="n">getEmptyHeader</span><span class="p">(</span><span class="s2">&quot;egf&quot;</span><span class="p">)</span>
+			<span class="n">header</span><span class="p">[</span><span class="s1">&#39;sample_rate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;4800 hz&#39;</span>
+			<span class="n">header</span><span class="p">[</span><span class="s1">&#39;bytes_per_sample&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;2&#39;</span>
+			<span class="n">dst_rate</span> <span class="o">=</span> <span class="mi">4800</span>
+			<span class="n">sample_key</span> <span class="o">=</span> <span class="s1">&#39;num_EGF_samples&#39;</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;duration&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">last_pos_ts</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">first_pos_ts</span><span class="p">))</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;sw_version&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;1.1.0&#39;</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;num_chans&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;1&#39;</span>
+
+		<span class="c1"># hdf5_continuous_data = hdf5_continuous_data * (self.bitvolts * 1000) / gain</span>
+		<span class="n">lfp_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="n">hdf5_continuous_data</span><span class="p">,</span> <span class="mi">30000</span><span class="p">,</span> <span class="n">dst_rate</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+		<span class="c1"># make sure data is same length as sample_rate * duration</span>
+		<span class="n">nsamples</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">dst_rate</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;duration&#39;</span><span class="p">]))</span>
+		<span class="n">lfp_data</span> <span class="o">=</span> <span class="n">lfp_data</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">nsamples</span><span class="p">]</span>
+		<span class="n">lfp_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__filterLFP__</span><span class="p">(</span><span class="n">lfp_data</span><span class="p">,</span> <span class="n">dst_rate</span><span class="p">)</span>
+		<span class="c1"># convert the data format</span>
+		<span class="c1"># lfp_data = lfp_data * self.bitvolts # in microvolts</span>
+
+		<span class="k">if</span> <span class="n">eeg_type</span> <span class="o">==</span> <span class="s1">&#39;eeg&#39;</span><span class="p">:</span>
+			<span class="c1"># probably BROKEN</span>
+			<span class="n">lfp_data</span> <span class="o">=</span> <span class="n">lfp_data</span> <span class="o">/</span> <span class="mf">32768.</span> <span class="c1"># lfp_data starts out as int16 (see Parameters above)</span>
+			<span class="n">lfp_data</span> <span class="o">=</span> <span class="n">lfp_data</span> <span class="o">*</span> <span class="n">gain</span>
+			<span class="c1"># cap the values at either end...</span>
+			<span class="n">lfp_data</span><span class="p">[</span><span class="n">lfp_data</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mi">128</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">128</span>
+			<span class="n">lfp_data</span><span class="p">[</span><span class="n">lfp_data</span> <span class="o">&gt;</span> <span class="mi">127</span><span class="p">]</span> <span class="o">=</span> <span class="mi">127</span>
+			<span class="c1"># and convert to int8</span>
+			<span class="n">lfp_data</span> <span class="o">=</span> <span class="n">lfp_data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">)</span>
+
+		<span class="k">elif</span> <span class="n">eeg_type</span> <span class="o">==</span> <span class="s1">&#39;egf&#39;</span><span class="p">:</span>
+			<span class="c1"># probably works</span>
+			<span class="c1"># lfp_data = lfp_data / 256.</span>
+			<span class="n">lfp_data</span> <span class="o">=</span> <span class="n">lfp_data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span>
+
+		<span class="n">header</span><span class="p">[</span><span class="n">sample_key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lfp_data</span><span class="p">))</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">writeLFP2AxonaFormat</span><span class="p">(</span><span class="n">header</span><span class="p">,</span> <span class="n">lfp_data</span><span class="p">,</span> <span class="n">eeg_type</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="OE2Axona.makeSetData"><a class="viewcode-back" href="../../../source/ephysiopy.format_converters.html#ephysiopy.format_converters.OE_Axona.OE2Axona.makeSetData">[docs]</a>	<span class="k">def</span> <span class="nf">makeSetData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lfp_channel</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">OE_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">getOEData</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filename_root</span><span class="p">)</span> <span class="c1"># to get the timestamps for duration key</span>
+		<span class="n">header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">AxonaData</span><span class="o">.</span><span class="n">getEmptyHeader</span><span class="p">(</span><span class="s2">&quot;set&quot;</span><span class="p">)</span>
+		<span class="c1"># set some reasonable default values</span>
+		<span class="kn">from</span> <span class="nn">ephysiopy</span> <span class="kn">import</span> <span class="n">__version__</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;sw_version&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">__version__</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;ADC_fullscale_mv&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;0.195&#39;</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;tracker_version&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;1.1.0&#39;</span>
+
+		<span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">header</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+			<span class="k">if</span> <span class="s1">&#39;gain&#39;</span> <span class="ow">in</span> <span class="n">k</span><span class="p">:</span>
+				<span class="n">header</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hp_gain</span><span class="p">)</span>
+			<span class="k">if</span> <span class="s1">&#39;collectMask&#39;</span> <span class="ow">in</span> <span class="n">k</span><span class="p">:</span>
+				<span class="n">header</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;0&#39;</span>
+			<span class="k">if</span> <span class="s1">&#39;EEG_ch_1&#39;</span> <span class="ow">in</span> <span class="n">k</span><span class="p">:</span>
+				<span class="k">if</span> <span class="n">lfp_channel</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+					<span class="n">header</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">lfp_channel</span><span class="p">)</span>
+			<span class="k">if</span> <span class="s1">&#39;mode_ch_&#39;</span> <span class="ow">in</span> <span class="n">k</span><span class="p">:</span>
+				<span class="n">header</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;0&#39;</span>
+		<span class="c1"># iterate again to make sure lfp gain set correctly</span>
+		<span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">header</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+			<span class="k">if</span> <span class="n">lfp_channel</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+				<span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="s1">&#39;gain_ch_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">lfp_channel</span><span class="p">):</span>
+					<span class="n">header</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lp_gain</span><span class="p">)</span>
+
+		<span class="c1"># Based on the data in the electrodes dict of the OESettings instance (self.settings - see __init__)</span>
+		<span class="c1"># determine which tetrodes we can let Tint load</span>
+		<span class="c1"># make sure we&#39;ve parsed the electrodes</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">parseSpikeSorter</span><span class="p">()</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">electrodes</span><span class="p">:</span>
+			<span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">electrodes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+				<span class="n">header</span><span class="p">[</span><span class="s1">&#39;collectMask_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">)]</span> <span class="o">=</span> <span class="s1">&#39;1&#39;</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lfp_channel</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="k">for</span> <span class="n">chan</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tetrodes</span><span class="p">:</span>
+				<span class="n">key</span> <span class="o">=</span> <span class="s1">&#39;collectMask_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">chan</span><span class="p">)</span>
+				<span class="n">header</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;1&#39;</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;colactive_1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;1&#39;</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;colactive_2&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;0&#39;</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;colactive_3&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;0&#39;</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;colactive_4&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;0&#39;</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;colmap_algorithm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;1&#39;</span>
+		<span class="n">header</span><span class="p">[</span><span class="s1">&#39;duration&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">last_pos_ts</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">first_pos_ts</span><span class="p">))</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">writeSetData</span><span class="p">(</span><span class="n">header</span><span class="p">)</span></div>
+
+	<span class="k">def</span> <span class="nf">__filterLFP__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+		<span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="kn">import</span> <span class="n">firwin</span><span class="p">,</span> <span class="n">filtfilt</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="kn">from</span> <span class="nn">ephysiopy</span> <span class="kn">import</span> <span class="n">fs</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">fs</span> <span class="o">=</span> <span class="n">fs</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lfp_lowcut</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="kn">from</span> <span class="nn">ephysiopy</span> <span class="kn">import</span> <span class="n">lfp_lowcut</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">lfp_lowcut</span> <span class="o">=</span> <span class="n">lfp_lowcut</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lfp_highcut</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="kn">from</span> <span class="nn">ephysiopy</span> <span class="kn">import</span> <span class="n">lfp_highcut</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">lfp_highcut</span> <span class="o">=</span> <span class="n">lfp_highcut</span>
+		<span class="n">nyq</span> <span class="o">=</span> <span class="n">sample_rate</span> <span class="o">/</span> <span class="mf">2.</span>
+		<span class="n">lowcut</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lfp_lowcut</span> <span class="o">/</span> <span class="n">nyq</span>
+		<span class="n">highcut</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lfp_highcut</span> <span class="o">/</span> <span class="n">nyq</span>
+		<span class="k">if</span> <span class="n">highcut</span> <span class="o">&gt;=</span> <span class="mf">1.0</span><span class="p">:</span>
+			<span class="n">highcut</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
+		<span class="k">if</span> <span class="n">lowcut</span> <span class="o">&lt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+			<span class="n">lowcut</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
+		<span class="n">b</span> <span class="o">=</span> <span class="n">firwin</span><span class="p">(</span><span class="n">sample_rate</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="p">[</span><span class="n">lowcut</span><span class="p">,</span> <span class="n">highcut</span><span class="p">],</span> <span class="n">window</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">pass_zero</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+		<span class="n">y</span> <span class="o">=</span> <span class="n">filtfilt</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">data</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">padtype</span><span class="o">=</span><span class="s1">&#39;odd&#39;</span><span class="p">)</span>
+		<span class="k">return</span> <span class="n">y</span>
+
+<div class="viewcode-block" id="OE2Axona.writeLFP2AxonaFormat"><a class="viewcode-back" href="../../../source/ephysiopy.format_converters.html#ephysiopy.format_converters.OE_Axona.OE2Axona.writeLFP2AxonaFormat">[docs]</a>	<span class="k">def</span> <span class="nf">writeLFP2AxonaFormat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">header</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">,</span> <span class="n">eeg_type</span><span class="o">=</span><span class="s1">&#39;eeg&#39;</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">AxonaData</span><span class="o">.</span><span class="n">setHeader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axona_root_name</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="n">eeg_type</span><span class="p">,</span> <span class="n">header</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">AxonaData</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axona_root_name</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="n">eeg_type</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="OE2Axona.writePos2AxonaFormat"><a class="viewcode-back" href="../../../source/ephysiopy.format_converters.html#ephysiopy.format_converters.OE_Axona.OE2Axona.writePos2AxonaFormat">[docs]</a>	<span class="k">def</span> <span class="nf">writePos2AxonaFormat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">header</span><span class="p">:</span>  <span class="nb">dict</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">AxonaData</span><span class="o">.</span><span class="n">setHeader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axona_root_name</span> <span class="o">+</span> <span class="s2">&quot;.pos&quot;</span><span class="p">,</span> <span class="n">header</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">AxonaData</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axona_root_name</span> <span class="o">+</span> <span class="s2">&quot;.pos&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="OE2Axona.writeTetrodeData"><a class="viewcode-back" href="../../../source/ephysiopy.format_converters.html#ephysiopy.format_converters.OE_Axona.OE2Axona.writeTetrodeData">[docs]</a>	<span class="k">def</span> <span class="nf">writeTetrodeData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tetnum</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">header</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">AxonaData</span><span class="o">.</span><span class="n">setHeader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axona_root_name</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="n">tetnum</span><span class="p">,</span> <span class="n">header</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">AxonaData</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axona_root_name</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="n">tetnum</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="OE2Axona.writeSetData"><a class="viewcode-back" href="../../../source/ephysiopy.format_converters.html#ephysiopy.format_converters.OE_Axona.OE2Axona.writeSetData">[docs]</a>	<span class="k">def</span> <span class="nf">writeSetData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">header</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">AxonaData</span><span class="o">.</span><span class="n">setHeader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axona_root_name</span> <span class="o">+</span> <span class="s2">&quot;.set&quot;</span><span class="p">,</span> <span class="n">header</span><span class="p">)</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Robin Hayman
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
