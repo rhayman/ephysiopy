@@ -126,11 +126,12 @@ def count_to(self, n):
 	return np.cumsum(ret)[:-1]
 
 def repeat_ind(self, n):
-	"""By example:
-
-		#    0  1  2  3  4  5  6  7  8
-		n = [0, 0, 3, 0, 0, 2, 0, 2, 1]
-		res = [2, 2, 2, 5, 5, 7, 7, 8]
+	"""
+	Examples
+	--------
+	>>> n = [0, 0, 3, 0, 0, 2, 0, 2, 1]
+	>>> res = repeat_ind(n)
+	>>> res = [2, 2, 2, 5, 5, 7, 7, 8]
 
 	That is the input specifies how many times to repeat the given index.
 
@@ -189,8 +190,11 @@ def spiral(self, X, Y):
 	'''
 	Given an array of shape X x Y this returns the coordinates needed to step
 	out from the centre of the array to the edge in a spiral fashion:
-		see http://stackoverflow.com/questions/398299/looping-in-a-spiral?rq=1
-		for original code and question/ solution(s)
+	
+	See Also
+	--------
+	See http://stackoverflow.com/questions/398299/looping-in-a-spiral?rq=1
+	for original code and question/ solution(s)
 	'''
 	x = 0
 	y = 0
@@ -206,19 +210,3 @@ def spiral(self, X, Y):
 		x, y = x+dx, y+dy
 		
 	return np.array(x_out), np.array(y_out)
-	
-class bcolors:
-	HEADER = '\033[95m'
-	OKBLUE = '\033[94m'
-	OKGREEN = '\033[92m'
-	WARNING = '\033[93m'
-	FAIL = '\033[91m'
-	ENDC = '\033[0m'
-
-	def disable(self):
-		self.HEADER = ''
-		self.OKBLUE = ''
-		self.OKGREEN = ''
-		self.WARNING = ''
-		self.FAIL = ''
-		self.ENDC = ''

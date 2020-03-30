@@ -178,14 +178,12 @@
 <span class="sd">        </span>
 <span class="sd">    Example</span>
 <span class="sd">	-------</span>
-
 <span class="sd">    &gt;&gt;&gt; t=linspace(-2,2,0.1)</span>
 <span class="sd">    &gt;&gt;&gt; x=sin(t)+randn(len(t))*0.1</span>
 <span class="sd">    &gt;&gt;&gt; y=smooth(x)</span>
 <span class="sd">    </span>
 <span class="sd">    See Also</span>
 <span class="sd">	--------</span>
-<span class="sd">    </span>
 <span class="sd">    numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve</span>
 <span class="sd">    scipy.signal.lfilter</span>
 <span class="sd"> </span>
@@ -276,11 +274,12 @@
 	<span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">ret</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span></div>
 
 <div class="viewcode-block" id="repeat_ind"><a class="viewcode-back" href="../../../source/ephysiopy.ephys_generic.html#ephysiopy.ephys_generic.utils.repeat_ind">[docs]</a><span class="k">def</span> <span class="nf">repeat_ind</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
-	<span class="sd">&quot;&quot;&quot;By example:</span>
-
-<span class="sd">		#    0  1  2  3  4  5  6  7  8</span>
-<span class="sd">		n = [0, 0, 3, 0, 0, 2, 0, 2, 1]</span>
-<span class="sd">		res = [2, 2, 2, 5, 5, 7, 7, 8]</span>
+	<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">	Examples</span>
+<span class="sd">	--------</span>
+<span class="sd">	&gt;&gt;&gt; n = [0, 0, 3, 0, 0, 2, 0, 2, 1]</span>
+<span class="sd">	&gt;&gt;&gt; res = repeat_ind(n)</span>
+<span class="sd">	&gt;&gt;&gt; res = [2, 2, 2, 5, 5, 7, 7, 8]</span>
 
 <span class="sd">	That is the input specifies how many times to repeat the given index.</span>
 
@@ -339,8 +338,11 @@
 	<span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">	Given an array of shape X x Y this returns the coordinates needed to step</span>
 <span class="sd">	out from the centre of the array to the edge in a spiral fashion:</span>
-<span class="sd">		see http://stackoverflow.com/questions/398299/looping-in-a-spiral?rq=1</span>
-<span class="sd">		for original code and question/ solution(s)</span>
+<span class="sd">	</span>
+<span class="sd">	See Also</span>
+<span class="sd">	--------</span>
+<span class="sd">	See http://stackoverflow.com/questions/398299/looping-in-a-spiral?rq=1</span>
+<span class="sd">	for original code and question/ solution(s)</span>
 <span class="sd">	&#39;&#39;&#39;</span>
 	<span class="n">x</span> <span class="o">=</span> <span class="mi">0</span>
 	<span class="n">y</span> <span class="o">=</span> <span class="mi">0</span>
@@ -356,22 +358,6 @@
 		<span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">x</span><span class="o">+</span><span class="n">dx</span><span class="p">,</span> <span class="n">y</span><span class="o">+</span><span class="n">dy</span>
 		
 	<span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x_out</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y_out</span><span class="p">)</span></div>
-	
-<div class="viewcode-block" id="bcolors"><a class="viewcode-back" href="../../../source/ephysiopy.ephys_generic.html#ephysiopy.ephys_generic.utils.bcolors">[docs]</a><span class="k">class</span> <span class="nc">bcolors</span><span class="p">:</span>
-	<span class="n">HEADER</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[95m&#39;</span>
-	<span class="n">OKBLUE</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[94m&#39;</span>
-	<span class="n">OKGREEN</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[92m&#39;</span>
-	<span class="n">WARNING</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[93m&#39;</span>
-	<span class="n">FAIL</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[91m&#39;</span>
-	<span class="n">ENDC</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[0m&#39;</span>
-
-<div class="viewcode-block" id="bcolors.disable"><a class="viewcode-back" href="../../../source/ephysiopy.ephys_generic.html#ephysiopy.ephys_generic.utils.bcolors.disable">[docs]</a>	<span class="k">def</span> <span class="nf">disable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-		<span class="bp">self</span><span class="o">.</span><span class="n">HEADER</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-		<span class="bp">self</span><span class="o">.</span><span class="n">OKBLUE</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-		<span class="bp">self</span><span class="o">.</span><span class="n">OKGREEN</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-		<span class="bp">self</span><span class="o">.</span><span class="n">WARNING</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-		<span class="bp">self</span><span class="o">.</span><span class="n">FAIL</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-		<span class="bp">self</span><span class="o">.</span><span class="n">ENDC</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span></div></div>
 </pre></div>
 
            </div>

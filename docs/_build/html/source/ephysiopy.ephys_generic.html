@@ -1375,47 +1375,6 @@ It can be used as a test for randomness.</p>
 </div>
 <div class="section" id="module-ephysiopy.ephys_generic.utils">
 <span id="ephysiopy-ephys-generic-utils-module"></span><h2>ephysiopy.ephys_generic.utils module<a class="headerlink" href="#module-ephysiopy.ephys_generic.utils" title="Permalink to this headline">¶</a></h2>
-<dl class="class">
-<dt id="ephysiopy.ephys_generic.utils.bcolors">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.ephys_generic.utils.</code><code class="sig-name descname">bcolors</code><a class="reference internal" href="../_modules/ephysiopy/ephys_generic/utils.html#bcolors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ephysiopy.ephys_generic.utils.bcolors" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="attribute">
-<dt id="ephysiopy.ephys_generic.utils.bcolors.ENDC">
-<code class="sig-name descname">ENDC</code><em class="property"> = '\x1b[0m'</em><a class="headerlink" href="#ephysiopy.ephys_generic.utils.bcolors.ENDC" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="ephysiopy.ephys_generic.utils.bcolors.FAIL">
-<code class="sig-name descname">FAIL</code><em class="property"> = '\x1b[91m'</em><a class="headerlink" href="#ephysiopy.ephys_generic.utils.bcolors.FAIL" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="ephysiopy.ephys_generic.utils.bcolors.HEADER">
-<code class="sig-name descname">HEADER</code><em class="property"> = '\x1b[95m'</em><a class="headerlink" href="#ephysiopy.ephys_generic.utils.bcolors.HEADER" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="ephysiopy.ephys_generic.utils.bcolors.OKBLUE">
-<code class="sig-name descname">OKBLUE</code><em class="property"> = '\x1b[94m'</em><a class="headerlink" href="#ephysiopy.ephys_generic.utils.bcolors.OKBLUE" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="ephysiopy.ephys_generic.utils.bcolors.OKGREEN">
-<code class="sig-name descname">OKGREEN</code><em class="property"> = '\x1b[92m'</em><a class="headerlink" href="#ephysiopy.ephys_generic.utils.bcolors.OKGREEN" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="ephysiopy.ephys_generic.utils.bcolors.WARNING">
-<code class="sig-name descname">WARNING</code><em class="property"> = '\x1b[93m'</em><a class="headerlink" href="#ephysiopy.ephys_generic.utils.bcolors.WARNING" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="ephysiopy.ephys_generic.utils.bcolors.disable">
-<code class="sig-name descname">disable</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ephysiopy/ephys_generic/utils.html#bcolors.disable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ephysiopy.ephys_generic.utils.bcolors.disable" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
 <dl class="function">
 <dt id="ephysiopy.ephys_generic.utils.blur_image">
 <code class="sig-prename descclassname">ephysiopy.ephys_generic.utils.</code><code class="sig-name descname">blur_image</code><span class="sig-paren">(</span><em class="sig-param">im</em>, <em class="sig-param">n</em>, <em class="sig-param">ny=None</em>, <em class="sig-param">ftype='boxcar'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ephysiopy/ephys_generic/utils.html#blur_image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ephysiopy.ephys_generic.utils.blur_image" title="Permalink to this definition">¶</a></dt>
@@ -1474,12 +1433,12 @@ y = r sin(w)</p>
 <dl class="function">
 <dt id="ephysiopy.ephys_generic.utils.repeat_ind">
 <code class="sig-prename descclassname">ephysiopy.ephys_generic.utils.</code><code class="sig-name descname">repeat_ind</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">n</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ephysiopy/ephys_generic/utils.html#repeat_ind"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ephysiopy.ephys_generic.utils.repeat_ind" title="Permalink to this definition">¶</a></dt>
-<dd><p>By example:</p>
-<blockquote>
-<div><p>#    0  1  2  3  4  5  6  7  8
-n = [0, 0, 3, 0, 0, 2, 0, 2, 1]
-res = [2, 2, 2, 5, 5, 7, 7, 8]</p>
-</div></blockquote>
+<dd><p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">n</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">res</span> <span class="o">=</span> <span class="n">repeat_ind</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">res</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">]</span>
+</pre></div>
+</div>
 <p>That is the input specifies how many times to repeat the given index.</p>
 <p>It is equivalent to something like this :</p>
 <blockquote>
@@ -1534,10 +1493,10 @@ scipy.signal.lfilter</p>
 <code class="sig-prename descclassname">ephysiopy.ephys_generic.utils.</code><code class="sig-name descname">spiral</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">X</em>, <em class="sig-param">Y</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ephysiopy/ephys_generic/utils.html#spiral"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ephysiopy.ephys_generic.utils.spiral" title="Permalink to this definition">¶</a></dt>
 <dd><p>Given an array of shape X x Y this returns the coordinates needed to step
 out from the centre of the array to the edge in a spiral fashion:</p>
-<blockquote>
-<div><p>see <a class="reference external" href="http://stackoverflow.com/questions/398299/looping-in-a-spiral?rq=1">http://stackoverflow.com/questions/398299/looping-in-a-spiral?rq=1</a>
-for original code and question/ solution(s)</p>
-</div></blockquote>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><code class="xref py py-func docutils literal notranslate"><span class="pre">See()</span></code>, <code class="xref py py-func docutils literal notranslate"><span class="pre">for()</span></code></p>
+</div>
 </dd></dl>
 
 </div>
