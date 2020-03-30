@@ -582,7 +582,7 @@ class Tetrode(IO, SpikeCalcs):
 	Mostly this class deals with interpolating tetrode and position timestamps
 	and getting indices for particular clusters.
 
-	Paraeters
+	Parameters
 	---------
 	filename_root : str
 		The fully qualified name of the file without it's suffix
@@ -741,7 +741,7 @@ class EEG(IO):
 	"""
 	Processes eeg data collected with the Axona recording system
 
-	Paramters
+	Parameters
 	---------
 	filename_root : str
 		The fully qualified filename without the suffix

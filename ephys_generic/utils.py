@@ -30,14 +30,12 @@ def smooth(x, window_len=9, window='hanning'):
         
     Example
 	-------
-
     >>> t=linspace(-2,2,0.1)
     >>> x=sin(t)+randn(len(t))*0.1
     >>> y=smooth(x)
     
     See Also
 	--------
-    
     numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
     scipy.signal.lfilter
  

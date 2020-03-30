@@ -686,7 +686,7 @@ class PosCalcsGeneric(object):
         """
         Calculates speed
 
-        Paramters
+        Parameters
         ---------
         xy : np.ma.MaskedArray
             The xy positional data
@@ -706,7 +706,7 @@ class PosCalcsGeneric(object):
         """
         Upsamples position data from 30 to upsample_rate
 
-        Paramters
+        Parameters
         ---------
         xy : np.ma.MaskedArray
             The xy positional data
