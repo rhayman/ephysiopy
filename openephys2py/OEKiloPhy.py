@@ -1,22 +1,8 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Tue Sep 12 11:53:10 2017
-
-@author: robin
-
 The main interface for dealing with openephys data recorded in
 either the .nwb or binary format (ie when using neuropixels)
-
-4 classes defined:
-
-KiloSortSession - deals with the output from kilosort or kilosort2
-OpenEphysBase - a not really abstract base class which is the parent (super)
-				class for:
-OpenEphysNPX - deals with neuropixels data
-OpenEphysNWB - deals with data recorded in nwb format
-
 """
+
 import numpy as np
 import matplotlib.pylab as plt
 
@@ -32,26 +18,28 @@ except ImportError:
 	from ephysiopy.openephys2py.OESettings import Settings
 
 """
-The results of a kilosort session are a load of .npy files, a .csv file
-and some other stuff
-The .npy files contain things like spike times, cluster ids etc. Importantly
-the .csv file ('cluster_groups.csv') contains the results (more or less) of
-the SAVED part of the phy template-gui (ie when you click "Save" from the
-Clustering menu): this file consists of a header ('cluster_id' and 'group')
-where 'cluster_id' is obvious (and relates to the identity in spk_clusters.npy),
-the 'group' is a string that contains things like 'noise' or 'unsorted' or
-presumably a number or quality measure as determined by the user
-Load all these things to get a restricted list of things to look at...
+
 """
 
 class KiloSortSession(object):
 	"""
+	Loads and processes data from a Kilosort session.
+
+	The results of a kilosort session are a load of .npy files, a .csv or .tsv file.
+	The .npy files contain things like spike times, cluster indices and so on.
+	Importantly	the .csv (or .tsv) file contains the cluster identities of
+	the SAVED part of the phy template-gui (ie when you click "Save" from the
+	Clustering menu): this file consists of a header ('cluster_id' and 'group')
+	where 'cluster_id' is obvious (and relates to the identity in spk_clusters.npy),
+	the 'group' is a string that contains things like 'noise' or 'unsorted' or
+	whatever as the phy user can define their own labels.
+
 	Parameters
 	----------
 	fname_root : str
-		Should contain all the files from a kilosort session and
-		the .dat file (extracted from the nwb OE session)
-
+		The top-level directory. If the Kilosort session was run directly on data
+		from an openephys recording session then fname_root is typically in form
+		of YYYY-MM-DD_HH-MM-SS
 	"""
 	def __init__(self, fname_root):
 		"""
@@ -70,22 +58,32 @@ class KiloSortSession(object):
 
 	def load(self):
 		"""
-		Loads all the relevant files
+		Load all the relevant files
 
 		Notes
 		-----
-		* KSLabel is output from KiloSort and so algorithm defined
-		* cluster_group are group labels from phy and so user defined (has labels like 'good', 'MUA', 'noise' etc)
+		* The file cluster_KSLabel.tsv is output from KiloSort and so algorithm defined
+			as opposed to...
+		* cluster_group.tsv or cluster_groups.csv which are group labels from phy and
+			so user defined (has labels like 'good', 'MUA', 'noise' etc)
 		"""
 		import os
 		dtype = {'names': ('cluster_id', 'group'), 'formats': ('i4', 'S10')}
-		# One of these is from kilosort and the other from kilosort2
+		# One of these (cluster_groups.csv or cluster_group.tsv) is from kilosort and the other from kilosort2
 		# and is updated by the user when doing cluster assignment in phy (or whatever)
 		# See comments above this class definition for a bit more info
 		if os.path.exists(os.path.join(self.fname_root, 'cluster_groups.csv')):
 			self.cluster_id, self.group = np.loadtxt(os.path.join(self.fname_root, 'cluster_groups.csv'), unpack=True, skiprows=1, dtype=dtype)
 		if os.path.exists(os.path.join(self.fname_root, 'cluster_group.tsv')):
 			self.cluster_id, self.group = np.loadtxt(os.path.join(self.fname_root, 'cluster_group.tsv'), unpack=True, skiprows=1, dtype=dtype)
+		"""
+		Output some information to the user if self.cluster_id is still None
+		it implies that data has not been sorted / curated
+		"""
+		if self.cluster_id is None:
+			import warnings
+			warnings.warn("No cluster_groups.tsv or cluster_group.csv file was found. Have you run phy?")
+		
 		dtype = {'names': ('cluster_id', 'KSLabel'), 'formats': ('i4', 'S10')}
 		# 'Raw' labels from a kilosort session
 		if os.path.exists(os.path.join(self.fname_root, 'cluster_KSLabel.tsv')):
@@ -214,8 +212,24 @@ class OpenEphysBase(object):
 			* 'all' - both spikes on path, ratemap & SAC plotted
 		Valid kwargs: 'ppm' - this is an integer denoting pixels per metre:
 												lower values = more bins in ratemap / SAC
-				'clusters' - int or list of ints describing which clusters to plot
-				i.e. this overwrites the 'good_clusters' value in self.kilodata
+				'cluster' - int or list of ints describing which clusters to plot
+		
+		Notes
+		-----
+		If providing a specific cluster or  list of clusters to this method with the keyword 
+		'cluster' then this is compared against the list of clusters from the Kilosort session.
+		Only clusters that are in both lists will be plotted.
+
+		Examples
+		--------
+		>>> from ephysiopy.openephys2py.OEKiloPhy import OpenEphysNPX
+		>>> npx = OpenEphysNPX('/path/to/data')
+		>>> npx.load()
+		>>> npx.plotMaps(plot_type='path', clusters=[1, 4, 6, 16, 22])
+
+		Will plot the spikes from clusters 1, 4, 6, 16, and 22 overlaid onto the xy position data 
+		in one figure window
+
 		"""
 		if self.kilodata is None:
 			self.loadKilo()
@@ -233,36 +247,40 @@ class OpenEphysBase(object):
 		self.hdir = hdir
 		spk_times = (self.kilodata.spk_times.T / 3e4) + self.recording_start_time
 		mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
-		if 'clusters' in kwargs:
-			if type(kwargs['clusters']) == int:
-				mapiter.good_clusters = np.intersect1d([kwargs['clusters']], self.kilodata.good_clusters)
+		if 'cluster' in kwargs:
+			if type(kwargs['cluster']) == int:
+				mapiter.good_clusters = np.intersect1d([kwargs['cluster']], self.kilodata.good_clusters)
 
 			else:
-				mapiter.good_clusters = np.intersect1d(kwargs['clusters'], self.kilodata.good_clusters)
+				mapiter.good_clusters = np.intersect1d(kwargs['cluster'], self.kilodata.good_clusters)
 		else:
 			mapiter.good_clusters = self.kilodata.good_clusters
 		mapiter.spk_clusters = self.kilodata.spk_clusters
 		self.mapiter = mapiter
 		mapiter.plotAll()
-		# [ print("") for cluster in mapiter ]
 
 	def plotMapsOneAtATime(self, plot_type='map', **kwargs):
-		'''
+		"""
 		Parameters
-		------------
-		plot_type - str - valid strings include:
-						'map' - just ratemap plotted
-						'path' - just spikes on path
-						'both' - both of the above
-						'all' - both spikes on path, ratemap & SAC plotted
-						can also be a list
-		Valid kwargs: 'ppm' - this is an integer denoting pixels per metre:
-												lower values = more bins in ratemap / SAC
-				'clusters' - int or list of ints describing which clusters to plot
-				i.e. this overwrites the 'good_clusters' value in self.kilodata
-				'save_grid_summary_location' - bool; if present the dictionary returned from
-				gridcell.SAC.getMeasures is saved for each cluster - this is passed to MapCalcsGeneric
-		'''
+		----------
+		plot_type : str or list
+			The kind of plot to produce
+			 Valid strings include:
+			* 'map' - just ratemap plotted
+			* 'path' - just spikes on path
+			* 'both' - both of the above
+			* 'all' - both spikes on path, ratemap & SAC plotted
+		
+		Notes
+		-----
+		Valid keyword arguments include:
+		* 'ppm' - this is an integer denoting pixels per metre where 
+			lower values = more bins in ratemap / SAC
+		* 'clusters' - int or list of ints describing which clusters to plot
+			i.e. this overwrites the 'good_clusters' value in self.kilodata
+		* 'save_grid_summary_location' - bool; if present the dictionary returned from
+			gridcell.SAC.getMeasures is saved for each cluster - this is passed to MapCalcsGeneric
+		"""
 		if self.kilodata is None:
 			self.loadKilo()
 		if ( 'ppm' in kwargs.keys() ):
@@ -293,6 +311,18 @@ class OpenEphysBase(object):
 		[ print("") for cluster in mapiter ]
 
 	def plotEEGPower(self, channel=0):
+		"""
+		Plots LFP power
+
+		Parameters
+		----------
+		channel : int
+			The channel from which to plot the power
+
+		See Also
+		-----
+		EEGCalcsGeneric.plotPowerSpectrum
+		"""
 		from ephysiopy.ephys_generic.ephys_generic import EEGCalcsGeneric
 		if self.rawData is None:
 			print("Loading raw data...")
@@ -301,8 +331,6 @@ class OpenEphysBase(object):
 		n_samples = np.shape(self.rawData[:,channel])[0]
 		s = signal.resample(self.rawData[:,channel], int(n_samples/3e4) * 500)
 		E = EEGCalcsGeneric(s, 500)
-
-		# E = EEGCalcsGeneric(self.rawData[:,channel], 3e4)
 		E.plotPowerSpectrum()
 
 	def plotSpectrogram(self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250):
@@ -362,8 +390,17 @@ class OpenEphysBase(object):
 		if self.rawData is None:
 			print("Loading raw data...")
 			self.load(loadraw=True)
+		# Find the amplitudes.npy file
 		import os
-		amplitudes = np.load(os.path.join(self.fname_root, 'amplitudes.npy'))
+		amplitudes = None
+		for d, _, f in os.walk(self.pname_root):
+			for ff in f:
+				if 'amplitudes.npy' in ff:
+					amplitudes = np.load(os.path.join(d, 'amplitudes.npy'))
+		if amplitudes is None:
+			import warnings
+			warnings.warn("No amplitudes.npy file was found so cant plot waveforms. Have you run Kilosort?")
+			return
 		waveiter = SpkWaveform(self.kilodata.good_clusters, self.kilodata.spk_times, self.kilodata.spk_clusters, amplitudes, self.rawData)
 		for cluster in waveiter:
 			print("Cluster {}".format(cluster))
@@ -383,8 +420,7 @@ class OpenEphysNPX(OpenEphysBase):
 
 		Parameters
 		----------
-		pname_root - str - the top level directory that contains the folder 'experiment1'
-		(usually) and settings.xml
+		pname_root - str - the top level directory, typically in form of YYYY-MM-DD_HH-MM-SS
 
 		recording_name - str - pretty obvious but this is also the directory immediately beneath pname_root
 		'''
@@ -437,15 +473,37 @@ class OpenEphysNPX(OpenEphysBase):
 		self.ts = np.arange(recording_start_time, trial_length+recording_start_time, 1.0 / ap_sample_rate)
 
 	def __calcTrialLengthFromBinarySize__(self, path2file:str, n_channels=384, sample_rate=30000):
-		'''
+		"""
 		Returns the time taken to run the trial (in seconds) based on the size of
 		the binary file on disk
-		'''
+		"""
 		import os
 		status = os.stat(path2file)
 		return status.st_size / ( 2.0 * n_channels * sample_rate)
 
 	def plotSpectrogramByDepth(self, nchannels=384, nseconds=100, maxFreq=125, **kwargs):
+		"""
+		Plots a heat map spectrogram of the LFP for each channel.
+
+		Line plots of power per frequency band and power on a subset of channels are 
+		also displayed to the right and above the main plot.
+
+		Parameters
+		----------
+		nchannels : int
+			The number of channels on the probe
+		nseconds : int, optional
+			How long in seconds from the start of the trial to do the spectrogram for (for speed).
+			Default 100
+		maxFreq : int
+			The maximum frequency in Hz to plot the spectrogram out to. Maximum 1250.
+			Default 125
+		
+		Notes
+		-----
+		Should also allow kwargs to specify exactly which channels and / or frequency
+		bands to do the line plots for
+		"""
 		import os
 		lfp_file = os.path.join(self.path2LFPdata, 'continuous.dat')
 		status = os.stat(lfp_file)
@@ -529,12 +587,12 @@ class OpenEphysNPX(OpenEphysBase):
 		super().plotWaves()
 
 class OpenEphysNWB(OpenEphysBase):
-	'''
+	"""
 	Parameters
 	------------
-	fname_root:- str
-		Should contain the settings.xml file and the .nwb file
-	'''
+	pname_root : str
+		The top level directory, typically in form of YYYY-MM-DD_HH-MM-SS
+	"""
 
 	def __init__(self, pname_root, **kwargs):
 		super().__init__(pname_root)
@@ -544,7 +602,7 @@ class OpenEphysNWB(OpenEphysBase):
 		self.isBinary = False
 
 	def load(self, pname_root: None, session_name=None, recording_name=None, loadraw=False, loadspikes=False, savedat=False):
-		'''
+		"""
 		Loads xy pos from binary part of the hdf5 file and data resulting from
 		a Kilosort session (see KiloSortSession class above)
 
@@ -566,7 +624,7 @@ class OpenEphysNWB(OpenEphysBase):
 			NB only works if loadraw is True. Also note that this
 			currently saves 64 channels worth of data (ie ignores
 			the 6 accelerometer channels)
-		'''
+		"""
 
 		import h5py
 		import os
@@ -618,9 +676,9 @@ class OpenEphysNWB(OpenEphysBase):
 			self.ts = self.xy
 
 	def save_ttl(self, out_fname):
-		'''
+		"""
 		Saves the ttl data to text file out_fname
-		'''
+		"""
 		if ( len(self.ttl_data) > 0 ) and ( len(self.ttl_timestamps) > 0 ):
 			data = np.array([self.ttl_data, self.ttl_timestamps])
 			if data.shape[0] == 2:

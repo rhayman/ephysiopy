@@ -148,7 +148,7 @@ class SpikeCalcsGeneric(object):
         mask = np.logical_and(bins>0, bins<n)
         return np.mean(counts[mask[1:]])
 
-    def xcorr(self, x1: np.array, x2=None, Trange=None, **kwargs)->np.ndarray:
+    def xcorr(self, x1: np.ndarray, x2=None, Trange=None, **kwargs)->np.ndarray:
         """
         Calculates the histogram of the ISIs in x1 or x1 vs x2
 
@@ -675,11 +675,11 @@ class PosCalcsGeneric(object):
         x = xy[:,0].astype(np.float64)
         y = xy[:,1].astype(np.float64)
 
-        from ephysiopy.dacq2py import smoothdata
+        from ephysiopy.ephys_generic.utils import smooth
         # TODO: calculate window_len from pos sampling rate
         # 11 is roughly equal to 400ms at 30Hz (window_len needs to be odd)
-        sm_x = smoothdata.smooth(x, window_len=11, window='flat')
-        sm_y = smoothdata.smooth(y, window_len=11, window='flat')
+        sm_x = smooth(x, window_len=11, window='flat')
+        sm_y = smooth(y, window_len=11, window='flat')
         return np.array([sm_x, sm_y])
 
     def calcSpeed(self, xy):
@@ -732,28 +732,34 @@ class PosCalcsGeneric(object):
 class MapCalcsGeneric(object):
     """
     Produces graphical output including but not limited to spatial
-    analysis of data i.e. ratemaps (xy, heading dir)ection, grid cell
-    spatial autocorrelograms, speed vs rate plots etc
+    analysis of data.
+    
+    Parameters
+    ----------
+    xy : array_like
+        The positional data usually as a 2D numpy array
+    hdir : array_like
+        The head direction data usually a 1D numpy array
+    pos_ts : array_like
+        1D array of timestamps in seconds
+    spk_ts : array_like
+        1D array of timestamps in seconds
+    plot_type : str or list
+        Determines the plots produced. Legal values:
+        ['map','path','hdir','sac', 'speed']
+    
+    Notes
+    -----
+    Output possible: 
+    * ratemaps (xy)
+    * polar plots (heading direction)
+    * grid cell spatial autocorrelograms
+    * speed vs rate plots
 
     It is possible to iterate through instances of this class as it has a yield
     method defined
     """
     def __init__(self, xy, hdir, speed, pos_ts, spk_ts, plot_type='map', **kwargs):
-        """
-        Parameters
-        ----------
-        xy : array_like
-            The positional data usually as a 2D numpy array
-        hdir : array_like
-            The head direction data usually a 1D numpy array
-        pos_ts : array_like
-            1D array of timestamps in seconds
-        spk_ts : array_like
-            1D array of timestamps in seconds
-        plot_type : str or list
-            Determines the plots produced. Legal values:
-            ['map','path','hdir','sac', 'speed']
-        """
         if (np.argmin(np.shape(xy)) == 1):
             xy = xy.T
         self.xy = xy
@@ -778,16 +784,6 @@ class MapCalcsGeneric(object):
             self.pos_sample_rate = 30
         if 'save_grid_summary_location' in kwargs.keys():
             self.save_grid_output_location = kwargs['save_grid_summary_location']
-
-    def __interpSpkPosTimes(self):
-        """
-        Interpolates spike times into indices of position data
-        NB Assumes pos times have been zeroed correctly - see comments in
-        OEKiloPhy.OpenEphysNWB function __alignTimeStamps__()
-        """
-        idx = np.searchsorted(self.pos_ts, self.spk_ts)
-        idx[idx==len(self.pos_ts)] = len(self.pos_ts) - 1
-        return idx
 
     @property
     def good_clusters(self):
@@ -833,9 +829,8 @@ class MapCalcsGeneric(object):
             else:
                 fig = plt.figure(figsize=(20,10))#, constrained_layout=True)
         if 'sac' in what_to_plot:
-            from ephysiopy.dacq2py import gridcell
+            from ephysiopy.ephys_generic import gridcell
             S = gridcell.SAC()
-            print(gridcell.__file__)
         import matplotlib.gridspec as gridspec
         nrows = np.ceil(np.sqrt(len(self.good_clusters))).astype(int)
         outer = gridspec.GridSpec(nrows, nrows, figure=fig)
@@ -876,7 +871,7 @@ class MapCalcsGeneric(object):
 
     def __iter__(self):
         if 'all' in self.plot_type:
-            from ephysiopy.dacq2py import gridcell
+            from ephysiopy.ephys_generic import gridcell
             S = gridcell.SAC()
 
         for cluster in self.good_clusters:

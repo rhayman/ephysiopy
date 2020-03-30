@@ -47,6 +47,11 @@ class Trial(axonaIO.IO, SAC, dict):
 	instances of subpackages (binning.Ratemap for example) so that the code
 	could be made more modular.
 
+	Parameters
+	----------
+	filename_root : str
+		Absolute location on the filesystem of the set of files without a suffix
+
 	Attributes:
 		filename_root : str
 			Absolute location on the filesystem of the set of files without a suffix
@@ -337,7 +342,7 @@ class Trial(axonaIO.IO, SAC, dict):
 				phase_info = {'startTime': None, 'duration': None, 'name': None, 'pulseWidth': None, 'pulsePause': None}
 				stim_dict = {}
 				stim_patt_dict = {}
-				for k,v in self.setheader.iteritems():
+				for k,v in self.setheader.items():
 					if k.startswith("stim_patternmask_"):
 						if (int(v) == 1):
 							# get the number of the phase
@@ -346,14 +351,14 @@ class Trial(axonaIO.IO, SAC, dict):
 					if k.startswith("stim_patt_"):
 						stim_patt_dict[k] = v
 				self.patt_dict = stim_patt_dict
-				for k,v in stim_dict.iteritems():
+				for k,v in stim_dict.items():
 					phase_num = k[-1]
 					stim_dict[k]['duration'] = int(self.setheader['stim_patterntimes_' + phase_num])
 					phase_name = self.setheader['stim_patternnames_' + phase_num]
 					stim_dict[k]['name'] = phase_name
 					if not (phase_name.startswith("Pause")):
 						# find the matching string in the stim_patt_dict
-						for kk,vv in stim_patt_dict.iteritems():
+						for kk,vv in stim_patt_dict.items():
 							split_str = vv.split('"')
 							patt_name = split_str[1]
 							if (patt_name == phase_name):
@@ -425,7 +430,7 @@ class Trial(axonaIO.IO, SAC, dict):
 			if np.ma.is_masked(self.EEG.EEGphase):
 				self.EEG.EEGphase.mask = np.ma.nomask
 		if self.TETRODE:#true if TETRODE dict has entries
-			for tet in self.TETRODE.iterkeys():
+			for tet in self.TETRODE.keys():
 				if np.ma.is_masked(self.TETRODE[tet].waveforms):
 					self.TETRODE[tet].waveforms.mask = np.ma.nomask
 					self.TETRODE[tet].spk_ts.mask = np.ma.nomask
@@ -435,7 +440,7 @@ class Trial(axonaIO.IO, SAC, dict):
 
 		idx = self.POS.filterPos(value)
 		if self.TETRODE:
-			for tet in self.TETRODE.iterkeys():
+			for tet in self.TETRODE.keys():
 				posSamps = self.TETRODE[tet].getPosSamples()
 				common = np.in1d(posSamps, np.nonzero(idx)[1])
 				# Mask timestamps first as this is a vector, then expand
@@ -461,7 +466,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		'''
 		Prints out keys/ values of STM dict
 		'''
-		for k,v in self.STM.iteritems():
+		for k,v in self.STM.items():
 			print(k, v)
 
 	def _filterForStm(self, laser=None):
@@ -478,8 +483,8 @@ class Trial(axonaIO.IO, SAC, dict):
 		if laser is not None:
 			times = [0]
 			phaseType = []
-			for k, d in self.STM['stim_params'].iteritems():
-				for kk, v in d.iteritems():
+			for k, d in self.STM['stim_params'].items():
+				for kk, v in d.items():
 					if 'duration' in kk:
 						times.append(v)
 					if 'name' in kk:
@@ -488,13 +493,13 @@ class Trial(axonaIO.IO, SAC, dict):
 			period_bounds = dict.fromkeys(set(phaseType), [])
 			for pk in period_bounds.keys():
 				bounds = []
-				for k, d in self.STM['stim_params'].iteritems():
+				for k, d in self.STM['stim_params'].items():
 					if pk == d['name']:
 						idx = int(k.split('_')[1])
 						bounds.append(periods[idx-1:idx+1])
 				period_bounds[pk] = bounds
 
-			for k, v in period_bounds.iteritems():
+			for k, v in period_bounds.items():
 				if laser == 0:
 					if 'Pause' in k:
 						self.posFilter = {'time': np.array(v)}
@@ -652,8 +657,6 @@ class Trial(axonaIO.IO, SAC, dict):
 		Return a tuple of indices into the EEG record that denotes the peaks
 		and troughs of theta cycles
 		'''
-		if not self.EEG:
-			self.EEG = EEG(self.filename_root)
 		sm_eeg = self.EEG.eegfilter()
 		df_eeg = np.diff(sm_eeg)
 		pts = np.diff((df_eeg > 0).astype(int), 2)
@@ -662,7 +665,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		troughs = pts[sm_eeg[pts] < 0] + 2
 		return peaks, troughs
 
-	def _getSpikeInCycle(self, peakIdx, spkIdx=None, whichSpk='first'):
+	def _getSpikeInCycle(self, peakIdx, spkIdx, whichSpk='first'):
 		'''
 		given an array of spike indices into eeg and indices of peaks in the
 		smoothed, theta-filtered eeg signal this returns the first spike in the
@@ -673,13 +676,11 @@ class Trial(axonaIO.IO, SAC, dict):
 			side = 'left'
 		elif 'last' in whichSpk:
 			side = 'right'
-		peaks, troughs = self._getThetaCycles()
-		if spkIdx is None:
-			spkIdx = self.TETRODE[self.tetrode].getSpkTS()
+		peaks, _ = self._getThetaCycles()
 		spk2eeg_idx = (spkIdx / (self.TETRODE[self.tetrode].timebase /
 					   self.EEG.sample_rate)).astype(np.int)
 		idx = np.searchsorted(peaks, spk2eeg_idx, side=side)
-		uniques, unique_indices = np.unique(idx, return_index=True)
+		_, unique_indices = np.unique(idx, return_index=True)
 		return spk2eeg_idx[unique_indices]
 
 	def _parseMetaData(self):
@@ -1444,10 +1445,10 @@ class Trial(axonaIO.IO, SAC, dict):
 		"""
 		pulsePause = 0
 		if evenOnsets:
-			for k, v in self.STM.iteritems():
+			for k, v in self.STM.items():
 				if isinstance(v, OrderedDict):
-					for kk, vv in v.iteritems():
-						for kkk, vvv in vv.iteritems():
+					for kk, vv in v.items():
+						for kkk, vvv in vv.items():
 							if 'Pause' in kkk:
 								if vvv is not None:
 									pulsePause = vvv

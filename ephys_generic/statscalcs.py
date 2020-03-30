@@ -163,7 +163,7 @@ class StatsCalcs():
 		V_bar = (1 / float(n)) * sum_Vi
 		U2n = sum_sq_Vi - sum_Ci_Vi_ov_n + (n * (1/float(3) - (V_bar - 0.5)**2))
 		test_vals = {'0.1': 0.152, '0.05': 0.187, '0.025': 0.221, '0.01': 0.267, '0.005': 0.302}
-		for key, val in test_vals.iteritems():
+		for key, val in test_vals.items():
 			if U2n > val:
 				print('The Watsons U2 statistic is {0} which is greater than\n the critical value of {1} at p={2}'.format(U2n, val, key))
 			else:

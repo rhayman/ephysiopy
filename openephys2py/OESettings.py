@@ -1,19 +1,8 @@
-#!/usr/bin/env python3
-'''
-Defines classes for parsing information contained in the settings.xml
+"""
+Classes for parsing information contained in the settings.xml
 file that is saved when recording with the openephys system.
+"""
 
-Classes
---------
-Settings - the main class that uses the following classes when parsing:
-
-ChannelInfo - parses the info attached to each channel
-BandpassFilter - parses the info contained in the Bandpass filter plugin
-Electrode - documents the ELECTRODE entries in the settings.xml file; this
-    is mostly for when using tetrodes and the SpikeSorter (or SpikeViewer)
-    plugin
-
-'''
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
@@ -21,6 +10,9 @@ except ImportError:
 from collections import OrderedDict, defaultdict
 
 class ChannelInfo(object):
+    """
+    Documents the information attached to each channel
+    """
     def __init__(self):
         self._name = None
         self._number = -1
@@ -80,9 +72,9 @@ class ChannelInfo(object):
         self._highcut = int(val)
 
 class BandpassFilter(object):
-    '''
-    Documents the Bandpass Filter plugin as detailed in the settings.xml file
-    '''
+    """
+    Documents the Bandpass Filter plugin
+    """
     def __init__(self):
         self._nodeId = None
         self._channels = None # becomes a list of int
@@ -168,12 +160,17 @@ class Electrode(object):
     def subChannelsActive(self, val):
         self._subChannelsActive = [bool(int(v)) for v in val]
 
-'''
-Deals with loading some of the details from the settings.xml file
-saved during / after an OE session
-'''
 class Settings(object):
-    def __init__(self, pname):
+    """
+    Groups together the other classes in this module and does the actual
+    parsing of the settings.xml file
+
+    Parameters
+    ----------
+    pname : str
+        The pathname to the top-level directory, typically in form of YYYY-MM-DD_HH-MM-SS
+    """
+    def __init__(self, pname : str):
         self.filename = None
         import os
         for d, c, f in os.walk(pname):
@@ -192,8 +189,14 @@ class Settings(object):
         self.stimcontrol_params = {}
         self.bandpass_params = OrderedDict()
     def load(self):
+        """
+        Creates a handle to the basic xml document
+        """
         self.tree = ET.ElementTree(file=self.filename)
     def parse(self):
+        """
+        Parses the basic information attached to the FPGA module
+        """
         if self.tree is None:
             self.load()
         for elem in self.tree.iter(tag='PROCESSOR'):
@@ -205,6 +208,9 @@ class Settings(object):
         except Exception:
             pass
     def parsePos(self):
+        """
+        Parses the information attached to the PosTracker plugin I wrote
+        """
         if len(self.processors) == 0:
             self.parse()
         children = self.processors['Sources/Pos Tracker'][0].getchildren()
@@ -214,6 +220,9 @@ class Settings(object):
         # convert string values to ints
         self.tracker_params = dict([k, int(v)] for k,v in self.tracker_params.items())
     def parseSpikeSorter(self):
+        """
+        Parses data attached to each ELECTRODE object in the xml tree
+        """
         if len(self.processors) == 0:
             self.parse()
         electrode_info = OrderedDict()
@@ -245,6 +254,9 @@ class Settings(object):
         self.electrodes = electrode_info
 
     def parseStimControl(self):
+        """
+        Parses information attached to the StimControl module I wrote
+        """
         if len(self.processors) == 0:
             self.parse()
         children = self.processors['Sinks/StimControl'][0].getchildren()
@@ -255,6 +267,9 @@ class Settings(object):
         self.stimcontrol_params = dict([k, int(v)] for k,v in self.stimcontrol_params.items())
 
     def parseChannels(self):
+        """
+        Parses data attached to each channel
+        """
         if len(self.processors) == 0:
             self.parse()
         channel_info = OrderedDict()
@@ -279,6 +294,9 @@ class Settings(object):
         self.channel_info = channel_info
 
     def parseBandpassFilters(self):
+        """
+        Parse the bandpass filter information
+        """
         if len(self.processors) == 0:
             self.parse()
         bandpass_info = OrderedDict()
