@@ -9,7 +9,7 @@ import os
 import pickle
 import fnmatch
 from ephysiopy.ephys_generic.utils import smooth
-from ephysiopy.ephys_generic.spikecalcs import SpikeCalcs
+from ephysiopy.dacq2py.spikecalcs import SpikeCalcs
 
 MAXSPEED = 4.0  # pos data speed filter in m/s
 BOXCAR = 20  # this gives a 400ms smoothing window for pos averaging
