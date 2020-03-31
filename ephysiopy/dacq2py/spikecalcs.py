@@ -8,7 +8,7 @@ from scipy import signal
 from scipy import stats
 import matplotlib.pyplot as plt
 from matplotlib import colors
-from .utils import blur_image
+from ephysiopy.ephys_generic.utils import blur_image
 
 class SpikeCalcs(object):
 	"""

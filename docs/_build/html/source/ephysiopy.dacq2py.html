@@ -1,0 +1,404 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>ephysiopy.dacq2py package &#8212; ephysiopy 1.5.58 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="ephysiopy-dacq2py-package">
+<h1>ephysiopy.dacq2py package<a class="headerlink" href="#ephysiopy-dacq2py-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="ephysiopy-dacq2py-axonaio-module">
+<h2>ephysiopy.dacq2py.axonaIO module<a class="headerlink" href="#ephysiopy-dacq2py-axonaio-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-ephysiopy.dacq2py.cluster">
+<span id="ephysiopy-dacq2py-cluster-module"></span><h2>ephysiopy.dacq2py.cluster module<a class="headerlink" href="#module-ephysiopy.dacq2py.cluster" title="Permalink to this headline">¶</a></h2>
+<p>Clustering of data using KlustaKwik but only with data recorded using the Axona
+recording system</p>
+<dl class="class">
+<dt id="ephysiopy.dacq2py.cluster.Kluster">
+<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.dacq2py.cluster.</code><code class="sig-name descname">Kluster</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">tet_num</em>, <em class="sig-param">feature_array</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.cluster.Kluster" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Runs KlustaKwik (KK) against data recorded on the Axona dacqUSB recording
+system</p>
+<dl class="method">
+<dt id="ephysiopy.dacq2py.cluster.Kluster.get_mask">
+<code class="sig-name descname">get_mask</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.cluster.Kluster.get_mask" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a feature mask based on unused channels, eeg recordings etc
+Loads the set file associated with the trial and creates two dicts
+containing the mode on each channel and the channels which contain the
+eeg recordings
+keys and values for both dicts are in the form of ints NB mode is
+numbered from 0 upwards but eeg_filter is from 1 upwards
+The mode key/ value pair of the Axona .set file correspond to the
+following values:
+2 - eeg
+5 - ref-sig
+6 - grounded
+The collectMask key in the Axona .set file corresponds to whether or
+not a tetrode was kept in the recording - use this also to construct
+the feature mask</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.dacq2py.cluster.Kluster.kluster">
+<code class="sig-name descname">kluster</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.cluster.Kluster.kluster" title="Permalink to this definition">¶</a></dt>
+<dd><p>Using a .fet.n file this makes a system call to KlustaKwik (KK) which
+clusters data and saves istributional ‘ + str(self.distribution)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.dacq2py.cluster.Kluster.make_fet">
+<code class="sig-name descname">make_fet</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.cluster.Kluster.make_fet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates and writes a .fet.n file for reading in  to KlustaKwik given
+the array input a</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.dacq2py.cluster.Kluster.make_fmask">
+<code class="sig-name descname">make_fmask</code><span class="sig-paren">(</span><em class="sig-param">feature_mask</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.cluster.Kluster.make_fmask" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a .fmask.n file for use in the new (01/09/14) KlustaKwik program
+where n denotes tetrode id</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>feature_mask</strong> (<em>numpy.array</em>) – array of numbers between 0 and 1 (see above
+description from github site)</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>From the github site:
+“The .fmask file is a text file, every line of which is a vector of
+length the number of features, in which 1 denotes unmasked and 0
+denotes masked, and values between 0 and 1 indicate partial masking”</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="ephysiopy-dacq2py-dacq2py-util-module">
+<h2>ephysiopy.dacq2py.dacq2py_util module<a class="headerlink" href="#ephysiopy-dacq2py-dacq2py-util-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-ephysiopy.dacq2py.spikecalcs">
+<span id="ephysiopy-dacq2py-spikecalcs-module"></span><h2>ephysiopy.dacq2py.spikecalcs module<a class="headerlink" href="#module-ephysiopy.dacq2py.spikecalcs" title="Permalink to this headline">¶</a></h2>
+<p>A lot of the functionality here has been more generically implemented
+in the ephys_generic.ephys_generic.SpikeCalcsGeneric class</p>
+<dl class="class">
+<dt id="ephysiopy.dacq2py.spikecalcs.SpikeCalcs">
+<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.dacq2py.spikecalcs.</code><code class="sig-name descname">SpikeCalcs</code><a class="headerlink" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Mix-in class for use with Tetrode class below.</p>
+<p>Extends Tetrodes functionality by adding methods for analysis of spikes/
+spike trains</p>
+<p>Note lots of the methods here are native to dacq2py.axonaIO.Tetrode</p>
+<p>Note that units are in milliseconds</p>
+<dl class="method">
+<dt id="ephysiopy.dacq2py.spikecalcs.SpikeCalcs.clusterQuality">
+<code class="sig-name descname">clusterQuality</code><span class="sig-paren">(</span><em class="sig-param">cluster</em>, <em class="sig-param">fet=1</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs.clusterQuality" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns the L-ratio and Isolation Distance measures
+calculated on the principal components of the energy in a spike matrix</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.dacq2py.spikecalcs.SpikeCalcs.getMeanWaveform">
+<code class="sig-name descname">getMeanWaveform</code><span class="sig-paren">(</span><em class="sig-param">clusterA</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs.getMeanWaveform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the mean waveform and sem for a given spike train</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>clusterA</strong> (<em>int</em>) – The cluster to get the mean waveform for</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>mn_wvs</strong> (<em>ndarray (floats) - usually 4x50 for tetrode recordings</em>) – the mean waveforms</p></li>
+<li><p><strong>std_wvs</strong> (<em>ndarray (floats) - usually 4x50 for tetrode recordings</em>) – the standard deviations of the waveforms</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.dacq2py.spikecalcs.SpikeCalcs.getNSpikes">
+<code class="sig-name descname">getNSpikes</code><span class="sig-paren">(</span><em class="sig-param">cluster</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs.getNSpikes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.dacq2py.spikecalcs.SpikeCalcs.getParam">
+<code class="sig-name descname">getParam</code><span class="sig-paren">(</span><em class="sig-param">waveforms=None</em>, <em class="sig-param">param='Amp'</em>, <em class="sig-param">t=200</em>, <em class="sig-param">fet=1</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs.getParam" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the requested parameter from a spike train as a numpy array</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>- numpy array</strong> (<em>waveforms</em>) – Shape of array can be an nSpikes x nSamples
+OR
+a nSpikes x nElectrodes x nSamples</p></li>
+<li><p><strong>- str</strong> (<em>param</em>) – <dl class="simple">
+<dt>Valid values are:</dt><dd><p>’Amp’ - peak-to-trough amplitude (default)
+‘P’ - height of peak
+‘T’ - depth of trough
+‘Vt’ height at time t
+‘tP’ - time of peak (in seconds)
+‘tT’ - time of trough (in seconds)
+‘PCA’ - first n fet principal components (defaults to 1)</p>
+</dd>
+</dl>
+</p></li>
+<li><p><strong>- int</strong> (<em>fet</em>) – The time used for Vt</p></li>
+<li><p><strong>- int</strong> – The number of principal components (used with param ‘PCA’)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.dacq2py.spikecalcs.SpikeCalcs.half_amp_dur">
+<code class="sig-name descname">half_amp_dur</code><span class="sig-paren">(</span><em class="sig-param">cluster</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs.half_amp_dur" title="Permalink to this definition">¶</a></dt>
+<dd><p>Half amplitude duration of a spike</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>A</strong> (<em>ndarray</em>) – An nSpikes x nElectrodes x nSamples array</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>had</strong> – The half-amplitude duration for the channel (electrode) that has
+the strongest (highest amplitude) signal. Units are ms</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.dacq2py.spikecalcs.SpikeCalcs.ifr_sp_corr">
+<code class="sig-name descname">ifr_sp_corr</code><span class="sig-paren">(</span><em class="sig-param">clusterA</em>, <em class="sig-param">speed</em>, <em class="sig-param">minSpeed=2.0</em>, <em class="sig-param">maxSpeed=40.0</em>, <em class="sig-param">sigma=3</em>, <em class="sig-param">shuffle=False</em>, <em class="sig-param">nShuffles=100</em>, <em class="sig-param">minTime=30</em>, <em class="sig-param">plot=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs.ifr_sp_corr" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>clusterA: int</dt><dd><p>the cluster to do the correlation with speed</p>
+</dd>
+<dt>speed: np.array (1 x nSamples)</dt><dd><p>instantaneous speed</p>
+</dd>
+<dt>minSpeed: int</dt><dd><p>speeds below this value are ignored - defaults to 2cm/s as with
+Kropff et al., 2015</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.dacq2py.spikecalcs.SpikeCalcs.mean_autoCorr">
+<code class="sig-name descname">mean_autoCorr</code><span class="sig-paren">(</span><em class="sig-param">cluster</em>, <em class="sig-param">n=40</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs.mean_autoCorr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the autocorrelation function mean from 0 to n ms (default=40)
+Used to help classify units as principal or interneuron</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.dacq2py.spikecalcs.SpikeCalcs.p2t_time">
+<code class="sig-name descname">p2t_time</code><span class="sig-paren">(</span><em class="sig-param">cluster</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs.p2t_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>The peak to trough time of a spike in ms</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>cluster</strong> (<em>int</em>) – the cluster whose waveforms are to be analysed</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>p2t</strong> – The mean peak-to-trough time for the channel (electrode) that has
+the strongest (highest amplitude) signal. Units are ms</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.dacq2py.spikecalcs.SpikeCalcs.plotClusterSpace">
+<code class="sig-name descname">plotClusterSpace</code><span class="sig-paren">(</span><em class="sig-param">clusters=None</em>, <em class="sig-param">param='Amp'</em>, <em class="sig-param">clusts=None</em>, <em class="sig-param">bins=256</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs.plotClusterSpace" title="Permalink to this definition">¶</a></dt>
+<dd><p>TODO: aspect of plot boxes in ImageGrid not right as scaled by range of
+values now</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.dacq2py.spikecalcs.SpikeCalcs.smoothSpikePosCount">
+<code class="sig-name descname">smoothSpikePosCount</code><span class="sig-paren">(</span><em class="sig-param">x1</em>, <em class="sig-param">npos</em>, <em class="sig-param">sigma=3.0</em>, <em class="sig-param">shuffle=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs.smoothSpikePosCount" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a spike train the same length as num pos samples that has been
+smoothed in time with a gaussian kernel M in width and standard deviation
+equal to sigma</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x1</strong> (<em>np.array</em>) – The pos indices the spikes occured at</p></li>
+<li><p><strong>npos</strong> (<em>int</em>) – The number of position samples captured</p></li>
+<li><p><strong>sigma</strong> (<em>float</em>) – the standard deviation of the gaussian used to smooth the spike
+train</p></li>
+<li><p><strong>shuffle</strong> (<em>int</em>) – The number of seconds to shift the spike train by. Default None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>smoothed_spikes</strong> – The smoothed spike train</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>np.array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.dacq2py.spikecalcs.SpikeCalcs.thetaBandMaxFreq">
+<code class="sig-name descname">thetaBandMaxFreq</code><span class="sig-paren">(</span><em class="sig-param">x1</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs.thetaBandMaxFreq" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates the frequency with the max power in the theta band (6-12Hz)
+of a spike trains autocorrelogram. Partly to look for differences
+in theta frequency in different running directions a la Blair (Welday paper)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.dacq2py.spikecalcs.SpikeCalcs.thetaModIdx">
+<code class="sig-name descname">thetaModIdx</code><span class="sig-paren">(</span><em class="sig-param">x1</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs.thetaModIdx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates a theta modulation index of a spike train based on the cells
+autocorrelogram</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x1</strong> (<em>np.array</em>) – The spike time-series</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>thetaMod</strong> – The difference of the values at the first peak and trough of the
+autocorrelogram</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.dacq2py.spikecalcs.SpikeCalcs.thetaModIdxV2">
+<code class="sig-name descname">thetaModIdxV2</code><span class="sig-paren">(</span><em class="sig-param">x1</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs.thetaModIdxV2" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a simpler alternative to the thetaModIdx method in that it
+calculates the difference between the normalized temporal autocorrelogram
+at the trough between 50-70ms and the peak between 100-140ms over
+their sum (data is binned into 5ms bins)</p>
+<p>Measure used in Cacucci et al., 2004 and Kropff et al 2015</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.dacq2py.spikecalcs.SpikeCalcs.trial_av_firing_rate">
+<code class="sig-name descname">trial_av_firing_rate</code><span class="sig-paren">(</span><em class="sig-param">cluster</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs.trial_av_firing_rate" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns the trial average firing rate of a cluster in Hz</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.dacq2py.spikecalcs.SpikeCalcs.xcorr">
+<code class="sig-name descname">xcorr</code><span class="sig-paren">(</span><em class="sig-param">x1</em>, <em class="sig-param">x2=None</em>, <em class="sig-param">Trange=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs.xcorr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the histogram of the ISIs</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>- 1d np.array list of spike times</strong> (<em>x1</em>) – </p></li>
+<li><p><strong>-</strong><strong> (</strong><strong>optional</strong><strong>) </strong><strong>1d np.array of spike times</strong> (<em>x2</em>) – </p></li>
+<li><p><strong>- 1x2 np.array for range of times to bin up. Defaults</strong> (<em>Trange</em>) – to [-500, +500]</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="ephysiopy-dacq2py-tetrode-dict-module">
+<h2>ephysiopy.dacq2py.tetrode_dict module<a class="headerlink" href="#ephysiopy-dacq2py-tetrode-dict-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-ephysiopy.dacq2py.tintcolours">
+<span id="ephysiopy-dacq2py-tintcolours-module"></span><h2>ephysiopy.dacq2py.tintcolours module<a class="headerlink" href="#module-ephysiopy.dacq2py.tintcolours" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-ephysiopy.dacq2py">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-ephysiopy.dacq2py" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">ephysiopy</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Robin Hayman.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/source/ephysiopy.dacq2py.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

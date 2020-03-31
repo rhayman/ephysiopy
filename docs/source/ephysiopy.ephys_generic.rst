@@ -12,6 +12,14 @@ ephysiopy.ephys\_generic.binning module
    :undoc-members:
    :show-inheritance:
 
+ephysiopy.ephys\_generic.eegcalcs module
+----------------------------------------
+
+.. automodule:: ephysiopy.ephys_generic.eegcalcs
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ephysiopy.ephys\_generic.ephys\_generic module
 ----------------------------------------------
 

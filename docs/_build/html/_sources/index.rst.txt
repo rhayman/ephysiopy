@@ -1,12 +1,12 @@
 Welcome to ephysiopy's documentation!
 =====================================
 
+.. automodule:: ephysiopy
+   :members:
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-
-   modules
-   .. mdinclude:: ../README.md
 
 
 

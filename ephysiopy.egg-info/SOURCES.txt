@@ -9,12 +9,12 @@ ephysiopy/dacq2py/__init__.py
 ephysiopy/dacq2py/axonaIO.py
 ephysiopy/dacq2py/cluster.py
 ephysiopy/dacq2py/dacq2py_util.py
-ephysiopy/dacq2py/eegcalcs.py
 ephysiopy/dacq2py/spikecalcs.py
 ephysiopy/dacq2py/tetrode_dict.py
 ephysiopy/dacq2py/tintcolours.py
 ephysiopy/ephys_generic/__init__.py
 ephysiopy/ephys_generic/binning.py
+ephysiopy/ephys_generic/eegcalcs.py
 ephysiopy/ephys_generic/ephys_generic.py
 ephysiopy/ephys_generic/gridcell.py
 ephysiopy/ephys_generic/phaseprecession.py

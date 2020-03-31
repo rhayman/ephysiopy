@@ -7,7 +7,7 @@ from scipy import signal
 from .axonaIO import EEG as EEGIO
 from itertools import groupby
 from operator import itemgetter
-from .statscalcs import StatsCalcs
+from ephysiopy.ephys_generic.statscalcs import StatsCalcs
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.collections import LineCollection

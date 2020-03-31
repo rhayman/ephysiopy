@@ -13,14 +13,14 @@ import matplotlib.transforms as transforms
 from matplotlib.collections import LineCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import warnings
-from . import axonaIO
-from .tetrode_dict import TetrodeDict
+from ephysiopy.dacq2py import axonaIO
+from ephysiopy.dacq2py.tetrode_dict import TetrodeDict
 from ephysiopy.ephys_generic import binning
 from ephysiopy.ephys_generic.ephys_generic import FieldCalcs
-from .spikecalcs import SpikeCalcs
-from .eegcalcs import EEGCalcs
-from .cluster import Kluster
-from . import tintcolours as tcols
+from ephysiopy.dacq2py.spikecalcs import SpikeCalcs
+from ephysiopy.ephys_generic.eegcalcs import EEGCalcs
+from ephysiopy.dacq2py.cluster import Kluster
+from ephysiopy.dacq2py import tintcolours as tcols
 from ephysiopy.ephys_generic.gridcell import SAC
 from itertools import combinations
 from mpl_toolkits.axes_grid1 import ImageGrid

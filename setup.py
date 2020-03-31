@@ -15,13 +15,15 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/rhayman/ephysiopy",
     packages=setuptools.find_packages(),
+    include_package_data=True,
+    package_data={"" : ["*.pkl", "*.txt"]},
     install_requires=[
         "numpy",
         "scipy",
         "matplotlib",
-        "scikits-learn<0.21",
+        "scikit-learn<0.21",
         "astropy",
-        "skimage",
+        "scikit-image",
         "mahotas",
         "h5py"],
     classifiers=[

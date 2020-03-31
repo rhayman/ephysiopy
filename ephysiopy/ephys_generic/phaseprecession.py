@@ -13,8 +13,8 @@ from scipy import ndimage, signal, stats, optimize
 import matplotlib.pylab as plt
 import mahotas
 import matplotlib
-from . import axonaIO
-from . import dacq2py_util
+from ephysiopy.dacq2py import axonaIO
+from ephysiopy.dacq2py import dacq2py_util
 from sklearn.utils import resample
 
 class phasePrecession():

@@ -28,14 +28,6 @@ ephysiopy.dacq2py.dacq2py\_util module
    :undoc-members:
    :show-inheritance:
 
-ephysiopy.dacq2py.eegcalcs module
----------------------------------
-
-.. automodule:: ephysiopy.dacq2py.eegcalcs
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 ephysiopy.dacq2py.spikecalcs module
 -----------------------------------
 
