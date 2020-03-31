@@ -15,6 +15,10 @@ __pycache__/*
 # Other folders
 .vscode/*
 
+# Python PyPi folders / files
+dist/
+egg-info/
+
 # Precompiled Headers
 *.gch
 *.pch
