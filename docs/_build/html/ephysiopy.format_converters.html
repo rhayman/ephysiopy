@@ -38,11 +38,183 @@
 <div class="section" id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="ephysiopy-format-converters-oe-axona-module">
-<h2>ephysiopy.format_converters.OE_Axona module<a class="headerlink" href="#ephysiopy-format-converters-oe-axona-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-ephysiopy.format_converters.OE_Axona">
+<span id="ephysiopy-format-converters-oe-axona-module"></span><h2>ephysiopy.format_converters.OE_Axona module<a class="headerlink" href="#module-ephysiopy.format_converters.OE_Axona" title="Permalink to this headline">¶</a></h2>
+<p>openephys to Axona file format conversion</p>
+<dl class="class">
+<dt id="ephysiopy.format_converters.OE_Axona.OE2Axona">
+<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.format_converters.OE_Axona.</code><code class="sig-name descname">OE2Axona</code><span class="sig-paren">(</span><em class="sig-param">filename_root: str</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.format_converters.OE_Axona.OE2Axona" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Converts openephys data recorded in the nwb format into Axona files</p>
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_Axona.OE2Axona.convertPosData">
+<code class="sig-name descname">convertPosData</code><span class="sig-paren">(</span><em class="sig-param">xy: numpy.array</em>, <em class="sig-param">xy_ts: numpy.array</em><span class="sig-paren">)</span> &#x2192; numpy.array<a class="headerlink" href="#ephysiopy.format_converters.OE_Axona.OE2Axona.convertPosData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform the conversion of the array parts of the data
+NB As well as upsampling the data to the Axona pos sampling rate (50Hz)
+we have to insert some columns into the pos array as Axona format expects it like:
+pos_format: t,x1,y1,x2,y2,numpix1,numpix2
+We can make up some of the info and ignore other bits</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_Axona.OE2Axona.convertSpikeData">
+<code class="sig-name descname">convertSpikeData</code><span class="sig-paren">(</span><em class="sig-param">hdf5_tetrode_data: h5py._hl.group.Group</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.format_converters.OE_Axona.OE2Axona.convertSpikeData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Does the spike conversion from OE Spike Sorter format to Axona format tetrode files</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>- h5py._hl.group.Group - this kind of looks like a dictionary and can</strong><strong>, </strong><strong>it seems</strong><strong>,</strong> (<em>hdf5_tetrode_data</em>) – be treated as one more or less (see <a class="reference external" href="http://docs.h5py.org/en/stable/high/group.html">http://docs.h5py.org/en/stable/high/group.html</a>).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_Axona.OE2Axona.exportLFP">
+<code class="sig-name descname">exportLFP</code><span class="sig-paren">(</span><em class="sig-param">channel: int</em>, <em class="sig-param">lfp_type: str</em>, <em class="sig-param">gain: int</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.format_converters.OE_Axona.OE2Axona.exportLFP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Export LFP data to file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>- int</strong> (<em>channel</em>) – </p></li>
+<li><p><strong>- str. Legal values are 'egf'</strong><strong> or </strong><strong>'eeg'</strong> (<em>lfp_type</em>) – </p></li>
+<li><p><strong>- int. Multiplier for the lfp data</strong> (<em>gain</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_Axona.OE2Axona.exportPos">
+<code class="sig-name descname">exportPos</code><span class="sig-paren">(</span><em class="sig-param">ppm=300</em>, <em class="sig-param">jumpmax=100</em>, <em class="sig-param">as_text=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.format_converters.OE_Axona.OE2Axona.exportPos" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_Axona.OE2Axona.exportSetFile">
+<code class="sig-name descname">exportSetFile</code><span class="sig-paren">(</span><em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.format_converters.OE_Axona.OE2Axona.exportSetFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper for makeSetData below</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_Axona.OE2Axona.exportSpikes">
+<code class="sig-name descname">exportSpikes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.format_converters.OE_Axona.OE2Axona.exportSpikes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_Axona.OE2Axona.getOEData">
+<code class="sig-name descname">getOEData</code><span class="sig-paren">(</span><em class="sig-param">filename_root: str</em>, <em class="sig-param">recording_name='recording1'</em><span class="sig-paren">)</span> &#x2192; dict<a class="headerlink" href="#ephysiopy.format_converters.OE_Axona.OE2Axona.getOEData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads the nwb file names in filename_root and returns a dict containing some of the nwb data
+relevant for converting to Axona file formats</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>- fuly qualified name of the nwb file</strong> (<em>filename_root</em>) – </p></li>
+<li><p><strong>- the name of the recording in the nwb file NB the default has changed in different versions of OE from 'recording0' to 'recording1'</strong> (<em>recording_name</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_Axona.OE2Axona.makeLFPData">
+<code class="sig-name descname">makeLFPData</code><span class="sig-paren">(</span><em class="sig-param">hdf5_continuous_data: numpy.array</em>, <em class="sig-param">eeg_type='eeg'</em>, <em class="sig-param">gain=5000</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.format_converters.OE_Axona.OE2Axona.makeLFPData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Downsamples the data in hdf5_continuous_data and saves the result
+as either an egf or eeg file depending on the choice of either eeg_type which can
+take a value of either ‘egf’ or ‘eeg’
+gain is the scaling factor</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>- np.array with dtype as np.int16</strong> (<em>hdf5_continuous_data</em>) – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_Axona.OE2Axona.makeSetData">
+<code class="sig-name descname">makeSetData</code><span class="sig-paren">(</span><em class="sig-param">lfp_channel=1</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.format_converters.OE_Axona.OE2Axona.makeSetData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_Axona.OE2Axona.resample">
+<code class="sig-name descname">resample</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">src_rate=30</em>, <em class="sig-param">dst_rate=50</em>, <em class="sig-param">axis=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.format_converters.OE_Axona.OE2Axona.resample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Upsamples data using FFT</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_Axona.OE2Axona.settings">
+<em class="property">property </em><code class="sig-name descname">settings</code><a class="headerlink" href="#ephysiopy.format_converters.OE_Axona.OE2Axona.settings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads the settings data from the settings.xml file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_Axona.OE2Axona.writeLFP2AxonaFormat">
+<code class="sig-name descname">writeLFP2AxonaFormat</code><span class="sig-paren">(</span><em class="sig-param">header: dict</em>, <em class="sig-param">data: numpy.array</em>, <em class="sig-param">eeg_type='eeg'</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.format_converters.OE_Axona.OE2Axona.writeLFP2AxonaFormat" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_Axona.OE2Axona.writePos2AxonaFormat">
+<code class="sig-name descname">writePos2AxonaFormat</code><span class="sig-paren">(</span><em class="sig-param">header: dict</em>, <em class="sig-param">data: numpy.array</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.format_converters.OE_Axona.OE2Axona.writePos2AxonaFormat" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_Axona.OE2Axona.writeSetData">
+<code class="sig-name descname">writeSetData</code><span class="sig-paren">(</span><em class="sig-param">header: dict</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.format_converters.OE_Axona.OE2Axona.writeSetData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_Axona.OE2Axona.writeTetrodeData">
+<code class="sig-name descname">writeTetrodeData</code><span class="sig-paren">(</span><em class="sig-param">tetnum: str</em>, <em class="sig-param">header: dict</em>, <em class="sig-param">data: numpy.array</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.format_converters.OE_Axona.OE2Axona.writeTetrodeData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 </div>
-<div class="section" id="ephysiopy-format-converters-oe-numpy-module">
-<h2>ephysiopy.format_converters.OE_numpy module<a class="headerlink" href="#ephysiopy-format-converters-oe-numpy-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-ephysiopy.format_converters.OE_numpy">
+<span id="ephysiopy-format-converters-oe-numpy-module"></span><h2>ephysiopy.format_converters.OE_numpy module<a class="headerlink" href="#module-ephysiopy.format_converters.OE_numpy" title="Permalink to this headline">¶</a></h2>
+<p>openephys to numpy file conversion</p>
+<dl class="class">
+<dt id="ephysiopy.format_converters.OE_numpy.OE2Numpy">
+<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.format_converters.OE_numpy.</code><code class="sig-name descname">OE2Numpy</code><span class="sig-paren">(</span><em class="sig-param">filename_root: str</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.format_converters.OE_numpy.OE2Numpy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Converts openephys data recorded in the nwb format into numpy files</p>
+<p>NB Only exports the LFP and TTL files at the moment</p>
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_numpy.OE2Numpy.exportLFP">
+<code class="sig-name descname">exportLFP</code><span class="sig-paren">(</span><em class="sig-param">channels: list</em>, <em class="sig-param">output_freq: int</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.format_converters.OE_numpy.OE2Numpy.exportLFP" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_numpy.OE2Numpy.exportTTL">
+<code class="sig-name descname">exportTTL</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.format_converters.OE_numpy.OE2Numpy.exportTTL" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_numpy.OE2Numpy.getOEData">
+<code class="sig-name descname">getOEData</code><span class="sig-paren">(</span><em class="sig-param">filename_root: str</em>, <em class="sig-param">recording_name='recording1'</em><span class="sig-paren">)</span> &#x2192; dict<a class="headerlink" href="#ephysiopy.format_converters.OE_numpy.OE2Numpy.getOEData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads the nwb file names in filename_root and returns a dict containing some of the nwb data
+relevant for converting to Axona file formats</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>- fuly qualified name of the nwb file</strong> (<em>filename_root</em>) – </p></li>
+<li><p><strong>- the name of the recording in the nwb file NB the default has changed in different versions of OE from 'recording0' to 'recording1'</strong> (<em>recording_name</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_numpy.OE2Numpy.resample">
+<code class="sig-name descname">resample</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">src_rate=30</em>, <em class="sig-param">dst_rate=50</em>, <em class="sig-param">axis=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.format_converters.OE_numpy.OE2Numpy.resample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Upsamples data using FFT</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.format_converters.OE_numpy.OE2Numpy.settings">
+<em class="property">property </em><code class="sig-name descname">settings</code><a class="headerlink" href="#ephysiopy.format_converters.OE_numpy.OE2Numpy.settings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads the settings data from the settings.xml file</p>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 <div class="section" id="module-ephysiopy.format_converters">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-ephysiopy.format_converters" title="Permalink to this headline">¶</a></h2>

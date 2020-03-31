@@ -17,7 +17,7 @@ __pycache__/*
 
 # Python PyPi folders / files
 dist/
-egg-info/
+ephysiopy.egg-info/
 
 # Precompiled Headers
 *.gch
