@@ -26,15 +26,10 @@ class IO(object):
 	"""
 	Axona data I/O. Also reads .clu files generated from KlustaKwik
 
-	Class variables:
-	* tetrode_files : dict
-		Keys are '.1', '.2' etc from 1 to 16 and the values is a custom
-		dtype used to read Axona tetrode files
-	* other_files : dict
-		Keys are axona format file suffixes ('.pos', '.eeg', etc) and
-		the values are numpy dtypes ('int16' etc) used to read the data.
-	* axona_files : dict
-		Is the combination of the above two dictionaries
+	Parameters
+	----------
+	filename_root : str
+		The fully-qualified filename
 	"""
 
 	tetrode_files = dict.fromkeys(["." + str(i) for i in range(1, 17)], [('ts', '>i'), ('waveform', '50b')])

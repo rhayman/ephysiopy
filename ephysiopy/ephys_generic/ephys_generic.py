@@ -1675,20 +1675,12 @@ class FieldCalcs:
 		each sum to 1 +/- .00001.
 
 		kldiv(X,P1,P2,'sym') returns a symmetric variant of the Kullback-Leibler
-		divergence, given by [KL(P1,P2)+KL(P2,P1)]/2 [1]_
+		divergence, given by [KL(P1,P2)+KL(P2,P1)]/2
 
 		kldiv(X,P1,P2,'js') returns the Jensen-Shannon divergence, given by
 		[KL(P1,Q)+KL(P2,Q)]/2, where Q = (P1+P2)/2.  See the Wikipedia article
 		for "Kullback–Leibler divergence".  This is equal to 1/2 the so-called
-		"Jeffrey divergence." [2]_
-
-		References
-		----------
-		.. [1] Johnson, D.H. and S. Sinanovic. "Symmetrizing the Kullback-Leibler
-		distance." IEEE Transactions on Information Theory (Submitted).
-		.. [2] Rubner, Y., Tomasi, C., and Guibas, L. J., 2000. "The Earth Mover's
-		distance as a metric for image retrieval." International Journal of
-		Computer Vision, 40(2): 99-121.
+		"Jeffrey divergence."
 
 		See Also
 		--------

@@ -15,6 +15,8 @@
     <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="ephysiopy.format_converters package" href="ephysiopy.format_converters.html" />
+    <link rel="prev" title="ephysiopy.dacq2py package" href="ephysiopy.dacq2py.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -166,8 +168,121 @@ by</p>
 </dd></dl>
 
 </div>
-<div class="section" id="ephysiopy-ephys-generic-eegcalcs-module">
-<h2>ephysiopy.ephys_generic.eegcalcs module<a class="headerlink" href="#ephysiopy-ephys-generic-eegcalcs-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-ephysiopy.ephys_generic.eegcalcs">
+<span id="ephysiopy-ephys-generic-eegcalcs-module"></span><h2>ephysiopy.ephys_generic.eegcalcs module<a class="headerlink" href="#module-ephysiopy.ephys_generic.eegcalcs" title="Permalink to this headline">¶</a></h2>
+<p>LFP-type analysis limmited at the moment to Axona file formats I think</p>
+<dl class="class">
+<dt id="ephysiopy.ephys_generic.eegcalcs.EEGCalcs">
+<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.ephys_generic.eegcalcs.</code><code class="sig-name descname">EEGCalcs</code><span class="sig-paren">(</span><em class="sig-param">fname, eegType='eeg', thetaRange=[7, 11], pad2pow=nan, smthKernelWidth=2, smthKernelSigma=0.1875, sn2Width=2, maxFreq=125, ymax=None, xmax=25</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.eegcalcs.EEGCalcs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="ephysiopy.dacq2py.html#ephysiopy.dacq2py.axonaIO.EEG" title="ephysiopy.dacq2py.axonaIO.EEG"><code class="xref py py-class docutils literal notranslate"><span class="pre">ephysiopy.dacq2py.axonaIO.EEG</span></code></a></p>
+<p>Has some useful methods in particularly to do with theta-gamma phase coupling</p>
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.eegcalcs.EEGCalcs.chisquare_inv">
+<code class="sig-name descname">chisquare_inv</code><span class="sig-paren">(</span><em class="sig-param">P</em>, <em class="sig-param">V</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.eegcalcs.EEGCalcs.chisquare_inv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.eegcalcs.EEGCalcs.chisquare_solve">
+<code class="sig-name descname">chisquare_solve</code><span class="sig-paren">(</span><em class="sig-param">XGUESS</em>, <em class="sig-param">P</em>, <em class="sig-param">V</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.eegcalcs.EEGCalcs.chisquare_solve" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.eegcalcs.EEGCalcs.eeg_instant_freq_power">
+<code class="sig-name descname">eeg_instant_freq_power</code><span class="sig-paren">(</span><em class="sig-param">eeg=None</em>, <em class="sig-param">plot=True</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.eegcalcs.EEGCalcs.eeg_instant_freq_power" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.eegcalcs.EEGCalcs.eeg_power_spectra">
+<code class="sig-name descname">eeg_power_spectra</code><span class="sig-paren">(</span><em class="sig-param">eeg=None</em>, <em class="sig-param">pos2use='all'</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.eegcalcs.EEGCalcs.eeg_power_spectra" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.eegcalcs.EEGCalcs.filterForLaser">
+<code class="sig-name descname">filterForLaser</code><span class="sig-paren">(</span><em class="sig-param">E=None</em>, <em class="sig-param">width=0.125</em>, <em class="sig-param">dip=15.0</em>, <em class="sig-param">stimFreq=6.66</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.eegcalcs.EEGCalcs.filterForLaser" title="Permalink to this definition">¶</a></dt>
+<dd><p>In some of the optogenetic experiments I ran the frequency of laser
+stimulation was at 6.66Hz - this method attempts to filter those
+frequencies out</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.eegcalcs.EEGCalcs.filterWithButter">
+<code class="sig-name descname">filterWithButter</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">low</em>, <em class="sig-param">high</em>, <em class="sig-param">fs</em>, <em class="sig-param">order=5</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.eegcalcs.EEGCalcs.filterWithButter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.eegcalcs.EEGCalcs.ifftFilter">
+<code class="sig-name descname">ifftFilter</code><span class="sig-paren">(</span><em class="sig-param">sig</em>, <em class="sig-param">freqs</em>, <em class="sig-param">fs=250</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.eegcalcs.EEGCalcs.ifftFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates the dft of signal and filters out the frequencies in
+freqs from the result and reconstructs the original signal using
+the inverse fft without those frequencies</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.eegcalcs.EEGCalcs.intrinsic_freq_autoCorr">
+<code class="sig-name descname">intrinsic_freq_autoCorr</code><span class="sig-paren">(</span><em class="sig-param">spkTimes=None</em>, <em class="sig-param">posMask=None</em>, <em class="sig-param">maxFreq=25</em>, <em class="sig-param">acBinSize=0.002</em>, <em class="sig-param">acWindow=0.5</em>, <em class="sig-param">plot=True</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.eegcalcs.EEGCalcs.intrinsic_freq_autoCorr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Be careful that if you’ve called dacq2py.Tetrode.getSpkTS()
+that they are divided by
+96000 to get into seconds before using here</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.eegcalcs.EEGCalcs.modulationindex">
+<code class="sig-name descname">modulationindex</code><span class="sig-paren">(</span><em class="sig-param">eeg=None, nbins=20, forder=2, thetaband=[4, 8], gammaband=[30, 80], plot=True, **kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.eegcalcs.EEGCalcs.modulationindex" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.eegcalcs.EEGCalcs.plv">
+<code class="sig-name descname">plv</code><span class="sig-paren">(</span><em class="sig-param">eeg=None, forder=2, thetaband=[4, 8], gammaband=[30, 80], plot=True, **kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.eegcalcs.EEGCalcs.plv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the phase-amplitude coupling (PAC) of nested oscillations. More
+specifically this is the phase-locking value (PLV) between two nested
+oscillations in EEG data, in this case theta (default between 4-8Hz)
+and gamma (defaults to 30-80Hz). A PLV of unity indicates perfect phase
+locking (here PAC) and a value of zero indicates no locking (no PAC)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>eeg</strong> (<em>numpy array</em>) – the eeg data itself. This is a 1-d array which can be masked or not</p></li>
+<li><p><strong>forder</strong> (<em>int</em>) – the order of the filter(s) applied to the eeg data</p></li>
+<li><p><strong>gammaband</strong> (<em>thetaband/</em>) – the range of values to bandpass filter for for the theta and gamma
+ranges</p></li>
+<li><p><strong>plot</strong> (<em>bool</em><em> (</em><em>default True</em><em>)</em>) – whether to plot the resulting binned up polar plot which shows the
+amplitude of the gamma oscillation found at different phases of the
+theta oscillation</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>plv</strong> – the value of the phase-amplitude coupling</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.eegcalcs.EEGCalcs.power_spectrum">
+<code class="sig-name descname">power_spectrum</code><span class="sig-paren">(</span><em class="sig-param">eeg=None</em>, <em class="sig-param">plot=True</em>, <em class="sig-param">binWidthSecs=None</em>, <em class="sig-param">maxFreq=None</em>, <em class="sig-param">pad2pow=None</em>, <em class="sig-param">ymax=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.eegcalcs.EEGCalcs.power_spectrum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method used by eeg_power_spectra and intrinsic_freq_autoCorr
+Signal in must be mean normalised already</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.eegcalcs.EEGCalcs.wave_bases">
+<code class="sig-name descname">wave_bases</code><span class="sig-paren">(</span><em class="sig-param">mother</em>, <em class="sig-param">k</em>, <em class="sig-param">scale</em>, <em class="sig-param">param</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.eegcalcs.EEGCalcs.wave_bases" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.eegcalcs.EEGCalcs.wave_signif">
+<code class="sig-name descname">wave_signif</code><span class="sig-paren">(</span><em class="sig-param">Y</em>, <em class="sig-param">dt</em>, <em class="sig-param">scale</em>, <em class="sig-param">sigtest=-1</em>, <em class="sig-param">lag1=-1</em>, <em class="sig-param">siglvl=-1</em>, <em class="sig-param">dof=-1</em>, <em class="sig-param">mother=-1</em>, <em class="sig-param">param=-1</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.eegcalcs.EEGCalcs.wave_signif" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.eegcalcs.EEGCalcs.wavelet">
+<code class="sig-name descname">wavelet</code><span class="sig-paren">(</span><em class="sig-param">Y</em>, <em class="sig-param">dt</em>, <em class="sig-param">pad=0</em>, <em class="sig-param">dj=-1</em>, <em class="sig-param">s0=-1</em>, <em class="sig-param">J1=-1</em>, <em class="sig-param">mother=-1</em>, <em class="sig-param">param=-1</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.eegcalcs.EEGCalcs.wavelet" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 </div>
 <div class="section" id="module-ephysiopy.ephys_generic.ephys_generic">
 <span id="ephysiopy-ephys-generic-ephys-generic-module"></span><h2>ephysiopy.ephys_generic.ephys_generic module<a class="headerlink" href="#module-ephysiopy.ephys_generic.ephys_generic" title="Permalink to this headline">¶</a></h2>
@@ -409,21 +524,11 @@ duplicate values will be considered as probabilities corresponding to
 two unique values.)  The elements of probability vectors P1 and P2 must
 each sum to 1 +/- .00001.</p>
 <p>kldiv(X,P1,P2,’sym’) returns a symmetric variant of the Kullback-Leibler
-divergence, given by [KL(P1,P2)+KL(P2,P1)]/2 <a href="#id6"><span class="problematic" id="id1">[1]_</span></a></p>
+divergence, given by [KL(P1,P2)+KL(P2,P1)]/2</p>
 <p>kldiv(X,P1,P2,’js’) returns the Jensen-Shannon divergence, given by
 [KL(P1,Q)+KL(P2,Q)]/2, where Q = (P1+P2)/2.  See the Wikipedia article
 for “Kullback–Leibler divergence”.  This is equal to 1/2 the so-called
-“Jeffrey divergence.” <a href="#id7"><span class="problematic" id="id2">[2]_</span></a></p>
-<p class="rubric">References</p>
-<dl class="footnote brackets">
-<dt class="label" id="id3"><span class="brackets">1</span></dt>
-<dd><p>Johnson, D.H. and S. Sinanovic. “Symmetrizing the Kullback-Leibler</p>
-</dd>
-</dl>
-<p>distance.” IEEE Transactions on Information Theory (Submitted).
-.. [2] Rubner, Y., Tomasi, C., and Guibas, L. J., 2000. “The Earth Mover’s
-distance as a metric for image retrieval.” International Journal of
-Computer Vision, 40(2): 99-121.</p>
+“Jeffrey divergence.”</p>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <p>Cover, T.M. and J.A. Thomas. “Elements of Information Theory,” Wiley, 1991.</p>
@@ -1130,8 +1235,116 @@ Default 100</p></li>
 </dd></dl>
 
 </div>
-<div class="section" id="ephysiopy-ephys-generic-phaseprecession-module">
-<h2>ephysiopy.ephys_generic.phaseprecession module<a class="headerlink" href="#ephysiopy-ephys-generic-phaseprecession-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-ephysiopy.ephys_generic.phaseprecession">
+<span id="ephysiopy-ephys-generic-phaseprecession-module"></span><h2>ephysiopy.ephys_generic.phaseprecession module<a class="headerlink" href="#module-ephysiopy.ephys_generic.phaseprecession" title="Permalink to this headline">¶</a></h2>
+<p>Mostly a total rip-off of code written by Ali Jeewajee for his paper on
+2D phase precession in place and grid cells <a class="footnote-reference brackets" href="#id2" id="id1">1</a></p>
+<dl class="footnote brackets">
+<dt class="label" id="id2"><span class="brackets"><a class="fn-backref" href="#id1">1</a></span></dt>
+<dd><p>Jeewajee A, Barry C, Douchamps V, Manson D, Lever C, Burgess N. Theta phase</p>
+</dd>
+</dl>
+<p>precession of grid and place cell firing in open environments. Philos Trans R Soc
+Lond B Biol Sci. 2013 Dec 23;369(1635):20120532. doi: 10.1098/rstb.2012.0532.</p>
+<dl class="class">
+<dt id="ephysiopy.ephys_generic.phaseprecession.phasePrecession">
+<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.ephys_generic.phaseprecession.</code><code class="sig-name descname">phasePrecession</code><span class="sig-paren">(</span><em class="sig-param">filename_root, psr=50.0, esr=250.0, binsizes=array([0.5, 0.5]), smthKernLen=50, smthKernSig=5, fieldThresh=0.35, areaThresh=nan, binsPerCm=2, allowedminSpkPhase=3.141592653589793, mnPowPrctThresh=0, allowedThetaLen=[20, 42], spdSmoothWindow=15, runMinSpd=2.5, runMinDuration=2, runSmoothWindowFrac=0.3333333333333333, spatialLPCutOff=3, ifr_kernLen=1, ifr_kernSig=0.5, binsPerSec=50</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.phaseprecession.phasePrecession" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>NB : MAKE SURE TO SEND ‘CM’ TO THE POS CONSTRUCTOR SO POS XY VALS ARE
+RETURNED IN CM NOT PIXELS</p>
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.phaseprecession.phasePrecession.getPosProps">
+<code class="sig-name descname">getPosProps</code><span class="sig-paren">(</span><em class="sig-param">tetrode</em>, <em class="sig-param">cluster</em>, <em class="sig-param">labels</em>, <em class="sig-param">peaksXY</em>, <em class="sig-param">laserEvents=None</em>, <em class="sig-param">plot=False</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.phaseprecession.phasePrecession.getPosProps" title="Permalink to this definition">¶</a></dt>
+<dd><p>Uses the output of partitionFields and returns vectors the same
+length as pos.
+Parameters:</p>
+<blockquote>
+<div><p>xy, xydir, spd - obvious spatial variables as numpy arrays
+rmap - the smootheed, binned ratemap
+spikeTS - the spike timestamps in seconds
+labels - a labelled ratemap (integer id for each field; 0 = background)
+peaksXY - x-y coords of the peaks in the ratemap
+laserEvents - position indices of on events (laser on)</p>
+</div></blockquote>
+<dl>
+<dt>Output:</dt><dd><p>fieldLabel - the field label for each pos sample (0 outside)
+runLabel - the run label for each pos (0 outside)
+r - distance from pos to centre / distance from perim to centre
+phi - the difference between the pos’s angle to the peak and the</p>
+<blockquote>
+<div><p>runs mean direction (nan outisde)</p>
+</div></blockquote>
+<p>NB: both r and phi are smoothed in cartesian space
+xy - r and phi in cartesian coords
+xyDir - direction of travel according to xy coords
+d_meanDir - r projected onto the runs mean direction
+d_currentDir - r projected on the runs current direction
+xy_old - the original xy values
+dir_old - the original dir values</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.phaseprecession.phasePrecession.getSpikeProps">
+<code class="sig-name descname">getSpikeProps</code><span class="sig-paren">(</span><em class="sig-param">tetrode</em>, <em class="sig-param">cluster</em>, <em class="sig-param">runLabel</em>, <em class="sig-param">meanDir</em>, <em class="sig-param">durationInPosBins</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.phaseprecession.phasePrecession.getSpikeProps" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.phaseprecession.phasePrecession.getThetaProps">
+<code class="sig-name descname">getThetaProps</code><span class="sig-paren">(</span><em class="sig-param">tetrode</em>, <em class="sig-param">cluster</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.phaseprecession.phasePrecession.getThetaProps" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.phaseprecession.phasePrecession.partitionFields">
+<code class="sig-name descname">partitionFields</code><span class="sig-paren">(</span><em class="sig-param">tetrode</em>, <em class="sig-param">cluster</em>, <em class="sig-param">ftype='g'</em>, <em class="sig-param">plot=False</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.phaseprecession.phasePrecession.partitionFields" title="Permalink to this definition">¶</a></dt>
+<dd><p>Partitions fileds.
+Partitions spikes into fields by finding the watersheds around the
+peaks of a super-smoothed ratemap
+Parameters</p>
+<blockquote>
+<div><p>psr - the pos sampling rate (defaults to 50.0Hz)
+dacq2py.Tetrode.getClustTS() will have to be divided by 96000)
+ftype - ‘p’ or ‘g’ denoting place or grid cells - not implemented
+binsizes - the binsize in cm
+smthKernLen - the size of the kernel to smooth the data with (in cm)
+smthKernSig - the sigma of the kernel if using ‘gaussian’
+fieldThresh - the fraction to threshold the field (float &gt;0 &lt;=1)
+areaThresh - size in cm of the small fields to remove
+binsPerCm - the number of bins per cm
+plot - boolean. Whether to produce a debugging plot or not</p>
+<dl class="simple">
+<dt>Valid keyword arguments include:</dt><dd><p>TODO</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="simple">
+<dt>Outputs:</dt><dd><p>peaksXY - the xy coordinates of the peak rates in each field
+peaksRate - the peak rates in peaksXY
+labels - an array of the labels corresponding to each field (starts
+at 1)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.phaseprecession.phasePrecession.performRegression">
+<code class="sig-name descname">performRegression</code><span class="sig-paren">(</span><em class="sig-param">tetrode</em>, <em class="sig-param">cluster</em>, <em class="sig-param">laserEvents=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.phaseprecession.phasePrecession.performRegression" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.phaseprecession.phasePrecession.plotPPRegression">
+<code class="sig-name descname">plotPPRegression</code><span class="sig-paren">(</span><em class="sig-param">regressorDict</em>, <em class="sig-param">regressor2plot='pos_d_cum'</em>, <em class="sig-param">ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.phaseprecession.phasePrecession.plotPPRegression" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ephysiopy.ephys_generic.phaseprecession.phasePrecession.thetaMod">
+<code class="sig-name descname">thetaMod</code><span class="sig-paren">(</span><em class="sig-param">eeg</em>, <em class="sig-param">spikeTS=None</em>, <em class="sig-param">pos2use=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.phaseprecession.phasePrecession.thetaMod" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates theta modulation properties of cells and EEG</p>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 <div class="section" id="module-ephysiopy.ephys_generic.statscalcs">
 <span id="ephysiopy-ephys-generic-statscalcs-module"></span><h2>ephysiopy.ephys_generic.statscalcs module<a class="headerlink" href="#module-ephysiopy.ephys_generic.statscalcs" title="Permalink to this headline">¶</a></h2>
@@ -1144,24 +1357,32 @@ stuff</p>
 <dl class="method">
 <dt id="ephysiopy.ephys_generic.statscalcs.StatsCalcs.V_test">
 <code class="sig-name descname">V_test</code><span class="sig-paren">(</span><em class="sig-param">angles</em>, <em class="sig-param">test_direction</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.statscalcs.StatsCalcs.V_test" title="Permalink to this definition">¶</a></dt>
-<dd><p>Taken from ‘100 Statistical Tests’ G.J.Kanji, 2006 Sage Publications
-Test is also known as the modified Rayleigh test</p>
-<p>angles is a vector of angular values in degrees
-test_direction is a single angular value in degrees
-The Watson U2 tests whether the observed angles have a tendency to
+<dd><p>The Watson U2 tests whether the observed angles have a tendency to
 cluster around a given angle indicating a lack of randomness in the
-distribution
-Limitations:</p>
-<blockquote>
-<div><p>For grouped data the length of the mean vector must be adjusted,
+distribution. Also known as the modified Rayleigh test</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>angles</strong> (<em>array_like</em>) – Vector of angular values in degrees</p></li>
+<li><p><strong>test_direction</strong> (<em>int</em>) – A single angular value in degrees</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>float</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>The V statistic</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>For grouped data the length of the mean vector must be adjusted,
 and for axial data all angles must be doubled.</p>
-</div></blockquote>
 </dd></dl>
 
 <dl class="method">
 <dt id="ephysiopy.ephys_generic.statscalcs.StatsCalcs.circ_r">
 <code class="sig-name descname">circ_r</code><span class="sig-paren">(</span><em class="sig-param">alpha</em>, <em class="sig-param">w=None</em>, <em class="sig-param">d=0</em>, <em class="sig-param">axis=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.statscalcs.StatsCalcs.circ_r" title="Permalink to this definition">¶</a></dt>
-<dd><p>Computes the mean resultant vector length for circular data <a href="#id8"><span class="problematic" id="id4">[1]_</span></a></p>
+<dd><p>Computes the mean resultant vector length for circular data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -1179,22 +1400,34 @@ factor is used to correct for bias in estimation of r, in radians</p></li>
 <dd class="field-odd"><p>float</p>
 </dd>
 </dl>
-<p class="rubric">References</p>
-<dl class="footnote brackets">
-<dt class="label" id="id5"><span class="brackets">1</span></dt>
-<dd><p>Statistical analysis of circular data, N.I.Fisher</p>
-</dd>
-</dl>
-<p>Topics in circular statistics, S.R.Jamalamadaka et al.
-Biostatistical Analysis, J.H.Zar</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ephysiopy.ephys_generic.statscalcs.StatsCalcs.duplicates_as_complex">
 <code class="sig-name descname">duplicates_as_complex</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">already_sorted=False</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.statscalcs.StatsCalcs.duplicates_as_complex" title="Permalink to this definition">¶</a></dt>
-<dd><p>Example:
-x = [9.9    9.9     12.3    15.2    15.2    15.2    ]
-ret=[9.9+0j 9.9+1j  12.3+0j 15.2+0j 15.2+1j 15.2+2j ]</p>
+<dd><p>Finds duplicates in x</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>array_like</em>) – The list to find duplicates in</p></li>
+<li><p><strong>already_sorted</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether x is already sorted. Default False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>x</strong> – A complex array where the complex part is the count of the
+number of duplicates of the real value</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>array_like</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span>    <span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="mf">9.9</span><span class="p">,</span> <span class="mf">9.9</span><span class="p">,</span> <span class="mf">12.3</span><span class="p">,</span> <span class="mf">15.2</span><span class="p">,</span> <span class="mf">15.2</span><span class="p">,</span> <span class="mf">15.2</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ret</span> <span class="o">=</span> <span class="n">duplicates_as_complex</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="nb">print</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+<span class="go">[9.9+0j, 9.9+1j,  12.3+0j, 15.2+0j, 15.2+1j, 15.2+2j]</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="method">
@@ -1218,30 +1451,64 @@ ret=[9.9+0j 9.9+1j  12.3+0j 15.2+0j 15.2+1j 15.2+2j ]</p>
 <dl class="method">
 <dt id="ephysiopy.ephys_generic.statscalcs.StatsCalcs.watsonWilliams">
 <code class="sig-name descname">watsonWilliams</code><span class="sig-paren">(</span><em class="sig-param">a</em>, <em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.statscalcs.StatsCalcs.watsonWilliams" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>The Watson-Williams F test tests whether a set of mean directions are
+equal given that the concentrations are unknown, but equal, given that
+the groups each follow a von Mises distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>b</strong> (<em>a</em><em>,</em>) – The directional samples</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The F-statistic</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="method">
 <dt id="ephysiopy.ephys_generic.statscalcs.StatsCalcs.watsonsU2">
 <code class="sig-name descname">watsonsU2</code><span class="sig-paren">(</span><em class="sig-param">a</em>, <em class="sig-param">b</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.statscalcs.StatsCalcs.watsonsU2" title="Permalink to this definition">¶</a></dt>
-<dd><p>Taken from ‘100 Statistical Tests’ G.J.Kanji, 2006 Sage Publications
-To test whether two samples from circular observations differ
+<dd><p>Tests whether two samples from circular observations differ
 significantly from each other with regard to mean direction or angular
-variance.
-Limitation
-Both samples must come from a continuous distribution. In the case of
-grouping the class interval should not exceed 5.</p>
+variance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>b</strong> (<em>a</em><em>,</em>) – The two samples to be tested</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>float</strong> – The test statistic</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>U2</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Both samples must come from a continuous distribution. In the case of
+grouping the class interval should not exceed 5.
+Taken from ‘100 Statistical Tests’ G.J.Kanji, 2006 Sage Publications</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="ephysiopy.ephys_generic.statscalcs.StatsCalcs.watsonsU2n">
 <code class="sig-name descname">watsonsU2n</code><span class="sig-paren">(</span><em class="sig-param">angles</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.statscalcs.StatsCalcs.watsonsU2n" title="Permalink to this definition">¶</a></dt>
-<dd><p>Taken from ‘100 Statistical Tests’ G.J.Kanji, 2006 Sage Publications</p>
-<p>To test whether the given distribution fits a random sample of angular values
-Limitations:</p>
-<blockquote>
-<div><p>This test is suitable for both unimodal and the multimodal cases.
-It can be used as a test for randomness.</p>
-</div></blockquote>
+<dd><p>Tests whether the given distribution fits a random sample of angular values</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>angles</strong> (<em>array_like</em>) – The angular samples</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>float</strong> – The test statistic</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>U2n</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>This test is suitable for both unimodal and the multimodal cases.
+It can be used as a test for randomness.
+Taken from ‘100 Statistical Tests’ G.J.Kanji, 2006 Sage Publications</p>
 </dd></dl>
 
 </dd></dl>
@@ -1396,11 +1663,24 @@ out from the centre of the array to the edge in a spiral fashion:</p>
 
 
 <h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">ephysiopy</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="ephysiopy.html">ephysiopy package</a></li>
+</ul>
+</li>
+</ul>
 
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">ephysiopy</a><ul>
+  <li><a href="ephysiopy.html">ephysiopy package</a><ul>
+      <li>Previous: <a href="ephysiopy.dacq2py.html" title="previous chapter">ephysiopy.dacq2py package</a></li>
+      <li>Next: <a href="ephysiopy.format_converters.html" title="next chapter">ephysiopy.format_converters package</a></li>
+  </ul></li>
+  </ul></li>
   </ul></li>
 </ul>
 </div>

@@ -269,18 +269,12 @@ class OpenEphysBase(object):
 			* 'path' - just spikes on path
 			* 'both' - both of the above
 			* 'all' - both spikes on path, ratemap & SAC plotted
-
-		Notes
-		-----
-		Valid keyword arguments include:
-		* 'ppm' - this is an integer denoting pixels per metre where 
-			lower values = more bins in ratemap / SAC
+		Keyword args:
+		* 'ppm' - Integer denoting pixels per metre where lower values = more bins in ratemap / SAC
 		* 'clusters' - int or list of ints describing which clusters to plot
-			i.e. this overwrites the 'good_clusters' value in self.kilodata
-		* 'save_grid_summary_location' - bool; if present the dictionary returned from
-			gridcell.SAC.getMeasures is saved for each cluster - this is passed to MapCalcsGeneric
-
+		* 'save_grid_summary_location' - bool; if True the dictionary returned from gridcell.SAC.getMeasures is saved for each cluster
 		"""
+
 		if self.kilodata is None:
 			self.loadKilo()
 		if ( 'ppm' in kwargs.keys() ):

@@ -4,7 +4,7 @@ LFP-type analysis limmited at the moment to Axona file formats I think
 import numpy as np
 import os
 from scipy import signal
-from .axonaIO import EEG as EEGIO
+from ephysiopy.dacq2py.axonaIO import EEG as EEGIO
 from itertools import groupby
 from operator import itemgetter
 from ephysiopy.ephys_generic.statscalcs import StatsCalcs
