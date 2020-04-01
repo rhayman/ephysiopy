@@ -1241,46 +1241,62 @@ Default 100</p></li>
 2D phase precession in place and grid cells <a class="footnote-reference brackets" href="#id2" id="id1">1</a></p>
 <dl class="footnote brackets">
 <dt class="label" id="id2"><span class="brackets"><a class="fn-backref" href="#id1">1</a></span></dt>
-<dd><p>Jeewajee A, Barry C, Douchamps V, Manson D, Lever C, Burgess N. Theta phase</p>
+<dd><p>Jeewajee A, Barry C, Douchamps V, Manson D, Lever C, Burgess N. Theta phase
+precession of grid and place cell firing in open environments. Philos Trans R Soc
+Lond B Biol Sci. 2013 Dec 23;369(1635):20120532. doi: 10.1098/rstb.2012.0532.</p>
 </dd>
 </dl>
-<p>precession of grid and place cell firing in open environments. Philos Trans R Soc
-Lond B Biol Sci. 2013 Dec 23;369(1635):20120532. doi: 10.1098/rstb.2012.0532.</p>
 <dl class="class">
 <dt id="ephysiopy.ephys_generic.phaseprecession.phasePrecession">
 <em class="property">class </em><code class="sig-prename descclassname">ephysiopy.ephys_generic.phaseprecession.</code><code class="sig-name descname">phasePrecession</code><span class="sig-paren">(</span><em class="sig-param">filename_root, psr=50.0, esr=250.0, binsizes=array([0.5, 0.5]), smthKernLen=50, smthKernSig=5, fieldThresh=0.35, areaThresh=nan, binsPerCm=2, allowedminSpkPhase=3.141592653589793, mnPowPrctThresh=0, allowedThetaLen=[20, 42], spdSmoothWindow=15, runMinSpd=2.5, runMinDuration=2, runSmoothWindowFrac=0.3333333333333333, spatialLPCutOff=3, ifr_kernLen=1, ifr_kernSig=0.5, binsPerSec=50</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.phaseprecession.phasePrecession" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>NB : MAKE SURE TO SEND ‘CM’ TO THE POS CONSTRUCTOR SO POS XY VALS ARE
-RETURNED IN CM NOT PIXELS</p>
+<p>Performs phase precession analysis for single unit data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename_root</strong> (<em>str</em>) – The absolute filename with no suffix</p></li>
+<li><p><strong>psr</strong> (<em>float</em><em>, </em><em>optional</em>) – The sample rate for position data. Default 50.0</p></li>
+<li><p><strong>esr</strong> (<em>float</em><em>, </em><em>optional</em>) – The sample rate for eeg data. Default 250.0</p></li>
+<li><p><strong>binsizes</strong> (<em>array_like</em><em>, </em><em>optional</em>) – The binsizes for the rate maps. Default numpy.array([0.5,0.5])</p></li>
+<li><p><strong>smthKernLen</strong> (<em>int</em><em>, </em><em>optional</em>) – Kernel length for gaussian field smoothing. Default 50</p></li>
+<li><p><strong>smthKernSig</strong> (<em>int</em><em>, </em><em>optional</em>) – Kernel sigma for gaussian field smoothing. Default 5</p></li>
+<li><p><strong>fieldThresh</strong> (<em>float</em><em>, </em><em>optional</em>) – Fractional limit of field peak rate to restrict field size. Default 0.35</p></li>
+<li><p><strong>areaThresh</strong> (<em>float</em><em>, </em><em>optional</em>) – Fractional limit for reducing fields at environment edge. Default numpy.nan</p></li>
+<li><p><strong>binsPerCm</strong> (<em>int</em><em>, </em><em>optional</em>) – The number of bins per cm. Default 2</p></li>
+<li><p><strong>allowedminSpkPhase</strong> (<em>float</em><em>, </em><em>optional</em>) – Defines the start / end of theta cycles. Default numpy.pi</p></li>
+<li><p><strong>mnPowPrctThresh</strong> (<em>int</em><em>, </em><em>optional</em>) – Percentile power below which theta cycles are rejected. Default 0</p></li>
+<li><p><strong>allowedThetaLen</strong> (<em>array_like</em><em>, </em><em>optional</em>) – Bandwidth of theta in bins. Default [20,42]</p></li>
+<li><p><strong>spdSmoothWindow</strong> (<em>int</em><em>, </em><em>optional</em>) – Kernel length for boxcar smoothing of speed. Default 15</p></li>
+<li><p><strong>runMinSpd</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimum allowed running speed in cm/s. Default 2.5</p></li>
+<li><p><strong>runMinDuration</strong> (<em>int</em><em>, </em><em>optional</em>) – Minimum allowed run duration in seconds. Default 2</p></li>
+<li><p><strong>runSmoothWindowFrac</strong> (<em>float</em><em>, </em><em>optional</em>) – Instantaneous firing rate smoothing constant. Default 1/3</p></li>
+<li><p><strong>spatialLPCutOff</strong> (<em>int</em><em>, </em><em>optional</em>) – Spatial low-pass cutoff frequency. Default 3</p></li>
+<li><p><strong>ifr_kernelLen</strong> (<em>int</em><em>, </em><em>optional</em>) – Instantaneous firing rate smoothing kernel length. Default 1</p></li>
+<li><p><strong>ifr_kernelSig</strong> (<em>float</em><em>, </em><em>optional</em>) – Instantaneous firing rate smoothing kernel sigma. Default 0.5</p></li>
+<li><p><strong>binsPerSec</strong> (<em>int</em><em>, </em><em>optional</em>) – Bins per second for instantaneous firing rate smoothing. Default 50</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="method">
 <dt id="ephysiopy.ephys_generic.phaseprecession.phasePrecession.getPosProps">
 <code class="sig-name descname">getPosProps</code><span class="sig-paren">(</span><em class="sig-param">tetrode</em>, <em class="sig-param">cluster</em>, <em class="sig-param">labels</em>, <em class="sig-param">peaksXY</em>, <em class="sig-param">laserEvents=None</em>, <em class="sig-param">plot=False</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.phaseprecession.phasePrecession.getPosProps" title="Permalink to this definition">¶</a></dt>
 <dd><p>Uses the output of partitionFields and returns vectors the same
-length as pos.
-Parameters:</p>
-<blockquote>
-<div><p>xy, xydir, spd - obvious spatial variables as numpy arrays
-rmap - the smootheed, binned ratemap
-spikeTS - the spike timestamps in seconds
-labels - a labelled ratemap (integer id for each field; 0 = background)
-peaksXY - x-y coords of the peaks in the ratemap
-laserEvents - position indices of on events (laser on)</p>
-</div></blockquote>
-<dl>
-<dt>Output:</dt><dd><p>fieldLabel - the field label for each pos sample (0 outside)
-runLabel - the run label for each pos (0 outside)
-r - distance from pos to centre / distance from perim to centre
-phi - the difference between the pos’s angle to the peak and the</p>
-<blockquote>
-<div><p>runs mean direction (nan outisde)</p>
-</div></blockquote>
-<p>NB: both r and phi are smoothed in cartesian space
-xy - r and phi in cartesian coords
-xyDir - direction of travel according to xy coords
-d_meanDir - r projected onto the runs mean direction
-d_currentDir - r projected on the runs current direction
-xy_old - the original xy values
-dir_old - the original dir values</p>
+length as pos.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cluster</strong> (<em>tetrode</em><em>,</em>) – The tetrode / cluster to examine</p></li>
+<li><p><strong>peaksXY</strong> (<em>array_like</em>) – The x-y coords of the peaks in the ratemap</p></li>
+<li><p><strong>laserEvents</strong> (<em>array_like</em>) – The position indices of on events (laser on)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>pos_dict, run_dict</strong> – Contains a whole bunch of information for the whole trial (pos_dict) and
+also on a run-by-run basis (run_dict). See the end of this function for all
+the key / value pairs.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1298,31 +1314,25 @@ dir_old - the original dir values</p>
 <dl class="method">
 <dt id="ephysiopy.ephys_generic.phaseprecession.phasePrecession.partitionFields">
 <code class="sig-name descname">partitionFields</code><span class="sig-paren">(</span><em class="sig-param">tetrode</em>, <em class="sig-param">cluster</em>, <em class="sig-param">ftype='g'</em>, <em class="sig-param">plot=False</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.phaseprecession.phasePrecession.partitionFields" title="Permalink to this definition">¶</a></dt>
-<dd><p>Partitions fileds.
-Partitions spikes into fields by finding the watersheds around the
-peaks of a super-smoothed ratemap
-Parameters</p>
-<blockquote>
-<div><p>psr - the pos sampling rate (defaults to 50.0Hz)
-dacq2py.Tetrode.getClustTS() will have to be divided by 96000)
-ftype - ‘p’ or ‘g’ denoting place or grid cells - not implemented
-binsizes - the binsize in cm
-smthKernLen - the size of the kernel to smooth the data with (in cm)
-smthKernSig - the sigma of the kernel if using ‘gaussian’
-fieldThresh - the fraction to threshold the field (float &gt;0 &lt;=1)
-areaThresh - size in cm of the small fields to remove
-binsPerCm - the number of bins per cm
-plot - boolean. Whether to produce a debugging plot or not</p>
-<dl class="simple">
-<dt>Valid keyword arguments include:</dt><dd><p>TODO</p>
+<dd><p>Partitions fileds.</p>
+<p>Partitions spikes into fields by finding the watersheds around the
+peaks of a super-smoothed ratemap</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cluster</strong> (<em>tetrode</em><em>,</em>) – The tetrode / cluster to examine</p></li>
+<li><p><strong>ftype</strong> (<em>str</em>) – ‘p’ or ‘g’ denoting place or grid cells - not implemented yet</p></li>
+<li><p><strong>plot</strong> (<em>boolean</em>) – Whether to produce a debugging plot or not</p></li>
+</ul>
 </dd>
-</dl>
-</div></blockquote>
-<dl class="simple">
-<dt>Outputs:</dt><dd><p>peaksXY - the xy coordinates of the peak rates in each field
-peaksRate - the peak rates in peaksXY
-labels - an array of the labels corresponding to each field (starts
-at 1)</p>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>peaksXY</strong> (<em>array_like</em>) – The xy coordinates of the peak rates in each field</p></li>
+<li><p><strong>peaksRate</strong> (<em>array_like</em>) – The peak rates in peaksXY</p></li>
+<li><p><strong>labels</strong> (<em>numpy.ndarray</em>) – An array of the labels corresponding to each field (indices start at 1)</p></li>
+<li><p><strong>rmap</strong> (<em>numpy.ndarray</em>) – The ratemap of the tetrode / cluster</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>

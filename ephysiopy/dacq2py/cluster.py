@@ -1,7 +1,7 @@
-'''
+"""
 Clustering of data using KlustaKwik but only with data recorded using the Axona
 recording system
-'''
+"""
 import numpy as np
 import os
 from subprocess import Popen, PIPE
@@ -140,10 +140,10 @@ class Kluster():
 		# Print the output of the KlustaKwik algo
 		for line in kk_proc.stdout:
 			print(line.replace(b'\n', b''))
-		'''
+		"""
 		now read in the .clu.n file that has been created as a result of this
 		process and create the Tint-friendly cut file
-		'''
+		"""
 		clu_filename = self.filename + '.clu.' + str(self.tet_num)
 		clu_data = np.loadtxt(clu_filename)
 		n_clusters = clu_data[0]

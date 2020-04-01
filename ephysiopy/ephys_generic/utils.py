@@ -187,7 +187,7 @@ def polar(x, y, deg=0):
 		return np.hypot(x, y), np.arctan2(y, x)
 
 def spiral(self, X, Y):
-	'''
+	"""
 	Given an array of shape X x Y this returns the coordinates needed to step
 	out from the centre of the array to the edge in a spiral fashion:
 	
@@ -195,7 +195,7 @@ def spiral(self, X, Y):
 	--------
 	See http://stackoverflow.com/questions/398299/looping-in-a-spiral?rq=1
 	for original code and question/ solution(s)
-	'''
+	"""
 	x = 0
 	y = 0
 	dx = 0

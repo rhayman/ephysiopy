@@ -28,18 +28,18 @@ class OE2Numpy(object):
 		self.lfp_highcut = None
 
 	def resample(self, data, src_rate=30, dst_rate=50, axis=0):
-		'''
+		"""
 		Upsamples data using FFT
-		'''
+		"""
 		denom = np.gcd(dst_rate, src_rate)
 		new_data = signal.resample_poly(data, dst_rate/denom, src_rate/denom, axis)
 		return new_data
 
 	@property
 	def settings(self):
-		'''
+		"""
 		Loads the settings data from the settings.xml file
-		'''
+		"""
 		if self._settings is None:
 			self._settings = OESettings.Settings(self.dirname)
 		return self._settings
@@ -49,7 +49,7 @@ class OE2Numpy(object):
 		self._settings = value
 
 	def getOEData(self, filename_root: str, recording_name='recording1')->dict:
-		'''
+		"""
 		Loads the nwb file names in filename_root and returns a dict containing some of the nwb data
 		relevant for converting to Axona file formats
 
@@ -57,7 +57,7 @@ class OE2Numpy(object):
 		----------------
 		filename_root - fuly qualified name of the nwb file
 		recording_name - the name of the recording in the nwb file NB the default has changed in different versions of OE from 'recording0' to 'recording1'
-		'''
+		"""
 		if os.path.isfile(filename_root):
 			OE_data = OEKiloPhy.OpenEphysNWB(self.dirname)
 			print("Loading nwb data...")

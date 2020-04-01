@@ -30,16 +30,16 @@ class SpikeCalcs(object):
 			return np.count_nonzero(self.cut == cluster)
 
 	def trial_av_firing_rate(self, cluster):
-		'''
+		"""
 		returns the trial average firing rate of a cluster in Hz
-		'''
+		"""
 		return self.getNSpikes(cluster) / float(self.header['duration'])
 	
 	def mean_autoCorr(self, cluster, n=40):
-		'''
+		"""
 		Returns the autocorrelation function mean from 0 to n ms (default=40)
 		Used to help classify units as principal or interneuron
-		'''
+		"""
 		if cluster not in self.clusters:
 			warnings.warn('Cluster not available. Try again!')
 		else:
@@ -143,7 +143,7 @@ class SpikeCalcs(object):
 			print("PPMC: {0}".format(res[0]))
 
 	def xcorr(self, x1, x2=None, Trange=None):
-		'''
+		"""
 		Returns the histogram of the ISIs
 
 		Parameters
@@ -152,7 +152,7 @@ class SpikeCalcs(object):
 		x2 - (optional) 1d np.array of spike times
 		Trange - 1x2 np.array for range of times to bin up. Defaults
 					to [-500, +500]
-		'''
+		"""
 		if x2 is None:
 			x2 = x1.copy()
 		if Trange is None:
@@ -166,7 +166,7 @@ class SpikeCalcs(object):
 		return y
 
 	def smoothSpikePosCount(self, x1, npos, sigma=3.0, shuffle=None):
-		'''
+		"""
 		Returns a spike train the same length as num pos samples that has been
 		smoothed in time with a gaussian kernel M in width and standard deviation
 		equal to sigma
@@ -187,7 +187,7 @@ class SpikeCalcs(object):
 		-----------
 		smoothed_spikes : np.array
 			The smoothed spike train
-		'''
+		"""
 		spk_hist = np.bincount(x1, minlength=npos)
 		if shuffle is not None:
 			spk_hist = np.roll(spk_hist, int(shuffle * 50))
@@ -198,7 +198,7 @@ class SpikeCalcs(object):
 		return signal.filtfilt(h.ravel(), 1, spk_hist)
 	
 	def getMeanWaveform(self, clusterA):
-		'''
+		"""
 		Returns the mean waveform and sem for a given spike train
 		
 		Parameters
@@ -212,18 +212,18 @@ class SpikeCalcs(object):
 			the mean waveforms
 		std_wvs: ndarray (floats) - usually 4x50 for tetrode recordings
 			the standard deviations of the waveforms
-		'''
+		"""
 		if clusterA not in self.clusters:
 			warnings.warn('Cluster not available. Try again!')
 		x = self.getClustSpks(clusterA)
 		return np.mean(x, axis=0), np.std(x, axis=0)
 
 	def thetaBandMaxFreq(self, x1):
-		'''
+		"""
 		Calculates the frequency with the max power in the theta band (6-12Hz)
 		of a spike trains autocorrelogram. Partly to look for differences
 		in theta frequency in different running directions a la Blair (Welday paper)
-		'''
+		"""
 		y = self.xcorr(x1)
 		corr, _ = np.histogram(y[y != 0], bins=201, range=np.array([-500,500]))
 		# Take the fft of the spike train autocorr (from -500 to +500ms)
@@ -233,7 +233,7 @@ class SpikeCalcs(object):
 		return freqs[np.argmax(power_masked)]
 
 	def thetaModIdx(self, x1):
-		'''
+		"""
 		Calculates a theta modulation index of a spike train based on the cells
 		autocorrelogram
 		
@@ -246,7 +246,7 @@ class SpikeCalcs(object):
 		thetaMod: float
 			The difference of the values at the first peak and trough of the
 			autocorrelogram
-		'''
+		"""
 		y = self.xcorr(x1)
 		corr, _ = np.histogram(y[y != 0], bins=201, range=np.array([-500,500]))
 		# Take the fft of the spike train autocorr (from -500 to +500ms)
@@ -268,14 +268,14 @@ class SpikeCalcs(object):
 		return (mean_theta_band_power - mean_other_band_power) / (mean_theta_band_power + mean_other_band_power)
 
 	def thetaModIdxV2(self, x1):
-		'''
+		"""
 		This is a simpler alternative to the thetaModIdx method in that it
 		calculates the difference between the normalized temporal autocorrelogram
 		at the trough between 50-70ms and the peak between 100-140ms over
 		their sum (data is binned into 5ms bins)
 		
 		Measure used in Cacucci et al., 2004 and Kropff et al 2015
-		'''
+		"""
 		y = self.xcorr(x1)
 		corr, bins = np.histogram(y[y != 0], bins=201, range=np.array([-500,500]))
 		# 'close' the right-hand bin
@@ -287,10 +287,10 @@ class SpikeCalcs(object):
 		return (thetaPhase-thetaAntiPhase) / (thetaPhase+thetaAntiPhase)
 
 	def clusterQuality(self, cluster, fet=1):
-		'''
+		"""
 		returns the L-ratio and Isolation Distance measures
 		calculated on the principal components of the energy in a spike matrix
-		'''
+		"""
 		nSpikes, nElectrodes, _ = self.waveforms.shape
 		wvs = self.waveforms.copy()
 		E = np.sqrt(np.nansum(self.waveforms ** 2, axis=2))
@@ -320,11 +320,11 @@ class SpikeCalcs(object):
 		return L_ratio, isolation_dist
 
 	def _mahal(self, u, v):
-		'''
+		"""
 		gets the mahalanobis distance between two vectors u and v
 		a blatant copy of the Mathworks fcn as it doesn't require the covariance
 		matrix to be calculated which is a pain if there are NaNs in the matrix
-		'''
+		"""
 		u_sz = u.shape
 		v_sz = v.shape
 		if u_sz[1] != v_sz[1]:
@@ -342,10 +342,10 @@ class SpikeCalcs(object):
 		return d
 
 	def plotClusterSpace(self, clusters=None, param='Amp', clusts=None, bins=256, **kwargs):
-		'''
+		"""
 		TODO: aspect of plot boxes in ImageGrid not right as scaled by range of
 		values now
-		'''
+		"""
 		import tintColours as tcols
 		import matplotlib.colors as colors
 		from itertools import combinations
@@ -474,7 +474,7 @@ class SpikeCalcs(object):
 		return r
 
 	def getParam(self, waveforms=None, param='Amp', t=200, fet=1):
-		'''
+		"""
 		Returns the requested parameter from a spike train as a numpy array
 		
 		Parameters
@@ -500,7 +500,7 @@ class SpikeCalcs(object):
 			
 		fet - int
 			The number of principal components (used with param 'PCA')
-		'''
+		"""
 		from scipy import interpolate
 		from sklearn.decomposition import PCA
 		

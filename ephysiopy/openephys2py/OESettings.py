@@ -179,10 +179,10 @@ class Settings(object):
                     self.filename = os.path.join(d, "settings.xml")
         self.tree = None
         self.fpga_nodeId = None
-        '''
+        """
         It's not uncommon to have > 1 of the same type of processor, i.e.
         2 x bandpass filter to look at LFP and APs. This deals with that...
-        '''
+        """
         self.processors = defaultdict(list)
         self.electrodes = OrderedDict()
         self.tracker_params = {}

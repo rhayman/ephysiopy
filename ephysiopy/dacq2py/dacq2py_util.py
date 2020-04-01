@@ -37,7 +37,7 @@ warnings.filterwarnings("ignore",
 						message="Casting complex values to real discards the imaginary part")
 
 class Trial(axonaIO.IO, SAC, dict):
-	'''
+	"""
 	Provides methods to plot electrophysiology data acquired using the Axona DACQ recording system
 	and methods to extract some measures from that data
 
@@ -52,78 +52,46 @@ class Trial(axonaIO.IO, SAC, dict):
 	filename_root : str
 		Absolute location on the filesystem of the set of files without a suffix
 
-	Attributes:
-		filename_root : str
-			Absolute location on the filesystem of the set of files without a suffix
-		basename : str
-			Basename of the set of files without a suffix (everything after the last trailing slash)
-		EEG : dacq2py.axonaIO.EEG 
-			Containing data from .eeg file
-		EGF : dacq2py.axonaIO.EEG 
-			Containing data from .egf file
-		STM : dacq2py.axonaIO.Stim 
-			Contains stimulation data (timestamps mostly) and header + some additions work done below
-		POS : dacq2py.axonaIO.Pos 
-			Contains raw and post-processed position data (xy, dir, speed etc) & header
-		TETRODE : extension of Pythons dict "
-			Each value is an instance of dacq2py.axonaIO.Tetrode. Contains
-			methods to get cluster spike times, cluster indices etc
-		posFilter : dict
-			Keys are things like 'speed', 'time'; values are n x 2 arrays of range of values *to keep*
-		setheader : dict
-			Corresponds to the .set file for the file set. Keys/ values are all strings
-		_available_files : list
-			All files matching the filename_root + any valid suffix
-		metadata : OrderedDict
-			Some basic info if the file is an *rh one (see _parseMetaData)
-		ratemap : dacq2py.binning.Ratemap class instance
+	Attributes
+	----------
+	filename_root : str
+		Absolute location on the filesystem of the set of files without a suffix
+	basename : str
+		Basename of the set of files without a suffix (everything after the last trailing slash)
+	EEG : dacq2py.axonaIO.EEG 
+		Containing data from .eeg file
+	EGF : dacq2py.axonaIO.EEG 
+		Containing data from .egf file
+	STM : dacq2py.axonaIO.Stim 
+		Contains stimulation data (timestamps mostly) and header + some additions work done below
+	POS : dacq2py.axonaIO.Pos 
+		Contains raw and post-processed position data (xy, dir, speed etc) & header
+	TETRODE : extension of Pythons dict
+		Each value is an instance of dacq2py.axonaIO.Tetrode. Contains methods to get cluster spike times, cluster indices etc
+	posFilter : dict
+		Keys are things like 'speed', 'time'; values are n x 2 arrays of range of values *to keep*
+	setheader : dict
+		Corresponds to the .set file for the file set. Keys/ values are all strings
+	_available_files : list
+		All files matching the filename_root + any valid suffix
+	metadata : collections.OrderedDict
+		Some basic info if the file is an "rh" one (see _parseMetaData)
+	ratemap : dacq2py.ephys_generic.binning.Ratemap class instance
 
 	See Also
 	--------
-	binning
-		Basic binning of data, calculation of bin sizes etc
-	eegcalcs
-		Contains filters, eeg power spectra methods
-	spikecalcs
-		Temporal measures of spike trains (firing rates etc) and extracting
-		parameters from the waveforms and clusters themselves
-	fieldcalcs
-		Methods for extracting information from 2D ratemaps mostly but also
-		contains some statistical tools (information theoretic measures etc)
-	gridcellTrial
-		Trial inherits from this at the moment. Includes methods for obtaining
-		the spatial autocorrelogram (SAC) (and cross-correlogram) and plotting of the
-		SAC
-
+	ephysiopy.ephys_generic.binning :Basic binning of data, calculation of bin sizes etc
+	ephysiopy.ephys_generic.eegcalcs : Contains filters, eeg power spectra methods
+	ephysiopy.ephys_generic.spikecalcs : Temporal measures of spike trains and extracting parameters from waveforms and clusters
+	ephysiopy.ephys_generic.fieldcalcs : Methods for extracting information from 2D ratemaps
+	
 	Examples
 	--------
 	>>> from dacq2py.dacq2py_util import Trial
 	>>> T = Trial(r'/media/robin/data/Dropbox/Science/Recordings/M851/M851_140908t1rh')
-
-	'''
+	"""
 
 	def __init__(self, filename_root, **kwargs):
-		"""
-		Parameters
-		----------
-		filename_root: str
-			The absolute filename without any suffix attached
-			i.e. C:\\\Robin\\\mytrial
-
-			Note that when RH is using this can be just the trial name as the getFullFile method
-			tries to find the trial given the folder layout and the filename - see that method
-			for details
-
-		Returns
-		-------
-		T : object
-			a dacq2py_util.Trial object
-
-		Examples
-		--------
-		>>> T = dacq2py_util.Trial(r'/media/robin/data/Dropbox/Science/Recordings/M851/M851_140908t1rh')
-		"""
-
 		# try and intelligently get full filename from just the root
 		filename_root = self.getFullFile(filename_root)
 		self.basename = os.path.basename(filename_root)
@@ -169,9 +137,9 @@ class Trial(axonaIO.IO, SAC, dict):
 		return '{self.__class__.__name__}({self.filename_root})'.format(self=self)
 
 	def hasFiles(self):
-		'''
-		Checks for some automated yaml processing (see Dropbox/Science/Analysis/)
-		'''
+		"""
+		Checks for some automated yaml processing
+		"""
 
 		for i in self.axona_files:
 			if os.path.isfile(self.filename_root + i):
@@ -180,16 +148,17 @@ class Trial(axonaIO.IO, SAC, dict):
 				self['has_' + i[1:]] = False
 
 	def getFullFile(self, filename):
-		'''
+		"""
 		Used to constuct filename_root in __init__
 
 		Parameters
-		-------------
+		----------
 		filename : str
 			The absolute path the files being analysed here without any suffix
-		'''
+		"""
+
 		if os.path.isdir(r'/home/robin/Dropbox/Science/Recordings'):
-			pname, fname = os.path.split(filename)
+			pname, _ = os.path.split(filename)
 			if len(pname) == 0:
 				defaultDir = r'/home/robin/Dropbox/Science/Recordings'
 				animal = filename.split('_')[0]
@@ -198,12 +167,12 @@ class Trial(axonaIO.IO, SAC, dict):
 
 	@property
 	def setheader(self):
-		'''
+		"""
 		Returns
 		----------
-		self.dict: dict
+		dict : setheader
 			Matches contents of .set file with keys and values all mapped as strings
-		'''
+		"""
 
 		if self._setheader is None:
 			try:
@@ -230,12 +199,12 @@ class Trial(axonaIO.IO, SAC, dict):
 
 	@property
 	def POS(self):
-		'''
+		"""
 		Returns
-		-----------
-		self.POS:
+		-------
+		ephysiopy.dacq2py.axonaIO.POS:
 			Contains raw and post-processed position data
-		'''
+		"""
 
 		if self._POS is None:
 			try:
@@ -257,12 +226,12 @@ class Trial(axonaIO.IO, SAC, dict):
 
 	@property
 	def EEG(self):
-		'''
+		"""
 		Returns
-		------------
-		self.EEG:
+		-------
+		ephysiopy.dacq2py.axonaIO.EEG:
 			eeg data and header
-		'''
+		"""
 		if self._EEG is None:
 			try:
 				self._EEG = axonaIO.EEG(self.filename_root, eeg_file=self.eeg_file)
@@ -278,12 +247,12 @@ class Trial(axonaIO.IO, SAC, dict):
 
 	@property
 	def EGF(self):
-		'''
+		"""
 		Returns
-		------------
-		self.EGF:
+		-------
+		ephysiopy.dacq2py.axonaIO.EGF:
 			eeg data and header from .egf file
-		'''
+		"""
 		if self._EGF is None:
 			try:
 				self._EGF = axonaIO.EEG(self.filename_root, eeg_file=self.eeg_file, egf=1)
@@ -299,19 +268,19 @@ class Trial(axonaIO.IO, SAC, dict):
 
 	@property
 	def STM(self):
-		'''
+		"""
 		Returns
-		------------
-		self.Stim:
+		-------
+		ephysiopy.dacq2py.axonaIO.Stim:
 			Stimulation data and header + some extras parsed from pos, eeg and set files
-		'''
+		"""
 		if self._STM is None:
 			try:
 				self._STM = axonaIO.Stim(self.filename_root)
-				'''
+				"""
 				update the STM dict with some relevant values from the .set file and the headers
 				of the eeg and pos files
-				'''
+				"""
 				posHdr = self.getHeader(self.filename_root + '.pos')
 				eegHdr = self.getHeader(self.filename_root + '.eeg')
 				self._STM['posSampRate'] = self.getHeaderVal(posHdr, 'sample_rate')
@@ -377,16 +346,15 @@ class Trial(axonaIO.IO, SAC, dict):
 
 	@property
 	def posFilter(self):
-		'''
+		"""
 		self.posFilter : dict
 			Keys are strings such as 'speed', 'time' etc. Values are n x 2 arrays of values *to keep*
-		'''
+		"""
 		return self._posFilter
 
 	@posFilter.setter
 	def posFilter(self, value):
-		"""
-		Filters data depending on the filter specified in the dictionary value
+		"""Filters data depending on the filter specified in the dictionary value
 
 		Parameters
 		----------
@@ -404,7 +372,7 @@ class Trial(axonaIO.IO, SAC, dict):
 
 		Returns
 		-------
-		modified dacq2py_util.Trial object: object
+		dacq2py_util.Trial : object
 			The Trial object is modified in place and all the relevant 
 			variables are filtered and changed to numpy masked arrays
 
@@ -463,23 +431,23 @@ class Trial(axonaIO.IO, SAC, dict):
 		self._posFilter = value
 
 	def print_stim_dict(self):
-		'''
+		"""
 		Prints out keys/ values of STM dict
-		'''
+		"""
 		for k,v in self.STM.items():
 			print(k, v)
 
 	def _filterForStm(self, laser=None):
-		'''
+		"""
 		Cycles through the STM dict and fiters for laser on / off periods and
 		applies the filter to the pos and eeg data NB tetrode data not dealt with
 		yet
 
 		Parameters
-		-------------
+		----------
 		laser : bool
 			Whether to filter for laser stimulation events
-		'''
+		"""
 		if laser is not None:
 			times = [0]
 			phaseType = []
@@ -512,8 +480,7 @@ class Trial(axonaIO.IO, SAC, dict):
 
 	def _getMap(self, tetrode=None, cluster=None, var2bin='pos', binsize=3,
 				smooth_sz=5, smooth=True, **kwargs):
-		'''
-
+		"""
 		Returns the ratemap (smoothed or unsmoothed) for a given tetrode and
 		cluster
 
@@ -542,10 +509,10 @@ class Trial(axonaIO.IO, SAC, dict):
 					testing
 
 		Returns
-		-------------
+		-------
 		rmap : np.array
 			The data binned up as requested
-		'''
+		"""
 		if 'pos' in var2bin:
 			varType = 'xy'
 		else:
@@ -575,44 +542,44 @@ class Trial(axonaIO.IO, SAC, dict):
 		return rmap
 
 	def _getPath(self):
-		'''
+		"""
 		Returns
-		------------
+		-------
 		self.POS.xy : np.array
 			The smoothed xy positions filtered appropriately 
-		'''
+		"""
 		if np.ma.is_masked(self.POS.xy):
 			return self.POS.xy[:, ~self.POS.xy.mask[0, :]]
 		return self.POS.xy
 
 	def _getDir(self):
-		'''
+		"""
 		Returns
 		------------
 		self.POS.dir : np.array
 			The smoothed directional data filtered appropriately
-		'''
+		"""
 		if np.ma.is_masked(self.POS.dir):
 			return self.POS.dir[:, ~self.POS.dir.mask[0, :]]
 		return self.POS.dir
 
 	def _getFieldLims(self, tetrode, cluster, binsize=3):
-		'''
+		"""
 		Returns a labelled matrix of the ratemap for a given cluster on a given
 		tetrode. Binsize can be fractional for smaller bins. Uses anything >
 		than the half peak rate to select as a field. Data is heavily smoothed
 
 		Parameters
-		---------------
+		----------
 		tetrode : int
 			The tetrode to examine
 		cluster : int
 			The cluster identity
 
 		Returns
-		----------
+		-------
 		labelled ratemap and the x and y edges of the binned data as a 3-tuple 
-		'''
+		"""
 		rmap, (ye, xe) = self._getMap(tetrode, cluster, binsize=binsize)
 		rmap[np.isnan(rmap)] = 0.0
 		h = int(np.max(rmap.shape) / 2)
@@ -630,21 +597,21 @@ class Trial(axonaIO.IO, SAC, dict):
 		return label, xe, ye
 
 	def _getClusterPhaseVals(self, tetrode, cluster):
-		'''
+		"""
 		Returns the phases of the LFP theta a given cluster fired at
 
 		Parameters
-		---------------
+		-----------
 		tetrode : int
 			The tetrode to examine
 		cluster : int
 			The cluster identity
 
 		Returns
-		----------
+		-------
 		eegphase : np.array
 			The phase of theta a cluster fired at
-		'''
+		"""
 		ts = self.TETRODE[tetrode].getSpkTS()
 		ts = ts / (self.TETRODE[tetrode].timebase / self.EEG.sample_rate)
 		ts_idx = np.floor(ts[self.TETRODE[tetrode].cut == cluster]).astype(np.int)
@@ -653,10 +620,10 @@ class Trial(axonaIO.IO, SAC, dict):
 		return EEGphase
 
 	def _getThetaCycles(self):
-		'''
+		"""
 		Return a tuple of indices into the EEG record that denotes the peaks
 		and troughs of theta cycles
-		'''
+		"""
 		sm_eeg = self.EEG.eegfilter()
 		df_eeg = np.diff(sm_eeg)
 		pts = np.diff((df_eeg > 0).astype(int), 2)
@@ -666,12 +633,12 @@ class Trial(axonaIO.IO, SAC, dict):
 		return peaks, troughs
 
 	def _getSpikeInCycle(self, peakIdx, spkIdx, whichSpk='first'):
-		'''
+		"""
 		given an array of spike indices into eeg and indices of peaks in the
 		smoothed, theta-filtered eeg signal this returns the first spike in the
 		cycle
 		whichSpk can be 'first' or 'last'
-		'''
+		"""
 		if 'first' in whichSpk:
 			side = 'left'
 		elif 'last' in whichSpk:
@@ -684,10 +651,10 @@ class Trial(axonaIO.IO, SAC, dict):
 		return spk2eeg_idx[unique_indices]
 
 	def _parseMetaData(self):
-		'''
+		"""
 		Parses the filename (mine has a standard format) to populate some of
 		the objects properties (self.animal_id, self.trial_num etc)
-		'''
+		"""
 		pname, fname = os.path.split(self.filename_root)
 		self.metadata['Filename'] = fname
 		self.metadata['Path'] = pname
@@ -716,9 +683,9 @@ class Trial(axonaIO.IO, SAC, dict):
 		Parameters
 		----------
 		d : dict
-			Specifies the vector of features to be used in
-			clustering. Each key is the identity of a tetrode (i.e. 1, 2 etc)
-			 and the values are the features used to do the clustering for that tetrode (i.e.
+			Specifies the vector of features to be used in clustering.
+			Each key is the identity of a tetrode (i.e. 1, 2 etc)
+			and the values are the features used to do the clustering for that tetrode (i.e.
 			'PC1', 'PC2', 'Amp' (amplitude) etc
 		"""
 
@@ -787,7 +754,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		return self.fieldcalcs.kldiv_dir(polarMap[0])
 
 	def getmrv(self, tetrode, cluster, **kwargs):
-		'''
+		"""
 		Calculate the mean resultant vector length and direction for a given
 		cluster/ cell
 
@@ -807,17 +774,17 @@ class Trial(axonaIO.IO, SAC, dict):
 			the mean resultant vector length (range = 0-1)
 		th : float
 			the mean resultant vector direction (in radians)
-		'''
+		"""
 
 		idx = self.TETRODE[tetrode].getClustIdx(cluster)
 		angsInRads = np.deg2rad(self.POS.dir[idx])
-		from statscalcs import StatsCalcs
+		from ephysiopy.ephys_generic.statscalcs import StatsCalcs
 		S = StatsCalcs()
 		r, th = S.mean_resultant_vector(angsInRads)
 		return r, th
 
 	def getcircR(self, tetrode, cluster, **kwargs):
-		'''
+		"""
 		Calculate the mean resultant vector length of circular data
 		Unlike getmrv (above) this only returns the vector length. This is
 		calculated differently (using complex numbers) but is a) faster, b)
@@ -825,9 +792,9 @@ class Trial(axonaIO.IO, SAC, dict):
 		the spike train
 
 		Parameters
-		---------------
+		----------
 		tetrode : int
-			The tetrode to exmaine
+			The tetrode to examine
 		cluster : int
 			The cluster to examine
 		**kwargs:
@@ -839,7 +806,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		----------
 		r : float
 			the mean resultant vector length (range = 0-1)
-		'''
+		"""
 
 		idx = self.TETRODE[tetrode].getClustIdx(cluster)
 		spk_weights = np.bincount(idx, minlength=self.POS.npos)
@@ -854,25 +821,31 @@ class Trial(axonaIO.IO, SAC, dict):
 		return R
 
 	def getskaggsInfo(self, tetrode, cluster, binsize=3, **kwargs):
-		'''
-		Wrapper for fieldcalcs.skaggsInfo see there for docs
+		"""
+		Gets the Skagss information theory measure for the given cluster.
 
 		Parameters
-		---------------
+		----------
 		tetrode : int
 			The tetrode to exmaine
 		cluster : int
 			The cluster to examine
 		binsize : int
 			Size of bins in cms
+		
 		Returns
-		--------------
+		-------
 		bits per spike : float
 
 		Notes
 		-----
 		binning could be over any single spatial variable (e.g. location, direction, speed).
-		'''
+
+		See Also
+		--------
+		Wrapper for ephysiopy.ephys_generic.fieldcalcs.skaggsInfo
+		"""
+
 		ratemap = self._getMap(tetrode, cluster, binsize=binsize, **kwargs)[0]
 		dwelltimes = self._getMap(binsize=binsize, **kwargs)[0]
 		ratemap, _, dwelltimes = self.ratemap._RateMap__adaptiveMap(ratemap, dwelltimes)
@@ -909,10 +882,10 @@ class Trial(axonaIO.IO, SAC, dict):
 				for cc in c:
 					tets.append(str(t))
 					clusts.append(str(cc))
-			'''
+			"""
 			The two fucking stupid lines below are so yaml can
 			serialize the object correctly
-			'''
+			"""
 			self.tetrodes = map(int,tets)
 			self.clusters = map(int,clusts)
 			return tAndCdict
@@ -920,36 +893,38 @@ class Trial(axonaIO.IO, SAC, dict):
 	def plotMap(self, tetrode, clusters, ax=None, var2bin='pos', *args, **kwargs):
 		"""
 		Plots a ratemap for a given tetrode and cluster
-		Wrapper for _plotMap() so multiple clusters can be plotted
 
 		Parameters
 		----------
 		tetrode : int
-				 the tetrode you want to look at
-		cluster : int, 1xn array/ list
-				 a single number or list (or 1xn array) of the clusters to plot
-		ax : optional, defaults to None. Which axis to add the plot to; if None
-					then a new figure window is produced
-		**kwargs :
-			extra arguments include:
-			'bar' - for use with directional data to produce a polar
-			histogram plot
-			'add_peak_rate' - bool
-			adds the peak rate (to 2 decimal places) to the figure
-			binsize : int, optional
-				size of bins. Defaults to 3
-			smooth_sz : the width of the smoothing kernel (see **kwargs for more)
-				var2bin: optional, defaults to 'pos'. Which variable to bin.
-				Can be either 'pos', 'dir' or 'speed'. Works with masked
-				arrays
-			smooth : bool, optional. Defaults to true. Whether to smooth the data or
-				not
+			The tetrode you want to look at
+		cluster : int or array_like
+			The cluster(s) to plot
+		ax : matplotlib.Axes, optional
+			Defaults to None. Which axis to add the plot to; if None then a new figure window is produced
+		
+		Keyword arguments
+		-----------------
+		'bar' : boolean
+			For use with directional data to produce a polar histogram plot
+		'add_peak_rate' : boolean
+			Adds the peak rate (to 2 decimal places) to the figure
+		binsize : int, optional
+			size of bins. Defaults to 3.
+		smooth_sz : the width of the smoothing kernel (see keyword args for more)
+			var2bin: optional, defaults to 'pos'. Which variable to bin.
+			Can be either 'pos', 'dir' or 'speed'. Works with masked arrays
+		smooth : bool, optional
+			Defaults to True. Whether to smooth the data
 
 		Returns
 		-------
 		ratemap : numpy.ndarray
-			depending on whether a directional (1d) or positional (2d) map was
-			asked for an ndarray is returned
+			Dimensionality depends on if a directional (1d) or positional (2d) map was requested
+		
+		See Also
+		--------
+		Wrapper for _plotMap() so multiple clusters can be plotted
 
 		Examples
 		--------
@@ -1125,7 +1100,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		return ax, ratemap
 
 	def plotPath(self, ax=None, clamp=False, label=False, applyStm=False, **kwargs):
-		'''
+		"""
 		Plots the animals path during a trial. Default is to limit plot range
 		to the min/ max of x/y extent of path
 
@@ -1137,7 +1112,7 @@ class Trial(axonaIO.IO, SAC, dict):
 			whether the axes are clamped to self._xlims and self._ylims or not
 		applyStm : bool
 			Whether to overlay r crosses on the path where the laser events occurred
-		'''
+		"""
 		if ax is None:
 			fig = plt.figure()
 			ax = fig.add_subplot(111)
@@ -1160,7 +1135,7 @@ class Trial(axonaIO.IO, SAC, dict):
 			plt.setp(ax.get_yticklabels(), visible=False)
 
 	def plotSpikesOnPath(self, tetrode, clusters, ax=None, clamp=False, **kwargs):
-		'''
+		"""
 		Plots the spikes on the path during a trial for a particular tetrode/
 		cluster(s)
 
@@ -1177,7 +1152,7 @@ class Trial(axonaIO.IO, SAC, dict):
 			defaults to None. Which axis to add the plot to.
 			If None a new figure window is produced
 
-		'''
+		"""
 		if not isinstance(clusters, (np.ndarray, list)):
 			if isinstance(clusters, str):
 				clusters = self.availableClusters
@@ -1355,7 +1330,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		return x,y
 
 	def getRasterHist(self, tetrode, cluster, dt=(-50, 100), hist=True):
-		'''
+		"""
 		Calculates the histogram of the raster of spikes during a series of events
 
 		Parameters
@@ -1367,7 +1342,7 @@ class Trial(axonaIO.IO, SAC, dict):
 			i.e. the first value will probably be negative as in the default example
 		hist : bool
 			not sure
-		'''
+		"""
 		x1 = self.TETRODE[tetrode].getClustTS(cluster)
 		x1 = x1 / int(self.TETRODE[tetrode].timebase / 1000.) #in ms
 		x1.sort()
@@ -1572,12 +1547,12 @@ class Trial(axonaIO.IO, SAC, dict):
 				xxx.set_visible(False)
 
 	def adjust_median_speed(self, min_speed=5, plot=True):
-		'''
+		"""
 		Parameters
 		----------
 		min_speed : float
 		plot : bool
-		'''
+		"""
 		grandMedian = stats.nanmedian(self.POS.speed, 1)
 		sortedSpIdx = np.argsort(self.POS.speed)
 		sortedSp = np.sort(self.POS.speed)
@@ -1611,7 +1586,7 @@ class Trial(axonaIO.IO, SAC, dict):
 	def plotRateVSpeed(self, tetrode, cluster, minSpeed=0.0, maxSpeed = 40.0, 
 					   sigma=3.0, shuffle=False, nShuffles=100, plot=False, ax=None,
 					   verbose=False, getShuffledData=False, getData=False, **kwargs):
-		'''
+		"""
 		Plots the instantaneous firing rate of a cell against running speed
 		Also outputs a couple of measures as with Kropff et al., 2015; the
 		Pearsons correlation and the depth of modulation (dom) - see below for
@@ -1641,7 +1616,7 @@ class Trial(axonaIO.IO, SAC, dict):
 			Kropff et al., 2015
 		plot : bool
 			Whether to plot output or not. Defaults to False
-		'''
+		"""
 
 		speed = self.POS.speed.ravel()
 		# Calculate histogram to see how much is accounted for in each bin
@@ -1712,7 +1687,7 @@ class Trial(axonaIO.IO, SAC, dict):
 
 	def plotRollingCorrRateVSpeed(self, tetrode, cluster, minSpeed=2.0,
 								  sigma=3.0, **kwargs):
-		'''
+		"""
 		Plots the rolling correlation of instantaneous firing rate of a given
 		cell against running speed
 
@@ -1723,7 +1698,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		minSpeed : float
 		sigma : float
 			The width of the smoothing kernel applied to the spike train to smooth it
-		'''
+		"""
 		speed_filt = self.POS.speed.ravel()
 		#filter for low speeds
 		lowSpeedIdx = speed_filt < minSpeed
@@ -1775,7 +1750,7 @@ class Trial(axonaIO.IO, SAC, dict):
 
 
 	def _getTimeSmoothedSpikes(self, tetrode, cluster, sigma=3.0, shuffle=None):
-		'''
+		"""
 		Returns a spike train the same length as num pos samples that has been
 		smoothed in time with a gaussian kernel M in width and standard deviation
 		equal to sigma
@@ -1789,16 +1764,17 @@ class Trial(axonaIO.IO, SAC, dict):
 		sigma : float
 			the standard deviation of the gaussian used to smooth the spike
 			train
-		'''
+		"""
 
 		x1 = self.TETRODE[tetrode].getClustIdx(cluster)
 		spk_sm = self.spikecalcs.smoothSpikePosCount(x1, self.POS.npos, sigma, shuffle)
 		return spk_sm
 
 	def plotFreqVSpeed(self, minSp=5, maxSp=50, spStep=5, ax=None, laserFilter=None, **kwargs):
-		'''
+		"""
 		Plots running speed vs eeg frequencies and does linear regression. Also adds position sample histogram
 		TODO: filter out negative frequencies - do this as default in EEG class
+
 		Parameters
 		----------
 		minSp : int
@@ -1811,11 +1787,9 @@ class Trial(axonaIO.IO, SAC, dict):
 			the axes in which to plot
 		laser : int or None
 			whether to filter for laser on/ off events
-			None means no filtering at all
-			1 means laser is on and data is filtered for on periods
+			None means no filtering at all; 1 means laser is on and data is filtered for on periods
 			0 means filter for laser off periods
-
-		'''
+		"""
 
 		sp = np.ma.compressed(self.POS.speed)
 		if laserFilter:
@@ -1939,7 +1913,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		plt.axis('off')
 
 	def plotPhaseInField(self, tetrode, cluster, ax=None, **kwargs):
-		'''
+		"""
 		Plots theta phase of spikes in a place field (found using _getFieldLims)
 		as individual colours for each run through the field
 		TODO: broken
@@ -1948,7 +1922,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		tetrode : int
 		cluster : int
 		ax : matplotlib.Axes
-		'''
+		"""
 		if not self.EEG:
 			self.EEG = EEG(self.filename_root)
 		self.EEG.thetaAmpPhase()
@@ -1965,7 +1939,7 @@ class Trial(axonaIO.IO, SAC, dict):
 
 	def plotSpectrogram(self, eegType='eeg', ymin=0, ymax=50, ax=None, secsPerBin=2,
 						laser=False, width=0.125, dip=15.0):
-		'''
+		"""
 		Plots a spectrogram of the LFP of the whole trial
 
 		Parameters
@@ -1987,7 +1961,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		Returns
 		------------
 		Plots the spectrogram
-		'''
+		"""
 
 		if 'eeg' in eegType:
 			E = self.EEG.eeg
@@ -2002,12 +1976,12 @@ class Trial(axonaIO.IO, SAC, dict):
 
 		EE = EEGCalcs(self.filename_root,thetaRange=[6,12])
 		if laser:
-			'''
+			"""
 			Split the eeg into the parts where the laser is on and off
 			and then reassemble for the spectrogram
 			NB this assumes the laser comes on at 600s for 20 minutes
 			and then goes off
-			'''
+			"""
 			mask = np.ones_like(E).astype(bool)
 
 			mask[600*int(Fs):1800*int(Fs)] = False
@@ -2048,7 +2022,7 @@ class Trial(axonaIO.IO, SAC, dict):
 	def plotEEGPower(self, E=None, eegType='eeg', smthKernelSigma=0.1875,
 					freqBand=(6,12), outsideBand=(3,125), s2nWdth=2, xmax=125, 
 					ymax=None, plot=True, ax=None, **kwargs):
-		'''
+		"""
 		Plots the eeg power spectrum. Annotates graph around theta frequency band.
 
 		Parameters
@@ -2079,7 +2053,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		-------------
 		ax : matplotlib.pyplot.axis instance
 			The axis containing the plot.
-		'''
+		"""
 
 		if E is None:
 			if 'eeg' in eegType:
@@ -2147,7 +2121,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		return ax
 
 	def plotClusterSpace(self, tetrode, clusters=None, ax=None, bins=256,**kwargs):
-		'''
+		"""
 		Plots the cluster space for the given tetrode
 
 		Parameters
@@ -2168,7 +2142,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		Returns
 		-------
 		fig: handle to figure window
-		'''
+		"""
 
 		if clusters is not None and not isinstance(clusters, (np.ndarray, list)):
 			clusters = [clusters]  # ie needs to be iterable
@@ -2241,7 +2215,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		return fig
 
 	def plotXCorr(self, tetrode, clusters, ax=None, Trange=(-500,500), bins=None, annotate=True, **kwargs):
-		'''
+		"""
 		Plots the temporal autocorrelogram (defaults to +/- 500ms)
 		TODO: needs to be able to take in two tetrodes & make sure Trange in ms
 
@@ -2259,7 +2233,7 @@ class Trial(axonaIO.IO, SAC, dict):
 			Whether to add the cluster identities to the figure axis
 		**kwargs
 			if 'add_peak_rate' is in the kwargs then that is also added to the axes
-		'''
+		"""
 		if isinstance(clusters, (np.ndarray, list, int)):
 			clusters = [clusters]
 		if isinstance(tetrode, (np.ndarray, list, int)):
@@ -2334,7 +2308,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		return ax, h
 
 	def getThetaModIdx(self, tetrode, cluster):
-		'''
+		"""
 		Calculates the theta modulation index of a clusters autocorrelogram
 		as the difference between the first trough and second peak of the
 		autocorrelogram (actually the difference over their sum)
@@ -2349,7 +2323,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		-------------
 		thetaModulation : int
 			The depth of theta modulation
-		'''
+		"""
 		x1 = self.TETRODE[tetrode].getClustTS(cluster) / float(self.TETRODE[tetrode].timebase) * 1000
 		if self.posFilter:
 			idx = np.nonzero(~self.POS.xy.mask[0])[0] # indices to keep
@@ -2359,7 +2333,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		return thetaMod
 
 	def getThetaModIdx2(self, tetrode, cluster):
-		'''
+		"""
 		Wrapper for thetaModIdxV2 in spikecalcs.py
 
 		Parameters
@@ -2372,7 +2346,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		-------------
 		thetaModulation : int
 			The depth of theta modulation
-		'''
+		"""
 
 		x1 = self.TETRODE[tetrode].getClustTS(cluster) / float(self.TETRODE[tetrode].timebase) * 1000
 		if self.posFilter:
@@ -2506,7 +2480,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		return dct
 
 	def getFieldRuns(self, tetrode, cluster, binsize=3):
-		'''
+		"""
 		Extracts the runs through a place field of a given cluster on a given
 		tetrode and returns the indices of the runs that are kept (defaults to
 		at least 5 spikes needing to be fired) and the indices of the spikes in
@@ -2523,7 +2497,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		-------
 		data : tuple
 			The runs retained, the spikes in the run and the run duration
-		'''
+		"""
 
 		# label is a mask of the place field - this could be hijacked to cover the whole track
 		label, xe, ye = self._getFieldLims(tetrode, cluster, binsize)
@@ -2563,7 +2537,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		return runs_to_keep, spks_in_run, run_duration
 
 	def tortuosity(self, xy=None):
-		'''
+		"""
 		Parameters
 		-----------
 		xy - numpy.array
@@ -2576,7 +2550,7 @@ class Trial(axonaIO.IO, SAC, dict):
 			tortuosity index calculated as follows:
 			T = sum(path_segment / segment_straight_line) / n_segments
 			n_segments is the number of one second segments per trial
-		'''
+		"""
 
 		if xy is None:
 			xy = self._getPath()
@@ -2596,11 +2570,11 @@ class Trial(axonaIO.IO, SAC, dict):
 		return np.sum(T) / len(T)
 
 	def getThigmotaxisIndex(self):
-		'''
+		"""
 		Currently fucked
 		Calculates the ratio of time spent in the middle of the environment
 		to the amount of time spent in the central part
-		'''
+		"""
 		dwellmap = self._getMap(smooth=False)[0] # unsmoothed dwell map
 		# simply calculate the sums in the corners and see if this 
 		# goes above some threshold
@@ -2618,7 +2592,7 @@ class Trial(axonaIO.IO, SAC, dict):
 			shape = 'circle'
 
 	def getBorderScore(self, tetrode, cluster, debug=False, **kwargs):
-		'''
+		"""
 		Calculates the border score in a similar way to how the Moser group did
 		but can also deal with circular environments as well as square ones
 
@@ -2633,7 +2607,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		See Also
 		--------
 		fieldcalcs.FieldCalcs.getBorderScore
-		'''
+		"""
 
 		A = self._getMap(tetrode, cluster, **kwargs)[0]
 		dwellmap = self._getMap(smooth=None)[0]
@@ -2655,7 +2629,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		return self.fieldcalcs.getBorderScore(A, shape=shape, debug=debug)
 
 	def plotDirFilteredRmaps(self, tetrode, cluster, maptype='rmap', **kwargs):
-		'''
+		"""
 		Plots out directionally filtered ratemaps for the tetrode/ cluster
 
 		Parameters
@@ -2664,7 +2638,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		cluster : int
 		maptype : str
 			Valid values include 'rmap', 'polar', 'xcorr'
-		'''
+		"""
 		inc = 8.0
 		step = 360/inc
 		dirs_st = np.arange(-step/2, 360-(step/2), step)

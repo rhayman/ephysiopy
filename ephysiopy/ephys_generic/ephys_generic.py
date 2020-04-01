@@ -1002,12 +1002,12 @@ class MapCalcsGeneric(object):
             ax.set_thetagrids([0, 90, 180, 270])
 
     def makeSpeedVsRatePlot(self, cluster, minSpeed=0.0, maxSpeed=40.0, sigma=3.0, ax=None, **kwargs):
-        '''
+        """
         Plots the instantaneous firing rate of a cell against running speed
         Also outputs a couple of measures as with Kropff et al., 2015; the
         Pearsons correlation and the depth of modulation (dom) - see below for
         details
-        '''
+        """
         speed = np.ravel(self.speed)
         if np.nanmax(speed) < maxSpeed:
             maxSpeed = np.nanmax(speed)
@@ -1151,9 +1151,9 @@ class FieldCalcs:
 		return central_field_props, central_field, central_field_idx
 
 	def global_threshold(self, A, prc=50, min_dist=5):
-		'''
+		"""
 		Globally thresholds a ratemap and counts number of fields found
-		'''
+		"""
 		Ac = A.copy()
 		Ac[np.isnan(A)] = 0
 		n = ny = 5
@@ -1499,10 +1499,10 @@ class FieldCalcs:
 			a = G.__fit_ellipse__(contour_coords[0][:, 0], contour_coords[0][:, 1])
 			ellipse_axes = G.__ellipse_axis_length__(a)
 			ellipse_ratio = np.min(ellipse_axes) / np.max(ellipse_axes)
-		''' using the peak_idx values calculate the angles of the triangles that
+		""" using the peak_idx values calculate the angles of the triangles that
 		make up a delaunay tesselation of the space if the calc_angles arg is
 		in kwargs
-		'''
+		"""
 		if 'calc_angs' in kwargs.keys():
 			try:
 				angs = self.calc_angs(peak_idx)
@@ -1583,16 +1583,16 @@ class FieldCalcs:
 		return np.array(outAngs).T
 
 	def _getAng(self, a, b, c):
-		'''
+		"""
 		Given lengths a,b,c of the sides of a triangle this returns the angles
 		in degress of all 3 angles
-		'''
+		"""
 		return np.degrees(np.arccos((c**2 - b**2 - a**2)/(-2.0 * a * b)))
 
 	def corr_maps(self, map1, map2, maptype='normal'):
-		'''
+		"""
 		correlates two ratemaps together ignoring areas that have zero sampling
-		'''
+		"""
 		if map1.shape > map2.shape:
 			map2 = misc.imresize(map2, map1.shape, interp='nearest', mode='F')
 		elif map1.shape < map2.shape:
@@ -1613,9 +1613,9 @@ class FieldCalcs:
 			return np.nan
 
 	def coherence(self, smthd_rate, unsmthd_rate):
-		'''calculates coherence of receptive field via correlation of smoothed
+		"""calculates coherence of receptive field via correlation of smoothed
 		and unsmoothed ratemaps
-		'''
+		"""
 		smthd = smthd_rate.ravel()
 		unsmthd = unsmthd_rate.ravel()
 		si = ~np.isnan(smthd)
@@ -1655,7 +1655,7 @@ class FieldCalcs:
 		return kldivergence
 
 	def kldiv(self, X, pvect1, pvect2, variant=None):
-		'''
+		"""
 		Calculates the Kullback-Leibler or Jensen-Shannon divergence between two distributions.
 
 		kldiv(X,P1,P2) returns the Kullback-Leibler divergence between two
@@ -1691,7 +1691,7 @@ class FieldCalcs:
 		Notes
 		-----
 		This function is taken from one on the Mathworks file exchange
-		'''
+		"""
 
 		if not np.equal(np.unique(X), np.sort(X)).all():
 			warnings.warn('X contains duplicate values. Treated as distinct values.',

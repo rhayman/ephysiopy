@@ -42,7 +42,7 @@ class StatsCalcs():
 		return r
 		
 	def mean_resultant_vector(self, angles):
-		'''
+		"""
 		Calculate the mean resultant length and direction for angles
 		
 		Parameters
@@ -56,7 +56,7 @@ class StatsCalcs():
 			the mean resultant vector length
 		th: float
 			the mean resultant vector direction
-		'''
+		"""
 		S = np.sum(np.sin(angles)) * (1/float(len(angles)))
 		C = np.sum(np.cos(angles)) * (1/float(len(angles)))
 		r = np.hypot(S, C)
@@ -132,7 +132,7 @@ class StatsCalcs():
 		return x + 1j*sub_idx
 
 	def watsonsU2(self, a, b):
-		'''
+		"""
 		Tests whether two samples from circular observations differ
 		significantly from each other with regard to mean direction or angular
 		variance.
@@ -152,7 +152,7 @@ class StatsCalcs():
 		Both samples must come from a continuous distribution. In the case of
 		grouping the class interval should not exceed 5.
 		Taken from '100 Statistical Tests' G.J.Kanji, 2006 Sage Publications
-		'''
+		"""
 
 		a = np.sort(np.ravel(a))
 		b = np.sort(np.ravel(b))

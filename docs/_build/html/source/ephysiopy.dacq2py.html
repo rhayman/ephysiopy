@@ -582,50 +582,150 @@ instances of subpackages (binning.Ratemap for example) so that the code
 could be made more modular.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>filename_root</strong> (<em>str</em>) – Absolute location on the filesystem of the set of files without a suffix</p></li>
-<li><p><strong>Attributes</strong> – <dl class="simple">
-<dt>filename_root<span class="classifier">str</span></dt><dd><p>Absolute location on the filesystem of the set of files without a suffix</p>
-</dd>
-<dt>basename<span class="classifier">str</span></dt><dd><p>Basename of the set of files without a suffix (everything after the last trailing slash)</p>
-</dd>
-<dt>EEG<span class="classifier">dacq2py.axonaIO.EEG</span></dt><dd><p>Containing data from .eeg file</p>
-</dd>
-<dt>EGF<span class="classifier">dacq2py.axonaIO.EEG</span></dt><dd><p>Containing data from .egf file</p>
-</dd>
-<dt>STM<span class="classifier">dacq2py.axonaIO.Stim</span></dt><dd><p>Contains stimulation data (timestamps mostly) and header + some additions work done below</p>
-</dd>
-<dt>POS<span class="classifier">dacq2py.axonaIO.Pos</span></dt><dd><p>Contains raw and post-processed position data (xy, dir, speed etc) &amp; header</p>
-</dd>
-<dt>TETRODE<span class="classifier">extension of Pythons dict “</span></dt><dd><p>Each value is an instance of dacq2py.axonaIO.Tetrode. Contains
-methods to get cluster spike times, cluster indices etc</p>
-</dd>
-<dt>posFilter<span class="classifier">dict</span></dt><dd><p>Keys are things like ‘speed’, ‘time’; values are n x 2 arrays of range of values <em>to keep</em></p>
-</dd>
-<dt>setheader<span class="classifier">dict</span></dt><dd><p>Corresponds to the .set file for the file set. Keys/ values are all strings</p>
-</dd>
-<dt>_available_files<span class="classifier">list</span></dt><dd><p>All files matching the filename_root + any valid suffix</p>
-</dd>
-<dt>metadata<span class="classifier">OrderedDict</span></dt><dd><p>Some basic info if the file is an <a href="#id1"><span class="problematic" id="id2">*</span></a>rh one (see _parseMetaData)</p>
+<dd class="field-odd"><p><strong>filename_root</strong> (<em>str</em>) – Absolute location on the filesystem of the set of files without a suffix</p>
 </dd>
 </dl>
-<p>ratemap : dacq2py.binning.Ratemap class instance</p>
-</p></li>
-</ul>
+<dl class="attribute">
+<dt id="ephysiopy.dacq2py.dacq2py_util.Trial.filename_root">
+<code class="sig-name descname">filename_root</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.filename_root" title="Permalink to this definition">¶</a></dt>
+<dd><p>Absolute location on the filesystem of the set of files without a suffix</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ephysiopy.dacq2py.dacq2py_util.Trial.basename">
+<code class="sig-name descname">basename</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.basename" title="Permalink to this definition">¶</a></dt>
+<dd><p>Basename of the set of files without a suffix (everything after the last trailing slash)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ephysiopy.dacq2py.dacq2py_util.Trial.EEG">
+<code class="sig-name descname">EEG</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.EEG" title="Permalink to this definition">¶</a></dt>
+<dd><p>Containing data from .eeg file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#ephysiopy.dacq2py.axonaIO.EEG" title="ephysiopy.dacq2py.axonaIO.EEG">dacq2py.axonaIO.EEG</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ephysiopy.dacq2py.dacq2py_util.Trial.EGF">
+<code class="sig-name descname">EGF</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.EGF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Containing data from .egf file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#ephysiopy.dacq2py.axonaIO.EEG" title="ephysiopy.dacq2py.axonaIO.EEG">dacq2py.axonaIO.EEG</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ephysiopy.dacq2py.dacq2py_util.Trial.STM">
+<code class="sig-name descname">STM</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.STM" title="Permalink to this definition">¶</a></dt>
+<dd><p>Contains stimulation data (timestamps mostly) and header + some additions work done below</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#ephysiopy.dacq2py.axonaIO.Stim" title="ephysiopy.dacq2py.axonaIO.Stim">dacq2py.axonaIO.Stim</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ephysiopy.dacq2py.dacq2py_util.Trial.POS">
+<code class="sig-name descname">POS</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.POS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Contains raw and post-processed position data (xy, dir, speed etc) &amp; header</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#ephysiopy.dacq2py.axonaIO.Pos" title="ephysiopy.dacq2py.axonaIO.Pos">dacq2py.axonaIO.Pos</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ephysiopy.dacq2py.dacq2py_util.Trial.TETRODE">
+<code class="sig-name descname">TETRODE</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.TETRODE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Each value is an instance of dacq2py.axonaIO.Tetrode. Contains methods to get cluster spike times, cluster indices etc</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>extension of Pythons dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ephysiopy.dacq2py.dacq2py_util.Trial.posFilter">
+<code class="sig-name descname">posFilter</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.posFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Keys are things like ‘speed’, ‘time’; values are n x 2 arrays of range of values <em>to keep</em></p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ephysiopy.dacq2py.dacq2py_util.Trial.setheader">
+<code class="sig-name descname">setheader</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.setheader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Corresponds to the .set file for the file set. Keys/ values are all strings</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ephysiopy.dacq2py.dacq2py_util.Trial._available_files">
+<code class="sig-name descname">_available_files</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial._available_files" title="Permalink to this definition">¶</a></dt>
+<dd><p>All files matching the filename_root + any valid suffix</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ephysiopy.dacq2py.dacq2py_util.Trial.metadata">
+<code class="sig-name descname">metadata</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Some basic info if the file is an “rh” one (see _parseMetaData)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>collections.OrderedDict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ephysiopy.dacq2py.dacq2py_util.Trial.ratemap">
+<code class="sig-name descname">ratemap</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.ratemap" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dacq2py.ephys_generic.binning.Ratemap class instance</p>
+</dd>
+</dl>
+</dd></dl>
+
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <dl class="simple">
-<dt><code class="xref py py-class docutils literal notranslate"><span class="pre">binning</span></code></dt><dd><p>Basic binning of data, calculation of bin sizes etc</p>
+<dt><a class="reference internal" href="ephysiopy.ephys_generic.html#module-ephysiopy.ephys_generic.binning" title="ephysiopy.ephys_generic.binning"><code class="xref py py-class docutils literal notranslate"><span class="pre">ephysiopy.ephys_generic.binning</span></code></a></dt><dd><p>Basic binning of data, calculation of bin sizes etc</p>
 </dd>
-<dt><code class="xref py py-class docutils literal notranslate"><span class="pre">eegcalcs</span></code></dt><dd><p>Contains filters, eeg power spectra methods</p>
+<dt><a class="reference internal" href="ephysiopy.ephys_generic.html#module-ephysiopy.ephys_generic.eegcalcs" title="ephysiopy.ephys_generic.eegcalcs"><code class="xref py py-class docutils literal notranslate"><span class="pre">ephysiopy.ephys_generic.eegcalcs</span></code></a></dt><dd><p>Contains filters, eeg power spectra methods</p>
 </dd>
-<dt><code class="xref py py-class docutils literal notranslate"><span class="pre">spikecalcs</span></code></dt><dd><p>Temporal measures of spike trains (firing rates etc) and extracting parameters from the waveforms and clusters themselves</p>
+<dt><code class="xref py py-class docutils literal notranslate"><span class="pre">ephysiopy.ephys_generic.spikecalcs</span></code></dt><dd><p>Temporal measures of spike trains and extracting parameters from waveforms and clusters</p>
 </dd>
-<dt><code class="xref py py-class docutils literal notranslate"><span class="pre">fieldcalcs</span></code></dt><dd><p>Methods for extracting information from 2D ratemaps mostly but also contains some statistical tools (information theoretic measures etc)</p>
-</dd>
-<dt><code class="xref py py-class docutils literal notranslate"><span class="pre">gridcellTrial</span></code></dt><dd><p>Trial inherits from this at the moment. Includes methods for obtaining the spatial autocorrelogram (SAC) (and cross-correlogram) and plotting of the SAC</p>
+<dt><code class="xref py py-class docutils literal notranslate"><span class="pre">ephysiopy.ephys_generic.fieldcalcs</span></code></dt><dd><p>Methods for extracting information from 2D ratemaps</p>
 </dd>
 </dl>
 </div>
@@ -635,53 +735,53 @@ methods to get cluster spike times, cluster indices etc</p>
 </pre></div>
 </div>
 <dl class="method">
-<dt id="ephysiopy.dacq2py.dacq2py_util.Trial.EEG">
-<em class="property">property </em><code class="sig-name descname">EEG</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.EEG" title="Permalink to this definition">¶</a></dt>
+<dt>
+<em class="property">property </em><code class="sig-name descname">EEG</code></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>eeg data and header</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p>self.EEG</p>
+<dd class="field-even"><p><a class="reference internal" href="#ephysiopy.dacq2py.axonaIO.EEG" title="ephysiopy.dacq2py.axonaIO.EEG">ephysiopy.dacq2py.axonaIO.EEG</a></p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="method">
-<dt id="ephysiopy.dacq2py.dacq2py_util.Trial.EGF">
-<em class="property">property </em><code class="sig-name descname">EGF</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.EGF" title="Permalink to this definition">¶</a></dt>
+<dt>
+<em class="property">property </em><code class="sig-name descname">EGF</code></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>eeg data and header from .egf file</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p>self.EGF</p>
+<dd class="field-even"><p>ephysiopy.dacq2py.axonaIO.EGF</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="method">
-<dt id="ephysiopy.dacq2py.dacq2py_util.Trial.POS">
-<em class="property">property </em><code class="sig-name descname">POS</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.POS" title="Permalink to this definition">¶</a></dt>
+<dt>
+<em class="property">property </em><code class="sig-name descname">POS</code></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>Contains raw and post-processed position data</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p>self.POS</p>
+<dd class="field-even"><p>ephysiopy.dacq2py.axonaIO.POS</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="method">
-<dt id="ephysiopy.dacq2py.dacq2py_util.Trial.STM">
-<em class="property">property </em><code class="sig-name descname">STM</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.STM" title="Permalink to this definition">¶</a></dt>
+<dt>
+<em class="property">property </em><code class="sig-name descname">STM</code></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>Stimulation data and header + some extras parsed from pos, eeg and set files</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p>self.Stim</p>
+<dd class="field-even"><p><a class="reference internal" href="#ephysiopy.dacq2py.axonaIO.Stim" title="ephysiopy.dacq2py.axonaIO.Stim">ephysiopy.dacq2py.axonaIO.Stim</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -839,7 +939,7 @@ the spike train</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>tetrode</strong> (<em>int</em>) – The tetrode to exmaine</p></li>
+<li><p><strong>tetrode</strong> (<em>int</em>) – The tetrode to examine</p></li>
 <li><p><strong>cluster</strong> (<em>int</em>) – The cluster to examine</p></li>
 <li><p><strong>**kwargs</strong> – Legal values of interest:
 shuffle: int
@@ -894,7 +994,7 @@ statscalcs.py)</p>
 <dl class="method">
 <dt id="ephysiopy.dacq2py.dacq2py_util.Trial.getskaggsInfo">
 <code class="sig-name descname">getskaggsInfo</code><span class="sig-paren">(</span><em class="sig-param">tetrode</em>, <em class="sig-param">cluster</em>, <em class="sig-param">binsize=3</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.getskaggsInfo" title="Permalink to this definition">¶</a></dt>
-<dd><p>Wrapper for fieldcalcs.skaggsInfo see there for docs</p>
+<dd><p>Gets the Skagss information theory measure for the given cluster.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -912,12 +1012,16 @@ statscalcs.py)</p>
 </dl>
 <p class="rubric">Notes</p>
 <p>binning could be over any single spatial variable (e.g. location, direction, speed).</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><code class="xref py py-meth docutils literal notranslate"><span class="pre">Wrapper()</span></code></p>
+</div>
 </dd></dl>
 
 <dl class="method">
 <dt id="ephysiopy.dacq2py.dacq2py_util.Trial.hasFiles">
 <code class="sig-name descname">hasFiles</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.hasFiles" title="Permalink to this definition">¶</a></dt>
-<dd><p>Checks for some automated yaml processing (see Dropbox/Science/Analysis/)</p>
+<dd><p>Checks for some automated yaml processing</p>
 </dd></dl>
 
 <dl class="method">
@@ -927,13 +1031,10 @@ statscalcs.py)</p>
 a given tetrode with nFet number of features (for the PCA)</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>d</strong> (<em>dict</em>) – <p>Specifies the vector of features to be used in
-clustering. Each key is the identity of a tetrode (i.e. 1, 2 etc)</p>
-<blockquote>
-<div><p>and the values are the features used to do the clustering for that tetrode (i.e.</p>
-</div></blockquote>
-<p>’PC1’, ‘PC2’, ‘Amp’ (amplitude) etc</p>
-</p>
+<dd class="field-odd"><p><strong>d</strong> (<em>dict</em>) – Specifies the vector of features to be used in clustering.
+Each key is the identity of a tetrode (i.e. 1, 2 etc)
+and the values are the features used to do the clustering for that tetrode (i.e.
+‘PC1’, ‘PC2’, ‘Amp’ (amplitude) etc</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1033,22 +1134,19 @@ produced if this is None</p></li>
 <dt id="ephysiopy.dacq2py.dacq2py_util.Trial.plotFreqVSpeed">
 <code class="sig-name descname">plotFreqVSpeed</code><span class="sig-paren">(</span><em class="sig-param">minSp=5</em>, <em class="sig-param">maxSp=50</em>, <em class="sig-param">spStep=5</em>, <em class="sig-param">ax=None</em>, <em class="sig-param">laserFilter=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.plotFreqVSpeed" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plots running speed vs eeg frequencies and does linear regression. Also adds position sample histogram
-TODO: filter out negative frequencies - do this as default in EEG class
-:param minSp: speeds below this are ignored
-:type minSp: int
-:param maxSp: speeds above this are ignored
-:type maxSp: int
-:param spStep: the bin width for speed
-:type spStep: int
-:param ax: the axes in which to plot
-:type ax: matplotlib.axes
-:param laser: whether to filter for laser on/ off events</p>
-<blockquote>
-<div><p>None means no filtering at all
-1 means laser is on and data is filtered for on periods
-0 means filter for laser off periods</p>
-</div></blockquote>
+TODO: filter out negative frequencies - do this as default in EEG class</p>
 <dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>minSp</strong> (<em>int</em>) – speeds below this are ignored</p></li>
+<li><p><strong>maxSp</strong> (<em>int</em>) – speeds above this are ignored</p></li>
+<li><p><strong>spStep</strong> (<em>int</em>) – the bin width for speed</p></li>
+<li><p><strong>ax</strong> (<em>matplotlib.axes</em>) – the axes in which to plot</p></li>
+<li><p><strong>laser</strong> (<em>int</em><em> or </em><em>None</em>) – whether to filter for laser on/ off events
+None means no filtering at all; 1 means laser is on and data is filtered for on periods
+0 means filter for laser off periods</p></li>
+</ul>
+</dd>
 </dl>
 </dd></dl>
 
@@ -1072,42 +1170,36 @@ and the outlying bits (outside the mask area used to calculate gridness) in blac
 <dl class="method">
 <dt id="ephysiopy.dacq2py.dacq2py_util.Trial.plotMap">
 <code class="sig-name descname">plotMap</code><span class="sig-paren">(</span><em class="sig-param">tetrode</em>, <em class="sig-param">clusters</em>, <em class="sig-param">ax=None</em>, <em class="sig-param">var2bin='pos'</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.plotMap" title="Permalink to this definition">¶</a></dt>
-<dd><p>Plots a ratemap for a given tetrode and cluster
-Wrapper for _plotMap() so multiple clusters can be plotted</p>
+<dd><p>Plots a ratemap for a given tetrode and cluster</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>tetrode</strong> (<em>int</em>) – the tetrode you want to look at</p></li>
-<li><p><strong>cluster</strong> (<em>int</em><em>, </em><em>1xn array/ list</em>) – a single number or list (or 1xn array) of the clusters to plot</p></li>
-<li><p><strong>ax</strong> (<em>optional</em><em>, </em><em>defaults to None. Which axis to add the plot to; if None</em>) – then a new figure window is produced</p></li>
-<li><p><strong>**kwargs</strong> – <p>extra arguments include:
-‘bar’ - for use with directional data to produce a polar
-histogram plot
-‘add_peak_rate’ - bool
-adds the peak rate (to 2 decimal places) to the figure
-binsize : int, optional</p>
-<blockquote>
-<div><p>size of bins. Defaults to 3</p>
-</div></blockquote>
-<dl>
-<dt>smooth_sz<span class="classifier">the width of the smoothing kernel (see <a href="#id3"><span class="problematic" id="id4">**</span></a>kwargs for more)</span></dt><dd><p>var2bin: optional, defaults to ‘pos’. Which variable to bin.
-Can be either ‘pos’, ‘dir’ or ‘speed’. Works with masked
-arrays</p>
-</dd>
-<dt>smooth<span class="classifier">bool, optional. Defaults to true. Whether to smooth the data or</span></dt><dd><p>not</p>
-</dd>
-</dl>
-</p></li>
+<li><p><strong>tetrode</strong> (<em>int</em>) – The tetrode you want to look at</p></li>
+<li><p><strong>cluster</strong> (<em>int</em><em> or </em><em>array_like</em>) – The cluster(s) to plot</p></li>
+<li><p><strong>ax</strong> (<em>matplotlib.Axes</em><em>, </em><em>optional</em>) – Defaults to None. Which axis to add the plot to; if None then a new figure window is produced</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p><strong>ratemap</strong> – depending on whether a directional (1d) or positional (2d) map was
-asked for an ndarray is returned</p>
+<dt class="field-even">Keyword Arguments</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>'bar'</strong> (<em>boolean</em>) – For use with directional data to produce a polar histogram plot</p></li>
+<li><p><strong>'add_peak_rate'</strong> (<em>boolean</em>) – Adds the peak rate (to 2 decimal places) to the figure</p></li>
+<li><p><strong>binsize</strong> (<em>int</em><em>, </em><em>optional</em>) – size of bins. Defaults to 3.</p></li>
+<li><p><strong>smooth_sz</strong> (<em>the width of the smoothing kernel</em><em> (</em><em>see keyword args for more</em><em>)</em>) – var2bin: optional, defaults to ‘pos’. Which variable to bin.
+Can be either ‘pos’, ‘dir’ or ‘speed’. Works with masked arrays</p></li>
+<li><p><strong>smooth</strong> (<em>bool</em><em>, </em><em>optional</em>) – Defaults to True. Whether to smooth the data</p></li>
+</ul>
 </dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>numpy.ndarray</p>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>ratemap</strong> – Dimensionality depends on if a directional (1d) or positional (2d) map was requested</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>numpy.ndarray</p>
 </dd>
 </dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><code class="xref py py-meth docutils literal notranslate"><span class="pre">Wrapper()</span></code></p>
+</div>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">T</span> <span class="o">=</span> <span class="n">dacq2py_util</span><span class="o">.</span><span class="n">Trial</span><span class="p">(</span><span class="s1">&#39;M845_141003t1rh&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># Plot the ratemap for cluster 1 on tetrode 1</span>
@@ -1358,8 +1450,8 @@ the trial.STM field. If False this is ignored.</p></li>
 </dd></dl>
 
 <dl class="method">
-<dt id="ephysiopy.dacq2py.dacq2py_util.Trial.posFilter">
-<em class="property">property </em><code class="sig-name descname">posFilter</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.posFilter" title="Permalink to this definition">¶</a></dt>
+<dt>
+<em class="property">property </em><code class="sig-name descname">posFilter</code></dt>
 <dd><p>dict
 Keys are strings such as ‘speed’, ‘time’ etc. Values are n x 2 arrays of values <em>to keep</em></p>
 <dl class="field-list simple">
@@ -1381,14 +1473,14 @@ Keys are strings such as ‘speed’, ‘time’ etc. Values are n x 2 arrays of
 </dd></dl>
 
 <dl class="method">
-<dt id="ephysiopy.dacq2py.dacq2py_util.Trial.setheader">
-<em class="property">property </em><code class="sig-name descname">setheader</code><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial.setheader" title="Permalink to this definition">¶</a></dt>
+<dt>
+<em class="property">property </em><code class="sig-name descname">setheader</code></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p><strong>self.dict</strong> – Matches contents of .set file with keys and values all mapped as strings</p>
+<dd class="field-odd"><p><strong>dict</strong> – Matches contents of .set file with keys and values all mapped as strings</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p>dict</p>
+<dd class="field-even"><p>setheader</p>
 </dd>
 </dl>
 </dd></dl>

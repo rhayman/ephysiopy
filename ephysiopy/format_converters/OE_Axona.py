@@ -43,18 +43,18 @@ class OE2Axona(object):
 		self.tetrodes = ['1','2','3','4']
 
 	def resample(self, data, src_rate=30, dst_rate=50, axis=0):
-		'''
+		"""
 		Upsamples data using FFT
-		'''
+		"""
 		denom = np.gcd(dst_rate, src_rate)
 		new_data = signal.resample_poly(data, dst_rate/denom, src_rate/denom, axis)
 		return new_data
 
 	@property
 	def settings(self):
-		'''
+		"""
 		Loads the settings data from the settings.xml file
-		'''
+		"""
 		if self._settings is None:
 			self._settings = OESettings.Settings(self.dirname)
 		return self._settings
@@ -64,7 +64,7 @@ class OE2Axona(object):
 		self._settings = value
 
 	def getOEData(self, filename_root: str, recording_name='recording1')->dict:
-		'''
+		"""
 		Loads the nwb file names in filename_root and returns a dict containing some of the nwb data
 		relevant for converting to Axona file formats
 
@@ -72,7 +72,7 @@ class OE2Axona(object):
 		----------------
 		filename_root - fuly qualified name of the nwb file
 		recording_name - the name of the recording in the nwb file NB the default has changed in different versions of OE from 'recording0' to 'recording1'
-		'''
+		"""
 		if os.path.isfile(filename_root):
 			root_filename = os.path.splitext(self.experiment_name)[0]
 			OE_data = OEKiloPhy.OpenEphysNWB(self.dirname)
@@ -96,9 +96,9 @@ class OE2Axona(object):
 			return OE_data
 
 	def exportSetFile(self, **kwargs):
-		'''
+		"""
 		Wrapper for makeSetData below
-		'''
+		"""
 		print("Exporting set file data...")
 		self.makeSetData(kwargs)
 		print("Done exporting set file.")
@@ -166,7 +166,7 @@ class OE2Axona(object):
 		print("Completed exporting spiking data")
 
 	def exportLFP(self, channel: int, lfp_type: str, gain: int):
-		'''
+		"""
 		Export LFP data to file
 
 		Parameters
@@ -174,7 +174,7 @@ class OE2Axona(object):
 		channel - int
 		lfp_type - str. Legal values are 'egf' or 'eeg'
 		gain - int. Multiplier for the lfp data
-		'''
+		"""
 		print("Beginning conversion and exporting of LFP data...")
 		if self.settings.fpga_nodeId is None:
 			self.settings.parse()
@@ -187,13 +187,13 @@ class OE2Axona(object):
 		print("Completed exporting LFP data to " + lfp_type + " format")
 
 	def convertPosData(self, xy: np.array, xy_ts: np.array) -> np.array:
-		'''
+		"""
 		Perform the conversion of the array parts of the data
 		NB As well as upsampling the data to the Axona pos sampling rate (50Hz)
 		we have to insert some columns into the pos array as Axona format expects it like:
 		pos_format: t,x1,y1,x2,y2,numpix1,numpix2
 		We can make up some of the info and ignore other bits
-		'''
+		"""
 		n_new_pts = int(np.floor((self.last_pos_ts-self.first_pos_ts) * 50))
 		t = xy_ts - self.first_pos_ts
 		new_ts = np.linspace(t[0], t[-1], n_new_pts)
@@ -213,14 +213,14 @@ class OE2Axona(object):
 		return new_data
 
 	def convertSpikeData(self, hdf5_tetrode_data: h5py._hl.group.Group):
-		'''
+		"""
 		Does the spike conversion from OE Spike Sorter format to Axona format tetrode files
 
 		Parameters
 		-----------
 		hdf5_tetrode_data - h5py._hl.group.Group - this kind of looks like a dictionary and can, it seems,
 								be treated as one more or less (see http://docs.h5py.org/en/stable/high/group.html).
-		'''
+		"""
 		# First lets get the datatype for tetrode files as this will be the same for all tetrodes...
 		dt = self.AxonaData.axona_files['.1']
 		# ... and a basic header for the tetrode file that use for each tetrode file, changing only the num_spikes value
@@ -274,7 +274,7 @@ class OE2Axona(object):
 			self.writeTetrodeData(i_tetnum, header, new_tetrode_data)
 
 	def makeLFPData(self, hdf5_continuous_data: np.array, eeg_type='eeg', gain=5000):
-		'''
+		"""
 		Downsamples the data in hdf5_continuous_data and saves the result
 		as either an egf or eeg file depending on the choice of either eeg_type which can
 		take a value of either 'egf' or 'eeg'
@@ -283,7 +283,7 @@ class OE2Axona(object):
 		Parameters
 		----------
 		hdf5_continuous_data - np.array with dtype as np.int16
-		'''
+		"""
 		if eeg_type == 'eeg':
 			dt = self.AxonaData.axona_files['.eeg']
 			header = self.AxonaData.getEmptyHeader("eeg")

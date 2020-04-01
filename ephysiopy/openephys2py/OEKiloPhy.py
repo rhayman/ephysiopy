@@ -408,7 +408,7 @@ class OpenEphysNPX(OpenEphysBase):
 		self.path2LFPdata = None
 
 	def load(self, pname_root=None, experiment_name='experiment1', recording_name='recording1'):
-		'''
+		"""
 		Loads data recorded in the OE 'flat' binary format
 		See https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/166789121/Flat+binary+format for more
 
@@ -417,7 +417,7 @@ class OpenEphysNPX(OpenEphysBase):
 		pname_root - str - the top level directory, typically in form of YYYY-MM-DD_HH-MM-SS
 
 		recording_name - str - pretty obvious but this is also the directory immediately beneath pname_root
-		'''
+		"""
 		self.isBinary = True
 		import os
 		import re
@@ -768,13 +768,13 @@ class SpkTimeCorrelogram(object):
 			yield cluster
 
 class SpkWaveform(object):
-	'''
+	"""
 
-	'''
+	"""
 	def __init__(self, clusters, spk_times, spk_clusters, amplitudes, raw_data):
-		'''
+		"""
 		spk_times in samples
-		'''
+		"""
 		self.clusters = clusters
 		self.spk_times = spk_times
 		self.spk_clusters = spk_clusters

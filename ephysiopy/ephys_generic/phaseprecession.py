@@ -3,10 +3,10 @@ Mostly a total rip-off of code written by Ali Jeewajee for his paper on
 2D phase precession in place and grid cells [1]_
 
 .. [1] Jeewajee A, Barry C, Douchamps V, Manson D, Lever C, Burgess N. Theta phase
-precession of grid and place cell firing in open environments. Philos Trans R Soc
-Lond B Biol Sci. 2013 Dec 23;369(1635):20120532. doi: 10.1098/rstb.2012.0532.
-
+	precession of grid and place cell firing in open environments. Philos Trans R Soc
+	Lond B Biol Sci. 2013 Dec 23;369(1635):20120532. doi: 10.1098/rstb.2012.0532.
 """
+
 import numpy as np
 import skimage
 from scipy import ndimage, signal, stats, optimize
@@ -18,10 +18,52 @@ from ephysiopy.dacq2py import dacq2py_util
 from sklearn.utils import resample
 
 class phasePrecession():
+	"""Performs phase precession analysis for single unit data
+	
+	Parameters
+	----------
+	filename_root : str
+		The absolute filename with no suffix
+	psr : float, optional
+		The sample rate for position data. Default 50.0
+	esr : float, optional
+		The sample rate for eeg data. Default 250.0
+	binsizes : array_like, optional
+		The binsizes for the rate maps. Default numpy.array([0.5,0.5])
+	smthKernLen : int, optional
+		Kernel length for gaussian field smoothing. Default 50
+	smthKernSig : int, optional
+		Kernel sigma for gaussian field smoothing. Default 5
+	fieldThresh : float, optional
+		Fractional limit of field peak rate to restrict field size. Default 0.35
+	areaThresh : float, optional
+		Fractional limit for reducing fields at environment edge. Default numpy.nan
+	binsPerCm : int, optional
+		The number of bins per cm. Default 2
+	allowedminSpkPhase : float, optional
+		Defines the start / end of theta cycles. Default numpy.pi
+	mnPowPrctThresh : int, optional
+		Percentile power below which theta cycles are rejected. Default 0
+	allowedThetaLen : array_like, optional
+		Bandwidth of theta in bins. Default [20,42]
+	spdSmoothWindow : int, optional
+		Kernel length for boxcar smoothing of speed. Default 15
+	runMinSpd : float, optional
+		Minimum allowed running speed in cm/s. Default 2.5
+	runMinDuration : int, optional
+		Minimum allowed run duration in seconds. Default 2
+	runSmoothWindowFrac : float, optional
+		Instantaneous firing rate smoothing constant. Default 1/3
+	spatialLPCutOff : int, optional
+		Spatial low-pass cutoff frequency. Default 3
+	ifr_kernelLen : int, optional
+		Instantaneous firing rate smoothing kernel length. Default 1
+	ifr_kernelSig : float, optional	
+		Instantaneous firing rate smoothing kernel sigma. Default 0.5
+	binsPerSec : int, optional
+		Bins per second for instantaneous firing rate smoothing. Default 50
 	"""
-	NB : MAKE SURE TO SEND 'CM' TO THE POS CONSTRUCTOR SO POS XY VALS ARE
-	RETURNED IN CM NOT PIXELS
-	"""
+
 	def __init__(self, filename_root, psr=50.0, esr=250.0, binsizes=np.array([0.5, 0.5]),
 				 smthKernLen=50, smthKernSig=5, fieldThresh=0.35,
 				 areaThresh=np.nan, binsPerCm=2,
@@ -103,31 +145,33 @@ class phasePrecession():
 		regressD = self._ppRegress(spkD, plot=True)
 
 	def partitionFields(self, tetrode, cluster, ftype='g', plot=False, **kwargs):
-		'''
+		"""
 		Partitions fileds.
+
 		Partitions spikes into fields by finding the watersheds around the
 		peaks of a super-smoothed ratemap
+
 		Parameters
-			psr - the pos sampling rate (defaults to 50.0Hz)
-			dacq2py.Tetrode.getClustTS() will have to be divided by 96000)
-			ftype - 'p' or 'g' denoting place or grid cells - not implemented
-			binsizes - the binsize in cm
-			smthKernLen - the size of the kernel to smooth the data with (in cm)
-			smthKernSig - the sigma of the kernel if using 'gaussian'
-			fieldThresh - the fraction to threshold the field (float >0 <=1)
-			areaThresh - size in cm of the small fields to remove
-			binsPerCm - the number of bins per cm
-			plot - boolean. Whether to produce a debugging plot or not
+		----------
+		tetrode, cluster : int
+			The tetrode / cluster to examine
+		ftype : str
+			'p' or 'g' denoting place or grid cells - not implemented yet
+		plot : boolean
+			Whether to produce a debugging plot or not
 
-			Valid keyword arguments include:
-				TODO
-		Outputs:
-			peaksXY - the xy coordinates of the peak rates in each field
-			peaksRate - the peak rates in peaksXY
-			labels - an array of the labels corresponding to each field (starts
-			at 1)
+		Returns
+		-------
+		peaksXY : array_like
+			The xy coordinates of the peak rates in each field
+		peaksRate : array_like
+			The peak rates in peaksXY
+		labels : numpy.ndarray
+			An array of the labels corresponding to each field (indices start at 1)
+		rmap : numpy.ndarray
+			The ratemap of the tetrode / cluster
+		"""
 
-		'''
 		if np.logical_or(tetrode != self.tetrode, cluster != self.cluster):
 			spikeTS = self.Trial.TETRODE[tetrode].getClustTS(cluster) / 96000.
 			self.spikeTS = spikeTS
@@ -153,7 +197,7 @@ class phasePrecession():
 		# get the number of spikes in each field - NB this is done against a
 		# flattened array so we need to figure out which count corresponds to
 		# which particular field id using np.unique
-		fieldId, firstIdx = np.unique(labels, return_index=True)
+		fieldId, _ = np.unique(labels, return_index=True)
 		fieldId = fieldId[1::]
 		# TODO: come back to this as may need to know field id ordering
 		peakCoords = np.array(ndimage.measurements.maximum_position(rmap, labels=labels, index=fieldId)).astype(int)
@@ -214,32 +258,27 @@ class phasePrecession():
 
 	def getPosProps(self, tetrode, cluster, labels, peaksXY,
 					laserEvents=None, plot=False, **kwargs):
-		'''
+		"""
 		Uses the output of partitionFields and returns vectors the same
 		length as pos.
-		Parameters:
-			xy, xydir, spd - obvious spatial variables as numpy arrays
-			rmap - the smootheed, binned ratemap
-			spikeTS - the spike timestamps in seconds
-			labels - a labelled ratemap (integer id for each field; 0 = background)
-			peaksXY - x-y coords of the peaks in the ratemap
-			laserEvents - position indices of on events (laser on)
 
-		Output:
-			fieldLabel - the field label for each pos sample (0 outside)
-			runLabel - the run label for each pos (0 outside)
-			r - distance from pos to centre / distance from perim to centre
-			phi - the difference between the pos's angle to the peak and the
-					runs mean direction (nan outisde)
-			NB: both r and phi are smoothed in cartesian space
-			xy - r and phi in cartesian coords
-			xyDir - direction of travel according to xy coords
-			d_meanDir - r projected onto the runs mean direction
-			d_currentDir - r projected on the runs current direction
-			xy_old - the original xy values
-			dir_old - the original dir values
+		Parameters
+		----------
+		tetrode, cluster : int
+			The tetrode / cluster to examine
+		peaksXY : array_like
+			The x-y coords of the peaks in the ratemap
+		laserEvents : array_like
+			The position indices of on events (laser on)
 
-		'''
+		Returns
+		-------
+		pos_dict, run_dict : dict
+			Contains a whole bunch of information for the whole trial (pos_dict) and
+			also on a run-by-run basis (run_dict). See the end of this function for all
+			the key / value pairs.
+		"""
+
 		if self.spikeTS is None:
 			spikeTS = self.Trial.TETRODE[tetrode].getClustTS(cluster) / 96000.
 			self.spikeTS = spikeTS
@@ -720,16 +759,15 @@ class phasePrecession():
 				'rho_boot': rho_boot, 'p_shuff': p_shuff, 'ci': ci}
 
 	def thetaMod(self, eeg, spikeTS=None, pos2use=None, **kwargs):
-
-		'''
+		"""
 		Calculates theta modulation properties of cells and EEG
-		'''
+		"""
 		pass
 
 	def _getClusterXPos(self, tetrode, cluster):
-		'''
+		"""
 		Returns the x pos of a given cluster taking account of any masking
-		'''
+		"""
 		idx = self.Trial.TETRODE[tetrode].getClustIdx(cluster)
 		x = self.Trial.POS.xy[0, idx]
 		return x
@@ -771,13 +809,13 @@ class phasePrecession():
 		return x, y
 
 	def _applyFilter2Labels(self, M, x):
-		'''
+		"""
 		M is a logical mask specifying which label numbers to keep
 		x is an array of positive integer labels
 
 		This method sets the undesired labels to 0 and renumbers the remaining
 		labels 1 to n when n is the number of trues in M
-		'''
+		"""
 		newVals = M * np.cumsum(M)
 		x[x>0] = newVals[x[x>0]-1]
 		return x
@@ -820,10 +858,10 @@ class phasePrecession():
 
 
 	def _toBinUnits(self, nd_data, nd_data_ranges, binsizes, **kwargs):
-		'''
+		"""
 		data should be in cms (nd_data) so raw data should be divided by ppm
 		and multiplied by 100 to get into cm
-		'''
+		"""
 		ndims, npoints = np.shape(nd_data)
 		if np.logical_or(np.logical_or(nd_data_ranges.shape[0] > 2,
 									   nd_data_ranges.shape[0] < 1),
@@ -876,9 +914,9 @@ class phasePrecession():
 
 	@staticmethod
 	def _ccc(t, p):
-		'''
+		"""
 		Calculates correlation between two random circular variables
-		'''
+		"""
 		n = len(t)
 		A = np.sum(np.cos(t) * np.cos(p), dtype=np.float)
 		B = np.sum(np.sin(t) * np.sin(p), dtype=np.float)
@@ -894,9 +932,9 @@ class phasePrecession():
 
 	@staticmethod
 	def _ccc_jack(t, p):
-		'''
+		"""
 		Function used to calculate jackknife estimates of correlation
-		'''
+		"""
 		n = len(t) - 1
 		A = np.cos(t) * np.cos(p)
 		A = np.sum(A, dtype=np.float) - A
@@ -919,7 +957,7 @@ class phasePrecession():
 		return rho
 
 	def _circCircCorrTLinear(self, theta, phi, k=1000, alpha=0.05, hyp=0, conf=True):
-		'''
+		"""
 		====
 		circCircCorrTLinear
 		====
@@ -959,7 +997,7 @@ class phasePrecession():
 		---------
 		$6.3.3 Fisher (1993), Statistical Analysis of Circular Data,
 				   Cambridge University Press, ISBN: 0 521 56890 0
-		'''
+		"""
 		theta = theta.ravel()
 		phi = phi.ravel()
 
@@ -1005,9 +1043,9 @@ class phasePrecession():
 
 	@staticmethod
 	def _shuffledPVal(theta, phi, rho, k, hyp):
-		'''
+		"""
 		Calculates shuffled p-values for correlation
-		'''
+		"""
 		n = len(theta)
 		idx = np.zeros((n, k))
 		for i in range(k):
@@ -1039,13 +1077,13 @@ class phasePrecession():
 
 
 	def _circRegress(self, x, t):
-		'''
+		"""
 		Function to find approximation to circular-linear regression for phase
 		precession.
 		x - n-by-1 list of in-field positions (linear variable)
 		t - n-by-1 list of phases, in degrees (converted to radians internally)
 		neither can contain NaNs, must be paired (of equal length).
-		'''
+		"""
 		# transform the linear co-variate to the range -1 to 1
 		mnx = np.mean(x, dtype=np.float)
 		xn = x - mnx

@@ -318,11 +318,11 @@ class EEGCalcs(EEGIO):
 		return PDIFF
 		
 	def ifftFilter(self, sig, freqs, fs=250):
-		'''
+		"""
 		Calculates the dft of signal and filters out the frequencies in
 		freqs from the result and reconstructs the original signal using 
 		the inverse fft without those frequencies
-		'''
+		"""
 		from scipy import signal
 		origLen = len(sig)
 		nyq = fs / 2.0
@@ -344,11 +344,11 @@ class EEGCalcs(EEGIO):
 		
 
 	def filterForLaser(self, E=None, width=0.125, dip=15.0, stimFreq=6.66):
-		'''
+		"""
 		In some of the optogenetic experiments I ran the frequency of laser
 		stimulation was at 6.66Hz - this method attempts to filter those
 		frequencies out
-		'''
+		"""
 		from scipy.signal import kaiserord, firwin, filtfilt        
 		nyq = self.sample_rate / 2.
 		width = width / nyq
@@ -633,7 +633,7 @@ class EEGCalcs(EEGIO):
 		return out_dict
 
 	def _nextpow2(self, val):
-		'''calculates the next power of 2 that will hold val'''
+		"""calculates the next power of 2 that will hold val"""
 		val = val - 1
 		val = (val >> 1) | val
 		val = (val >> 2) | val
