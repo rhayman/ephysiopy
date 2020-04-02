@@ -2,7 +2,7 @@ import setuptools
 import os
 from ephysiopy import __version__
 
-with open(os.path.join(os.getcwd(), "ephysiopy", "README.md"), "r") as fh:
+with open(os.path.join(os.getcwd(), "readme.rst"), "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
@@ -12,7 +12,7 @@ setuptools.setup(
     author_email="robin.hayman@gmail.com",
     description="Analysis of electrophysiology data",
     long_description=long_description,
-    long_description_content_type="text/markdown",
+    long_description_content_type="text/x-rst",
     url="https://github.com/rhayman/ephysiopy",
     packages=setuptools.find_packages(),
     include_package_data=True,

@@ -24,7 +24,7 @@ copyright = '2020, Robin Hayman'
 author = 'Robin Hayman'
 
 # The full version, including alpha/beta/rc tags
-release = '1.5.58'
+release = '1.5.75'
 
 
 # -- General configuration ---------------------------------------------------
