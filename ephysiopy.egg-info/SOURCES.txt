@@ -1,4 +1,9 @@
+LICENSE
+MANIFEST.in
+README.rst
+setup.cfg
 setup.py
+ephysiopy/__about__.py
 ephysiopy/__init__.py
 ephysiopy.egg-info/PKG-INFO
 ephysiopy.egg-info/SOURCES.txt
