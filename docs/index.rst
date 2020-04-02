@@ -3,11 +3,11 @@ Welcome to ephysiopy's documentation!
 
 Release v\ |version|
 
+.. include:: ../README.rst
+
 .. toctree::
    :maxdepth: 3
    :caption: Contents:
-
-.. include:: ../README.rst
 
    ephysiopy
 
