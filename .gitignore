@@ -15,6 +15,7 @@ __pycache__/*
 
 # Other folders
 .vscode/*
+*.code-workspace
 
 # Python PyPi folders / files
 dist/
