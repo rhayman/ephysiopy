@@ -5,10 +5,12 @@ Welcome to ephysiopy's documentation!
    :members:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
    source/readme
+   
+   source/ephysiopy
 
 Indices and tables
 ==================

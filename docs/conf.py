@@ -24,7 +24,7 @@ copyright = '2020, Robin Hayman'
 author = 'Robin Hayman'
 
 # The full version, including alpha/beta/rc tags
-release = '1.5.75'
+release = '1.5.77'
 
 
 # -- General configuration ---------------------------------------------------
@@ -44,8 +44,7 @@ napoleon_google_docstring = False
 
 # The file extensions for source files
 source_suffix = {
-    '.rst' : 'restructuredtext',
-    '.md' : 'markdown'}
+    '.rst' : 'restructuredtext'}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
