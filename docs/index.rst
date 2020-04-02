@@ -7,7 +7,7 @@ Release v\ |version|
    :maxdepth: 3
    :caption: Contents:
 
-.. include:: ../README
+.. include:: ../README.rst
 
    ephysiopy
 
