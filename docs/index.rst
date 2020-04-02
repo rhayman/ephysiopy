@@ -1,16 +1,15 @@
 Welcome to ephysiopy's documentation!
 =====================================
 
-.. automodule:: ephysiopy
-   :members:
+Release v\ |version|
 
 .. toctree::
    :maxdepth: 3
    :caption: Contents:
 
-   source/readme
-   
-   source/ephysiopy
+   ../readme
+
+   ephysiopy
 
 Indices and tables
 ==================
