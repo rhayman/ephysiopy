@@ -2,7 +2,7 @@ import setuptools
 import os
 from ephysiopy import __about__
 
-with open(os.path.join("readme.rst"), "r") as fh:
+with open("README.rst", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
