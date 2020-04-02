@@ -1,14 +1,14 @@
 import setuptools
 import os
-from ephysiopy import __version__
+from ephysiopy import __about__
 
 with open(os.path.join("readme.rst"), "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="ephysiopy",
-    version=__version__,
-    author="Robin Hayman",
+    name=__about__.__project__,
+    version=__about__.__version__,
+    author=__about__.__author__,
     author_email="robin.hayman@gmail.com",
     description="Analysis of electrophysiology data",
     long_description=long_description,
