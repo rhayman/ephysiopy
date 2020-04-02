@@ -186,7 +186,7 @@
 recording data.</p>
 <dl class="class">
 <dt id="ephysiopy.dacq2py.axonaIO.EEG">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.dacq2py.axonaIO.</code><code class="sig-name descname">EEG</code><span class="sig-paren">(</span><em class="sig-param">filename_root</em>, <em class="sig-param">eeg_file=1</em>, <em class="sig-param">egf=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.axonaIO.EEG" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">EEG</code><span class="sig-paren">(</span><em class="sig-param">filename_root</em>, <em class="sig-param">eeg_file=1</em>, <em class="sig-param">egf=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.axonaIO.EEG" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#ephysiopy.dacq2py.axonaIO.IO" title="ephysiopy.dacq2py.axonaIO.IO"><code class="xref py py-class docutils literal notranslate"><span class="pre">ephysiopy.dacq2py.axonaIO.IO</span></code></a></p>
 <p>Processes eeg data collected with the Axona recording system</p>
 <dl class="field-list simple">
@@ -249,7 +249,7 @@ frequency (6-12Hz)</p>
 
 <dl class="class">
 <dt id="ephysiopy.dacq2py.axonaIO.IO">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.dacq2py.axonaIO.</code><code class="sig-name descname">IO</code><span class="sig-paren">(</span><em class="sig-param">filename_root=''</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.axonaIO.IO" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">IO</code><span class="sig-paren">(</span><em class="sig-param">filename_root=''</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.axonaIO.IO" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Axona data I/O. Also reads .clu files generated from KlustaKwik</p>
 <dl class="field-list simple">
@@ -399,7 +399,7 @@ the end (e.g. “.set”, “.pos” or whatever)</p></li>
 
 <dl class="class">
 <dt id="ephysiopy.dacq2py.axonaIO.Pos">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.dacq2py.axonaIO.</code><code class="sig-name descname">Pos</code><span class="sig-paren">(</span><em class="sig-param">filename_root</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.axonaIO.Pos" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">Pos</code><span class="sig-paren">(</span><em class="sig-param">filename_root</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.axonaIO.Pos" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#ephysiopy.dacq2py.axonaIO.IO" title="ephysiopy.dacq2py.axonaIO.IO"><code class="xref py py-class docutils literal notranslate"><span class="pre">ephysiopy.dacq2py.axonaIO.IO</span></code></a></p>
 <p>Processs position data recorded with the Axona recording system</p>
 <dl class="field-list simple">
@@ -511,7 +511,7 @@ led swaps, impossibly fast points etc</p>
 
 <dl class="class">
 <dt id="ephysiopy.dacq2py.axonaIO.Stim">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.dacq2py.axonaIO.</code><code class="sig-name descname">Stim</code><span class="sig-paren">(</span><em class="sig-param">filename_root</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.axonaIO.Stim" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">Stim</code><span class="sig-paren">(</span><em class="sig-param">filename_root</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.axonaIO.Stim" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>, <a class="reference internal" href="#ephysiopy.dacq2py.axonaIO.IO" title="ephysiopy.dacq2py.axonaIO.IO"><code class="xref py py-class docutils literal notranslate"><span class="pre">ephysiopy.dacq2py.axonaIO.IO</span></code></a></p>
 <p>Processes the stimulation data recorded using Axona</p>
 <dl class="field-list simple">
@@ -555,7 +555,7 @@ In either case, this is followed by: for k in F:  D[k] = F[k]</p>
 
 <dl class="class">
 <dt id="ephysiopy.dacq2py.axonaIO.Tetrode">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.dacq2py.axonaIO.</code><code class="sig-name descname">Tetrode</code><span class="sig-paren">(</span><em class="sig-param">filename_root</em>, <em class="sig-param">tetrode</em>, <em class="sig-param">volts=True</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.axonaIO.Tetrode" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">Tetrode</code><span class="sig-paren">(</span><em class="sig-param">filename_root</em>, <em class="sig-param">tetrode</em>, <em class="sig-param">volts=True</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.axonaIO.Tetrode" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#ephysiopy.dacq2py.axonaIO.IO" title="ephysiopy.dacq2py.axonaIO.IO"><code class="xref py py-class docutils literal notranslate"><span class="pre">ephysiopy.dacq2py.axonaIO.IO</span></code></a>, <a class="reference internal" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs" title="ephysiopy.dacq2py.spikecalcs.SpikeCalcs"><code class="xref py py-class docutils literal notranslate"><span class="pre">ephysiopy.dacq2py.spikecalcs.SpikeCalcs</span></code></a></p>
 <p>Processes tetrode files recorded with the Axona recording system</p>
 <p>Mostly this class deals with interpolating tetrode and position timestamps
@@ -651,7 +651,7 @@ is returned i.e. getSpkTS() is called</p>
 recording system</p>
 <dl class="class">
 <dt id="ephysiopy.dacq2py.cluster.Kluster">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.dacq2py.cluster.</code><code class="sig-name descname">Kluster</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">tet_num</em>, <em class="sig-param">feature_array</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.cluster.Kluster" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">Kluster</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">tet_num</em>, <em class="sig-param">feature_array</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.cluster.Kluster" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Runs KlustaKwik (KK) against data recorded on the Axona dacqUSB recording
 system</p>
@@ -713,7 +713,7 @@ denotes masked, and values between 0 and 1 indicate partial masking”</p>
 <span id="ephysiopy-dacq2py-dacq2py-util-module"></span><h2>ephysiopy.dacq2py.dacq2py_util module<a class="headerlink" href="#module-ephysiopy.dacq2py.dacq2py_util" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="ephysiopy.dacq2py.dacq2py_util.Trial">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.dacq2py.dacq2py_util.</code><code class="sig-name descname">Trial</code><span class="sig-paren">(</span><em class="sig-param">filename_root</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">Trial</code><span class="sig-paren">(</span><em class="sig-param">filename_root</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.dacq2py_util.Trial" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#ephysiopy.dacq2py.axonaIO.IO" title="ephysiopy.dacq2py.axonaIO.IO"><code class="xref py py-class docutils literal notranslate"><span class="pre">ephysiopy.dacq2py.axonaIO.IO</span></code></a>, <a class="reference internal" href="ephysiopy.ephys_generic.html#ephysiopy.ephys_generic.gridcell.SAC" title="ephysiopy.ephys_generic.gridcell.SAC"><code class="xref py py-class docutils literal notranslate"><span class="pre">ephysiopy.ephys_generic.gridcell.SAC</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></p>
 <p>Provides methods to plot electrophysiology data acquired using the Axona DACQ recording system
 and methods to extract some measures from that data</p>
@@ -1655,7 +1655,7 @@ n_segments is the number of one second segments per trial</p>
 in the ephys_generic.ephys_generic.SpikeCalcsGeneric class</p>
 <dl class="class">
 <dt id="ephysiopy.dacq2py.spikecalcs.SpikeCalcs">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.dacq2py.spikecalcs.</code><code class="sig-name descname">SpikeCalcs</code><a class="headerlink" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">SpikeCalcs</code><a class="headerlink" href="#ephysiopy.dacq2py.spikecalcs.SpikeCalcs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Mix-in class for use with Tetrode class below.</p>
 <p>Extends Tetrodes functionality by adding methods for analysis of spikes/
@@ -1874,7 +1874,7 @@ their sum (data is binned into 5ms bins)</p>
 <span id="ephysiopy-dacq2py-tetrode-dict-module"></span><h2>ephysiopy.dacq2py.tetrode_dict module<a class="headerlink" href="#module-ephysiopy.dacq2py.tetrode_dict" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="ephysiopy.dacq2py.tetrode_dict.TetrodeDict">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.dacq2py.tetrode_dict.</code><code class="sig-name descname">TetrodeDict</code><span class="sig-paren">(</span><em class="sig-param">filename_root</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.tetrode_dict.TetrodeDict" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">TetrodeDict</code><span class="sig-paren">(</span><em class="sig-param">filename_root</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.dacq2py.tetrode_dict.TetrodeDict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></p>
 <dl class="method">
 <dt id="ephysiopy.dacq2py.tetrode_dict.TetrodeDict.update">

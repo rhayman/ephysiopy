@@ -185,7 +185,7 @@
 <span id="ephysiopy-ephys-generic-binning-module"></span><h2>ephysiopy.ephys_generic.binning module<a class="headerlink" href="#module-ephysiopy.ephys_generic.binning" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="ephysiopy.ephys_generic.binning.RateMap">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.ephys_generic.binning.</code><code class="sig-name descname">RateMap</code><span class="sig-paren">(</span><em class="sig-param">xy=None</em>, <em class="sig-param">hdir=None</em>, <em class="sig-param">speed=None</em>, <em class="sig-param">pos_weights=None</em>, <em class="sig-param">ppm=430</em>, <em class="sig-param">xyInCms=False</em>, <em class="sig-param">cmsPerBin=3</em>, <em class="sig-param">smooth_sz=5</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.binning.RateMap" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">RateMap</code><span class="sig-paren">(</span><em class="sig-param">xy=None</em>, <em class="sig-param">hdir=None</em>, <em class="sig-param">speed=None</em>, <em class="sig-param">pos_weights=None</em>, <em class="sig-param">ppm=430</em>, <em class="sig-param">xyInCms=False</em>, <em class="sig-param">cmsPerBin=3</em>, <em class="sig-param">smooth_sz=5</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.binning.RateMap" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Bins up positional data (xy, head direction etc) and produces rate maps
 of the relevant kind. This is a generic class meant to be independent of
@@ -316,7 +316,7 @@ by</p>
 <p>LFP-type analysis limmited at the moment to Axona file formats I think</p>
 <dl class="class">
 <dt id="ephysiopy.ephys_generic.eegcalcs.EEGCalcs">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.ephys_generic.eegcalcs.</code><code class="sig-name descname">EEGCalcs</code><span class="sig-paren">(</span><em class="sig-param">fname, eegType='eeg', thetaRange=[7, 11], pad2pow=nan, smthKernelWidth=2, smthKernelSigma=0.1875, sn2Width=2, maxFreq=125, ymax=None, xmax=25</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.eegcalcs.EEGCalcs" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">EEGCalcs</code><span class="sig-paren">(</span><em class="sig-param">fname, eegType='eeg', thetaRange=[7, 11], pad2pow=nan, smthKernelWidth=2, smthKernelSigma=0.1875, sn2Width=2, maxFreq=125, ymax=None, xmax=25</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.eegcalcs.EEGCalcs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="ephysiopy.dacq2py.html#ephysiopy.dacq2py.axonaIO.EEG" title="ephysiopy.dacq2py.axonaIO.EEG"><code class="xref py py-class docutils literal notranslate"><span class="pre">ephysiopy.dacq2py.axonaIO.EEG</span></code></a></p>
 <p>Has some useful methods in particularly to do with theta-gamma phase coupling</p>
 <dl class="method">
@@ -434,7 +434,7 @@ and encapsulate some generic mechanisms for producing things like spike timing
 autocorrelograms, power spectrum calculation and so on</p>
 <dl class="class">
 <dt id="ephysiopy.ephys_generic.ephys_generic.EEGCalcsGeneric">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.ephys_generic.ephys_generic.</code><code class="sig-name descname">EEGCalcsGeneric</code><span class="sig-paren">(</span><em class="sig-param">sig</em>, <em class="sig-param">fs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.ephys_generic.EEGCalcsGeneric" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">EEGCalcsGeneric</code><span class="sig-paren">(</span><em class="sig-param">sig</em>, <em class="sig-param">fs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.ephys_generic.EEGCalcsGeneric" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Generic class for processing and analysis of EEG data</p>
 <dl class="field-list simple">
@@ -523,7 +523,7 @@ Defaults to the previous 50ms and the subsequent 100ms</p></li>
 
 <dl class="class">
 <dt id="ephysiopy.ephys_generic.ephys_generic.FieldCalcs">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.ephys_generic.ephys_generic.</code><code class="sig-name descname">FieldCalcs</code><a class="headerlink" href="#ephysiopy.ephys_generic.ephys_generic.FieldCalcs" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">FieldCalcs</code><a class="headerlink" href="#ephysiopy.ephys_generic.ephys_generic.FieldCalcs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>This class differs from MapCalcsGeneric in that this one is mostly concerned with
 treating rate maps as images as opposed to using the spiking information contained
@@ -747,7 +747,7 @@ around any local peak</p>
 
 <dl class="class">
 <dt id="ephysiopy.ephys_generic.ephys_generic.MapCalcsGeneric">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.ephys_generic.ephys_generic.</code><code class="sig-name descname">MapCalcsGeneric</code><span class="sig-paren">(</span><em class="sig-param">xy</em>, <em class="sig-param">hdir</em>, <em class="sig-param">speed</em>, <em class="sig-param">pos_ts</em>, <em class="sig-param">spk_ts</em>, <em class="sig-param">plot_type='map'</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.ephys_generic.MapCalcsGeneric" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">MapCalcsGeneric</code><span class="sig-paren">(</span><em class="sig-param">xy</em>, <em class="sig-param">hdir</em>, <em class="sig-param">speed</em>, <em class="sig-param">pos_ts</em>, <em class="sig-param">spk_ts</em>, <em class="sig-param">plot_type='map'</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.ephys_generic.MapCalcsGeneric" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Produces graphical output including but not limited to spatial
 analysis of data.</p>
@@ -829,7 +829,7 @@ to plot are given in self.plot_type and the list of clusters in self.good_cluste
 
 <dl class="class">
 <dt id="ephysiopy.ephys_generic.ephys_generic.PosCalcsGeneric">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.ephys_generic.ephys_generic.</code><code class="sig-name descname">PosCalcsGeneric</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em>, <em class="sig-param">ppm</em>, <em class="sig-param">cm=True</em>, <em class="sig-param">jumpmax=100</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.ephys_generic.PosCalcsGeneric" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">PosCalcsGeneric</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em>, <em class="sig-param">ppm</em>, <em class="sig-param">cm=True</em>, <em class="sig-param">jumpmax=100</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.ephys_generic.PosCalcsGeneric" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Generic class for post-processing of position data
 Uses numpys masked arrays for dealing with bad positions, filtering etc</p>
@@ -953,7 +953,7 @@ into Axona format 50Hz data</p>
 
 <dl class="class">
 <dt id="ephysiopy.ephys_generic.ephys_generic.SpikeCalcsGeneric">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.ephys_generic.ephys_generic.</code><code class="sig-name descname">SpikeCalcsGeneric</code><span class="sig-paren">(</span><em class="sig-param">spike_times</em>, <em class="sig-param">waveforms=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.ephys_generic.SpikeCalcsGeneric" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">SpikeCalcsGeneric</code><span class="sig-paren">(</span><em class="sig-param">spike_times</em>, <em class="sig-param">waveforms=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.ephys_generic.SpikeCalcsGeneric" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Deals with the processing and analysis of spike timing data.</p>
 <dl class="field-list simple">
@@ -1105,14 +1105,14 @@ of times defined Trange</p>
 
 <dl class="class">
 <dt id="ephysiopy.ephys_generic.ephys_generic.SpikeCalcsProbe">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.ephys_generic.ephys_generic.</code><code class="sig-name descname">SpikeCalcsProbe</code><a class="headerlink" href="#ephysiopy.ephys_generic.ephys_generic.SpikeCalcsProbe" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">SpikeCalcsProbe</code><a class="headerlink" href="#ephysiopy.ephys_generic.ephys_generic.SpikeCalcsProbe" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#ephysiopy.ephys_generic.ephys_generic.SpikeCalcsGeneric" title="ephysiopy.ephys_generic.ephys_generic.SpikeCalcsGeneric"><code class="xref py py-class docutils literal notranslate"><span class="pre">ephysiopy.ephys_generic.ephys_generic.SpikeCalcsGeneric</span></code></a></p>
 <p>Encapsulates methods specific to probe-based recordings</p>
 </dd></dl>
 
 <dl class="class">
 <dt id="ephysiopy.ephys_generic.ephys_generic.SpikeCalcsTetrode">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.ephys_generic.ephys_generic.</code><code class="sig-name descname">SpikeCalcsTetrode</code><a class="headerlink" href="#ephysiopy.ephys_generic.ephys_generic.SpikeCalcsTetrode" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">SpikeCalcsTetrode</code><a class="headerlink" href="#ephysiopy.ephys_generic.ephys_generic.SpikeCalcsTetrode" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#ephysiopy.ephys_generic.ephys_generic.SpikeCalcsGeneric" title="ephysiopy.ephys_generic.ephys_generic.SpikeCalcsGeneric"><code class="xref py py-class docutils literal notranslate"><span class="pre">ephysiopy.ephys_generic.ephys_generic.SpikeCalcsGeneric</span></code></a></p>
 <p>Encapsulates methods specific to the geometry inherent in tetrode-based
 recordings</p>
@@ -1125,7 +1125,7 @@ recordings</p>
 and some graphical output etc</p>
 <dl class="class">
 <dt id="ephysiopy.ephys_generic.gridcell.SAC">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.ephys_generic.gridcell.</code><code class="sig-name descname">SAC</code><a class="headerlink" href="#ephysiopy.ephys_generic.gridcell.SAC" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">SAC</code><a class="headerlink" href="#ephysiopy.ephys_generic.gridcell.SAC" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Spatial AutoCorrelation (SAC) class</p>
 <dl class="method">
@@ -1391,7 +1391,7 @@ Lond B Biol Sci. 2013 Dec 23;369(1635):20120532. doi: 10.1098/rstb.2012.0532.</p
 </dl>
 <dl class="class">
 <dt id="ephysiopy.ephys_generic.phaseprecession.phasePrecession">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.ephys_generic.phaseprecession.</code><code class="sig-name descname">phasePrecession</code><span class="sig-paren">(</span><em class="sig-param">filename_root, psr=50.0, esr=250.0, binsizes=array([0.5, 0.5]), smthKernLen=50, smthKernSig=5, fieldThresh=0.35, areaThresh=nan, binsPerCm=2, allowedminSpkPhase=3.141592653589793, mnPowPrctThresh=0, allowedThetaLen=[20, 42], spdSmoothWindow=15, runMinSpd=2.5, runMinDuration=2, runSmoothWindowFrac=0.3333333333333333, spatialLPCutOff=3, ifr_kernLen=1, ifr_kernSig=0.5, binsPerSec=50</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.phaseprecession.phasePrecession" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">phasePrecession</code><span class="sig-paren">(</span><em class="sig-param">filename_root, psr=50.0, esr=250.0, binsizes=array([0.5, 0.5]), smthKernLen=50, smthKernSig=5, fieldThresh=0.35, areaThresh=nan, binsPerCm=2, allowedminSpkPhase=3.141592653589793, mnPowPrctThresh=0, allowedThetaLen=[20, 42], spdSmoothWindow=15, runMinSpd=2.5, runMinDuration=2, runSmoothWindowFrac=0.3333333333333333, spatialLPCutOff=3, ifr_kernLen=1, ifr_kernSig=0.5, binsPerSec=50</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.phaseprecession.phasePrecession" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Performs phase precession analysis for single unit data</p>
 <dl class="field-list simple">
@@ -1505,7 +1505,7 @@ peaks of a super-smoothed ratemap</p>
 stuff</p>
 <dl class="class">
 <dt id="ephysiopy.ephys_generic.statscalcs.StatsCalcs">
-<em class="property">class </em><code class="sig-prename descclassname">ephysiopy.ephys_generic.statscalcs.</code><code class="sig-name descname">StatsCalcs</code><a class="headerlink" href="#ephysiopy.ephys_generic.statscalcs.StatsCalcs" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">StatsCalcs</code><a class="headerlink" href="#ephysiopy.ephys_generic.statscalcs.StatsCalcs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <dl class="method">
 <dt id="ephysiopy.ephys_generic.statscalcs.StatsCalcs.V_test">
@@ -1671,7 +1671,7 @@ Taken from ‘100 Statistical Tests’ G.J.Kanji, 2006 Sage Publications</p>
 <span id="ephysiopy-ephys-generic-utils-module"></span><h2>ephysiopy.ephys_generic.utils module<a class="headerlink" href="#module-ephysiopy.ephys_generic.utils" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
 <dt id="ephysiopy.ephys_generic.utils.blur_image">
-<code class="sig-prename descclassname">ephysiopy.ephys_generic.utils.</code><code class="sig-name descname">blur_image</code><span class="sig-paren">(</span><em class="sig-param">im</em>, <em class="sig-param">n</em>, <em class="sig-param">ny=None</em>, <em class="sig-param">ftype='boxcar'</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.utils.blur_image" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">blur_image</code><span class="sig-paren">(</span><em class="sig-param">im</em>, <em class="sig-param">n</em>, <em class="sig-param">ny=None</em>, <em class="sig-param">ftype='boxcar'</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.utils.blur_image" title="Permalink to this definition">¶</a></dt>
 <dd><p>blurs the image by convolving with a filter (‘gaussian’ or
 ‘boxcar’) of
 size n. The optional keyword argument ny allows for a different
@@ -1680,7 +1680,7 @@ size in the y direction.</p>
 
 <dl class="function">
 <dt id="ephysiopy.ephys_generic.utils.count_to">
-<code class="sig-prename descclassname">ephysiopy.ephys_generic.utils.</code><code class="sig-name descname">count_to</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">n</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.utils.count_to" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">count_to</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">n</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.utils.count_to" title="Permalink to this definition">¶</a></dt>
 <dd><p>By example:</p>
 <blockquote>
 <div><p>#    0  1  2  3  4  5  6  7  8
@@ -1698,7 +1698,7 @@ in a function.</p>
 
 <dl class="function">
 <dt id="ephysiopy.ephys_generic.utils.polar">
-<code class="sig-prename descclassname">ephysiopy.ephys_generic.utils.</code><code class="sig-name descname">polar</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em>, <em class="sig-param">deg=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.utils.polar" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">polar</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em>, <em class="sig-param">deg=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.utils.polar" title="Permalink to this definition">¶</a></dt>
 <dd><p>Converts from rectangular coordinates to polar ones</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1718,7 +1718,7 @@ in a function.</p>
 
 <dl class="function">
 <dt id="ephysiopy.ephys_generic.utils.rect">
-<code class="sig-prename descclassname">ephysiopy.ephys_generic.utils.</code><code class="sig-name descname">rect</code><span class="sig-paren">(</span><em class="sig-param">r</em>, <em class="sig-param">w</em>, <em class="sig-param">deg=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.utils.rect" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">rect</code><span class="sig-paren">(</span><em class="sig-param">r</em>, <em class="sig-param">w</em>, <em class="sig-param">deg=0</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.utils.rect" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert from polar (r,w) to rectangular (x,y)
 x = r cos(w)
 y = r sin(w)</p>
@@ -1726,7 +1726,7 @@ y = r sin(w)</p>
 
 <dl class="function">
 <dt id="ephysiopy.ephys_generic.utils.repeat_ind">
-<code class="sig-prename descclassname">ephysiopy.ephys_generic.utils.</code><code class="sig-name descname">repeat_ind</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">n</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.utils.repeat_ind" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">repeat_ind</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">n</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.utils.repeat_ind" title="Permalink to this definition">¶</a></dt>
 <dd><p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">n</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">res</span> <span class="o">=</span> <span class="n">repeat_ind</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
@@ -1744,7 +1744,7 @@ any rate it encapsulates a task in a function.</p>
 
 <dl class="function">
 <dt id="ephysiopy.ephys_generic.utils.smooth">
-<code class="sig-prename descclassname">ephysiopy.ephys_generic.utils.</code><code class="sig-name descname">smooth</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">window_len=9</em>, <em class="sig-param">window='hanning'</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.utils.smooth" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">smooth</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">window_len=9</em>, <em class="sig-param">window='hanning'</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.utils.smooth" title="Permalink to this definition">¶</a></dt>
 <dd><p>Smooth the data using a window with requested size.</p>
 <p>This method is based on the convolution of a scaled window with the signal.
 The signal is prepared by introducing reflected copies of the signal
@@ -1784,7 +1784,7 @@ in the begining and end part of the output signal.</p>
 
 <dl class="function">
 <dt id="ephysiopy.ephys_generic.utils.spiral">
-<code class="sig-prename descclassname">ephysiopy.ephys_generic.utils.</code><code class="sig-name descname">spiral</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">X</em>, <em class="sig-param">Y</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.utils.spiral" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">spiral</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">X</em>, <em class="sig-param">Y</em><span class="sig-paren">)</span><a class="headerlink" href="#ephysiopy.ephys_generic.utils.spiral" title="Permalink to this definition">¶</a></dt>
 <dd><p>Given an array of shape X x Y this returns the coordinates needed to step
 out from the centre of the array to the edge in a spiral fashion:</p>
 <div class="admonition seealso">
