@@ -13,18 +13,19 @@
 import os
 import sys
 import sphinx_rtd_theme
-sys.path.insert(0, os.path.abspath('../'))
-sys.path.insert(0, os.path.abspath('../ephysiopy'))
+file_loc = os.path.split(__file__)[0]
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(file_loc), '.')))
 
 
 # -- Project information -----------------------------------------------------
-
-project = 'ephysiopy'
-copyright = '2020, Robin Hayman'
-author = 'Robin Hayman'
-
+import ephysiopy
+project = ephysiopy.__about__.__project__
+author = ephysiopy.__about__.__author__
+from datetime import date
+copyright = u'Copyright 2020 - {0} {1}'.format(date.today().year, author)
+version = ephysiopy.__about__.__version__
 # The full version, including alpha/beta/rc tags
-release = '1.5.77'
+release = version
 
 
 # -- General configuration ---------------------------------------------------
