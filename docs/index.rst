@@ -8,7 +8,7 @@ Welcome to ephysiopy's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   source/modules
+   source/readme
 
 Indices and tables
 ==================
