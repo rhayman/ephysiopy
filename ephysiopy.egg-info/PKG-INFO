@@ -1,12 +1,14 @@
 Metadata-Version: 2.1
 Name: ephysiopy
-Version: 1.5.79
+Version: 1.5.83
 Summary: Analysis of electrophysiology data
 Home-page: https://github.com/rhayman/ephysiopy
 Author: Robin Hayman
 Author-email: robin.hayman@gmail.com
 License: UNKNOWN
-Description: Synopsis
+Description: 
+        
+        Synopsis
         ========
         
         Tools for the analysis of electrophysiological data collected with the Axona or openephys recording systems.
@@ -24,27 +26,17 @@ Description: Synopsis
         
         Or similar.
         
-        This will install all the pre-requisites, which are as follows:
-        
-        * numpy
-        * scipy
-        * matplotlib
-        * scikits-learn
-        * `astropy <http://www.astropy.org/>`_ (for NaN-friendly convolution)
-        * skimage
-        * `mahotas <http://mahotas.readthedocs.org/en/latest/>`_
-        * h5py
-        
         I haven't yet tried this in a conda like environment but a quick google shows it should be pretty easy.
         
         Code Example
         ============
         
+        Neuropixels / openephys tetrode recordings
+        ------------------------------------------
+        
         For openephys-type analysis there are two main entry classes depending on whether you are doing
         Neuropixels or tetrode-based analysis. Both classes inherit from the same
         parent class (OpenEphysBase) and so share a high degree of overlap in what they can do.
-        
-        For Neuropixels:
         
         >>> from ephysiopy.openephys2py.OEKiloPhy import OpenEphysNPX
         >>> npx = OpenEphysNPX("/path/to/top_level")
@@ -80,6 +72,9 @@ Description: Synopsis
         >>> npx.plotPos()
         
         For ratemaps and so on you call plotMaps() which can take several arguments to make maps of different types. See the documentation for the base class for details (OpenEphysBase)
+        
+        Axona tetrode recordings
+        ------------------------
         
         The main entry class for Axona related analysis is "Trial" contained in ephysiopy.dacq2py.dacq2py_util i.e.
         
