@@ -675,7 +675,7 @@ class PosCalcsGeneric(object):
         x = xy[:,0].astype(np.float64)
         y = xy[:,1].astype(np.float64)
 
-        from ephysiopy.ephys_generic.utils import smooth
+        from ephysiopy.common.utils import smooth
         # TODO: calculate window_len from pos sampling rate
         # 11 is roughly equal to 400ms at 30Hz (window_len needs to be odd)
         sm_x = smooth(x, window_len=11, window='flat')

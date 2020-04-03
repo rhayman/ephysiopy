@@ -8,7 +8,7 @@ import math
 import os
 import pickle
 import fnmatch
-from ephysiopy.ephys_generic.utils import smooth
+from ephysiopy.common.utils import smooth
 from ephysiopy.dacq2py.spikecalcs import SpikeCalcs
 
 MAXSPEED = 4.0  # pos data speed filter in m/s

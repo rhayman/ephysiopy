@@ -7,7 +7,7 @@ Submodules
 ephysiopy.ephys\_generic.binning module
 ---------------------------------------
 
-.. automodule:: ephysiopy.ephys_generic.binning
+.. automodule:: ephysiopy.common.binning
    :members:
    :undoc-members:
    :show-inheritance:
@@ -15,7 +15,7 @@ ephysiopy.ephys\_generic.binning module
 ephysiopy.ephys\_generic.eegcalcs module
 ----------------------------------------
 
-.. automodule:: ephysiopy.ephys_generic.eegcalcs
+.. automodule:: ephysiopy.common.eegcalcs
    :members:
    :undoc-members:
    :show-inheritance:
@@ -23,7 +23,7 @@ ephysiopy.ephys\_generic.eegcalcs module
 ephysiopy.ephys\_generic.ephys\_generic module
 ----------------------------------------------
 
-.. automodule:: ephysiopy.ephys_generic.ephys_generic
+.. automodule:: ephysiopy.common.ephys_generic
    :members:
    :undoc-members:
    :show-inheritance:
@@ -31,7 +31,7 @@ ephysiopy.ephys\_generic.ephys\_generic module
 ephysiopy.ephys\_generic.gridcell module
 ----------------------------------------
 
-.. automodule:: ephysiopy.ephys_generic.gridcell
+.. automodule:: ephysiopy.common.gridcell
    :members:
    :undoc-members:
    :show-inheritance:
@@ -39,7 +39,7 @@ ephysiopy.ephys\_generic.gridcell module
 ephysiopy.ephys\_generic.statscalcs module
 ------------------------------------------
 
-.. automodule:: ephysiopy.ephys_generic.statscalcs
+.. automodule:: ephysiopy.common.statscalcs
    :members:
    :undoc-members:
    :show-inheritance:
@@ -47,7 +47,7 @@ ephysiopy.ephys\_generic.statscalcs module
 ephysiopy.ephys\_generic.utils module
 -------------------------------------
 
-.. automodule:: ephysiopy.ephys_generic.utils
+.. automodule:: ephysiopy.common.utils
    :members:
    :undoc-members:
    :show-inheritance:

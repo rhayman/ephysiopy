@@ -16,12 +16,12 @@ import warnings
 from ephysiopy.dacq2py import axonaIO
 from ephysiopy.dacq2py.tetrode_dict import TetrodeDict
 from ephysiopy.ephys_generic import binning
-from ephysiopy.ephys_generic.ephys_generic import FieldCalcs
+from ephysiopy.common.ephys_generic import FieldCalcs
 from ephysiopy.dacq2py.spikecalcs import SpikeCalcs
-from ephysiopy.ephys_generic.eegcalcs import EEGCalcs
+from ephysiopy.common.eegcalcs import EEGCalcs
 from ephysiopy.dacq2py.cluster import Kluster
 from ephysiopy.dacq2py import tintcolours as tcols
-from ephysiopy.ephys_generic.gridcell import SAC
+from ephysiopy.common.gridcell import SAC
 from itertools import combinations
 from mpl_toolkits.axes_grid1 import ImageGrid
 import skimage, skimage.morphology, skimage.feature
@@ -80,10 +80,10 @@ class Trial(axonaIO.IO, SAC, dict):
 
 	See Also
 	--------
-	ephysiopy.ephys_generic.binning :Basic binning of data, calculation of bin sizes etc
-	ephysiopy.ephys_generic.eegcalcs : Contains filters, eeg power spectra methods
-	ephysiopy.ephys_generic.spikecalcs : Temporal measures of spike trains and extracting parameters from waveforms and clusters
-	ephysiopy.ephys_generic.fieldcalcs : Methods for extracting information from 2D ratemaps
+	ephysiopy.common.binning :Basic binning of data, calculation of bin sizes etc
+	ephysiopy.common.eegcalcs : Contains filters, eeg power spectra methods
+	ephysiopy.common.spikecalcs : Temporal measures of spike trains and extracting parameters from waveforms and clusters
+	ephysiopy.common.fieldcalcs : Methods for extracting information from 2D ratemaps
 	
 	Examples
 	--------
@@ -778,7 +778,7 @@ class Trial(axonaIO.IO, SAC, dict):
 
 		idx = self.TETRODE[tetrode].getClustIdx(cluster)
 		angsInRads = np.deg2rad(self.POS.dir[idx])
-		from ephysiopy.ephys_generic.statscalcs import StatsCalcs
+		from ephysiopy.common.statscalcs import StatsCalcs
 		S = StatsCalcs()
 		r, th = S.mean_resultant_vector(angsInRads)
 		return r, th
@@ -843,7 +843,7 @@ class Trial(axonaIO.IO, SAC, dict):
 
 		See Also
 		--------
-		Wrapper for ephysiopy.ephys_generic.fieldcalcs.skaggsInfo
+		Wrapper for ephysiopy.common.fieldcalcs.skaggsInfo
 		"""
 
 		ratemap = self._getMap(tetrode, cluster, binsize=binsize, **kwargs)[0]

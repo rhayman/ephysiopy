@@ -162,7 +162,7 @@ class OpenEphysBase(object):
 	def plotXCorrs(self):
 		if self.kilodata is None:
 			self.loadKilo()
-		from ephysiopy.ephys_generic.ephys_generic import SpikeCalcsGeneric
+		from ephysiopy.common.ephys_generic import SpikeCalcsGeneric
 		corriter = SpikeCalcsGeneric(self.kilodata.spk_times)
 		corriter.spk_clusters = self.kilodata.spk_clusters
 		corriter.plotAllXCorrs(self.kilodata.good_clusters)
@@ -186,7 +186,7 @@ class OpenEphysBase(object):
 		if jumpmax is None:
 			jumpmax = self.jumpmax
 		import matplotlib.pylab as plt
-		from ephysiopy.ephys_generic.ephys_generic import PosCalcsGeneric
+		from ephysiopy.common.ephys_generic import PosCalcsGeneric
 
 		self.__loadSettings__()
 		if self.xy is None:
@@ -237,7 +237,7 @@ class OpenEphysBase(object):
 			ppm = kwargs['ppm']
 		else:
 			ppm = 400
-		from ephysiopy.ephys_generic.ephys_generic import PosCalcsGeneric, MapCalcsGeneric
+		from ephysiopy.common.ephys_generic import PosCalcsGeneric, MapCalcsGeneric
 		if self.xy is None:
 			self.__loaddata__(**kwargs)
 		posProcessor = PosCalcsGeneric(self.xy[:,0], self.xy[:,1], ppm, jumpmax=self.jumpmax)
@@ -281,7 +281,7 @@ class OpenEphysBase(object):
 			ppm = kwargs['ppm']
 		else:
 			ppm = 400
-		from ephysiopy.ephys_generic.ephys_generic import PosCalcsGeneric, MapCalcsGeneric
+		from ephysiopy.common.ephys_generic import PosCalcsGeneric, MapCalcsGeneric
 		if self.xy is None:
 			self.__loaddata__(**kwargs)
 		posProcessor = PosCalcsGeneric(self.xy[:,0], self.xy[:,1], ppm, jumpmax=self.jumpmax)
@@ -317,7 +317,7 @@ class OpenEphysBase(object):
 		-----
 		EEGCalcsGeneric.plotPowerSpectrum
 		"""
-		from ephysiopy.ephys_generic.ephys_generic import EEGCalcsGeneric
+		from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 		if self.rawData is None:
 			print("Loading raw data...")
 			self.load(loadraw=True)
@@ -328,7 +328,7 @@ class OpenEphysBase(object):
 		E.plotPowerSpectrum()
 
 	def plotSpectrogram(self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250):
-		from ephysiopy.ephys_generic.ephys_generic import EEGCalcsGeneric
+		from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 		if self.rawData is None:
 			print("Loading raw data...")
 			self.load(loadraw=True)
@@ -360,7 +360,7 @@ class OpenEphysBase(object):
 		self.settings.parseStimControl()
 		if self.kilodata is None:
 			self.loadKilo()
-		from ephysiopy.ephys_generic.ephys_generic import SpikeCalcsGeneric
+		from ephysiopy.common.ephys_generic import SpikeCalcsGeneric
 		spk_times = (self.kilodata.spk_times.T[0] / 3e4) + self.ts[0] # in seconds
 		S = SpikeCalcsGeneric(spk_times)
 		S.event_ts = self.ttl_timestamps[2::2] # this is because some of the trials have two weird events logged at about 2-3 minutes in...
@@ -370,7 +370,7 @@ class OpenEphysBase(object):
 			print(next(S.plotPSTH(x)))
 
 	def plotEventEEG(self):
-		from ephysiopy.ephys_generic.ephys_generic import EEGCalcsGeneric
+		from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 		if self.rawData is None:
 			print("Loading raw data...")
 			self.load(loadraw=True)
@@ -507,7 +507,7 @@ class OpenEphysNPX(OpenEphysBase):
 		channel_map = np.squeeze(np.load(os.path.join(self.path2APdata, 'channel_map.npy')))
 		lfp_sample_rate = 2500
 		data = np.array(mmap[channel_map, 0:nseconds*lfp_sample_rate])
-		from ephysiopy.ephys_generic.ephys_generic import EEGCalcsGeneric
+		from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 		E = EEGCalcsGeneric(data[0, :], lfp_sample_rate)
 		E.calcEEGPowerSpectrum()
 		spec_data = np.zeros(shape=(data.shape[0], len(E.sm_power[0::50])))

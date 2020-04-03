@@ -5,7 +5,7 @@ import numpy as np
 import os
 import matplotlib.pylab as plt
 from ephysiopy.dacq2py import axonaIO
-from ephysiopy.ephys_generic.ephys_generic import PosCalcsGeneric
+from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.openephys2py import OEKiloPhy, OESettings
 from scipy import signal
 import h5py

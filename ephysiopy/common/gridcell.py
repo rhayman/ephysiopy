@@ -8,7 +8,7 @@ import scipy, scipy.io, scipy.signal
 import skimage, skimage.morphology, skimage.measure, skimage.feature, skimage.segmentation
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from ephysiopy.ephys_generic.utils import rect
+from ephysiopy.common.utils import rect
 import mahotas
 import collections
 
@@ -271,7 +271,7 @@ class SAC(object):
 		Hp = np.swapaxes(Hp, 1, 0)
 		Hs = np.swapaxes(Hs, 1, 0)
 
-		from ephysiopy.ephys_generic.binning import RateMap
+		from ephysiopy.common.binning import RateMap
 		R = RateMap()
 
 		fHp = R.blurImage(Hp, boxcar)
