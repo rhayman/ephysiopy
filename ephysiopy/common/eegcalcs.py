@@ -520,7 +520,7 @@ class EEGCalcs(EEGIO):
 		pbins = a[:, np.newaxis] + dt[np.newaxis, :]
 		amp = np.zeros((nbins))
 		phaselen = np.arange(len(lowphase))
-		for i in xrange(nbins):
+		for i in range(nbins):
 			pts = np.nonzero((lowphase >= pbins[i,0]) * (lowphase < pbins[i,1]) * phaselen)
 			amp[i] = np.mean(highamp[pts])
 		amp = amp / np.sum(amp)

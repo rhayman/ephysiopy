@@ -15,7 +15,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import warnings
 from ephysiopy.dacq2py import axonaIO
 from ephysiopy.dacq2py.tetrode_dict import TetrodeDict
-from ephysiopy.ephys_generic import binning
+from ephysiopy.common import binning
 from ephysiopy.common.ephys_generic import FieldCalcs
 from ephysiopy.dacq2py.spikecalcs import SpikeCalcs
 from ephysiopy.common.eegcalcs import EEGCalcs

@@ -14,7 +14,7 @@ import matplotlib.cm as cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.transforms as transforms
 from matplotlib.patches import Rectangle
-from ephysiopy.ephys_generic import binning
+from ephysiopy.common import binning
 from ephysiopy.dacq2py import tintcolours as tcols
 
 class SpikeCalcsGeneric(object):
@@ -829,7 +829,7 @@ class MapCalcsGeneric(object):
             else:
                 fig = plt.figure(figsize=(20,10))#, constrained_layout=True)
         if 'sac' in what_to_plot:
-            from ephysiopy.ephys_generic import gridcell
+            from ephysiopy.common import gridcell
             S = gridcell.SAC()
         import matplotlib.gridspec as gridspec
         nrows = np.ceil(np.sqrt(len(self.good_clusters))).astype(int)
@@ -871,7 +871,7 @@ class MapCalcsGeneric(object):
 
     def __iter__(self):
         if 'all' in self.plot_type:
-            from ephysiopy.ephys_generic import gridcell
+            from ephysiopy.common import gridcell
             S = gridcell.SAC()
 
         for cluster in self.good_clusters:

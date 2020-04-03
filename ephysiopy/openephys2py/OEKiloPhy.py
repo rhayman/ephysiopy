@@ -339,7 +339,7 @@ class OpenEphysBase(object):
 		from scipy import signal
 		freqs, times, Sxx = signal.spectrogram(E.sig, fs, nperseg=nperseg)
 		Sxx_sm = Sxx
-		from ephysiopy.ephys_generic import binning
+		from ephysiopy.common import binning
 		R = binning.RateMap()
 		Sxx_sm = R.blurImage(Sxx, (secsPerBin*2)+1)
 		x, y = np.meshgrid(times, freqs)
