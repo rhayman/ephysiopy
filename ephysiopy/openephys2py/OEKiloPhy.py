@@ -569,7 +569,7 @@ class OpenEphysNPX(OpenEphysBase):
 		super().plotEEGPower(channel)
 
 	def plotSpectrogram(self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250):
-		super().plotSpectrogram(self, nSeconds, secsPerBin, ax, ymin, ymax)
+		super().plotSpectrogram(nSeconds, secsPerBin, ax, ymin, ymax)
 
 	def plotPSTH(self):
 		super().plotPSTH()

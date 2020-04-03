@@ -1,5 +1,5 @@
-from ephysiopy import __about__
 import mahotas # this is to get around a weird, possibly python3.6 related issue
+from ephysiopy import __about__
 kk_path = '/home/robin/klustakwik/KlustaKwik'
 # used to bandpass filter the continuous raw openephys data when converting to
 # Axona eeg/ egf format
