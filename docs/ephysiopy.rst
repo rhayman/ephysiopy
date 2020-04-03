@@ -6,8 +6,8 @@ Subpackages
 
 .. toctree::
 
+   ephysiopy.common
    ephysiopy.dacq2py
-   ephysiopy.ephys_generic
    ephysiopy.format_converters
    ephysiopy.openephys2py
 
