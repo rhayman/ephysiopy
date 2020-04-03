@@ -1,51 +1,51 @@
-ephysiopy.ephys\_generic package
-================================
+ephysiopy.common package
+========================
 
 Submodules
 ----------
 
-ephysiopy.ephys\_generic.binning module
----------------------------------------
+ephysiopy.common.binning module
+-------------------------------
 
 .. automodule:: ephysiopy.common.binning
    :members:
    :undoc-members:
    :show-inheritance:
 
-ephysiopy.ephys\_generic.eegcalcs module
-----------------------------------------
+ephysiopy.common.eegcalcs module
+--------------------------------
 
 .. automodule:: ephysiopy.common.eegcalcs
    :members:
    :undoc-members:
    :show-inheritance:
 
-ephysiopy.ephys\_generic.ephys\_generic module
-----------------------------------------------
+ephysiopy.common.ephys\_generic module
+--------------------------------------
 
 .. automodule:: ephysiopy.common.ephys_generic
    :members:
    :undoc-members:
    :show-inheritance:
 
-ephysiopy.ephys\_generic.gridcell module
-----------------------------------------
+ephysiopy.common.gridcell module
+--------------------------------
 
 .. automodule:: ephysiopy.common.gridcell
    :members:
    :undoc-members:
    :show-inheritance:
 
-ephysiopy.ephys\_generic.statscalcs module
-------------------------------------------
+ephysiopy.common.statscalcs module
+----------------------------------
 
 .. automodule:: ephysiopy.common.statscalcs
    :members:
    :undoc-members:
    :show-inheritance:
 
-ephysiopy.ephys\_generic.utils module
--------------------------------------
+ephysiopy.common.utils module
+-----------------------------
 
 .. automodule:: ephysiopy.common.utils
    :members:
@@ -56,7 +56,7 @@ ephysiopy.ephys\_generic.utils module
 Module contents
 ---------------
 
-.. automodule:: ephysiopy.ephys_generic
+.. automodule:: ephysiopy.common
    :members:
    :undoc-members:
    :show-inheritance:
