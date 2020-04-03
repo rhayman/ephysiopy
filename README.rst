@@ -32,11 +32,12 @@ I haven't yet tried this in a conda like environment but a quick google shows it
 Code Example
 ============
 
+Neuropixels / openephys tetrode recordings
+------------------------------------------
+
 For openephys-type analysis there are two main entry classes depending on whether you are doing
 Neuropixels or tetrode-based analysis. Both classes inherit from the same
 parent class (OpenEphysBase) and so share a high degree of overlap in what they can do.
-
-For Neuropixels:
 
 >>> from ephysiopy.openephys2py.OEKiloPhy import OpenEphysNPX
 >>> npx = OpenEphysNPX("/path/to/top_level")
@@ -72,6 +73,9 @@ When data is recorded using the `PosTracker <https://github.com/rhayman/PosTrack
 >>> npx.plotPos()
 
 For ratemaps and so on you call plotMaps() which can take several arguments to make maps of different types. See the documentation for the base class for details (OpenEphysBase)
+
+Axona tetrode recordings
+------------------------
 
 The main entry class for Axona related analysis is "Trial" contained in ephysiopy.dacq2py.dacq2py_util i.e.
 

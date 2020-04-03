@@ -36,14 +36,6 @@ ephysiopy.ephys\_generic.gridcell module
    :undoc-members:
    :show-inheritance:
 
-ephysiopy.ephys\_generic.phaseprecession module
------------------------------------------------
-
-.. automodule:: ephysiopy.ephys_generic.phaseprecession
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 ephysiopy.ephys\_generic.statscalcs module
 ------------------------------------------
 
