@@ -24,7 +24,6 @@ setuptools.setup(
         "scikit-learn<0.21",
         "astropy",
         "scikit-image",
-        "mahotas",
         "h5py"],
     classifiers=[
         "Programming Language :: Python :: 3",

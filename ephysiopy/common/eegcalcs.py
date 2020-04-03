@@ -3,16 +3,23 @@ LFP-type analysis limmited at the moment to Axona file formats I think
 """
 import numpy as np
 import os
-from scipy import signal
+from scipy import signal, ndimage, stats, optimize
 from ephysiopy.dacq2py.axonaIO import EEG as EEGIO
 from itertools import groupby
 from operator import itemgetter
 from ephysiopy.common.statscalcs import StatsCalcs
+from ephysiopy.common.utils import bwperim
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.collections import LineCollection
 from scipy.special._ufuncs import gammainc, gamma
 from scipy.optimize import fminbound
+
+import skimage
+import matplotlib
+from ephysiopy.dacq2py import axonaIO
+from ephysiopy.dacq2py import dacq2py_util
+from sklearn.utils import resample
 
 class EEGCalcs(EEGIO):
 	"""
@@ -652,16 +659,6 @@ Mostly a total rip-off of code written by Ali Jeewajee for his paper on
 	Lond B Biol Sci. 2013 Dec 23;369(1635):20120532. doi: 10.1098/rstb.2012.0532.
 """
 
-import numpy as np
-import skimage
-from scipy import ndimage, signal, stats, optimize
-import matplotlib.pylab as plt
-import mahotas
-import matplotlib
-from ephysiopy.dacq2py import axonaIO
-from ephysiopy.dacq2py import dacq2py_util
-from sklearn.utils import resample
-
 class phasePrecession():
 	"""Performs phase precession analysis for single unit data
 	
@@ -954,7 +951,7 @@ class phasePrecession():
 		yBins = np.digitize(xy_nrmd[1], xe[:-1])
 		fieldLabel = labels[yBins-1, xBins-1]
 
-		fieldPerimMask = mahotas.bwperim(labels)
+		fieldPerimMask = bwperim(labels)
 		fieldPerimYBins, fieldPerimXBins = np.nonzero(fieldPerimMask)
 		fieldPerimX = ye[fieldPerimXBins]
 		fieldPerimY = xe[fieldPerimYBins]

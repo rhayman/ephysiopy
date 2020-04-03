@@ -24,7 +24,6 @@ This will install all the pre-requisites, which are as follows:
 * scikits-learn
 * `astropy <http://www.astropy.org/>`_ (for NaN-friendly convolution)
 * skimage
-* `mahotas <http://mahotas.readthedocs.org/en/latest/>`_
 * h5py
 
 I haven't yet tried this in a conda like environment but a quick google shows it should be pretty easy.

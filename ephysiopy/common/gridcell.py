@@ -8,8 +8,7 @@ import scipy, scipy.io, scipy.signal
 import skimage, skimage.morphology, skimage.measure, skimage.feature, skimage.segmentation
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from ephysiopy.common.utils import rect
-import mahotas
+from ephysiopy.common.utils import rect, bwperim
 import collections
 
 import warnings
@@ -392,7 +391,7 @@ class SAC(object):
 					fieldsMask[:,:, field-1] = tmp.astype(bool)
 			fieldsMask = np.max(fieldsMask,2).astype(bool)
 			fieldsLabel[~fieldsMask] = 0
-		fieldPerim = mahotas.bwperim(fieldsMask)
+		fieldPerim = bwperim(fieldsMask)
 		fieldsLabel = fieldsLabel.astype(int)
 		# [Stage 3] Calculate a couple of metrics based on the closest peaks
 		#Find the (mean) autoCorr value at the closest peak pixels
@@ -820,5 +819,5 @@ class SAC(object):
 		aboveHalfHeightLabel = scipy.ndimage.label(A > halfHeight, structure=np.ones((3,3)))[0]
 		peakIDTmp = aboveHalfHeightLabel[peakCoord[1], peakCoord[0]]
 		peakLabel[aboveHalfHeightLabel == peakIDTmp] = peakID
-		perimeterLabel[mahotas.bwperim(aboveHalfHeightLabel==peakIDTmp)] = peakID
+		perimeterLabel[bwperim(aboveHalfHeightLabel==peakIDTmp)] = peakID
 		return peakLabel, perimeterLabel
