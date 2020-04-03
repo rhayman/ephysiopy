@@ -1,3 +1,5 @@
+
+
 Synopsis
 ========
 
@@ -15,16 +17,6 @@ or,
 ``pip3 install ephysiopy``
 
 Or similar.
-
-This will install all the pre-requisites, which are as follows:
-
-* numpy
-* scipy
-* matplotlib
-* scikits-learn
-* `astropy <http://www.astropy.org/>`_ (for NaN-friendly convolution)
-* skimage
-* h5py
 
 I haven't yet tried this in a conda like environment but a quick google shows it should be pretty easy.
 

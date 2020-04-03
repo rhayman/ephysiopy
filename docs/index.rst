@@ -1,14 +1,14 @@
 Welcome to ephysiopy's documentation!
 =====================================
 
-Release v\ |version|
-
-.. include:: ../README.rst
+Release |version|
 
 .. toctree::
-   :maxdepth: 3
-   :caption: Contents:
+   :maxdepth: 2
+   :caption: Contents
 
+   Introduction
+   Usage
    ephysiopy
 
 Indices and tables

@@ -14,12 +14,12 @@ _build/
 __pycache__/*
 
 # Other folders
-.vscode/*
+.vscode/
 *.code-workspace
 
 # Python PyPi folders / files
 dist/
-ephysiopy.egg-info/
+*.egg-info/
 
 # Precompiled Headers
 *.gch
