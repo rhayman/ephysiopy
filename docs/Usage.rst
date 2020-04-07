@@ -60,7 +60,13 @@ The above command will plot out the ratemaps for clusters 1, 24, 87 and 129 in a
 
 >>> npx.plotMapsOneAtATime(clusters=[1, 24, 87, 129])
 
-will plot them in separate windows. Check the documentation for both methods to see what else you can do!
+will plot them in separate windows. Check the documentation for both methods to see what else you can do i.e
+
+:py:meth:`ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMaps`
+
+and
+
+:py:meth:`ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMapsOneAtATime`
 
 Axona
 -----
