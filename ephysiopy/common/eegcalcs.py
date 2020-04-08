@@ -777,14 +777,34 @@ class phasePrecession():
 		self.conf = True
 
 	def performRegression(self, tetrode, cluster, laserEvents=None, **kwargs):
+		"""Wrapper function for doing the actual regression which has multiple stages.
+		
+		Specifically here we parition fields into sub-fields, get a bunch of information
+		about the position, spiking and theta data and then do the actual regresssion.
+		
+		Parameters
+		----------
+		tetrode, cluster : int
+			The tetrode, cluster to examine
+		laserEvents : array_like, optional
+			The on times for laser events if present, by default None
+
+		See Also
+		--------
+		ephysiopy.common.eegcalcs.phasePrecession.partitionFields()
+		ephysiopy.common.eegcalcs.phasePrecession.getPosProps()
+		ephysiopy.common.eegcalcs.phasePrecession.getThetaProps()
+		ephysiopy.common.eegcalcs.phasePrecession.getSpikeProps()
+		ephysiopy.common.eegcalcs.phasePrecession._ppRegress()
+		"""
 		if 'binsizes' in kwargs.keys():
 			self.binsizes = kwargs.pop('binsizes')
 		peaksXY, peaksRate, labels, rmap = self.partitionFields(tetrode, cluster, plot=True)
 		posD, runD = self.getPosProps(tetrode, cluster, labels, peaksXY, laserEvents=laserEvents, plot=True)
-		thetaProps = self.getThetaProps(tetrode, cluster)
+		self.getThetaProps(tetrode, cluster)
 		spkD = self.getSpikeProps(tetrode, cluster, posD['runLabel'], runD['meanDir'],
 								  runD['runDurationInPosBins'])
-		regressD = self._ppRegress(spkD, plot=True)
+		self._ppRegress(spkD, plot=True)
 
 	def partitionFields(self, tetrode, cluster, ftype='g', plot=False, **kwargs):
 		"""

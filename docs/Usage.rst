@@ -68,6 +68,10 @@ and
 
 :py:meth:`ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMapsOneAtATime`
 
+Probably a good place to get started is to look at the various classes defined in the common package, :py:module:`ephysiopy.common`. Of 
+particular interest are the classes in the sub-module :py:module:`ephysiopy.common.ephys_generic`. The two main classes for doing spatial 
+analysis are :py:class:`ephysiopy.common.ephys_generic.MapCalcsGeneric` and :py:class:`ephysiopy.common.ephys_generic.PosCalcsGeneric`.
+
 Axona
 -----
 
