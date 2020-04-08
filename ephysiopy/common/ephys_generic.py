@@ -1002,7 +1002,7 @@ class MapCalcsGeneric(object):
 
             # See if we should add the mean resultant vector (mrv)
             if 'add_mrv' in kwargs.keys():
-                from ephysiopy.dacq2py import statscalcs
+                from ephysiopy.common import statscalcs
                 S = statscalcs.StatsCalcs()
                 angles = self.hdir[self.spk_pos_idx[self.spk_clusters==cluster]]
                 r, th = S.mean_resultant_vector(np.deg2rad(angles))
