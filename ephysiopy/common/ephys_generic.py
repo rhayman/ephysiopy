@@ -809,7 +809,7 @@ class MapCalcsGeneric(object):
     def ppm(self, value):
         self.__ppm = value
 
-    def __interpSpkPosTimes():
+    def __interpSpkPosTimes(self):
         """
         Interpolates spike times into indices of position data
         NB Assumes pos times have been zeroed correctly - see comments in
