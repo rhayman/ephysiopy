@@ -809,6 +809,16 @@ class MapCalcsGeneric(object):
     def ppm(self, value):
         self.__ppm = value
 
+    def __interpSpkPosTimes():
+        """
+        Interpolates spike times into indices of position data
+        NB Assumes pos times have been zeroed correctly - see comments in
+        OEKiloPhy.OpenEphysNWB function __alignTimeStamps__()
+        """
+        idx = np.searchsorted(self.pos_ts, self.spk_ts)
+        idx[idx==len(self.pos_ts)] = len(self.pos_ts) - 1
+        return idx
+
     def plotAll(self):
         """
         Plots rate maps and other graphical output
