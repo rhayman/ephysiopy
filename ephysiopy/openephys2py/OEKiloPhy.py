@@ -49,9 +49,10 @@ class KiloSortSession(object):
 		self.fname_root = fname_root
 		import os
 		for d, _, f in os.walk(fname_root):
-			for ff in f:
-				if 'spike_times.npy' in ff:
-					self.fname_root = d
+			if not d.startswith('.'): # ignore hidden directories
+				for ff in f:
+					if 'spike_times.npy' in ff:
+						self.fname_root = d
 		self.cluster_id = None
 		self.spk_clusters = None
 		self.spk_times = None
@@ -159,6 +160,46 @@ class OpenEphysBase(object):
 	def __loaddata__(self, **kwargs):
 		self.load(self.pname_root, **kwargs) # some knarly hack
 
+	def prepareMaps(self, **kwargs):
+		"""Initialises a MapCalcsGeneric object by providing it with positional and
+		spiking data.
+
+		I don't like the name of this method but it is useful to be able to separate
+		out the preparation of the MapCalcsGeneric object as there are two major uses;
+		actually plotting the maps and/ or extracting data from them without plotting
+		"""
+		if self.kilodata is None:
+			self.loadKilo()
+		if ( 'ppm' in kwargs.keys() ):
+			ppm = kwargs['ppm']
+		else:
+			ppm = 400
+		from ephysiopy.common.ephys_generic import PosCalcsGeneric, MapCalcsGeneric
+		if self.xy is None:
+			self.__loaddata__(**kwargs)
+		posProcessor = PosCalcsGeneric(self.xy[:,0], self.xy[:,1], ppm, jumpmax=self.jumpmax)
+		import os
+		self.__loadSettings__()
+		xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
+		self.hdir = hdir
+		spk_times = (self.kilodata.spk_times.T / 3e4) + self.recording_start_time
+		if 'plot_type' in kwargs:
+			plot_type = kwargs['plot_type']
+		else:
+			plot_type = 'map'
+		mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
+		if 'cluster' in kwargs:
+			if type(kwargs['cluster']) == int:
+				mapiter.good_clusters = np.intersect1d([kwargs['cluster']], self.kilodata.good_clusters)
+
+			else:
+				mapiter.good_clusters = np.intersect1d(kwargs['cluster'], self.kilodata.good_clusters)
+		else:
+			mapiter.good_clusters = self.kilodata.good_clusters
+		mapiter.spk_clusters = self.kilodata.spk_clusters
+		self.mapiter = mapiter
+		return mapiter
+
 	def plotXCorrs(self):
 		if self.kilodata is None:
 			self.loadKilo()
@@ -231,33 +272,15 @@ class OpenEphysBase(object):
 		in one figure window
 
 		"""
-		if self.kilodata is None:
-			self.loadKilo()
-		if ( 'ppm' in kwargs.keys() ):
-			ppm = kwargs['ppm']
-		else:
-			ppm = 400
-		from ephysiopy.common.ephys_generic import PosCalcsGeneric, MapCalcsGeneric
-		if self.xy is None:
-			self.__loaddata__(**kwargs)
-		posProcessor = PosCalcsGeneric(self.xy[:,0], self.xy[:,1], ppm, jumpmax=self.jumpmax)
-		import os
-		self.__loadSettings__()
-		xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
-		self.hdir = hdir
-		spk_times = (self.kilodata.spk_times.T / 3e4) + self.recording_start_time
-		mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
+		self.prepareMaps(**kwargs)
 		if 'cluster' in kwargs:
 			if type(kwargs['cluster']) == int:
-				mapiter.good_clusters = np.intersect1d([kwargs['cluster']], self.kilodata.good_clusters)
+				self.mapiter.good_clusters = np.intersect1d([kwargs['cluster']], self.kilodata.good_clusters)
 
 			else:
-				mapiter.good_clusters = np.intersect1d(kwargs['cluster'], self.kilodata.good_clusters)
-		else:
-			mapiter.good_clusters = self.kilodata.good_clusters
-		mapiter.spk_clusters = self.kilodata.spk_clusters
-		self.mapiter = mapiter
-		mapiter.plotAll()
+				self.mapiter.good_clusters = np.intersect1d(kwargs['cluster'], self.kilodata.good_clusters)
+		
+		self.mapiter.plotAll()
 
 	def plotMapsOneAtATime(self, plot_type='map', **kwargs):
 		"""
@@ -301,7 +324,6 @@ class OpenEphysBase(object):
 			mapiter.good_clusters = self.kilodata.good_clusters
 		mapiter.spk_clusters = self.kilodata.spk_clusters
 		self.mapiter = mapiter
-		# mapiter.plotAll()
 		[ print("") for cluster in mapiter ]
 
 	def plotEEGPower(self, channel=0):
@@ -429,17 +451,18 @@ class OpenEphysNPX(OpenEphysBase):
 		if pname_root is None:
 			pname_root = self.pname_root
 
-		for d, c, f in os.walk(pname_root):
-			for ff in f:
-				if 'data_array.npy' in ff:
-					self.path2PosData = os.path.join(d)
-				if 'continuous.dat' in ff:
-					if APdata_match.search(d):
-						self.path2APdata = os.path.join(d)
-					if LFPdata_match.search(d):
-						self.path2LFPdata = os.path.join(d)
-				if 'sync_messages.txt' in ff:
-					sync_message_file = os.path.join(d, 'sync_messages.txt')
+		for d, _, f in os.walk(pname_root):
+			if not d.startswith('.'): # ignore hidden directories
+				for ff in f:
+					if 'data_array.npy' in ff:
+						self.path2PosData = os.path.join(d)
+					if 'continuous.dat' in ff:
+						if APdata_match.search(d):
+							self.path2APdata = os.path.join(d)
+						if LFPdata_match.search(d):
+							self.path2LFPdata = os.path.join(d)
+					if 'sync_messages.txt' in ff:
+						sync_message_file = os.path.join(d, 'sync_messages.txt')
 
 		if self.path2PosData is not None:
 			pos_data = np.load(os.path.join(self.path2PosData, 'data_array.npy'))

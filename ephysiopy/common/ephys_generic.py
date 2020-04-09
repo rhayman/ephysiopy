@@ -838,9 +838,6 @@ class MapCalcsGeneric(object):
                 fig = plt.figure(figsize=(20,10))
             else:
                 fig = plt.figure(figsize=(20,10))#, constrained_layout=True)
-        if 'sac' in what_to_plot:
-            from ephysiopy.common import gridcell
-            S = gridcell.SAC()
         import matplotlib.gridspec as gridspec
         nrows = np.ceil(np.sqrt(len(self.good_clusters))).astype(int)
         outer = gridspec.GridSpec(nrows, nrows, figure=fig)
@@ -857,7 +854,6 @@ class MapCalcsGeneric(object):
                     ax = fig.add_subplot(inner[plot_type_idx],projection='polar')
                 else:
                     ax = fig.add_subplot(inner[plot_type_idx])
-
                 if 'path' in plot_type:
                     self.makeSpikePathPlot(cluster, ax)
                 if 'map' in plot_type:
@@ -866,10 +862,7 @@ class MapCalcsGeneric(object):
                     self.makeHDPlot(cluster, ax, add_mrv=True)
                 if 'sac' in plot_type:
                     rmap = self.makeRateMap(cluster)
-                    nodwell = ~np.isfinite(rmap[0])
-                    sac = S.autoCorr2D(rmap[0], nodwell)
-                    d = S.getMeasures(sac)
-                    S.show(sac,d,ax)
+                    self.makeSAC(rmap, ax)
                 if 'speed' in plot_type:
                     self.makeSpeedVsRatePlot(cluster, 0.0, 40.0, 3.0, ax)
                 if 'sp_hd' in plot_type:
@@ -880,10 +873,6 @@ class MapCalcsGeneric(object):
         plt.show()
 
     def __iter__(self):
-        if 'all' in self.plot_type:
-            from ephysiopy.common import gridcell
-            S = gridcell.SAC()
-
         for cluster in self.good_clusters:
             print("Cluster {}".format(cluster))
             if 'map' in self.plot_type:
@@ -924,15 +913,7 @@ class MapCalcsGeneric(object):
                 ax0 = fig.add_subplot(2, 3, 2)
                 rmap = self.makeRateMap(cluster, ax0)
                 ax2 = fig.add_subplot(2, 3, 3)
-                nodwell = ~np.isfinite(rmap[0])
-                sac = S.autoCorr2D(rmap[0], nodwell)
-                d = S.getMeasures(sac)
-                if self.save_grid_output_location:
-                    d['Cluster'] = cluster
-                    f = open(self.save_grid_output_location, 'w')
-                    f.write(str(d))
-                    f.close()
-                S.show(sac,d,ax2)
+                d = self.makeSAC(rmap, cluster, ax2)
                 print("Gridscore: {:.2f}".format(d['gridness']))
                 ax3 = fig.add_subplot(2, 3, 4, projection='polar')
                 self.makeHDPlot(cluster, ax3, add_mrv=True)
@@ -942,6 +923,21 @@ class MapCalcsGeneric(object):
                 self.makeSpeedVsHeadDirectionPlot(cluster, ax5)
                 plt.show()
             yield cluster
+
+    def makeSAC(self, rmap, cluster, ax=None):
+        from ephysiopy.common import gridcell
+        S = gridcell.SAC()
+        nodwell = ~np.isfinite(rmap[0])
+        sac = S.autoCorr2D(rmap[0], nodwell)
+        measures = S.getMeasures(sac)
+        if self.save_grid_output_location:
+            measures['Cluster'] = cluster
+            f = open(self.save_grid_output_location + "_" + str(cluster), 'w')
+            f.write(str(measures))
+            f.close()
+        if ax is not None:
+            S.show(sac, measures, ax)
+        return measures
 
     def makeRateMap(self, cluster, ax=None):
         pos_w = np.ones_like(self.pos_ts)
