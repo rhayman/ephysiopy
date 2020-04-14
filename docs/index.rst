@@ -4,7 +4,7 @@ Welcome to ephysiopy's documentation!
 Release |version|
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents
 
    Introduction

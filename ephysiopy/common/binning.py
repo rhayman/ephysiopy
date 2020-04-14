@@ -483,7 +483,7 @@ class RateMap(object):
 		kernel = sgrid/sgrid.sum()
 		return kernel
 
-	def __adaptiveMap(self, pos_binned, spk_binned, alpha=200):
+	def getAdaptiveMap(self, pos_binned, spk_binned, alpha=200):
 		"""
 		Produces a ratemap that has been adaptively binned according to the
 		algorithm described in Skaggs et al., 1996) [1]_.
@@ -710,7 +710,7 @@ class RateMap(object):
 
 		return np.squeeze(mapCovar / (mapStd_a * mapStd_b))
 
-	def t_win_SAC(self, xy, spkIdx, ppm = 365, winSize=10, pos_sample_rate=50, nbins=71, boxcar=5, Pthresh=100, downsampfreq=50, plot=False):
+	def tWinSAC(self, xy, spkIdx, ppm = 365, winSize=10, pos_sample_rate=50, nbins=71, boxcar=5, Pthresh=100, downsampfreq=50, plot=False):
 		"""
 		Temporal windowed spatial autocorrelation.
 

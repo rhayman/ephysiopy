@@ -60,13 +60,7 @@ The above command will plot out the ratemaps for clusters 1, 24, 87 and 129 in a
 
 >>> npx.plotMapsOneAtATime(clusters=[1, 24, 87, 129])
 
-will plot them in separate windows. Check the documentation for both methods to see what else you can do i.e
-
-:py:meth:`~ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMaps`
-
-and
-
-:py:meth:`~ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMapsOneAtATime`
+will plot them in separate windows. Check the documentation for both methods to see what else you can do i.e :py:meth:`~ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMaps`, and :py:meth:`~ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMapsOneAtATime`.
 
 Probably a good place to get started is to look at the various classes defined in the common package, :py:mod:`ephysiopy.common`. Of 
 particular interest are the classes in the sub-module :py:mod:`ephysiopy.common.ephys_generic` . The two main classes for doing spatial 
