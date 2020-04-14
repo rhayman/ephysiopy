@@ -62,15 +62,15 @@ The above command will plot out the ratemaps for clusters 1, 24, 87 and 129 in a
 
 will plot them in separate windows. Check the documentation for both methods to see what else you can do i.e
 
-:py:meth:`ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMaps`
+:py:meth:`~ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMaps`
 
 and
 
-:py:meth:`ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMapsOneAtATime`
+:py:meth:`~ephysiopy.openephys2py.OEKiloPhy.OpenEphysBase.plotMapsOneAtATime`
 
-Probably a good place to get started is to look at the various classes defined in the common package, :py:module:`ephysiopy.common`. Of 
-particular interest are the classes in the sub-module :py:module:`ephysiopy.common.ephys_generic`. The two main classes for doing spatial 
-analysis are :py:class:`ephysiopy.common.ephys_generic.MapCalcsGeneric` and :py:class:`ephysiopy.common.ephys_generic.PosCalcsGeneric`.
+Probably a good place to get started is to look at the various classes defined in the common package, :py:module:`~ephysiopy.common`. Of 
+particular interest are the classes in the sub-module :py:module:`~ephysiopy.common.ephys_generic`. The two main classes for doing spatial 
+analysis are :py:class:`~ephysiopy.common.ephys_generic.MapCalcsGeneric` and :py:class:`~ephysiopy.common.ephys_generic.PosCalcsGeneric`.
 
 Axona
 -----

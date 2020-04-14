@@ -48,9 +48,9 @@ class KiloSortSession(object):
 		"""
 		self.fname_root = fname_root
 		import os
-		for d, _, f in os.walk(fname_root):
-			if not d.startswith('.'): # ignore hidden directories
-				for ff in f:
+		for d, c, f in os.walk(fname_root):
+			for ff in f:
+				if '.' not in c: # ignore hidden directories
 					if 'spike_times.npy' in ff:
 						self.fname_root = d
 		self.cluster_id = None
@@ -273,12 +273,12 @@ class OpenEphysBase(object):
 
 		"""
 		self.prepareMaps(**kwargs)
-		if 'cluster' in kwargs:
-			if type(kwargs['cluster']) == int:
-				self.mapiter.good_clusters = np.intersect1d([kwargs['cluster']], self.kilodata.good_clusters)
+		if 'clusters' in kwargs:
+			if type(kwargs['clusters']) == int:
+				self.mapiter.good_clusters = np.intersect1d([kwargs['clusters']], self.kilodata.good_clusters)
 
 			else:
-				self.mapiter.good_clusters = np.intersect1d(kwargs['cluster'], self.kilodata.good_clusters)
+				self.mapiter.good_clusters = np.intersect1d(kwargs['clusters'], self.kilodata.good_clusters)
 		
 		self.mapiter.plotAll()
 
@@ -292,7 +292,7 @@ class OpenEphysBase(object):
 			* 'path' - just spikes on path
 			* 'both' - both of the above
 			* 'all' - both spikes on path, ratemap & SAC plotted
-		Keyword args:
+		kwargs :
 		* 'ppm' - Integer denoting pixels per metre where lower values = more bins in ratemap / SAC
 		* 'clusters' - int or list of ints describing which clusters to plot
 		* 'save_grid_summary_location' - bool; if True the dictionary returned from gridcell.SAC.getMeasures is saved for each cluster
@@ -337,7 +337,7 @@ class OpenEphysBase(object):
 
 		See Also
 		-----
-		EEGCalcsGeneric.plotPowerSpectrum
+		ephysiopy.common.ephys_generic.EEGCalcsGeneric.plotPowerSpectrum()
 		"""
 		from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 		if self.rawData is None:
@@ -377,6 +377,11 @@ class OpenEphysBase(object):
 		ax.set_ylabel('Frequency(Hz)')
 
 	def plotPSTH(self):
+		"""Plots the peri-stimulus time histogram for all the 'good' clusters
+
+		Given some data has been recorded in the ttl channel, this method will plot
+		the PSTH for each 'good' cluster and just keep spitting out figure windows
+		"""
 		import os
 		self.__loadSettings__()
 		self.settings.parseStimControl()
@@ -422,7 +427,7 @@ class OpenEphysBase(object):
 			print("Cluster {}".format(cluster))
 
 class OpenEphysNPX(OpenEphysBase):
-	"""docstring for OpenEphysNPX"""
+	"""The main class for dealing with data recorded using Neuropixels probes under openephys."""
 	def __init__(self, pname_root):
 		super().__init__(pname_root)
 		self.path2PosData = None
@@ -431,14 +436,19 @@ class OpenEphysNPX(OpenEphysBase):
 
 	def load(self, pname_root=None, experiment_name='experiment1', recording_name='recording1'):
 		"""
-		Loads data recorded in the OE 'flat' binary format
-		See https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/166789121/Flat+binary+format for more
+		Loads data recorded in the OE 'flat' binary format.
 
 		Parameters
 		----------
-		pname_root - str - the top level directory, typically in form of YYYY-MM-DD_HH-MM-SS
+		pname_root : str
+			The top level directory, typically in form of YYYY-MM-DD_HH-MM-SS
 
-		recording_name - str - pretty obvious but this is also the directory immediately beneath pname_root
+		recording_name : str
+			The directory immediately beneath pname_root
+
+		See Also
+		--------
+		See https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/166789121/Flat+binary+format
 		"""
 		self.isBinary = True
 		import os
@@ -451,9 +461,9 @@ class OpenEphysNPX(OpenEphysBase):
 		if pname_root is None:
 			pname_root = self.pname_root
 
-		for d, _, f in os.walk(pname_root):
-			if not d.startswith('.'): # ignore hidden directories
-				for ff in f:
+		for d, c, f in os.walk(pname_root):
+			for ff in f:
+				if '.' not in c: # ignore hidden directories
 					if 'data_array.npy' in ff:
 						self.path2PosData = os.path.join(d)
 					if 'continuous.dat' in ff:
