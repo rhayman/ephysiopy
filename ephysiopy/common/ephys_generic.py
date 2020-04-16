@@ -6,7 +6,8 @@ autocorrelograms, power spectrum calculation and so on
 
 import numpy as np
 from scipy import signal, spatial, misc, ndimage, stats, io
-import skimage as skimage
+import skimage
+from skimage import feature
 import matplotlib
 import matplotlib.pylab as plt
 import matplotlib.cm as cm
@@ -1116,7 +1117,7 @@ class FieldCalcs:
 		g = np.exp(-(x**2/float(n) + y**2/float(ny)))
 		g = g / g.sum()
 		Ac = signal.convolve(Ac, g, mode='same')
-		peak_mask = skimage.feature.peak_local_max(Ac, min_distance=min_dist,
+		peak_mask = feature.peak_local_max(Ac, min_distance=min_dist,
 											 exclude_border=False,
 											 indices=False)
 		peak_labels = skimage.measure.label(peak_mask, 8)
@@ -1170,7 +1171,7 @@ class FieldCalcs:
 		Ac = signal.convolve(Ac, g, mode='same')
 		maxRate = np.nanmax(np.ravel(Ac))
 		Ac[Ac < maxRate*(prc/float(100))] = 0
-		peak_mask = skimage.feature.peak_local_max(Ac, min_distance=min_dist,
+		peak_mask = feature.peak_local_max(Ac, min_distance=min_dist,
 											 exclude_border=False,
 											 indices=False)
 		peak_labels = skimage.measure.label(peak_mask, 8)
@@ -1193,7 +1194,7 @@ class FieldCalcs:
 		g = np.exp(-(x**2/float(n) + y**2/float(ny)))
 		g = g / g.sum()
 		Ac = signal.convolve(Ac, g, mode='same')
-		peak_mask = skimage.feature.peak_local_max(Ac, min_distance=min_dist,
+		peak_mask = feature.peak_local_max(Ac, min_distance=min_dist,
 											 exclude_border=False,
 											 indices=False)
 		peak_labels = skimage.measure.label(peak_mask, 8)
@@ -1410,7 +1411,7 @@ class FieldCalcs:
 			the separation (in bins) between fields for measures
 			such as field distance to make sense. Used to
 			partition the image into separate fields in the call to
-			skimage.feature.peak_local_max
+			feature.peak_local_max
 		neighbours : int
 			the number of fields to consider as neighbours to
 			any given field. Defaults to 2
@@ -1453,14 +1454,14 @@ class FieldCalcs:
 			clear_border = True
 		else:
 			clear_border = False
-		peak_idx = skimage.feature.peak_local_max(Ac, min_distance=min_dist,
+		peak_idx = feature.peak_local_max(Ac, min_distance=min_dist,
 											exclude_border=clear_border,
 											indices=True)
 		if neighbours > len(peak_idx):
 			print('neighbours value of {0} > the {1} peaks found'.format(neighbours, len(peak_idx)))
 			print('Reducing neighbours to number of peaks found')
 			neighbours = len(peak_idx)
-		peak_mask = skimage.feature.peak_local_max(Ac, min_distance=min_dist, exclude_border=clear_border,
+		peak_mask = feature.peak_local_max(Ac, min_distance=min_dist, exclude_border=clear_border,
 											 indices=False)
 		peak_labels = skimage.measure.label(peak_mask, 8)
 		field_labels = skimage.morphology.watershed(image=-Ac,
@@ -1819,7 +1820,7 @@ class FieldCalcs:
 			min_distance = kwargs.pop('min_distance')
 		else:
 			min_distance = np.ceil(np.min(A_sz / 2) / 8.).astype(int)
-		peaksMask = skimage.feature.peak_local_max(A_tmp, indices=False, min_distance=min_distance,exclude_border=False)
+		peaksMask = feature.peak_local_max(A_tmp, indices=False, min_distance=min_distance,exclude_border=False)
 		peaksLabel = skimage.measure.label(peaksMask, connectivity=2)
 		if maxima == 'centroid':
 			S = skimage.measure.regionprops(peaksLabel)

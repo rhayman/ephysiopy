@@ -24,7 +24,8 @@ from ephysiopy.dacq2py import tintcolours as tcols
 from ephysiopy.common.gridcell import SAC
 from itertools import combinations
 from mpl_toolkits.axes_grid1 import ImageGrid
-import skimage, skimage.morphology, skimage.feature
+import skimage, skimage.morphology
+from skimage import feature
 from collections import OrderedDict
 
 warnings.filterwarnings("ignore",
@@ -587,7 +588,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		thresh = np.max(sm_rmap.ravel()) * 0.2  # select area > 20% of peak
 		# do some image processing magic to get region to keep as field
 		distance = ndimage.distance_transform_edt(sm_rmap > thresh)
-		mask = skimage.feature.peak_local_max(distance, indices=False,
+		mask = feature.peak_local_max(distance, indices=False,
 											  exclude_border=False,
 											  labels=sm_rmap > thresh)
 		label = ndimage.label(mask)[0]

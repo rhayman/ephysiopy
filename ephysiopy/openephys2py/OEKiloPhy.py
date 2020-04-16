@@ -200,7 +200,7 @@ class OpenEphysBase(object):
 		self.mapiter = mapiter
 		return mapiter
 
-	def plotXCorrs(self):
+	def plotXCorrs(self, **kwargs):
 		if self.kilodata is None:
 			self.loadKilo()
 		from ephysiopy.common.ephys_generic import SpikeCalcsGeneric
@@ -235,10 +235,16 @@ class OpenEphysBase(object):
 		posProcessor = PosCalcsGeneric(self.xy[:,0], self.xy[:,1], ppm=300, cm=True, jumpmax=jumpmax)
 		xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
 		self.hdir = hdir
+		if 'saveas' in kwargs:
+			saveas = kwargs['saveas']
+			plt.plot(xy[0], xy[1])
+			plt.gca().invert_yaxis()
+			plt.savefig(saveas)
 		if show:
 			plt.plot(xy[0], xy[1])
 			plt.gca().invert_yaxis()
-			plt.show()
+			ax = plt.gca()
+			return ax, xy
 		return xy
 
 	def plotMaps(self, plot_type='map', **kwargs):
@@ -587,10 +593,13 @@ class OpenEphysNPX(OpenEphysBase):
 		meanfreq_powerAx.set_xlabel('Mean freq. band power(dB)')
 		meanfreq_powerAx.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left', mode='expand',
 			fontsize='x-small', ncol=1)
+		if 'saveas' in kwargs:
+			saveas = kwargs['saveas']
+			plt.savefig(saveas)
 		plt.show()
 
-	def plotPos(self, jumpmax=None, show=True):
-		super().plotPos(jumpmax, show)
+	def plotPos(self, jumpmax=None, show=True, **kwargs):
+		super().plotPos(jumpmax, show, **kwargs)
 
 	def plotMaps(self, plot_type='map', **kwargs):
 		super().plotMaps(plot_type, **kwargs)
@@ -598,20 +607,20 @@ class OpenEphysNPX(OpenEphysBase):
 	def plotMapsOneAtATime(self, plot_type='map', **kwargs):
 		super().plotMapsOneAtATime(plot_type, **kwargs)
 
-	def plotEEGPower(self, channel=0):
-		super().plotEEGPower(channel)
+	def plotEEGPower(self, channel=0, **kwargs):
+		super().plotEEGPower(channel, **kwargs)
 
-	def plotSpectrogram(self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250):
-		super().plotSpectrogram(nSeconds, secsPerBin, ax, ymin, ymax)
+	def plotSpectrogram(self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250, **kwargs):
+		super().plotSpectrogram(nSeconds, secsPerBin, ax, ymin, ymax, **kwargs)
 
-	def plotPSTH(self):
-		super().plotPSTH()
+	def plotPSTH(self, **kwargs):
+		super().plotPSTH(**kwargs)
 
-	def plotEventEEG(self):
-		super().plotEventEEG()
+	def plotEventEEG(self, **kwargs):
+		super().plotEventEEG(**kwargs)
 
-	def plotWaves(self):
-		super().plotWaves()
+	def plotWaves(self, **kwargs):
+		super().plotWaves(**kwargs)
 
 class OpenEphysNWB(OpenEphysBase):
 	"""
@@ -744,7 +753,7 @@ class OpenEphysNWB(OpenEphysBase):
 
 class SpkTimeCorrelogram(object):
 	def __init__(self, clusters, spk_times, spk_clusters):
-		from dacq2py import spikecalcs
+		from ephysiopy.dacq2py import spikecalcs
 		self.SpkCalcs = spikecalcs.SpikeCalcs()
 		self.clusters = clusters
 		self.spk_times = spk_times
