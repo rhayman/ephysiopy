@@ -6,11 +6,12 @@ autocorrelograms, power spectrum calculation and so on
 
 import numpy as np
 from scipy import signal, spatial, misc, ndimage, stats, io
+from scipy.signal import gaussian, boxcar
 import skimage
 from skimage import feature
 import matplotlib
 import matplotlib.pylab as plt
-import matplotlib.cm as cm
+from matplotlib.cm import jet
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.transforms as transforms
 from matplotlib.patches import Rectangle
@@ -428,7 +429,7 @@ class EEGCalcsGeneric(object):
 		binsperhz = (ffthalflen-1) / nqlim
 		kernelsigma = self.smthKernelSigma * binsperhz
 		smthkernelsigma = 2 * int(4.0 * kernelsigma + 0.5) + 1
-		gausswin = signal.gaussian(smthkernelsigma, kernelsigma)
+		gausswin = gaussian(smthkernelsigma, kernelsigma)
 		sm_power = signal.fftconvolve(power, gausswin, 'same')
 		sm_power = sm_power / np.sqrt(len(sm_power))
 		spectrummaskband = np.logical_and(freqs > self.thetaRange[0], freqs < self.thetaRange[1])
@@ -518,7 +519,7 @@ class EEGCalcsGeneric(object):
 		ax.add_patch(Rectangle((0, 0), width=stim_width, height=1,
 							 transform=axTrans,
 							 color=[1, 1, 0], alpha=0.5))
-		ax.set_ylabel('LFP ($\mu$V)')
+		ax.set_ylabel(r'LFP ($\mu$V)')
 		ax.set_xlabel('Time(s)')
 		plt.show()
 
@@ -952,7 +953,7 @@ class MapCalcsGeneric(object):
 		ratemap = np.ma.MaskedArray(rmap[0], np.isnan(rmap[0]), copy=True)
 		x, y = np.meshgrid(rmap[1][1][0:-1], rmap[1][0][0:-1][::-1])
 		vmax = np.max(np.ravel(ratemap))
-		ax.pcolormesh(x, y, ratemap, cmap=cm.jet, edgecolors='face', vmax=vmax)
+		ax.pcolormesh(x, y, ratemap, cmap=jet, edgecolors='face', vmax=vmax)
 		ax.axis([x.min(), x.max(), y.min(), y.max()])
 		ax.set_aspect('equal')
 		plt.setp(ax.get_xticklabels(), visible=False)
@@ -1503,9 +1504,8 @@ class FieldCalcs:
 			ellipse_ratio = np.nan
 		else:
 			contour_coords = find_contours(central_field, 0.5)
-			G = gridcell.SAC()
-			a = G.__fit_ellipse__(contour_coords[0][:, 0], contour_coords[0][:, 1])
-			ellipse_axes = G.__ellipse_axis_length__(a)
+			a = self.__fit_ellipse__(contour_coords[0][:, 0], contour_coords[0][:, 1])
+			ellipse_axes = self.__ellipse_axis_length__(a)
 			ellipse_ratio = np.min(ellipse_axes) / np.max(ellipse_axes)
 		""" using the peak_idx values calculate the angles of the triangles that
 		make up a delaunay tesselation of the space if the calc_angles arg is
@@ -1526,7 +1526,7 @@ class FieldCalcs:
 			else:
 				ax = ax
 			Am = np.ma.MaskedArray(Ac, mask=nan_idx, copy=True)
-			ax.pcolormesh(Am, cmap=cm.jet, edgecolors='face')
+			ax.pcolormesh(Am, cmap=jet, edgecolors='face')
 			for c in contours:
 				ax.plot(c[:, 1], c[:, 0], 'k')
 			# do the delaunay thing
@@ -2200,7 +2200,7 @@ class FieldCalcs:
 		xy_centre : array_like
 			The xy coordinates of the centre of the ellipse
 		"""
-		b,c,d,f,g,a = a[1]/2, a[2], a[3]/2, a[4]/2, a[5], a[0]
+		b,c,d,f,_,a = a[1]/2, a[2], a[3]/2, a[4]/2, a[5], a[0]
 		num = b*b-a*c
 		x0=(c*d-b*f)/num
 		y0=(a*f-b*d)/num
@@ -2220,7 +2220,7 @@ class FieldCalcs:
 		angle : array_like
 			The angle of rotation of the ellipse
 		"""
-		b,c,d,f,g,a = a[1]/2, a[2], a[3]/2, a[4]/2, a[5], a[0]
+		b,c,_,_,_,a = a[1]/2, a[2], a[3]/2, a[4]/2, a[5], a[0]
 		return 0.5*np.arctan(2*b/(a-c))
 
 	def __ellipse_axis_length__(self, a):

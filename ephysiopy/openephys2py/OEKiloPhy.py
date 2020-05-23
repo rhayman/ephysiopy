@@ -636,6 +636,7 @@ class OpenEphysNWB(OpenEphysBase):
 		self.rawData = None # np.array holding the raw, continuous recording
 		self.recording_name = None # the recording name inside the nwb file ('recording0', 'recording1', etc)
 		self.isBinary = False
+		self.xy = None
 
 	def load(self, pname_root: None, session_name=None, recording_name=None, loadraw=False, loadspikes=False, savedat=False):
 		"""
@@ -674,14 +675,22 @@ class OpenEphysNWB(OpenEphysBase):
 			if recording_name is None:
 				recording_name = 'recording1'
 			self.recording_name = recording_name
-		self.xy = np.array(self.nwbData['acquisition']['timeseries'][self.recording_name]['events']['binary1']['data'])
+		try:
+			self.xy = np.array(self.nwbData['acquisition']['timeseries'][self.recording_name]['events']['binary1']['data'])
 
-		self.xyTS = np.array(self.nwbData['acquisition']['timeseries'][self.recording_name]['events']['binary1']['timestamps'])
-		self.xyTS = self.xyTS - (self.xy[:,2] / 1e6)
-		self.xy = self.xy[:,0:2]
-		# TTL data...
-		self.ttl_data = np.array(self.nwbData['acquisition']['timeseries'][self.recording_name]['events']['ttl1']['data'])
-		self.ttl_timestamps = np.array(self.nwbData['acquisition']['timeseries'][self.recording_name]['events']['ttl1']['timestamps'])
+			self.xyTS = np.array(self.nwbData['acquisition']['timeseries'][self.recording_name]['events']['binary1']['timestamps'])
+			self.xyTS = self.xyTS - (self.xy[:,2] / 1e6)
+			self.xy = self.xy[:,0:2]
+		except:
+			self.xy = None
+			self.xyTS = None
+		try:
+			# TTL data...
+			self.ttl_data = np.array(self.nwbData['acquisition']['timeseries'][self.recording_name]['events']['ttl1']['data'])
+			self.ttl_timestamps = np.array(self.nwbData['acquisition']['timeseries'][self.recording_name]['events']['ttl1']['timestamps'])
+		except:
+			self.ttl_data = None
+			self.ttl_timestamps = None
 
 		# ...everything else
 		try:
