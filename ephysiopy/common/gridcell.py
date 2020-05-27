@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.ephys_generic import FieldCalcs
+from ephysiopy.common.utils import rect, polar
 
 class SAC(object):
 	"""
