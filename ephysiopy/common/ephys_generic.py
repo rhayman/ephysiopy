@@ -1044,7 +1044,7 @@ class MapCalcsGeneric(object):
 			ax.spines['right'].set_visible(False)
 			ax.spines['top'].set_visible(False)
 			ax.yaxis.set_ticks_position('left')
-			ax.xaxis.set_ticks_position('bottom')
+			ax.xaxis.set_ticks_position('bottom')		
 
 	def makeSpeedVsHeadDirectionPlot(self, cluster, ax):
 		idx = self.spk_pos_idx[self.spk_clusters==cluster]
@@ -1066,6 +1066,76 @@ class MapCalcsGeneric(object):
 		ax.spines['top'].set_visible(False)
 		plt.xticks([90,180,270], fontweight='normal', size=6)
 		plt.yticks([10,20], fontweight='normal', size=6)
+
+	def getSpatialStats(self, cluster):
+		# HWPD 20200527
+		"""
+		Adds summary of various spatial metrics in a dataframe
+		"""
+		import pandas as pd
+		try:
+			iter(cluster)
+		except Exception:
+			cluster = [cluster]
+			
+		gridness,scale,orientation,HDtuning,HDangle,speedCorr,speedMod = [],[],[],[],[],[],[]
+		for i,cl in enumerate(cluster):
+			rmap = self.makeRateMap(cl, None)
+			m = self.makeSAC(rmap, cl, None)
+			r,th = self.getHDtuning(cl)
+			spC,spM = self.getSpeedTuning(cl)
+			
+			gridness.append(m['gridness'])
+			scale.append(m['scale'])
+			orientation.append(m['orientation'])
+			HDtuning.append(r)
+			HDangle.append(th)
+			speedCorr.append(spC)
+			speedMod.append(spM)
+			
+		d = {'id': cluster, 'gridness': gridness, 'scale': scale, 
+	        'orientation': orientation, 'HDtuning': HDtuning, 
+			'HDangle': HDangle, 'speedCorr': speedCorr, 'speedMod': speedMod}
+		self.spatialStats = pd.DataFrame(d)
+		
+	def getHDtuning(self, cluster):
+		# HWPD 20200527
+		"""
+		Uses RH's head direction tuning function, just returns metric and doesn't plot
+		"""
+		from ephysiopy.common import statscalcs
+		S = statscalcs.StatsCalcs()
+		angles = self.hdir[self.spk_pos_idx[self.spk_clusters==cluster]]
+		r, th = S.mean_resultant_vector(np.deg2rad(angles))
+		return r, th
+	
+	
+	def getSpeedTuning(self, cluster, minSpeed=0.0, maxSpeed=40.0, sigma=3.0):
+		"""
+		Uses RH's speed tuning function, just returns metric and doesn't plot
+		"""
+		# HWPD 20200527
+		speed = np.ravel(self.speed)
+		if np.nanmax(speed) < maxSpeed:
+			maxSpeed = np.nanmax(speed)
+		spd_bins = np.arange(minSpeed, maxSpeed, 1.0)
+		# Construct the mask
+		speed_filt = np.ma.MaskedArray(speed)
+		speed_filt = np.ma.masked_where(speed_filt < minSpeed, speed_filt)
+		speed_filt = np.ma.masked_where(speed_filt > maxSpeed, speed_filt)
+		from ephysiopy.dacq2py import spikecalcs
+		S = spikecalcs.SpikeCalcs()
+		x1 = self.spk_pos_idx[self.spk_clusters==cluster]
+		spk_sm = S.smoothSpikePosCount(x1, self.pos_ts.shape[0], sigma, None)
+		spk_sm = np.ma.MaskedArray(spk_sm, mask=np.ma.getmask(speed_filt))
+		from scipy import stats
+		speedCorr = stats.mstats.pearsonr(spk_sm, speed_filt)
+		spd_dig  = np.digitize(speed_filt, spd_bins, right=True)
+		mn_rate = np.array([np.ma.mean(spk_sm[spd_dig==i]) for i in range(0,len(spd_bins))])
+		speedCorr = speedCorr[0] # HWPD 20200527
+		speedCurve = mn_rate * self.pos_sample_rate
+		speedMod = np.max(speedCurve) - np.min(speedCurve) # HWPD 20200527
+		return speedCorr, speedMod
 
 class FieldCalcs:
 	"""
@@ -1921,7 +1991,10 @@ class FieldCalcs:
 			step = kwargs.pop('step')
 		else:
 			step = 30
-		gridness, rotationCorrVals, rotationArr = self.getGridness(autoCorrMiddle, step=step)
+		try: #HWPD
+			gridness, rotationCorrVals, rotationArr = self.getGridness(autoCorrMiddle, step=step)
+		except: #HWPD
+			gridness, rotationCorrVals, rotationArr = np.nan, np.nan, np.nan #HWPD
 		# attempt to fit an ellipse to the closest peaks
 		if allProps:
 			try:

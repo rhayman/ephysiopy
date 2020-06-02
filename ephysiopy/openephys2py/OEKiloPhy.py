@@ -69,6 +69,7 @@ class KiloSortSession(object):
 			so user defined (has labels like 'good', 'MUA', 'noise' etc)
 		"""
 		import os
+		import pandas as pd
 		dtype = {'names': ('cluster_id', 'group'), 'formats': ('i4', 'S10')}
 		# One of these (cluster_groups.csv or cluster_group.tsv) is from kilosort and the other from kilosort2
 		# and is updated by the user when doing cluster assignment in phy (or whatever)
@@ -77,6 +78,16 @@ class KiloSortSession(object):
 			self.cluster_id, self.group = np.loadtxt(os.path.join(self.fname_root, 'cluster_groups.csv'), unpack=True, skiprows=1, dtype=dtype)
 		if os.path.exists(os.path.join(self.fname_root, 'cluster_group.tsv')):
 			self.cluster_id, self.group = np.loadtxt(os.path.join(self.fname_root, 'cluster_group.tsv'), unpack=True, skiprows=1, dtype=dtype)
+		# HWPD 20200527 
+		# load cluster_info file and add X co-ordinate to it
+		if os.path.exists(os.path.join(self.fname_root, 'cluster_info.tsv')): # load cluster_info file and add X co-ordinate to it
+			self.cluster_info = pd.read_csv(os.path.join(self.fname_root, 'cluster_info.tsv'),"\t")
+			if os.path.exists(os.path.join(self.fname_root, 'channel_positions.npy')) and os.path.exists(os.path.join(self.fname_root, 'channel_map.npy')):
+				chXZ = np.load(os.path.join(self.fname_root, 'channel_positions.npy'))
+				chMap = np.load(os.path.join(self.fname_root, 'channel_map.npy'))
+				chID = np.asarray([np.argmax(chMap==x) for x in self.cluster_info.ch.values])
+				self.cluster_info['chanX'] = chXZ[chID,0]
+				self.cluster_info['chanY'] = chXZ[chID,1]
 		"""
 		Output some information to the user if self.cluster_id is still None
 		it implies that data has not been sorted / curated
@@ -91,6 +102,7 @@ class KiloSortSession(object):
 			self.ks_cluster_id, self.ks_group = np.loadtxt(os.path.join(self.fname_root, 'cluster_KSLabel.tsv'), unpack=True, skiprows=1, dtype=dtype)
 		self.spk_clusters = np.squeeze(np.load(os.path.join(self.fname_root, 'spike_clusters.npy')))
 		self.spk_times    = np.squeeze(np.load(os.path.join(self.fname_root, 'spike_times.npy')))
+			
 
 	def removeNoiseClusters(self):
 		"""
@@ -199,7 +211,7 @@ class OpenEphysBase(object):
 		mapiter.spk_clusters = self.kilodata.spk_clusters
 		self.mapiter = mapiter
 		return mapiter
-
+	
 	def plotXCorrs(self, **kwargs):
 		if self.kilodata is None:
 			self.loadKilo()
@@ -431,7 +443,7 @@ class OpenEphysBase(object):
 		waveiter = SpkWaveform(self.kilodata.good_clusters, self.kilodata.spk_times, self.kilodata.spk_clusters, amplitudes, self.rawData)
 		for cluster in waveiter:
 			print("Cluster {}".format(cluster))
-
+			
 class OpenEphysNPX(OpenEphysBase):
 	"""The main class for dealing with data recorded using Neuropixels probes under openephys."""
 	def __init__(self, pname_root):
@@ -504,7 +516,75 @@ class OpenEphysNPX(OpenEphysBase):
 			recording_start_time = self.xyTS[0]
 		self.recording_start_time = recording_start_time
 		self.ts = np.arange(recording_start_time, trial_length+recording_start_time, 1.0 / ap_sample_rate)
+		
+	def loadLite(self, pname_root=None, experiment_name='experiment1', recording_name='recording1'):
+		# HWPD 20200529
+		"""
+		Loads data recorded in the OE 'flat' binary format but doesn't require the large continuous.dat file
 
+		Parameters
+		----------
+		pname_root : str
+			The top level directory, typically in form of YYYY-MM-DD_HH-MM-SS
+
+		recording_name : str
+			The directory immediately beneath pname_root
+
+		See Also
+		--------
+		See https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/166789121/Flat+binary+format
+		"""
+		self.isBinary = True
+		import os
+		import re
+		APdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].0')
+		LFPdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].1')
+		sync_message_file = None
+		self.recording_start_time = None
+
+		if pname_root is None:
+			pname_root = self.pname_root
+
+		for d, c, f in os.walk(pname_root):
+			for ff in f:
+				if '.' not in c: # ignore hidden directories
+					if 'data_array.npy' in ff:
+						self.path2PosData = os.path.join(d)
+					if 'spike_times.npy' in ff: # changed from continuous.dat
+						if APdata_match.search(d):
+							self.path2APdata = os.path.join(d)
+						if LFPdata_match.search(d):
+							self.path2LFPdata = os.path.join(d)
+					if 'sync_messages.txt' in ff:
+						sync_message_file = os.path.join(d, 'sync_messages.txt')
+
+		if self.path2PosData is not None:
+			pos_data = np.load(os.path.join(self.path2PosData, 'data_array.npy'))
+			self.xy = pos_data[:,0:2]
+			pos_ts = np.load(os.path.join(self.path2PosData, 'timestamps.npy'))
+			self.xyTS = pos_ts / 30.0 / 1000.0
+
+		ap_sample_rate = 30000
+		n_channels = 384
+		spk_times = np.squeeze(np.load(os.path.join(self.path2APdata, 'spike_times.npy')))
+		last_spike_time = spk_times.max() / ap_sample_rate
+		#trial_length = self.__calcTrialLengthFromBinarySize__(os.path.join(self.path2APdata, 'continuous.dat'), n_channels, ap_sample_rate)
+		# Load the start time from the sync_messages file
+		if sync_message_file is not None:
+			with open(sync_message_file, 'r') as f:
+				sync_strs = f.read()
+			sync_lines = sync_strs.split('\n')
+			for line in sync_lines:
+				if 'subProcessor: 0' in line:
+					idx = line.find('start time: ')
+					start_val = line[idx + len('start time: '):-1]
+					tmp = start_val.split('@')
+					recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
+		else:
+			recording_start_time = self.xyTS[0]
+		self.recording_start_time = recording_start_time
+		self.ts = np.arange(recording_start_time, last_spike_time, 1.0 / ap_sample_rate)
+		
 	def __calcTrialLengthFromBinarySize__(self, path2file:str, n_channels=384, sample_rate=30000):
 		"""
 		Returns the time taken to run the trial (in seconds) based on the size of
