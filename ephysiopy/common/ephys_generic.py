@@ -1071,7 +1071,13 @@ class MapCalcsGeneric(object):
 		# HWPD 20200527
 		"""
 		Adds summary of various spatial metrics in a dataframe
+
+		Parameters
+		----------
+		cluster : list, numpy array
+			cell IDs to summarise (these will be recorded in the dataframe)
 		"""
+
 		import pandas as pd
 		try:
 			iter(cluster)
