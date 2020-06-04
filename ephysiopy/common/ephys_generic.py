@@ -1044,7 +1044,7 @@ class MapCalcsGeneric(object):
 			ax.spines['right'].set_visible(False)
 			ax.spines['top'].set_visible(False)
 			ax.yaxis.set_ticks_position('left')
-			ax.xaxis.set_ticks_position('bottom')		
+			ax.xaxis.set_ticks_position('bottom')
 
 	def makeSpeedVsHeadDirectionPlot(self, cluster, ax):
 		idx = self.spk_pos_idx[self.spk_clusters==cluster]

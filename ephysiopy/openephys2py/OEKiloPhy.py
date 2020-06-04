@@ -101,8 +101,7 @@ class KiloSortSession(object):
 		if os.path.exists(os.path.join(self.fname_root, 'cluster_KSLabel.tsv')):
 			self.ks_cluster_id, self.ks_group = np.loadtxt(os.path.join(self.fname_root, 'cluster_KSLabel.tsv'), unpack=True, skiprows=1, dtype=dtype)
 		self.spk_clusters = np.squeeze(np.load(os.path.join(self.fname_root, 'spike_clusters.npy')))
-		self.spk_times    = np.squeeze(np.load(os.path.join(self.fname_root, 'spike_times.npy')))
-			
+		self.spk_times    = np.squeeze(np.load(os.path.join(self.fname_root, 'spike_times.npy')))		
 
 	def removeNoiseClusters(self):
 		"""
@@ -211,7 +210,7 @@ class OpenEphysBase(object):
 		mapiter.spk_clusters = self.kilodata.spk_clusters
 		self.mapiter = mapiter
 		return mapiter
-	
+
 	def plotXCorrs(self, **kwargs):
 		if self.kilodata is None:
 			self.loadKilo()
@@ -443,7 +442,7 @@ class OpenEphysBase(object):
 		waveiter = SpkWaveform(self.kilodata.good_clusters, self.kilodata.spk_times, self.kilodata.spk_clusters, amplitudes, self.rawData)
 		for cluster in waveiter:
 			print("Cluster {}".format(cluster))
-			
+
 class OpenEphysNPX(OpenEphysBase):
 	"""The main class for dealing with data recorded using Neuropixels probes under openephys."""
 	def __init__(self, pname_root):
