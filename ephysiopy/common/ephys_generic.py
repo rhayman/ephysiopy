@@ -2013,19 +2013,19 @@ class FieldCalcs:
 				circleXY = self.__getcircleXY__(im_centre, np.min(ellipse_axes))
 			except:
 				im_centre = centralPoint
-				ellipse_angle = np.nan
-				ellipse_axes = (np.nan, np.nan)
-				ellipseXY = centralPoint
-				circleXY = centralPoint
+				ellipse_angle = None
+				ellipse_axes = (None, None)
+				ellipseXY = None
+				circleXY = None
 		else:
 			ellipseXY = None
 			circleXY = None
 			ellipse_axes = None
 			ellipse_angle = None
-			im_centre = None
+			im_centre = centralPoint
 		# collect all the following keywords into a dict for output
 		dictKeys = ('gridness','scale', 'orientation', 'closestPeaksCoord', 'gridnessMaskAll', 'gridnessMask',
-		'ellipse_axes', 'ellipse_angle', 'im_centre', 'rotationArr','rotationCorrVals')
+		'ellipse_axes', 'ellipse_angle', 'ellipseXY', 'circleXY', 'im_centre', 'rotationArr','rotationCorrVals')
 		outDict = dict.fromkeys(dictKeys,np.nan)
 		for thiskey in outDict.keys():
 			outDict[thiskey] = locals()[thiskey]# neat trick: locals is a dict that holds all locally scoped variables
@@ -2115,7 +2115,7 @@ class FieldCalcs:
 		return gridscore, rotationalCorrVals, rotationArr
 
 	
-	def deformSAC(self, A, circleXY, ellipseXY):
+	def deformSAC(self, A, circleXY=None, ellipseXY=None):
 		"""
 		Deforms a SAC that is non-circular to be more circular
 
@@ -2127,9 +2127,9 @@ class FieldCalcs:
 		A : array_like
 			The SAC
 		circleXY : array_like
-			The xy coordinates defining a circle. See Notes
+			The xy coordinates defining a circle. Default None.
 		ellipseXY : array_like
-			The xy coordinates defining an ellipse
+			The xy coordinates defining an ellipse. Default None.
 
 		Returns
 		-------
@@ -2138,15 +2138,24 @@ class FieldCalcs:
 
 		See Also
 		--------
+		ephysiopy.common.ephys_generic.FieldCalcs.getGridFieldMeasures : for ellipse / circle coordinate calcs
 		skimage.transform.AffineTransform : for calculation of the affine transform
 		skimage.transform.warp : for performance of the image warping
 		skimage.exposure.rescale_intensity : for rescaling following deformation
 		"""
-		A[np.isnan(A)] = 0
+		if circleXY is None or ellipseXY is None:
+			SAC_stats = getGridFieldMeasures(A)
+			circleXY = SAC_stats['circleXY']
+			ellipseXY = SAC_stats['ellipseXY']
+			# The ellipse detection stuff might have failed, if so return the original SAC
+			if circleXY is None:
+				return A
+		
 		if circleXY.shape[0] == 2:
 			circleXY = circleXY.T
 		if ellipseXY.shape[0] == 2:
 			ellipseXY = ellipseXY.T
+
 		tform = skimage.transform.AffineTransform()
 		tform.estimate(ellipseXY, circleXY)
 		"""
@@ -2154,8 +2163,9 @@ class FieldCalcs:
 		rescale the SAC values before doing the deformation and then rescale
 		again so the values assume the same range as in the unadulterated SAC
 		"""
-		SACmin = np.nanmin(A.flatten())#should be 1
-		SACmax = np.nanmax(A.flatten())
+		A[np.isnan(A)] = 0
+		SACmin = np.nanmin(A.flatten())
+		SACmax = np.nanmax(A.flatten()) # should be 1 if autocorr
 		AA = A + 1
 		deformedSAC = skimage.transform.warp(AA / np.nanmax(AA.flatten()), inverse_map=tform.inverse, cval=0)
 		return skimage.exposure.rescale_intensity(deformedSAC, out_range=(SACmin,SACmax))

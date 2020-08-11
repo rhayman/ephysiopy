@@ -1,5 +1,6 @@
 from ephysiopy import __about__
-kk_path = '/home/robin/klustakwik/KlustaKwik'
+import os
+kk_path = os.path.join(os.environ.get('HOME'), 'klustakwik', 'Klustakwik')
 # used to bandpass filter the continuous raw openephys data when converting to
 # Axona eeg/ egf format
 lfp_lowcut = 1
