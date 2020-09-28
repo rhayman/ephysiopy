@@ -711,6 +711,7 @@ class PosCalcsGeneric(object):
 
 		Parameters
 		---------
+		
 		xy : np.ma.MaskedArray
 			The xy positional data
 
@@ -2063,7 +2064,7 @@ class FieldCalcs:
 		"""
 		Calculates the gridness score in a grid cell spatial autocorrelogram (SAC).
 
-		Briefly, the data in `image` is rotated in `step` amounts and each rotated array
+		BrPiefly, the data in `image` is rotated in `step` amounts and each rotated array
 		is correlated with the original. The maximum of the values at 30, 90 and 150 degrees
 		is the subtracted from the minimum of the values at 60, 120 and 180 degrees to give the
 		grid score.
