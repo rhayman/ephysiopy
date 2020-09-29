@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib
 import matplotlib.pylab as plt
+from itertools import groupby
+from operator import itemgetter
 from ephysiopy.common.ephys_generic import PosCalcsGeneric, SpikeCalcsGeneric
 
 class CosineDirectionalTuning(object):
@@ -246,5 +248,70 @@ class CosineDirectionalTuning(object):
             y = self.spikeCalcs.xcorr(ts*1000, Trange=acorr_range)
             acorrs.append(y)
         return acorrs
+
+
+    def intrinsic_freq_autoCorr(self, spkTimes=None, posMask=None, maxFreq=25,
+								acBinSize=0.002, acWindow=0.5, plot=True,
+								**kwargs):
+        """
+        This is taken and adapted from ephysiopy.common.eegcalcs.EEGCalcs
+
+        Parameters
+        ----------
+        spkTimes - np.array of times in seconds of the cells firing
+        posMask - boolean array corresponding to the length of spkTimes I guess where True 
+                    is stuff to keep
+        maxFreq - the maximum frequency to do the power spectrum out to
+        acBinSize - the bin size of the autocorrelogram in seconds
+        acWindow - the range of the autocorr in seconds
+
+        NB Make sure all times are in seconds
+        """
+        acBinsPerPos = 1. / self.pos_sample_rate / acBinSize
+		acWindowSizeBins = np.round(acWindow / acBinSize)
+		binCentres = np.arange(0.5, len(posMask)*acBinsPerPos) * acBinSize
+		spkTrHist, _ = np.histogram(spkTimes, bins=binCentres)
+
+		# find start, end and length of each block of trues in posMask
+		idxArray = np.array([map(itemgetter(0), itemgetter(0, -1)(list(g))) + [k] for k, g in groupby(enumerate(posMask), itemgetter(1))])
+		chunkLens = np.diff(idxArray)[:, 0] + 1
+
+		# split the single histogram into individual chunks
+		splitIdx = np.nonzero(np.diff(posMask.astype(int)))[0]+1
+		splitMask = np.split(posMask, splitIdx)
+		splitSpkHist = np.split(spkTrHist, splitIdx * acBinsPerPos)
+		histChunks = []
+		for i in range(len(splitSpkHist)):
+			if np.all(splitMask[i]):
+				if np.sum(splitSpkHist[i]) > 2:
+					histChunks.append(splitSpkHist[i])
+		autoCorrGrid = np.zeros((acWindowSizeBins + 1, len(histChunks)))
+		chunkLens = []
+		for i in range(len(histChunks)):
+			lenThisChunk = len(histChunks[i])
+			chunkLens.append(lenThisChunk)
+			tmp = np.zeros(lenThisChunk * 2)
+			tmp[lenThisChunk/2:lenThisChunk/2+lenThisChunk] = histChunks[i]
+			tmp2 = signal.fftconvolve(tmp, histChunks[i][::-1], mode='valid')
+			autoCorrGrid[:, i] = tmp2[lenThisChunk/2:lenThisChunk/2+acWindowSizeBins+1] / acBinsPerPos
+
+		totalLen = np.sum(chunkLens)
+		autoCorrSum = np.nansum(autoCorrGrid, 1) / totalLen
+		#lags = np.arange(0, acWindowSizeBins) * acBinSize
+		meanNormdAc = autoCorrSum[1::] - np.nanmean(autoCorrSum[1::])
+		out = self.power_spectrum(eeg=meanNormdAc, binWidthSecs=acBinSize,
+								  maxFreq=maxFreq, pad2pow=16, **kwargs)
+		out.update({'meanNormdAc': meanNormdAc})
+		if plot:
+			fig = plt.gcf()
+			ax = fig.gca()
+			xlim = ax.get_xlim()
+			ylim = ax.get_ylim()
+			ax.imshow(autoCorrGrid,
+					 extent=[maxFreq*0.6, maxFreq,
+							 np.max(out['Power'])*0.6, ax.get_ylim()[1]])
+			ax.set_ylim(ylim)
+			ax.set_xlim(xlim)
+		return out
 
         
