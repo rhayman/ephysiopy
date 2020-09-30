@@ -310,7 +310,8 @@ class SpikeCalcsGeneric(object):
 			ax.hist(y[y != 0], bins=201, range=[-500, 500], color='k', histtype='stepfilled')
 			ax.set_xlim(-500,500)
 			ax.set_xticks((-500, 0, 500))
-			ax.set_xticklabels((str(-500), '0', str(500)),fontweight='normal', size=8)
+			# ax.set_xticklabels((str(-500), '0', str(500)),fontweight='normal', size=8)
+			ax.set_xticklabels('')
 			ax.tick_params(axis='both', which='both', left=False, right=False,
 							bottom=False, top=False)
 			ax.set_yticklabels('')

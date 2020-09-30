@@ -56,6 +56,7 @@ class KiloSortSession(object):
 		self.cluster_id = None
 		self.spk_clusters = None
 		self.spk_times = None
+		self.good_KS_ids = []
 
 	def load(self):
 		"""
@@ -78,6 +79,7 @@ class KiloSortSession(object):
 			self.cluster_id, self.group = np.loadtxt(os.path.join(self.fname_root, 'cluster_groups.csv'), unpack=True, skiprows=1, dtype=dtype)
 		if os.path.exists(os.path.join(self.fname_root, 'cluster_group.tsv')):
 			self.cluster_id, self.group = np.loadtxt(os.path.join(self.fname_root, 'cluster_group.tsv'), unpack=True, skiprows=1, dtype=dtype)
+		
 		# HWPD 20200527 
 		# load cluster_info file and add X co-ordinate to it
 		if os.path.exists(os.path.join(self.fname_root, 'cluster_info.tsv')): # load cluster_info file and add X co-ordinate to it
@@ -112,6 +114,14 @@ class KiloSortSession(object):
 			for id_group in zip(self.cluster_id, self.group):
 				if 'noise' not in id_group[1].decode() and 'mua' not in id_group[1].decode():
 					self.good_clusters.append(id_group[0])
+	
+	def removeKSNoiseClusters(self):
+		"""
+		Removes "noise" and "mua" clusters from the kilosort labelled stuff
+		"""
+		for cluster_id, kslabel in zip(self.ks_cluster_id, self.ks_group):
+			if 'good' in kslabel.decode():
+				self.good_KS_ids.append(cluster_id)
 
 
 class OpenEphysBase(object):
@@ -156,7 +166,7 @@ class OpenEphysBase(object):
 		# Loads a kilosort session
 		kilodata = KiloSortSession(self.pname_root) # pname_root gets walked through and over-written with correct location of kiolsort data
 		kilodata.load()
-		kilodata.removeNoiseClusters()
+		kilodata.removeKSNoiseClusters()
 		self.kilodata = kilodata
 
 	def __loadSettings__(self):
@@ -201,12 +211,12 @@ class OpenEphysBase(object):
 		mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
 		if 'cluster' in kwargs:
 			if type(kwargs['cluster']) == int:
-				mapiter.good_clusters = np.intersect1d([kwargs['cluster']], self.kilodata.good_clusters)
+				mapiter.good_clusters = np.intersect1d([kwargs['cluster']], self.kilodata.good_KS_ids)
 
 			else:
-				mapiter.good_clusters = np.intersect1d(kwargs['cluster'], self.kilodata.good_clusters)
+				mapiter.good_clusters = np.intersect1d(kwargs['cluster'], self.kilodata.good_KS_ids)
 		else:
-			mapiter.good_clusters = self.kilodata.good_clusters
+			mapiter.good_clusters = self.kilodata.good_KS_ids
 		mapiter.spk_clusters = self.kilodata.spk_clusters
 		self.mapiter = mapiter
 		return mapiter
@@ -217,7 +227,7 @@ class OpenEphysBase(object):
 		from ephysiopy.common.ephys_generic import SpikeCalcsGeneric
 		corriter = SpikeCalcsGeneric(self.kilodata.spk_times)
 		corriter.spk_clusters = self.kilodata.spk_clusters
-		corriter.plotAllXCorrs(self.kilodata.good_clusters)
+		corriter.plotAllXCorrs(self.kilodata.good_KS_ids)
 
 	def plotPos(self, jumpmax=None, show=True, **kwargs):
 		"""
@@ -250,6 +260,7 @@ class OpenEphysBase(object):
 			saveas = kwargs['saveas']
 			plt.plot(xy[0], xy[1])
 			plt.gca().invert_yaxis()
+			plt.axis('off')
 			plt.savefig(saveas)
 		if show:
 			plt.plot(xy[0], xy[1])
@@ -292,10 +303,10 @@ class OpenEphysBase(object):
 		self.prepareMaps(**kwargs)
 		if 'clusters' in kwargs:
 			if type(kwargs['clusters']) == int:
-				self.mapiter.good_clusters = np.intersect1d([kwargs['clusters']], self.kilodata.good_clusters)
+				self.mapiter.good_clusters = np.intersect1d([kwargs['clusters']], self.kilodata.good_KS_ids)
 
 			else:
-				self.mapiter.good_clusters = np.intersect1d(kwargs['clusters'], self.kilodata.good_clusters)
+				self.mapiter.good_clusters = np.intersect1d(kwargs['clusters'], self.kilodata.good_KS_ids)
 		
 		self.mapiter.plotAll()
 
@@ -333,12 +344,12 @@ class OpenEphysBase(object):
 		mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
 		if 'clusters' in kwargs:
 			if type(kwargs['clusters']) == int:
-				mapiter.good_clusters = np.intersect1d([kwargs['clusters']], self.kilodata.good_clusters)
+				mapiter.good_clusters = np.intersect1d([kwargs['clusters']], self.kilodata.good_KS_ids)
 
 			else:
-				mapiter.good_clusters = np.intersect1d(kwargs['clusters'], self.kilodata.good_clusters)
+				mapiter.good_clusters = np.intersect1d(kwargs['clusters'], self.kilodata.good_KS_ids)
 		else:
-			mapiter.good_clusters = self.kilodata.good_clusters
+			mapiter.good_clusters = self.kilodata.good_KS_ids
 		mapiter.spk_clusters = self.kilodata.spk_clusters
 		self.mapiter = mapiter
 		[ print("") for cluster in mapiter ]
