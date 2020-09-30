@@ -314,4 +314,80 @@ class CosineDirectionalTuning(object):
 			ax.set_xlim(xlim)
 		return out
 
-        
+    def power_spectrum(self, eeg, plot=True, binWidthSecs=None,
+					   maxFreq=25, pad2pow=None, ymax=None, **kwargs):
+		"""
+		Method used by eeg_power_spectra and intrinsic_freq_autoCorr
+		Signal in must be mean normalised already
+		"""
+		
+		# Get raw power spectrum
+		nqLim = self.EEG.sample_rate / 2.
+		origLen = len(eeg)
+		if pad2pow is None:
+			fftLen = int(np.power(2, self._nextpow2(origLen)))
+		else:
+			fftLen = int(np.power(2, pad2pow))
+		fftHalfLen = int(fftLen / float(2) + 1)
+
+		fftRes = np.fft.fft(eeg, fftLen)
+		# get power density from fft and discard second half of spectrum
+		_power = np.power(np.abs(fftRes), 2) / origLen
+		power = np.delete(_power, np.s_[fftHalfLen::])
+		power[1:-2] = power[1:-2] * 2
+
+		# calculate freqs and crop spectrum to requested range
+		freqs = nqLim * np.linspace(0, 1, fftHalfLen)
+		freqs = freqs[freqs <= maxFreq].T
+		power = power[0:len(freqs)]
+
+		# smooth spectrum using gaussian kernel
+		binsPerHz = (fftHalfLen - 1) / nqLim
+		kernelLen = np.round(self.smthKernelWidth * binsPerHz)
+		kernelSig = self.smthKernelSigma * binsPerHz
+		k = signal.gaussian(kernelLen, kernelSig) / (kernelLen/2/2)
+		power_sm = signal.fftconvolve(power, k[::-1], mode='same')
+
+		# calculate some metrics
+		# find max in theta band
+		spectrumMaskBand = np.logical_and(freqs > self.thetaRange[0],
+										  freqs < self.thetaRange[1])
+		bandMaxPower = np.max(power_sm[spectrumMaskBand])
+		maxBinInBand = np.argmax(power_sm[spectrumMaskBand])
+		bandFreqs = freqs[spectrumMaskBand]
+		freqAtBandMaxPower = bandFreqs[maxBinInBand]
+		# self.maxBinInBand = maxBinInBand
+		# self.freqAtBandMaxPower = freqAtBandMaxPower
+		# self.bandMaxPower = bandMaxPower
+
+		# find power in small window around peak and divide by power in rest
+		# of spectrum to get snr
+		spectrumMaskPeak = np.logical_and(freqs > freqAtBandMaxPower - self.sn2Width / 2,
+										  freqs < freqAtBandMaxPower + self.sn2Width / 2)
+		s2n = np.nanmean(power_sm[spectrumMaskPeak]) / np.nanmean(power_sm[~spectrumMaskPeak])
+		self.freqs = freqs
+		self.power_sm = power_sm
+		self.spectrumMaskPeak = spectrumMaskPeak
+		if plot:
+			fig = plt.figure()
+			ax = fig.add_subplot(111)
+			if ymax is None:
+				ymax = np.min([2 * np.max(power), np.max(power_sm)])
+				if ymax == 0:
+					ymax = 1
+			ax.plot(freqs, power, c=[0.9, 0.9, 0.9])
+			ax.hold(True)
+			ax.plot(freqs, power_sm, 'k', lw=2)
+			ax.axvline(self.thetaRange[0], c='b', ls='--')
+			ax.axvline(self.thetaRange[1], c='b', ls='--')
+			ax.stem([freqAtBandMaxPower], [bandMaxPower], c='r', lw=2)
+			ax.fill_between(freqs, 0, power_sm, where=spectrumMaskPeak,
+							color='r', alpha=0.25, zorder=25)
+			ax.set_ylim(0, ymax)
+			ax.set_xlim(0, self.xmax)
+			ax.set_xlabel('Frequency (Hz)')
+			ax.set_ylabel('Power density (W/Hz)')
+		out_dict = {'maxFreq': freqAtBandMaxPower, 'Power': power_sm,
+					'Freqs': freqs, 's2n': s2n, 'Power_raw': power, 'k': k, 'kernelLen': kernelLen,
+					'kernelSig': kernelSig, 'binsPerHz': binsPerHz, 'kernelLen': kernelLen}
+		return out_dict
