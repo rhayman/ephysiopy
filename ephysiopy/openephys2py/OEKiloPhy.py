@@ -5,6 +5,7 @@ either the .nwb or binary format (ie when using neuropixels)
 
 import numpy as np
 import matplotlib.pylab as plt
+import warnings
 
 try:
 	import xml.etree.cElementTree as ET
@@ -56,18 +57,22 @@ class KiloSortSession(object):
 		self.cluster_id = None
 		self.spk_clusters = None
 		self.spk_times = None
-		self.good_KS_ids = []
+		self.good_clusters = []
 
 	def load(self):
 		"""
 		Load all the relevant files
 
-		Notes
-		-----
-		* The file cluster_KSLabel.tsv is output from KiloSort and so algorithm defined
-			as opposed to...
-		* cluster_group.tsv or cluster_groups.csv which are group labels from phy and
-			so user defined (has labels like 'good', 'MUA', 'noise' etc)
+		There is a distinction between clusters assigned during the automatic spike sorting
+		process (here KiloSort2) and the manually curated distillation of the automatic
+		process conducted by the user with a program such as phy.
+
+		* The file cluster_KSLabel.tsv is output from KiloSort. Actually all this information
+			is also contained in the cluster_info.tsv file! Not sure about the .csv version (from
+			original KiloSort?)
+		* The files cluster_group.tsv or cluster_groups.csv contain "group labels" from phy 
+			('good', 'MUA', 'noise' etc). One of these (cluster_groups.csv or cluster_group.tsv) 
+			is from kilosort and the other from kilosort2
 		"""
 		import os
 		import pandas as pd
@@ -80,6 +85,15 @@ class KiloSortSession(object):
 		if os.path.exists(os.path.join(self.fname_root, 'cluster_group.tsv')):
 			self.cluster_id, self.group = np.loadtxt(os.path.join(self.fname_root, 'cluster_group.tsv'), unpack=True, skiprows=1, dtype=dtype)
 		
+		"""
+		Output some information to the user if self.cluster_id is still None
+		it implies that data has not been sorted / curated
+		"""
+		if self.cluster_id is None:
+			print(f"Searching {os.path.join(self.fname_root)} and...")
+			warnings.warn("No cluster_groups.tsv or cluster_group.csv file was found.\
+				Have you manually curated the data (e.g with phy?")
+
 		# HWPD 20200527 
 		# load cluster_info file and add X co-ordinate to it
 		if os.path.exists(os.path.join(self.fname_root, 'cluster_info.tsv')): # load cluster_info file and add X co-ordinate to it
@@ -90,20 +104,19 @@ class KiloSortSession(object):
 				chID = np.asarray([np.argmax(chMap==x) for x in self.cluster_info.ch.values])
 				self.cluster_info['chanX'] = chXZ[chID,0]
 				self.cluster_info['chanY'] = chXZ[chID,1]
-		"""
-		Output some information to the user if self.cluster_id is still None
-		it implies that data has not been sorted / curated
-		"""
-		if self.cluster_id is None:
-			import warnings
-			warnings.warn("No cluster_groups.tsv or cluster_group.csv file was found. Have you run phy?")
 		
 		dtype = {'names': ('cluster_id', 'KSLabel'), 'formats': ('i4', 'S10')}
 		# 'Raw' labels from a kilosort session
 		if os.path.exists(os.path.join(self.fname_root, 'cluster_KSLabel.tsv')):
 			self.ks_cluster_id, self.ks_group = np.loadtxt(os.path.join(self.fname_root, 'cluster_KSLabel.tsv'), unpack=True, skiprows=1, dtype=dtype)
-		self.spk_clusters = np.squeeze(np.load(os.path.join(self.fname_root, 'spike_clusters.npy')))
-		self.spk_times    = np.squeeze(np.load(os.path.join(self.fname_root, 'spike_times.npy')))		
+		if os.path.exists(os.path.join(self.fname_root, 'spike_clusters.npy')):
+			self.spk_clusters = np.squeeze(np.load(os.path.join(self.fname_root, 'spike_clusters.npy')))
+		if os.path.exists(os.path.join(self.fname_root, 'spike_times.npy')):
+			self.spk_times = np.squeeze(np.load(os.path.join(self.fname_root, 'spike_times.npy')))
+			return True
+		warnings.warn("No spike times or clusters were found (spike_times.npy or spike_clusters.npy).\
+				You should run KiloSort")
+		return False
 
 	def removeNoiseClusters(self):
 		"""
@@ -121,7 +134,7 @@ class KiloSortSession(object):
 		"""
 		for cluster_id, kslabel in zip(self.ks_cluster_id, self.ks_group):
 			if 'good' in kslabel.decode():
-				self.good_KS_ids.append(cluster_id)
+				self.good_clusters.append(cluster_id)
 
 
 class OpenEphysBase(object):
@@ -162,11 +175,18 @@ class OpenEphysBase(object):
 		# Overridden by sub-classes
 		pass
 
-	def loadKilo(self):
+	def loadKilo(self, **kwargs):
+		if 'pname' in kwargs:
+			pname = kwargs['pname']
+		else:
+			pname = self.pname_root
 		# Loads a kilosort session
-		kilodata = KiloSortSession(self.pname_root) # pname_root gets walked through and over-written with correct location of kiolsort data
-		kilodata.load()
-		kilodata.removeKSNoiseClusters()
+		kilodata = KiloSortSession(pname) # pname_root gets walked through and over-written with correct location of kiolsort data
+		if kilodata.load():
+			try:
+				kilodata.removeKSNoiseClusters()
+			except:
+				pass
 		self.kilodata = kilodata
 
 	def __loadSettings__(self):
@@ -181,6 +201,15 @@ class OpenEphysBase(object):
 	def __loaddata__(self, **kwargs):
 		self.load(self.pname_root, **kwargs) # some knarly hack
 
+	def __calcTrialLengthFromBinarySize__(self, path2file:str, n_channels=384, sample_rate=30000):
+		"""
+		Returns the time taken to run the trial (in seconds) based on the size of
+		the binary file on disk
+		"""
+		import os
+		status = os.stat(path2file)
+		return status.st_size / ( 2.0 * n_channels * sample_rate)
+
 	def prepareMaps(self, **kwargs):
 		"""Initialises a MapCalcsGeneric object by providing it with positional and
 		spiking data.
@@ -190,7 +219,7 @@ class OpenEphysBase(object):
 		actually plotting the maps and/ or extracting data from them without plotting
 		"""
 		if self.kilodata is None:
-			self.loadKilo()
+			self.loadKilo(**kwargs)
 		if ( 'ppm' in kwargs.keys() ):
 			ppm = kwargs['ppm']
 		else:
@@ -211,23 +240,28 @@ class OpenEphysBase(object):
 		mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
 		if 'cluster' in kwargs:
 			if type(kwargs['cluster']) == int:
-				mapiter.good_clusters = np.intersect1d([kwargs['cluster']], self.kilodata.good_KS_ids)
+				mapiter.good_clusters = np.intersect1d([kwargs['cluster']], self.kilodata.good_clusters)
 
 			else:
-				mapiter.good_clusters = np.intersect1d(kwargs['cluster'], self.kilodata.good_KS_ids)
+				mapiter.good_clusters = np.intersect1d(kwargs['cluster'], self.kilodata.good_clusters)
 		else:
-			mapiter.good_clusters = self.kilodata.good_KS_ids
+			mapiter.good_clusters = self.kilodata.good_clusters
 		mapiter.spk_clusters = self.kilodata.spk_clusters
 		self.mapiter = mapiter
 		return mapiter
 
 	def plotXCorrs(self, **kwargs):
 		if self.kilodata is None:
-			self.loadKilo()
+			self.loadKilo(**kwargs)
 		from ephysiopy.common.ephys_generic import SpikeCalcsGeneric
 		corriter = SpikeCalcsGeneric(self.kilodata.spk_times)
 		corriter.spk_clusters = self.kilodata.spk_clusters
-		corriter.plotAllXCorrs(self.kilodata.good_KS_ids)
+		clusts2plot = []
+		if 'cluster' in kwargs:
+			clusts2plot = np.intersect1d(kwargs['cluster'], self.kilodata.good_clusters)
+		else:
+			clusts2plot = self.kilodata.good_clusters
+		corriter.plotAllXCorrs(clusters=clusts2plot)
 
 	def plotPos(self, jumpmax=None, show=True, **kwargs):
 		"""
@@ -266,6 +300,7 @@ class OpenEphysBase(object):
 			plt.plot(xy[0], xy[1])
 			plt.gca().invert_yaxis()
 			ax = plt.gca()
+			plt.show()
 			return ax, xy
 		return xy
 
@@ -303,10 +338,10 @@ class OpenEphysBase(object):
 		self.prepareMaps(**kwargs)
 		if 'clusters' in kwargs:
 			if type(kwargs['clusters']) == int:
-				self.mapiter.good_clusters = np.intersect1d([kwargs['clusters']], self.kilodata.good_KS_ids)
+				self.mapiter.good_clusters = np.intersect1d([kwargs['clusters']], self.kilodata.good_clusters)
 
 			else:
-				self.mapiter.good_clusters = np.intersect1d(kwargs['clusters'], self.kilodata.good_KS_ids)
+				self.mapiter.good_clusters = np.intersect1d(kwargs['clusters'], self.kilodata.good_clusters)
 		
 		self.mapiter.plotAll()
 
@@ -327,7 +362,7 @@ class OpenEphysBase(object):
 		"""
 
 		if self.kilodata is None:
-			self.loadKilo()
+			self.loadKilo(**kwargs)
 		if ( 'ppm' in kwargs.keys() ):
 			ppm = kwargs['ppm']
 		else:
@@ -344,12 +379,12 @@ class OpenEphysBase(object):
 		mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
 		if 'clusters' in kwargs:
 			if type(kwargs['clusters']) == int:
-				mapiter.good_clusters = np.intersect1d([kwargs['clusters']], self.kilodata.good_KS_ids)
+				mapiter.good_clusters = np.intersect1d([kwargs['clusters']], self.kilodata.good_clusters)
 
 			else:
-				mapiter.good_clusters = np.intersect1d(kwargs['clusters'], self.kilodata.good_KS_ids)
+				mapiter.good_clusters = np.intersect1d(kwargs['clusters'], self.kilodata.good_clusters)
 		else:
-			mapiter.good_clusters = self.kilodata.good_KS_ids
+			mapiter.good_clusters = self.kilodata.good_clusters
 		mapiter.spk_clusters = self.kilodata.spk_clusters
 		self.mapiter = mapiter
 		[ print("") for cluster in mapiter ]
@@ -414,7 +449,7 @@ class OpenEphysBase(object):
 		self.__loadSettings__()
 		self.settings.parseStimControl()
 		if self.kilodata is None:
-			self.loadKilo()
+			self.loadKilo(**kwargs)
 		from ephysiopy.common.ephys_generic import SpikeCalcsGeneric
 		spk_times = (self.kilodata.spk_times.T[0] / 3e4) + self.ts[0] # in seconds
 		S = SpikeCalcsGeneric(spk_times)
@@ -435,7 +470,7 @@ class OpenEphysBase(object):
 
 	def plotWaves(self):
 		if self.kilodata is None:
-			self.loadKilo()
+			self.loadKilo(**kwargs)
 		if self.rawData is None:
 			print("Loading raw data...")
 			self.load(loadraw=True)
@@ -600,9 +635,7 @@ class OpenEphysNPX(OpenEphysBase):
 		Returns the time taken to run the trial (in seconds) based on the size of
 		the binary file on disk
 		"""
-		import os
-		status = os.stat(path2file)
-		return status.st_size / ( 2.0 * n_channels * sample_rate)
+		return super().__calcTrialLengthFromBinarySize__(path2file, n_channels, sample_rate)
 
 	def plotSpectrogramByDepth(self, nchannels=384, nseconds=100, maxFreq=125, **kwargs):
 		"""
@@ -688,6 +721,9 @@ class OpenEphysNPX(OpenEphysBase):
 			plt.savefig(saveas)
 		plt.show()
 
+	def loadKilo(self, **kwargs):
+		super().loadKilo(pname=self.path2APdata)
+
 	def plotPos(self, jumpmax=None, show=True, **kwargs):
 		super().plotPos(jumpmax, show, **kwargs)
 
@@ -711,6 +747,9 @@ class OpenEphysNPX(OpenEphysBase):
 
 	def plotWaves(self, **kwargs):
 		super().plotWaves(**kwargs)
+
+	def plotXCorrs(self, **kwargs):
+		super().plotXCorrs(**kwargs)
 
 class OpenEphysNWB(OpenEphysBase):
 	"""
@@ -769,7 +808,6 @@ class OpenEphysNWB(OpenEphysBase):
 			self.xy = np.array(self.nwbData['acquisition']['timeseries'][self.recording_name]['events']['binary1']['data'])
 
 			self.xyTS = np.array(self.nwbData['acquisition']['timeseries'][self.recording_name]['events']['binary1']['timestamps'])
-			self.xyTS = self.xyTS - (self.xy[:,2] / 1e6)
 			self.xy = self.xy[:,0:2]
 		except:
 			self.xy = None
@@ -825,6 +863,9 @@ class OpenEphysNWB(OpenEphysBase):
 		out = np.hstack([xy.T, self.xyTS[:,np.newaxis]])
 		np.savetxt('position.txt', out, delimiter=',', fmt=['%3.3i','%3.3i','%3.3f'])
 
+	def loadKilo(self, **kwargs):
+		super().loadKilo(pname=self.pname_root)
+
 	def plotPos(self, jumpmax=None, show=True):
 		xy = super().plotPos(jumpmax, show)
 		return xy
@@ -839,7 +880,137 @@ class OpenEphysNWB(OpenEphysBase):
 		super().plotEEGPower(channel)
 
 	def plotSpectrogram(self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250):
-		super().plotSpectrogram(self, nSeconds, secsPerBin, ax, ymin, ymax)
+		super().plotSpectrogram(nSeconds, secsPerBin, ax, ymin, ymax)
+
+	def plotPSTH(self):
+		super().plotPSTH()
+
+	def plotEventEEG(self):
+		super().plotEventEEG()
+
+	def plotWaves(self):
+		super().plotWaves()
+
+class OpenEphysBinary(OpenEphysBase):
+	"""The main class for dealing with data recorded using openephys nad the Rhythm-FPGA module ."""
+	def __init__(self, pname_root):
+		super().__init__(pname_root)
+		self.path2PosData = None
+		self.path2APdata = None
+		self.path2LFPdata = None
+		self.rawData = None
+
+	def load(self, pname_root=None, experiment_name='experiment1', recording_name='recording1', loadraw=False, n_channels=64):
+		"""
+		Loads data recorded in the OE 'flat' binary format.
+
+		Parameters
+		----------
+		pname_root : str
+			The top level directory, typically in form of YYYY-MM-DD_HH-MM-SS
+
+		recording_name : str
+			The directory immediately beneath pname_root
+
+		See Also
+		--------
+		See https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/166789121/Flat+binary+format
+		"""
+		self.isBinary = True
+		import os
+		import re
+		APdata_match = re.compile('Rhythm_FPGA-[0-9][0-9][0-9].0')
+		LFPdata_match = re.compile('Rhythm_FPGA-[0-9][0-9][0-9].1')
+		sync_message_file = None
+		self.recording_start_time = None
+
+		if pname_root is None:
+			pname_root = self.pname_root
+
+		for d, c, f in os.walk(pname_root):
+			for ff in f:
+				if '.' not in c: # ignore hidden directories
+					if 'data_array.npy' in ff:
+						self.path2PosData = os.path.join(d)
+					if 'continuous.dat' in ff:
+						if APdata_match.search(d):
+							self.path2APdata = os.path.join(d)
+						if LFPdata_match.search(d):
+							self.path2LFPdata = os.path.join(d)
+					if 'sync_messages.txt' in ff:
+						sync_message_file = os.path.join(d, 'sync_messages.txt')
+
+		if self.path2PosData is not None:
+			pos_data = np.load(os.path.join(self.path2PosData, 'data_array.npy'))
+			self.xy = pos_data[:,0:2]
+			pos_ts = np.load(os.path.join(self.path2PosData, 'timestamps.npy'))
+			self.xyTS = pos_ts / 30.0 / 1000.0
+
+		ap_sample_rate = 30000
+		trial_length = self.__calcTrialLengthFromBinarySize__(os.path.join(self.path2APdata, 'continuous.dat'), n_channels, ap_sample_rate)
+		
+		if loadraw:
+			status = os.stat(os.path.join(self.path2APdata, 'continuous.dat'))
+			n_samples = int(status.st_size / 2/ n_channels)
+			mmap = np.memmap(os.path.join(self.path2APdata, 'continuous.dat'), np.int16, 'r', 0, (n_channels, n_samples), 'C')
+			self.rawData = np.array(mmap, dtype=np.float64)
+		
+		# Load the start time from the sync_messages file
+		if sync_message_file is not None:
+			with open(sync_message_file, 'r') as f:
+				sync_strs = f.read()
+			sync_lines = sync_strs.split('\n')
+			for line in sync_lines:
+				if 'subProcessor: 0' in line:
+					idx = line.find('start time: ')
+					start_val = line[idx + len('start time: '):-1]
+					tmp = start_val.split('@')
+					recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
+		else:
+			recording_start_time = self.xyTS[0]
+		self.recording_start_time = recording_start_time
+		self.ts = np.arange(recording_start_time, trial_length+recording_start_time, 1.0 / ap_sample_rate)
+		
+	def __calcTrialLengthFromBinarySize__(self, path2file:str, n_channels=384, sample_rate=30000):
+		"""
+		Returns the time taken to run the trial (in seconds) based on the size of
+		the binary file on disk
+		"""
+		return super().__calcTrialLengthFromBinarySize__(path2file, n_channels, sample_rate)
+
+	def save_ttl(self, out_fname):
+		"""
+		Saves the ttl data to text file out_fname
+		"""
+		if ( len(self.ttl_data) > 0 ) and ( len(self.ttl_timestamps) > 0 ):
+			data = np.array([self.ttl_data, self.ttl_timestamps])
+		if data.shape[0] == 2:
+			data = data.T
+		np.savetxt(out_fname, data, delimiter='\t')
+
+	def exportPos(self):
+		xy = self.plotPos(show=False)
+		out = np.hstack([xy.T, self.xyTS[:,np.newaxis]])
+		np.savetxt('position.txt', out, delimiter=',', fmt=['%3.3i','%3.3i','%3.3f'])
+
+	def loadKilo(self, **kwargs):
+		super().loadKilo(**kwargs)
+
+	def plotPos(self, jumpmax=None, show=True):
+		xy = super().plotPos(jumpmax, show)
+		return xy
+
+	def plotMaps(self, plot_type='map', **kwargs):
+		super().plotMaps(plot_type, **kwargs)
+
+	def plotMapsOneAtATime(self, plot_type='map', **kwargs):
+		super().plotMapsOneAtATime(plot_type, **kwargs)
+
+	def plotEEGPower(self, channel=0):
+		super().plotEEGPower(channel)
+
+	def plotSpectrogram(self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250):
+		super().plotSpectrogram(nSeconds, secsPerBin, ax, ymin, ymax)
 
 	def plotPSTH(self):
 		super().plotPSTH()

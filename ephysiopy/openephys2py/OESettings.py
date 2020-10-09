@@ -173,7 +173,7 @@ class Settings(object):
     def __init__(self, pname : str):
         self.filename = None
         import os
-        for d, c, f in os.walk(pname):
+        for d, _, f in os.walk(pname):
             for ff in f:
                 if 'settings.xml' in ff:
                     self.filename = os.path.join(d, "settings.xml")
@@ -192,33 +192,46 @@ class Settings(object):
         """
         Creates a handle to the basic xml document
         """
-        self.tree = ET.ElementTree(file=self.filename)
+        if self.filename is not None:
+            self.tree = ET.ElementTree(file=self.filename)
     def parse(self):
         """
         Parses the basic information attached to the FPGA module
         """
         if self.tree is None:
             self.load()
-        for elem in self.tree.iter(tag='PROCESSOR'):
-            self.processors[elem.attrib['name']].append(elem)
+        # quick hack to deal with flat binary format that has no settings.xml
+        if self.tree is not None:
+            for elem in self.tree.iter(tag='PROCESSOR'):
+                self.processors[elem.attrib['name']].append(elem)
         # in a try / except because might be Neuropixels probe so no Rhythm FPGA
         try:
             fpga_items = dict(self.processors['Sources/Rhythm FPGA'][0].items())
             self.fpga_nodeId = fpga_items['NodeId']
         except Exception:
-            pass
+            self.fpga_nodeId = None
     def parsePos(self):
         """
         Parses the information attached to the PosTracker plugin I wrote
         """
         if len(self.processors) == 0:
             self.parse()
-        children = self.processors['Sources/Pos Tracker'][0].getchildren()
-        for child in children:
-            if 'Parameters' in child.tag:
-                self.tracker_params = child.attrib
-        # convert string values to ints
-        self.tracker_params = dict([k, int(v)] for k,v in self.tracker_params.items())
+        
+        if len(self.processors) > 0: # hack for no settings.xml file
+            if self.processors['Sources/Pos Tracker']:
+                children = self.processors['Sources/Pos Tracker'][0].getchildren()
+                for child in children:
+                    if 'Parameters' in child.tag:
+                        self.tracker_params = child.attrib
+                # convert string values to ints
+                self.tracker_params = dict([k, int(v)] for k,v in self.tracker_params.items())
+            else:
+                self.tracker_params = {'Brightness': 20, 'Contrast': 20, 'Exposure': 20, 'AutoExposure': 0, 'OverlayPath': 1,
+                                    'LeftBorder': 0, 'RightBorder': 800, 'TopBorder': 0, 'BottomBorder': 600}
+        else:
+            self.tracker_params = {'Brightness': 20, 'Contrast': 20, 'Exposure': 20, 'AutoExposure': 0, 'OverlayPath': 1,
+                                    'LeftBorder': 0, 'RightBorder': 800, 'TopBorder': 0, 'BottomBorder': 600}
+
     def parseSpikeSorter(self):
         """
         Parses data attached to each ELECTRODE object in the xml tree

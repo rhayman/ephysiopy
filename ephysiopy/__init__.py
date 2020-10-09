@@ -1,6 +1,9 @@
 from ephysiopy import __about__
 import os
-kk_path = os.path.join(os.environ.get('HOME'), 'klustakwik', 'Klustakwik')
+try:
+    kk_path = os.path.join(os.environ.get('HOME'), 'klustakwik', 'Klustakwik')
+except:
+    kk_path = None
 # used to bandpass filter the continuous raw openephys data when converting to
 # Axona eeg/ egf format
 lfp_lowcut = 1

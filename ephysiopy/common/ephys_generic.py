@@ -636,10 +636,11 @@ class PosCalcsGeneric(object):
 		xy : np.ma.MaskedArray
 			The xy data with speeds > self.jumpmax masked
 		"""
-		df = np.diff(xy, axis=0)
-		disp = np.hypot(df[:,0], df[:,1])
+		
+		disp = np.hypot(xy[:,0], xy[:,1])
+		disp = np.diff(disp, axis=0)
 		disp = np.insert(disp, -1, 0)
-		xy[disp > self.jumpmax, :] = np.ma.masked
+		xy[np.abs(disp) > self.jumpmax, :] = np.ma.masked
 		return xy
 
 	def interpnans(self, xy):
@@ -1801,7 +1802,7 @@ class FieldCalcs:
 		KL = np.nansum(pvect1 * (np.log2(pvect1) - np.log2(pvect2)))
 		return KL
 
-	def skaggsInfo(self, ratemap, dwelltimes):
+	def skaggsInfo(self, ratemap, dwelltimes, **kwargs):
 		"""
 		Calculates Skaggs information measure
 
@@ -1826,9 +1827,13 @@ class FieldCalcs:
 		.. math:: I = sum_{x} p(x).r(x).log(r(x)/r)
 		
 		"""
+		if 'sample_rate' in kwargs:
+			sample_rate = kwargs['sample_rate']
+		else:
+			sample_rate = 50
 
-		dwelltimes = dwelltimes / 50  # assumed sample rate of 50Hz
-		if np.shape(ratemap) > 1:
+		dwelltimes = dwelltimes / sample_rate  # assumed sample rate of 50Hz
+		if ratemap.ndim > 1:
 			ratemap = np.reshape(ratemap, (np.prod(np.shape(ratemap)), 1))
 			dwelltimes = np.reshape(dwelltimes, (np.prod(np.shape(dwelltimes)), 1))
 		duration = np.nansum(dwelltimes)
