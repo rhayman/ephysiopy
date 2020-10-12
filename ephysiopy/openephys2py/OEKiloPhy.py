@@ -176,17 +176,22 @@ class OpenEphysBase(object):
 		pass
 
 	def loadKilo(self, **kwargs):
+		import os
 		if 'pname' in kwargs:
 			pname = kwargs['pname']
 		else:
 			pname = self.pname_root
 		# Loads a kilosort session
-		kilodata = KiloSortSession(pname) # pname_root gets walked through and over-written with correct location of kiolsort data
-		if kilodata.load():
-			try:
-				kilodata.removeKSNoiseClusters()
-			except:
-				pass
+		kilodata = None
+		if pname is not None:
+			if os.path.exists(pname):
+				kilodata = KiloSortSession(pname) # pname_root gets walked through and over-written with correct location of kiolsort data
+		if kilodata is not None:
+			if kilodata.load():
+				try:
+					kilodata.removeKSNoiseClusters()
+				except:
+					pass
 		self.kilodata = kilodata
 
 	def __loadSettings__(self):
@@ -545,7 +550,10 @@ class OpenEphysNPX(OpenEphysBase):
 
 		ap_sample_rate = 30000
 		n_channels = 384
-		trial_length = self.__calcTrialLengthFromBinarySize__(os.path.join(self.path2APdata, 'continuous.dat'), n_channels, ap_sample_rate)
+		trial_length = 0 # make sure a trial_length has a value
+		if self.path2APdata is not None:
+			if os.path.exists(os.path.join(self.path2APdata, 'continuous.dat')):
+				trial_length = self.__calcTrialLengthFromBinarySize__(os.path.join(self.path2APdata, 'continuous.dat'), n_channels, ap_sample_rate)
 		# Load the start time from the sync_messages file
 		if sync_message_file is not None:
 			with open(sync_message_file, 'r') as f:
@@ -724,7 +732,10 @@ class OpenEphysNPX(OpenEphysBase):
 		plt.show()
 
 	def loadKilo(self, **kwargs):
-		super().loadKilo(pname=self.path2APdata)
+		if self.path2APdata is not None:
+			super().loadKilo(pname=self.path2APdata)
+		else:
+			super().loadKilo(**kwargs)
 
 	def plotPos(self, jumpmax=None, show=True, **kwargs):
 		super().plotPos(jumpmax, show, **kwargs)
