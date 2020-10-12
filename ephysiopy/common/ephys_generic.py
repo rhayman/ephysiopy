@@ -997,7 +997,9 @@ class MapCalcsGeneric(object):
 				ax = fig.add_subplot(111, projection='polar')
 			theta = np.deg2rad(rmap[1][0][1:])
 			ax.clear()
-			ax.plot(theta, rmap[0])
+			r = rmap[0]
+			r = np.insert(r, -1, r[0])
+			ax.plot(theta, r)
 			ax.set_aspect('equal')
 			ax.tick_params(axis='both', which='both', bottom=False, left=False, right=False, top=False, labelbottom=False, labelleft=False, labeltop=False, labelright=False)
 			ax.set_rticks([])

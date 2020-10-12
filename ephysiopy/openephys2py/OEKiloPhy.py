@@ -439,7 +439,7 @@ class OpenEphysBase(object):
 		ax.set_xlabel('Time(s)')
 		ax.set_ylabel('Frequency(Hz)')
 
-	def plotPSTH(self):
+	def plotPSTH(self, **kwargs):
 		"""Plots the peri-stimulus time histogram for all the 'good' clusters
 
 		Given some data has been recorded in the ttl channel, this method will plot
@@ -468,7 +468,7 @@ class OpenEphysBase(object):
 		event_ts = self.ttl_timestamps[2::2] # this is because some of the trials have two weird events logged at about 2-3 minutes in...
 		E.plotEventEEG(event_ts)
 
-	def plotWaves(self):
+	def plotWaves(self, **kwargs):
 		if self.kilodata is None:
 			self.loadKilo(**kwargs)
 		if self.rawData is None:
@@ -557,6 +557,7 @@ class OpenEphysNPX(OpenEphysBase):
 					start_val = line[idx + len('start time: '):-1]
 					tmp = start_val.split('@')
 					recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
+			self.xyTS = self.xyTS - recording_start_time
 		else:
 			recording_start_time = self.xyTS[0]
 		self.recording_start_time = recording_start_time
@@ -625,6 +626,7 @@ class OpenEphysNPX(OpenEphysBase):
 					start_val = line[idx + len('start time: '):-1]
 					tmp = start_val.split('@')
 					recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
+			self.xyTS = self.xyTS - recording_start_time
 		else:
 			recording_start_time = self.xyTS[0]
 		self.recording_start_time = recording_start_time
@@ -966,6 +968,7 @@ class OpenEphysBinary(OpenEphysBase):
 					start_val = line[idx + len('start time: '):-1]
 					tmp = start_val.split('@')
 					recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
+			self.xyTS = self.xyTS - self.recording_start_time # ensure pos timestamps are zeroed
 		else:
 			recording_start_time = self.xyTS[0]
 		self.recording_start_time = recording_start_time
