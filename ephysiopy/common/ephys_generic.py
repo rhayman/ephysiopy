@@ -995,7 +995,7 @@ class MapCalcsGeneric(object):
 			if ax is None:
 				fig = plt.figure()
 				ax = fig.add_subplot(111, projection='polar')
-			theta = np.deg2rad(rmap[1][0][1:])
+			theta = np.deg2rad(rmap[1][0])
 			ax.clear()
 			r = rmap[0]
 			r = np.insert(r, -1, r[0])
@@ -1092,9 +1092,18 @@ class MapCalcsGeneric(object):
 		gridness,scale,orientation,HDtuning,HDangle,speedCorr,speedMod = [],[],[],[],[],[],[]
 		for i,cl in enumerate(cluster):
 			rmap = self.makeRateMap(cl, None)
-			m = self.makeSAC(rmap, cl, None)
-			r,th = self.getHDtuning(cl)
-			spC,spM = self.getSpeedTuning(cl)
+			try:
+				m = self.makeSAC(rmap, cl, None)
+			except:
+				m = np.nan
+			try:
+				r,th = self.getHDtuning(cl)
+			except:
+				r = th = np.nan
+			try:
+				spC,spM = self.getSpeedTuning(cl)
+			except:
+				spC = spM = np.nan
 			
 			gridness.append(m['gridness'])
 			scale.append(m['scale'])

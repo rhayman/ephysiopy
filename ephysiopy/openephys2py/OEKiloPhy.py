@@ -237,7 +237,7 @@ class OpenEphysBase(object):
 		self.__loadSettings__()
 		xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
 		self.hdir = hdir
-		spk_times = (self.kilodata.spk_times.T / 3e4) + self.recording_start_time
+		spk_times = (self.kilodata.spk_times.T / 3e4)
 		if 'plot_type' in kwargs:
 			plot_type = kwargs['plot_type']
 		else:
@@ -380,7 +380,7 @@ class OpenEphysBase(object):
 		self.__loadSettings__()
 		xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
 		self.hdir = hdir
-		spk_times = (self.kilodata.spk_times.T / 3e4) + self.recording_start_time
+		spk_times = (self.kilodata.spk_times.T / 3e4)
 		mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
 		if 'clusters' in kwargs:
 			if type(kwargs['clusters']) == int:
