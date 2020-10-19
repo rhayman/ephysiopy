@@ -9,6 +9,7 @@ from scipy import signal, spatial, misc, ndimage, stats, io
 from scipy.signal import gaussian, boxcar
 import skimage
 from skimage import feature
+from skimage.segmentation import watershed
 import matplotlib
 import matplotlib.pylab as plt
 from matplotlib.cm import jet
@@ -20,322 +21,6 @@ from ephysiopy.common.utils import bwperim
 from ephysiopy.dacq2py import tintcolours as tcols
 import warnings
 
-class SpikeCalcsGeneric(object):
-	"""
-	Deals with the processing and analysis of spike timing data.
-
-	Parameters
-	----------
-	spike_times : array_like
-		the times of 'spikes' in the trial
-		this should be all spikes as the cluster identity vector _spk_clusters
-		is used to pick out the right spikes
-	waveforms : np.array, optional
-		not sure on shape yet but will be something like a
-		a 4 x nSpikes x nSamples (4 for tetrode-based analysis)
-
-	Notes
-	-----
-	Units for time are provided as per the sample rate but converted internally to milliseconds
-	"""
-	def __init__(self, spike_times, waveforms=None, **kwargs):
-		self.spike_times = spike_times
-		self.waveforms = waveforms
-		self._event_ts = None # the times that events occured i.e. the laser came on
-		self._spk_clusters = None # vector of cluster ids, same length as spike_times
-		self._event_window = np.array((-0.050, 0.100)) # window, in seconds, either side of the stimulus, to examine
-		self._stim_width = None # the width, in ms, of the stimulus
-		self._secs_per_bin = 0.001 # used to increase / decrease size of bins in psth
-		self._sample_rate = 30000
-		self._duration = None
-
-	@property
-	def sample_rate(self):
-		return self._sample_rate
-
-	@sample_rate.setter
-	def sample_rate(self, value):
-		self._sample_rate = value
-
-	def n_spikes(self, cluster=None):
-		if cluster is None:
-			return len(self.spike_times)
-		else:
-			if self.spk_clusters is None:
-				warnings.warn("No clusters available, please load some into me.")
-				return
-			else:
-				return np.count_nonzero(self._spk_clusters==cluster)
-
-	@property
-	def event_ts(self):
-		return self._event_ts
-
-	@event_ts.setter
-	def event_ts(self, value):
-		self._event_ts = value
-
-	@property
-	def duration(self):
-		return self._duration
-
-	@duration.setter
-	def duration(self, value):
-		self._duration = value
-
-	@property
-	def spk_clusters(self):
-		return self._spk_clusters
-
-	@spk_clusters.setter
-	def spk_clusters(self, value):
-		self._spk_clusters = value
-
-	@property
-	def event_window(self):
-		return self._event_window
-
-	@event_window.setter
-	def event_window(self, value):
-		self._event_window = value
-
-	@property
-	def stim_width(self):
-		return self._stim_width
-
-	@stim_width.setter
-	def stim_width(self, value):
-		self._stim_width = value
-
-	@property
-	def _secs_per_bin(self):
-		return self.__secs_per_bin
-
-	@_secs_per_bin.setter
-	def _secs_per_bin(self, value):
-		self.__secs_per_bin = value
-
-	def trial_mean_fr(self, cluster: int)->float:
-		# Returns the trial mean firing rate for the cluster
-		if self.duration is None:
-			warnings.warn("No duration provided, give me one!")
-			return
-		return self.n_spikes(cluster) / self.duration
-
-	def mean_isi_range(self, cluster: int, n: int)->float:
-		"""
-		Calculates the mean of the autocorrelation from 0 to n milliseconds
-		Used to help classify a neruons type (principal, interneuron etc)
-
-		Parameters
-		----------
-		cluster : int
-			The cluster to analyse
-		n : int
-			The range in milliseconds to calculate the mean over
-
-		Returns
-		-------
-		mean_isi_range : float
-			The mean of the autocorrelogram between 0 and n milliseconds
-		"""
-		if cluster not in self.spk_clusters:
-			warnings.warn("Cluster not available")
-			return
-		bins = 201
-		trange = np.array((-500, 500))
-		t = self.spike_times[self.spk_clusters==cluster]
-		y = self.xcorr(t, Trange=trange)
-		y = y.astype(np.int64) # See xcorr docs
-		counts, bins = np.histogram(y[y!=0], bins=bins, range=trange)
-		mask = np.logical_and(bins>0, bins<n)
-		return np.mean(counts[mask[1:]])
-
-	def xcorr(self, x1: np.ndarray, x2=None, Trange=None, **kwargs)->np.ndarray:
-		"""
-		Calculates the histogram of the ISIs in x1 or x1 vs x2
-
-		Parameters
-		----------
-		x1, x2 : array_like
-			The times of the spikes emitted by the cluster(s)
-			NB must be signed int to accomodate negative times
-		Trange : array_like
-			Range of times to bin up. Defaults to [-500, +500] in ms
-
-		Returns
-		-------
-		y : np.ndarray
-			The time differences between spike times in x1 over the range
-			of times defined Trange
-		"""
-		if x2 is None:
-			x2 = x1.copy()
-		if Trange is None:
-			Trange = np.array([-500, 500])
-		if type(Trange) == tuple:
-			Trange = np.array(Trange)
-		y = []
-		irange = x1[:, np.newaxis] + Trange[np.newaxis, :]
-		dts = np.searchsorted(x2, irange)
-		for i, t in enumerate(dts):
-			y.extend(x2[t[0]:t[1]] - x1[i])
-		y = np.array(y, dtype=float)
-		return y
-
-	def calculatePSTH(self, cluster_id, **kwargs):
-		"""
-		Calculate the PSTH of event_ts against the spiking of a cell
-
-		Parameters
-		----------
-		cluster_id : int
-			The cluster for which to calculate the psth
-
-		Returns
-		-------
-		x, y : list
-			The list of time differences between the spikes of the cluster
-			and the events (x) and the trials (y)
-		"""
-		if self._event_ts is None:
-			raise Exception("Need some event timestamps! Aborting")
-		if self._spk_clusters is None:
-			raise Exception("Need cluster identities! Aborting")
-		event_ts = self.event_ts
-		event_ts.sort()
-		if type(event_ts) == list:
-			event_ts = np.array(event_ts)
-
-		spike_times = self.spike_times[self.spk_clusters == cluster_id]
-		irange = event_ts[:, np.newaxis] + self.event_window[np.newaxis, :]
-		dts = np.searchsorted(spike_times, irange)
-		x = []
-		y = []
-		for i, t in enumerate(dts):
-			tmp = spike_times[t[0]:t[1]] - event_ts[i]
-			x.extend(tmp)
-			y.extend(np.repeat(i,len(tmp)))
-		return x, y
-
-	def plotPSTH(self, cluster, fig=None):
-		"""
-		Plots the PSTH for a cluster
-
-		Parameters
-		----------
-		cluster : int
-			The cluster to examine
-
-		Returns
-		-------
-		cluster, i : int
-			The cluster and a junk variable (not sure why for now)
-		"""
-		x, y = self.calculatePSTH(cluster)
-		show = False # used below to show the figure or leave this to the caller
-		if fig is None:
-			fig = plt.figure(figsize=(4.0,7.0))
-			show = True
-		scatter_ax = fig.add_subplot(111)
-		scatter_ax.scatter(x, y, marker='.', s=2, rasterized=False)
-		divider = make_axes_locatable(scatter_ax)
-		scatter_ax.set_xticks((self.event_window[0], 0, self.event_window[1]))
-		scatter_ax.set_xticklabels((str(self.event_window[0]), '0', str(self.event_window[1])))
-		hist_ax = divider.append_axes("top", 0.95, pad=0.2, sharex=scatter_ax,
-									  transform=scatter_ax.transAxes)
-		scattTrans = transforms.blended_transform_factory(scatter_ax.transData,
-														  scatter_ax.transAxes)
-		if self.stim_width is not None:
-			scatter_ax.add_patch(Rectangle((0, 0), width=self.stim_width, height=1,
-						transform=scattTrans,
-						color=[0, 0, 1], alpha=0.5))
-			histTrans = transforms.blended_transform_factory(hist_ax.transData,
-															 hist_ax.transAxes)
-			hist_ax.add_patch(Rectangle((0, 0), width=self.stim_width, height=1,
-							  transform=histTrans,
-							  color=[0, 0, 1], alpha=0.5))
-		scatter_ax.set_ylabel('Laser stimulation events', labelpad=-18.5)
-		scatter_ax.set_xlabel('Time to stimulus onset(secs)')
-		nStms = int(len(self.event_ts))
-		scatter_ax.set_ylim(0, nStms)
-		# Label only the min and max of the y-axis
-		ylabels = scatter_ax.get_yticklabels()
-		for i in range(1, len(ylabels)-1):
-			ylabels[i].set_visible(False)
-		yticks = scatter_ax.get_yticklines()
-		for i in range(1, len(yticks)-1):
-			yticks[i].set_visible(False)
-		histColor = [192/255.0,192/255.0,192/255.0]
-		hist_ax.hist(x, bins=np.arange(self.event_window[0], self.event_window[1] + self._secs_per_bin, self._secs_per_bin),
-							 color=histColor, alpha=0.6, range=self.event_window, rasterized=True, histtype='stepfilled')
-		hist_ax.set_ylabel("Spike count", labelpad=-2.5)
-		plt.setp(hist_ax.get_xticklabels(), visible=False)
-		# Label only the min and max of the y-axis
-		ylabels = hist_ax.get_yticklabels()
-		for i in range(1, len(ylabels)-1):
-			ylabels[i].set_visible(False)
-		yticks = hist_ax.get_yticklines()
-		for i in range(1, len(yticks)-1):
-			yticks[i].set_visible(False)
-		hist_ax.set_xlim(self.event_window)
-		scatter_ax.set_xlim(self.event_window)
-		if show:
-			plt.show()
-		yield cluster, 1
-
-	def plotAllXCorrs(self, clusters, fig=None):
-		"""
-		Plots all xcorrs in a single figure window
-
-		Parameters
-		----------
-		clusters : list
-			The clusters to plot
-		fig : matplotlib.figure instance, optional, default None
-			If provided the figure will contain all the axes
-		"""
-		from ephysiopy.dacq2py import spikecalcs
-		SpkCalcs = spikecalcs.SpikeCalcs()
-		if fig is None:
-			fig = plt.figure(figsize=(10,20))
-
-		nrows = np.ceil(np.sqrt(len(clusters))).astype(int)
-		fig.subplots_adjust(wspace=0.25,hspace=0.25)
-		for i, cluster in enumerate(clusters):
-			cluster_idx = np.nonzero(self.spk_clusters == cluster)[0]
-			cluster_ts = np.ravel(self.spike_times[cluster_idx])
-			ax = fig.add_subplot(nrows,nrows,i+1)
-			y = SpkCalcs.xcorr(cluster_ts.T / float(self.sample_rate / 1000)) # ms
-			ax.hist(y[y != 0], bins=201, range=[-500, 500], color='k', histtype='stepfilled')
-			ax.set_xlim(-500,500)
-			ax.set_xticks((-500, 0, 500))
-			# ax.set_xticklabels((str(-500), '0', str(500)),fontweight='normal', size=8)
-			ax.set_xticklabels('')
-			ax.tick_params(axis='both', which='both', left=False, right=False,
-							bottom=False, top=False)
-			ax.set_yticklabels('')
-			ax.spines['right'].set_visible(False)
-			ax.spines['top'].set_visible(False)
-			ax.spines['left'].set_visible(False)
-			ax.xaxis.set_ticks_position('bottom')
-			ax.set_title(cluster, fontweight='bold', size=10, pad=1)
-		plt.show()
-
-class SpikeCalcsTetrode(SpikeCalcsGeneric):
-	"""
-	Encapsulates methods specific to the geometry inherent in tetrode-based
-	recordings
-	"""
-	def __init__(self):
-		pass
-
-class SpikeCalcsProbe(SpikeCalcsGeneric):
-	"""
-	Encapsulates methods specific to probe-based recordings
-	"""
-	def __init__(self):
-		pass
 
 class EEGCalcsGeneric(object):
 	"""
@@ -775,7 +460,10 @@ class MapCalcsGeneric(object):
 		if (spk_ts.ndim == 2):
 			spk_ts = np.ravel(spk_ts)
 		self.spk_ts = spk_ts
-		self.plot_type = plot_type
+		if type(plot_type) is str:
+			self.plot_type = [plot_type]
+		else:
+			self.plot_type = list(plot_type)
 		self.spk_pos_idx = self.__interpSpkPosTimes()
 		self.__good_clusters = None
 		self.__spk_clusters = None
@@ -825,7 +513,7 @@ class MapCalcsGeneric(object):
 		idx[idx==len(self.pos_ts)] = len(self.pos_ts) - 1
 		return idx
 
-	def plotAll(self):
+	def plotAll(self, **kwargs):
 		"""
 		Plots rate maps and other graphical output
 
@@ -839,6 +527,8 @@ class MapCalcsGeneric(object):
 			what_to_plot = ['map','path','hdir','sac','speed', 'sp_hd']
 			fig = plt.figure(figsize=(20,10))
 		else:
+			if type(self.plot_type) is str:
+				what_to_plot = [self.plot_type]
 			what_to_plot = list(self.plot_type)
 			if len(what_to_plot) > 1:
 				fig = plt.figure(figsize=(20,10))
@@ -861,14 +551,14 @@ class MapCalcsGeneric(object):
 				else:
 					ax = fig.add_subplot(inner[plot_type_idx])
 				if 'path' in plot_type:
-					self.makeSpikePathPlot(cluster, ax)
+					self.makeSpikePathPlot(cluster, ax, **kwargs)
 				if 'map' in plot_type:
-					rmap = self.makeRateMap(cluster, ax)
+					rmap = self.makeRateMap(cluster, ax, **kwargs)
 				if 'hdir' in plot_type:
-					self.makeHDPlot(cluster, ax, add_mrv=True)
+					self.makeHDPlot(cluster, ax, add_mrv=True, **kwargs)
 				if 'sac' in plot_type:
 					rmap = self.makeRateMap(cluster)
-					self.makeSAC(rmap, ax)
+					self.makeSAC(rmap, cluster, ax)
 				if 'speed' in plot_type:
 					self.makeSpeedVsRatePlot(cluster, 0.0, 40.0, 3.0, ax)
 				if 'sp_hd' in plot_type:
@@ -945,7 +635,7 @@ class MapCalcsGeneric(object):
 			S.show(sac, measures, ax)
 		return measures
 
-	def makeRateMap(self, cluster, ax=None):
+	def makeRateMap(self, cluster, ax=None, **kwargs):
 		pos_w = np.ones_like(self.pos_ts)
 		mapMaker = binning.RateMap(self.xy, None, None, pos_w, ppm=self.ppm)
 		spk_w = np.bincount(self.spk_pos_idx, self.spk_clusters==cluster, minlength=self.pos_ts.shape[0])
@@ -969,13 +659,18 @@ class MapCalcsGeneric(object):
 		ax.spines['left'].set_visible(False)
 		return rmap
 
-	def makeSpikePathPlot(self, cluster, ax):
+	def makeSpikePathPlot(self, cluster, ax, **kwargs):
 		ax.plot(self.xy[0], self.xy[1], c=tcols.colours[0], zorder=1)
 		ax.set_aspect('equal')
 		ax.invert_yaxis()
 		idx = self.spk_pos_idx[self.spk_clusters==cluster]
 		spk_colour = tcols.colours[1]
-		ax.plot(self.xy[0,idx], self.xy[1,idx],'s',ms=1, c=spk_colour,mec=spk_colour)
+		ms = 1
+		if 'ms' in kwargs:
+			ms = kwargs['ms']
+		if 'markersize' in kwargs:
+			ms = kwargs['markersize']
+		ax.plot(self.xy[0,idx], self.xy[1,idx],'s',ms=ms, c=spk_colour,mec=spk_colour)
 		plt.setp(ax.get_xticklabels(), visible=False)
 		plt.setp(ax.get_yticklabels(), visible=False)
 		ax.axes.get_xaxis().set_visible(False)
@@ -1000,6 +695,8 @@ class MapCalcsGeneric(object):
 			r = rmap[0]
 			r = np.insert(r, -1, r[0])
 			ax.plot(theta, r)
+			if 'fill' in kwargs:
+				ax.fill(theta, r, alpha=0.5)
 			ax.set_aspect('equal')
 			ax.tick_params(axis='both', which='both', bottom=False, left=False, right=False, top=False, labelbottom=False, labelleft=False, labeltop=False, labelright=False)
 			ax.set_rticks([])
@@ -1211,7 +908,7 @@ class FieldCalcs:
 											 exclude_border=False,
 											 indices=False)
 		peak_labels = skimage.measure.label(peak_mask, 8)
-		field_labels = skimage.morphology.watershed(image=-Ac,
+		field_labels = watershed(image=-Ac,
 											  markers=peak_labels)
 		nFields = np.max(field_labels)
 		sub_field_mask = np.zeros((nFields, Ac.shape[0], Ac.shape[1]))
@@ -1265,7 +962,7 @@ class FieldCalcs:
 											 exclude_border=False,
 											 indices=False)
 		peak_labels = skimage.measure.label(peak_mask, 8)
-		field_labels = skimage.morphology.watershed(image=-Ac,
+		field_labels = watershed(image=-Ac,
 											  markers=peak_labels)
 		nFields = np.max(field_labels)
 		return nFields
@@ -1288,7 +985,7 @@ class FieldCalcs:
 											 exclude_border=False,
 											 indices=False)
 		peak_labels = skimage.measure.label(peak_mask, 8)
-		field_labels = skimage.morphology.watershed(image=-Ac,
+		field_labels = watershed(image=-Ac,
 											  markers=peak_labels)
 		nFields = np.max(field_labels)
 		sub_field_mask = np.zeros((nFields, Ac.shape[0], Ac.shape[1]))
@@ -1554,7 +1251,7 @@ class FieldCalcs:
 		peak_mask = feature.peak_local_max(Ac, min_distance=min_dist, exclude_border=clear_border,
 											 indices=False)
 		peak_labels = skimage.measure.label(peak_mask, 8)
-		field_labels = skimage.morphology.watershed(image=-Ac,
+		field_labels = watershed(image=-Ac,
 											  markers=peak_labels)
 		nFields = np.max(field_labels)
 		sub_field_mask = np.zeros((nFields, Ac.shape[0], Ac.shape[1]))
@@ -1696,10 +1393,10 @@ class FieldCalcs:
 			map1 = misc.imresize(map1, map2.shape, interp='nearest', mode='F')
 		map1 = map1.flatten()
 		map2 = map2.flatten()
-		if maptype is 'normal':
+		if 'normal' in maptype:
 			valid_map1 = np.logical_or((map1 > 0), ~np.isnan(map1))
 			valid_map2 = np.logical_or((map2 > 0), ~np.isnan(map2))
-		elif maptype is 'grid':
+		elif 'grid' in maptype:
 			valid_map1 = ~np.isnan(map1)
 			valid_map2 = ~np.isnan(map2)
 		valid = np.logical_and(valid_map1, valid_map2)
@@ -1942,8 +1639,8 @@ class FieldCalcs:
 			fieldsMask = fieldsLabel > 0
 		elif field_extent_method == 2:
 			# 2a find the inverse drainage bin for each peak
-			fieldsLabel = skimage.morphology.watershed(image=-A_tmp, markers=peaksLabel)
-#            fieldsLabel = skimage.segmentation.random_walker(-A, peaksLabel)
+			fieldsLabel = watershed(image=-A_tmp, markers=peaksLabel)
+            #fieldsLabel = skimage.segmentation.random_walker(-A, peaksLabel)
 			# 2b. Work out what threshold to use in each drainage-basin
 			nZones = np.max(fieldsLabel.ravel())
 			fieldIDs = fieldsLabel[closestPeaksCoord[:,0],closestPeaksCoord[:,1]]

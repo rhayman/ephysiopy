@@ -215,6 +215,18 @@ class OpenEphysBase(object):
 		status = os.stat(path2file)
 		return status.st_size / ( 2.0 * n_channels * sample_rate)
 
+	def memmapBinaryFile(self, path2file:str, n_channels=384, **kwargs):
+		"""
+		Returns a numpy memmap of the 30Khz sampled high frequency data in the file
+		'continuous.dat', if present
+		"""
+		import os
+		if os.path.exists(path2file):
+			status = os.stat(path2file)
+			n_samples = status.st_size / ( 2.0 * n_channels )
+			mmap = np.memmap(path2file, np.int16, 'r', 0, (n_channels, n_samples), order='F')
+			return mmap
+
 	def prepareMaps(self, **kwargs):
 		"""Initialises a MapCalcsGeneric object by providing it with positional and
 		spiking data.
@@ -238,8 +250,8 @@ class OpenEphysBase(object):
 		xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
 		self.hdir = hdir
 		spk_times = (self.kilodata.spk_times.T / 3e4)
-		if 'plot_type' in kwargs:
-			plot_type = kwargs['plot_type']
+		if 'plot_type' in kwargs.keys():
+			plot_type = kwargs.pop('plot_type')
 		else:
 			plot_type = 'map'
 		mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
@@ -254,6 +266,92 @@ class OpenEphysBase(object):
 		mapiter.spk_clusters = self.kilodata.spk_clusters
 		self.mapiter = mapiter
 		return mapiter
+
+	def plotMaps(self, **kwargs):
+		"""
+		Parameters
+		------------
+		plot_type : str or list
+			The type of map to plot. Valid strings include:
+			* 'map' - just ratemap plotted
+			* 'path' - just spikes on path
+			* 'both' - both of the above
+			* 'all' - both spikes on path, ratemap & SAC plotted
+		Valid kwargs: 'ppm' - this is an integer denoting pixels per metre:
+												lower values = more bins in ratemap / SAC
+				'cluster' - int or list of ints describing which clusters to plot
+		
+		Notes
+		-----
+		If providing a specific cluster or  list of clusters to this method with the keyword 
+		'cluster' then this is compared against the list of clusters from the Kilosort session.
+		Only clusters that are in both lists will be plotted.
+
+		Examples
+		--------
+		>>> from ephysiopy.openephys2py.OEKiloPhy import OpenEphysNPX
+		>>> npx = OpenEphysNPX('/path/to/data')
+		>>> npx.load()
+		>>> npx.plotMaps(plot_type='path', clusters=[1, 4, 6, 16, 22])
+
+		Will plot the spikes from clusters 1, 4, 6, 16, and 22 overlaid onto the xy position data 
+		in one figure window
+
+		"""
+		self.prepareMaps(**kwargs)
+		if 'clusters' in kwargs:
+			if type(kwargs['clusters']) == int:
+				self.mapiter.good_clusters = np.intersect1d([kwargs['clusters']], self.kilodata.good_clusters)
+
+			else:
+				self.mapiter.good_clusters = np.intersect1d(kwargs['clusters'], self.kilodata.good_clusters)
+		
+		self.mapiter.plotAll(**kwargs)
+
+	def plotMapsOneAtATime(self, plot_type='map', **kwargs):
+		"""
+		Parameters
+		----------
+		plot_type : str or list
+			The kind of plot to produce.  Valid strings include:
+			* 'map' - just ratemap plotted
+			* 'path' - just spikes on path
+			* 'both' - both of the above
+			* 'all' - both spikes on path, ratemap & SAC plotted
+		kwargs :
+		* 'ppm' - Integer denoting pixels per metre where lower values = more bins in ratemap / SAC
+		* 'clusters' - int or list of ints describing which clusters to plot
+		* 'save_grid_summary_location' - bool; if True the dictionary returned from gridcell.SAC.getMeasures is saved for each cluster
+		"""
+
+		if self.kilodata is None:
+			self.loadKilo(**kwargs)
+		if ( 'ppm' in kwargs.keys() ):
+			ppm = kwargs['ppm']
+		else:
+			ppm = 400
+		from ephysiopy.common.ephys_generic import PosCalcsGeneric, MapCalcsGeneric
+		if self.xy is None:
+
+			self.__loaddata__(**kwargs)
+		posProcessor = PosCalcsGeneric(self.xy[:,0], self.xy[:,1], ppm, jumpmax=self.jumpmax)
+		import os
+		self.__loadSettings__()
+		xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
+		self.hdir = hdir
+		spk_times = (self.kilodata.spk_times.T / 3e4)
+		mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
+		if 'clusters' in kwargs:
+			if type(kwargs['clusters']) == int:
+				mapiter.good_clusters = np.intersect1d([kwargs['clusters']], self.kilodata.good_clusters)
+
+			else:
+				mapiter.good_clusters = np.intersect1d(kwargs['clusters'], self.kilodata.good_clusters)
+		else:
+			mapiter.good_clusters = self.kilodata.good_clusters
+		mapiter.spk_clusters = self.kilodata.spk_clusters
+		self.mapiter = mapiter
+		[ print("") for cluster in mapiter ]
 
 	def plotXCorrs(self, **kwargs):
 		if self.kilodata is None:
@@ -308,91 +406,6 @@ class OpenEphysBase(object):
 			plt.show()
 			return ax, xy
 		return xy
-
-	def plotMaps(self, plot_type='map', **kwargs):
-		"""
-		Parameters
-		------------
-		plot_type : str or list
-			The type of map to plot. Valid strings include:
-			* 'map' - just ratemap plotted
-			* 'path' - just spikes on path
-			* 'both' - both of the above
-			* 'all' - both spikes on path, ratemap & SAC plotted
-		Valid kwargs: 'ppm' - this is an integer denoting pixels per metre:
-												lower values = more bins in ratemap / SAC
-				'cluster' - int or list of ints describing which clusters to plot
-		
-		Notes
-		-----
-		If providing a specific cluster or  list of clusters to this method with the keyword 
-		'cluster' then this is compared against the list of clusters from the Kilosort session.
-		Only clusters that are in both lists will be plotted.
-
-		Examples
-		--------
-		>>> from ephysiopy.openephys2py.OEKiloPhy import OpenEphysNPX
-		>>> npx = OpenEphysNPX('/path/to/data')
-		>>> npx.load()
-		>>> npx.plotMaps(plot_type='path', clusters=[1, 4, 6, 16, 22])
-
-		Will plot the spikes from clusters 1, 4, 6, 16, and 22 overlaid onto the xy position data 
-		in one figure window
-
-		"""
-		self.prepareMaps(**kwargs)
-		if 'clusters' in kwargs:
-			if type(kwargs['clusters']) == int:
-				self.mapiter.good_clusters = np.intersect1d([kwargs['clusters']], self.kilodata.good_clusters)
-
-			else:
-				self.mapiter.good_clusters = np.intersect1d(kwargs['clusters'], self.kilodata.good_clusters)
-		
-		self.mapiter.plotAll()
-
-	def plotMapsOneAtATime(self, plot_type='map', **kwargs):
-		"""
-		Parameters
-		----------
-		plot_type : str or list
-			The kind of plot to produce.  Valid strings include:
-			* 'map' - just ratemap plotted
-			* 'path' - just spikes on path
-			* 'both' - both of the above
-			* 'all' - both spikes on path, ratemap & SAC plotted
-		kwargs :
-		* 'ppm' - Integer denoting pixels per metre where lower values = more bins in ratemap / SAC
-		* 'clusters' - int or list of ints describing which clusters to plot
-		* 'save_grid_summary_location' - bool; if True the dictionary returned from gridcell.SAC.getMeasures is saved for each cluster
-		"""
-
-		if self.kilodata is None:
-			self.loadKilo(**kwargs)
-		if ( 'ppm' in kwargs.keys() ):
-			ppm = kwargs['ppm']
-		else:
-			ppm = 400
-		from ephysiopy.common.ephys_generic import PosCalcsGeneric, MapCalcsGeneric
-		if self.xy is None:
-			self.__loaddata__(**kwargs)
-		posProcessor = PosCalcsGeneric(self.xy[:,0], self.xy[:,1], ppm, jumpmax=self.jumpmax)
-		import os
-		self.__loadSettings__()
-		xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
-		self.hdir = hdir
-		spk_times = (self.kilodata.spk_times.T / 3e4)
-		mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
-		if 'clusters' in kwargs:
-			if type(kwargs['clusters']) == int:
-				mapiter.good_clusters = np.intersect1d([kwargs['clusters']], self.kilodata.good_clusters)
-
-			else:
-				mapiter.good_clusters = np.intersect1d(kwargs['clusters'], self.kilodata.good_clusters)
-		else:
-			mapiter.good_clusters = self.kilodata.good_clusters
-		mapiter.spk_clusters = self.kilodata.spk_clusters
-		self.mapiter = mapiter
-		[ print("") for cluster in mapiter ]
 
 	def plotEEGPower(self, channel=0):
 		"""
@@ -740,8 +753,8 @@ class OpenEphysNPX(OpenEphysBase):
 	def plotPos(self, jumpmax=None, show=True, **kwargs):
 		super().plotPos(jumpmax, show, **kwargs)
 
-	def plotMaps(self, plot_type='map', **kwargs):
-		super().plotMaps(plot_type, **kwargs)
+	def plotMaps(self, **kwargs):
+		super().plotMaps(**kwargs)
 
 	def plotMapsOneAtATime(self, plot_type='map', **kwargs):
 		super().plotMapsOneAtATime(plot_type, **kwargs)
@@ -883,8 +896,8 @@ class OpenEphysNWB(OpenEphysBase):
 		xy = super().plotPos(jumpmax, show)
 		return xy
 
-	def plotMaps(self, plot_type='map', **kwargs):
-		super().plotMaps(plot_type, **kwargs)
+	def plotMaps(self, **kwargs):
+		super().plotMaps(**kwargs)
 
 	def plotMapsOneAtATime(self, plot_type='map', **kwargs):
 		super().plotMapsOneAtATime(plot_type, **kwargs)
@@ -960,15 +973,18 @@ class OpenEphysBinary(OpenEphysBase):
 			self.xyTS = pos_ts / 30.0 / 1000.0
 
 		ap_sample_rate = 30000
-		trial_length = self.__calcTrialLengthFromBinarySize__(os.path.join(self.path2APdata, 'continuous.dat'), n_channels, ap_sample_rate)
+		if os.path.exists(os.path.join(self.path2APdata, 'continuous.dat')):
+			trial_length = self.__calcTrialLengthFromBinarySize__(os.path.join(self.path2APdata, 'continuous.dat'), n_channels, ap_sample_rate)
 		
 		if loadraw:
-			status = os.stat(os.path.join(self.path2APdata, 'continuous.dat'))
-			n_samples = int(status.st_size / 2/ n_channels)
-			mmap = np.memmap(os.path.join(self.path2APdata, 'continuous.dat'), np.int16, 'r', 0, (n_channels, n_samples), 'C')
-			self.rawData = np.array(mmap, dtype=np.float64)
+			if os.path.exists(os.path.join(self.path2APdata, 'continuous.dat')):
+				status = os.stat(os.path.join(self.path2APdata, 'continuous.dat'))
+				n_samples = int(status.st_size / 2/ n_channels)
+				mmap = np.memmap(os.path.join(self.path2APdata, 'continuous.dat'), np.int16, 'r', 0, (n_channels, n_samples), 'C')
+				self.rawData = np.array(mmap, dtype=np.float64)
 		
 		# Load the start time from the sync_messages file
+		recording_start_time = 0
 		if sync_message_file is not None:
 			with open(sync_message_file, 'r') as f:
 				sync_strs = f.read()
@@ -979,7 +995,7 @@ class OpenEphysBinary(OpenEphysBase):
 					start_val = line[idx + len('start time: '):-1]
 					tmp = start_val.split('@')
 					recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
-			self.xyTS = self.xyTS - self.recording_start_time # ensure pos timestamps are zeroed
+			self.xyTS = self.xyTS - recording_start_time # ensure pos timestamps are zeroed
 		else:
 			recording_start_time = self.xyTS[0]
 		self.recording_start_time = recording_start_time
@@ -1014,8 +1030,8 @@ class OpenEphysBinary(OpenEphysBase):
 		xy = super().plotPos(jumpmax, show)
 		return xy
 
-	def plotMaps(self, plot_type='map', **kwargs):
-		super().plotMaps(plot_type, **kwargs)
+	def plotMaps(self, **kwargs):
+		super().plotMaps(**kwargs)
 
 	def plotMapsOneAtATime(self, plot_type='map', **kwargs):
 		super().plotMapsOneAtATime(plot_type, **kwargs)
