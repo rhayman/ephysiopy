@@ -677,6 +677,9 @@ class OpenEphysNPX(OpenEphysBase):
 		maxFreq : int
 			The maximum frequency in Hz to plot the spectrogram out to. Maximum 1250.
 			Default 125
+		kwargs: legal values are: 'frequencies' and 'channels'; both are lists that denote
+				which frequencies to show the mean power of along the length of the probe and,
+				which channels to show the frequency spectra of.
 		
 		Notes
 		-----
@@ -695,6 +698,7 @@ class OpenEphysNPX(OpenEphysBase):
 		from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 		E = EEGCalcsGeneric(data[0, :], lfp_sample_rate)
 		E.calcEEGPowerSpectrum()
+		# Select a subset of the full amount of data to display later
 		spec_data = np.zeros(shape=(data.shape[0], len(E.sm_power[0::50])))
 		for chan in range(data.shape[0]):
 			E = EEGCalcsGeneric(data[chan, :], lfp_sample_rate)
@@ -706,8 +710,16 @@ class OpenEphysNPX(OpenEphysBase):
 		from matplotlib.pyplot import cm
 		from mpl_toolkits.axes_grid1 import make_axes_locatable
 		_, spectoAx = plt.subplots()
-		spectoAx.pcolormesh(x, y, spec_data, edgecolors='face', cmap='bone',norm=colors.LogNorm())
-		spectoAx.set_xlim(0, maxFreq)
+		if 'cmap' in kwargs:
+			cmap = kwargs['cmap']
+		else:
+			cmap = 'bone'
+		spectoAx.pcolormesh(x, y, spec_data, edgecolors='face', cmap=cmap,norm=colors.LogNorm(), shading='nearest')
+		if 'minFreq' in kwargs:
+			minFreq = kwargs['minFreq']
+		else:
+			minFreq = 0
+		spectoAx.set_xlim(minFreq, maxFreq)
 		spectoAx.set_ylim(channel_map[0], channel_map[-1])
 		spectoAx.set_xlabel('Frequency (Hz)')
 		spectoAx.set_ylabel('Channel')
@@ -717,8 +729,13 @@ class OpenEphysNPX(OpenEphysBase):
 		plt.setp(channel_spectoAx.get_xticklabels() + meanfreq_powerAx.get_yticklabels(), visible=False)
 
 		mn_power = np.mean(spec_data, 0)
-		cols = iter(cm.rainbow(np.linspace(0,1,(nchannels//60)+1)))
-		for i in range(0, spec_data.shape[0], 60):
+		if 'channels' in kwargs:
+			channels = kwargs['channels']
+			cols = iter(cm.rainbow(np.linspace(0,1,(len(kwargs['channels'])))))
+		else:
+			channels = np.arange(0, spec_data.shape[0], 60)
+			cols = iter(cm.rainbow(np.linspace(0,1,(nchannels//60)+1)))
+		for i in channels:
 			c = next(cols)
 			channel_spectoAx.plot(E.freqs[0::50], 10*np.log10(spec_data[i, :]/mn_power), c=c, label=str(i))
 
@@ -726,9 +743,16 @@ class OpenEphysNPX(OpenEphysBase):
 		channel_spectoAx.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left', mode='expand',
 			fontsize='x-small', ncol=4)
 
-		freq_inc = 6
-		lower_freqs = np.arange(1, maxFreq-freq_inc, freq_inc)
-		upper_freqs = np.arange(1+freq_inc, maxFreq, freq_inc)
+		if 'frequencies' in kwargs:
+			lower_freqs = kwargs['frequencies']
+			upper_freqs = lower_freqs[1::]
+			inc = np.diff([lower_freqs[-2],lower_freqs[-1]])
+			upper_freqs = np.append(upper_freqs, lower_freqs[-1]+inc)
+		else:
+			freq_inc = 6
+			lower_freqs = np.arange(1, maxFreq-freq_inc, freq_inc)
+			upper_freqs = np.arange(1+freq_inc, maxFreq, freq_inc)
+
 		cols = iter(cm.nipy_spectral(np.linspace(0,1,len(upper_freqs))))
 		mn_power = np.mean(spec_data, 1)
 		for freqs in zip(lower_freqs, upper_freqs):
