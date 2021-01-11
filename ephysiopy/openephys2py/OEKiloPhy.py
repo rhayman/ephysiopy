@@ -515,7 +515,7 @@ class OpenEphysNPX(OpenEphysBase):
 		self.path2APdata = None
 		self.path2LFPdata = None
 
-	def load(self, pname_root=None, experiment_name='experiment1', recording_name='recording1'):
+	def load(self, pname_root=None, experiment_name='experiment1', recording_name='recording1', **kwargs):
 		"""
 		Loads data recorded in the OE 'flat' binary format.
 

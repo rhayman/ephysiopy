@@ -112,3 +112,15 @@ class OE2Numpy(object):
 		np.save(os.path.join(self.dirname, "ttl_state.npy"), ttl_state, allow_pickle=False)
 		np.save(os.path.join(self.dirname, "ttl_timestamps.npy"), ttl_ts, allow_pickle=False)
 		print("Finished exporting TTL data")
+
+	def exportRaw2Binary(self, output_fname=None):
+		if self.OE_data.rawData is None:
+			print("Load the data first. See getOEData()")
+			return
+		if output_fname is None:
+			output_fname = os.path.splitext(self.filename_root)[0] + '.bin'
+		print(f"Exporting raw data to:\n{output_fname}")
+		with open(output_fname, 'wb') as f:
+			np.save(f, self.OE_data.rawData)
+		print("Finished exporting")
+		
