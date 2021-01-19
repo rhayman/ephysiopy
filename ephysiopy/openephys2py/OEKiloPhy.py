@@ -877,10 +877,15 @@ class OpenEphysNWB(OpenEphysBase):
 			fpgaNode = 'processor' + str(fpgaId) + '_' + str(fpgaId)
 			self.ts = np.array(self.nwbData['acquisition']['timeseries'][self.recording_name]['continuous'][fpgaNode]['timestamps'])
 			if (loadraw == True):
-				self.rawData = np.array(self.nwbData['acquisition']['timeseries'][self.recording_name]['continuous'][fpgaNode]['data'])
+				print("Attempting to reference ALL the raw data...")
+				self.rawData = self.nwbData['acquisition']['timeseries'][self.recording_name]['continuous'][fpgaNode]['data']
+				print("Referenced the raw data! Yay!\nParsing channels...")
 				self.settings.parseChannels() # to get the neural data channels
+				print("Channels parsed\nAccessing accelerometer data...")
 				self.accelerometerData = self.rawData[:,64:]
+				print("Accessed the accelerometer data\nAttempting to access the raw data...")
 				self.rawData = self.rawData[:,0:64]
+				print("Got the raw data!")
 				if (savedat == True):
 					data2save = self.rawData[:,0:64]
 					data2save.tofile(os.path.join(pname_root, 'experiment_1.dat'))
