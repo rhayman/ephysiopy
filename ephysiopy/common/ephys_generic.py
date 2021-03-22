@@ -3,7 +3,7 @@ The classes contained in this module are supposed to be agnostic to recording fo
 and encapsulate some generic mechanisms for producing things like spike timing
 autocorrelograms, power spectrum calculation and so on
 """
-
+import functools
 import numpy as np
 from scipy import signal, spatial, misc, ndimage, stats, io
 from scipy.signal import gaussian, boxcar
@@ -19,6 +19,29 @@ from ephysiopy.common import binning
 from ephysiopy.common.utils import bwperim
 from ephysiopy.dacq2py import tintcolours as tcols
 import warnings
+
+# Decorators
+def stripAxes(func):
+	@functools.wraps(func)
+	def wrapper(*args, **kwargs):
+		original = func(*args, **kwargs)
+		if 'ax' in kwargs.keys():
+			ax = kwargs['ax']
+		else:
+			return original
+		plt.setp(ax.get_xticklabels(), visible=False)
+		plt.setp(ax.get_yticklabels(), visible=False)
+		ax.axes.get_xaxis().set_visible(False)
+		ax.axes.get_yaxis().set_visible(False)
+		if 'polar' in ax.name:
+			ax.set_rticks([])
+		else:
+			ax.spines['right'].set_visible(False)
+			ax.spines['top'].set_visible(False)
+			ax.spines['bottom'].set_visible(False)
+			ax.spines['left'].set_visible(False)
+		return original
+	return wrapper
 
 class SpikeCalcsGeneric(object):
 	"""
@@ -839,7 +862,10 @@ class MapCalcsGeneric(object):
 			what_to_plot = ['map','path','hdir','sac','speed', 'sp_hd']
 			fig = plt.figure(figsize=(20,10))
 		else:
-			what_to_plot = list(self.plot_type)
+			if type(self.plot_type) is str:
+				what_to_plot = [self.plot_type] # turn into list
+			else:
+				what_to_plot = self.plot_type
 			if len(what_to_plot) > 1:
 				fig = plt.figure(figsize=(20,10))
 			else:
@@ -877,7 +903,7 @@ class MapCalcsGeneric(object):
 					# ax = fig.add_subplot(inner[plot_type_idx])
 				ax.set_title(cluster, fontweight='bold', size=8)
 		plt.show()
-
+	'''
 	def __iter__(self):
 		for cluster in self.good_clusters:
 			print("Cluster {}".format(cluster))
@@ -929,7 +955,7 @@ class MapCalcsGeneric(object):
 				self.makeSpeedVsHeadDirectionPlot(cluster, ax5)
 				plt.show()
 			yield cluster
-
+	'''
 	def makeSAC(self, rmap, cluster, ax=None):
 		from ephysiopy.common import gridcell
 		S = gridcell.SAC()
@@ -945,47 +971,34 @@ class MapCalcsGeneric(object):
 			S.show(sac, measures, ax)
 		return measures
 
-	def makeRateMap(self, cluster, ax=None):
+	@stripAxes
+	def makeRateMap(self, cluster, ax=None, **kwargs):
 		pos_w = np.ones_like(self.pos_ts)
 		mapMaker = binning.RateMap(self.xy, None, None, pos_w, ppm=self.ppm)
 		spk_w = np.bincount(self.spk_pos_idx, self.spk_clusters==cluster, minlength=self.pos_ts.shape[0])
-		# print("nSpikes: {}".format(np.sum(spk_w).astype(int)))
 		rmap = mapMaker.getMap(spk_w)
-		if ax is None:
-			return rmap
 		ratemap = np.ma.MaskedArray(rmap[0], np.isnan(rmap[0]), copy=True)
 		x, y = np.meshgrid(rmap[1][1][0:-1], rmap[1][0][0:-1][::-1])
 		vmax = np.max(np.ravel(ratemap))
-		ax.pcolormesh(x, y, ratemap, cmap=jet, edgecolors='face', vmax=vmax)
+		ax.pcolormesh(x, y, ratemap, cmap=jet, edgecolors='face', vmax=vmax, **kwargs)
 		ax.axis([x.min(), x.max(), y.min(), y.max()])
 		ax.set_aspect('equal')
-		plt.setp(ax.get_xticklabels(), visible=False)
-		plt.setp(ax.get_yticklabels(), visible=False)
-		ax.axes.get_xaxis().set_visible(False)
-		ax.axes.get_yaxis().set_visible(False)
-		ax.spines['right'].set_visible(False)
-		ax.spines['top'].set_visible(False)
-		ax.spines['bottom'].set_visible(False)
-		ax.spines['left'].set_visible(False)
-		return rmap
+		return ax
 
-	def makeSpikePathPlot(self, cluster, ax):
+	@stripAxes
+	def makeSpikePathPlot(self, cluster, ax=None, **kwargs):
+		if 'mec' or 'c' not in kwargs.keys():
+			kwargs['c'] = tcols.colours[1]
+			kwargs['mec'] = tcols.colours[1]
 		ax.plot(self.xy[0], self.xy[1], c=tcols.colours[0], zorder=1)
 		ax.set_aspect('equal')
 		ax.invert_yaxis()
 		idx = self.spk_pos_idx[self.spk_clusters==cluster]
-		spk_colour = tcols.colours[1]
-		ax.plot(self.xy[0,idx], self.xy[1,idx],'s',ms=1, c=spk_colour,mec=spk_colour)
-		plt.setp(ax.get_xticklabels(), visible=False)
-		plt.setp(ax.get_yticklabels(), visible=False)
-		ax.axes.get_xaxis().set_visible(False)
-		ax.axes.get_yaxis().set_visible(False)
-		ax.spines['right'].set_visible(False)
-		ax.spines['top'].set_visible(False)
-		ax.spines['bottom'].set_visible(False)
-		ax.spines['left'].set_visible(False)
+		ax.plot(self.xy[0,idx], self.xy[1,idx], 's', **kwargs)
+		return ax
 
-	def makeHDPlot(self, cluster, ax, **kwargs):
+	@stripAxes
+	def makeHDPlot(self, cluster, ax=None, **kwargs):
 		pos_w = np.ones_like(self.pos_ts)
 		mapMaker = binning.RateMap(self.xy, self.hdir, None, pos_w, ppm=self.ppm)
 		spk_w = np.bincount(self.spk_pos_idx, self.spk_clusters==cluster, minlength=self.pos_ts.shape[0])
@@ -1002,7 +1015,6 @@ class MapCalcsGeneric(object):
 			ax.plot(theta, r)
 			ax.set_aspect('equal')
 			ax.tick_params(axis='both', which='both', bottom=False, left=False, right=False, top=False, labelbottom=False, labelleft=False, labeltop=False, labelright=False)
-			ax.set_rticks([])
 
 			# See if we should add the mean resultant vector (mrv)
 			if 'add_mrv' in kwargs.keys():
@@ -1014,7 +1026,9 @@ class MapCalcsGeneric(object):
 				# print('\tUnit vector length: {:.3f}\n\tVector angle: {:.2f}'.format(r,np.rad2deg(th)))
 				ax.plot([th, th],[0, r*np.max(rmap[0])],'r')
 			ax.set_thetagrids([0, 90, 180, 270])
+			return ax
 
+	@stripAxes
 	def makeSpeedVsRatePlot(self, cluster, minSpeed=0.0, maxSpeed=40.0, sigma=3.0, ax=None, **kwargs):
 		"""
 		Plots the instantaneous firing rate of a cell against running speed
@@ -1046,12 +1060,9 @@ class MapCalcsGeneric(object):
 			ax.set_xlim(spd_bins[0], spd_bins[-1])
 			plt.xticks([spd_bins[0], spd_bins[-1]], ['0', '{:.2g}'.format(spd_bins[-1])], fontweight='normal', size=6)
 			plt.yticks([0,np.nanmax(mn_rate)*self.pos_sample_rate], ['0', '{:.2f}'.format(np.nanmax(mn_rate))], fontweight='normal', size=6)
-			ax.spines['right'].set_visible(False)
-			ax.spines['top'].set_visible(False)
-			ax.yaxis.set_ticks_position('left')
-			ax.xaxis.set_ticks_position('bottom')
+		return ax
 
-	def makeSpeedVsHeadDirectionPlot(self, cluster, ax):
+	def makeSpeedVsHeadDirectionPlot(self, cluster, ax=None):
 		idx = self.spk_pos_idx[self.spk_clusters==cluster]
 		w = np.bincount(idx, minlength=self.speed.shape[0])
 		dir_bins = np.arange(0,360,6)
@@ -1067,10 +1078,9 @@ class MapCalcsGeneric(object):
 		# im = np.ma.masked_where(all_sp_x_hd_binned < (len(self.speed) * 0.005), im)
 		x,y = np.meshgrid(dir_bins, spd_bins)
 		ax.pcolormesh(x,y,im.T)
-		ax.spines['right'].set_visible(False)
-		ax.spines['top'].set_visible(False)
 		plt.xticks([90,180,270], fontweight='normal', size=6)
 		plt.yticks([10,20], fontweight='normal', size=6)
+		return ax
 
 	def getSpatialStats(self, cluster):
 		# HWPD 20200527
@@ -1114,7 +1124,7 @@ class MapCalcsGeneric(object):
 			speedMod.append(spM)
 			
 		d = {'id': cluster, 'gridness': gridness, 'scale': scale, 
-	        'orientation': orientation, 'HDtuning': HDtuning, 
+			'orientation': orientation, 'HDtuning': HDtuning, 
 			'HDangle': HDangle, 'speedCorr': speedCorr, 'speedMod': speedMod}
 		self.spatialStats = pd.DataFrame(d)
 		
