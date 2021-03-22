@@ -28,7 +28,7 @@ def stripAxes(func):
 		if 'ax' in kwargs.keys():
 			ax = kwargs['ax']
 		else:
-			return original
+			ax = args[2] #  len of args includes self
 		plt.setp(ax.get_xticklabels(), visible=False)
 		plt.setp(ax.get_yticklabels(), visible=False)
 		ax.axes.get_xaxis().set_visible(False)
@@ -862,14 +862,12 @@ class MapCalcsGeneric(object):
 			what_to_plot = ['map','path','hdir','sac','speed', 'sp_hd']
 			fig = plt.figure(figsize=(20,10))
 		else:
+			fig = plt.gcf()
 			if type(self.plot_type) is str:
 				what_to_plot = [self.plot_type] # turn into list
 			else:
 				what_to_plot = self.plot_type
-			if len(what_to_plot) > 1:
-				fig = plt.figure(figsize=(20,10))
-			else:
-				fig = plt.figure(figsize=(20,10))#, constrained_layout=True)
+
 		import matplotlib.gridspec as gridspec
 		nrows = np.ceil(np.sqrt(len(self.good_clusters))).astype(int)
 		outer = gridspec.GridSpec(nrows, nrows, figure=fig)
@@ -879,6 +877,7 @@ class MapCalcsGeneric(object):
 			inner_nrows = 1
 		else:
 			inner_nrows = 2
+		
 		for i, cluster in enumerate(self.good_clusters):
 			inner = gridspec.GridSpecFromSubplotSpec(inner_nrows,inner_ncols, subplot_spec=outer[i])
 			for plot_type_idx, plot_type in enumerate(what_to_plot):
@@ -889,74 +888,24 @@ class MapCalcsGeneric(object):
 				if 'path' in plot_type:
 					self.makeSpikePathPlot(cluster, ax)
 				if 'map' in plot_type:
-					rmap = self.makeRateMap(cluster, ax)
+					self.makeRateMap(cluster, ax)
 				if 'hdir' in plot_type:
 					self.makeHDPlot(cluster, ax, add_mrv=True)
 				if 'sac' in plot_type:
-					rmap = self.makeRateMap(cluster)
-					self.makeSAC(rmap, ax)
+					self.makeSAC(cluster, ax)
 				if 'speed' in plot_type:
-					self.makeSpeedVsRatePlot(cluster, 0.0, 40.0, 3.0, ax)
+					self.makeSpeedVsRatePlot(cluster, ax, 0.0, 40.0, 3.0)
 				if 'sp_hd' in plot_type:
 					self.makeSpeedVsHeadDirectionPlot(cluster, ax)
-				# if first_sub_axis in plot_type: # label the first sub-axis only
-					# ax = fig.add_subplot(inner[plot_type_idx])
 				ax.set_title(cluster, fontweight='bold', size=8)
 		plt.show()
-	'''
-	def __iter__(self):
-		for cluster in self.good_clusters:
-			print("Cluster {}".format(cluster))
-			if 'map' in self.plot_type:
-				fig = plt.figure()
-				ax = plt.gca()
-				self.makeRateMap(cluster, ax)
-				fig.show()
-			elif 'path' in self.plot_type:
-				plt.figure()
-				ax = plt.gca()
-				self.makeSpikePathPlot(cluster, ax)
-				plt.show()
-			elif 'hdir' in self.plot_type:
-				fig = plt.figure()
-				ax = fig.add_subplot(111, projection='polar')
-				self.makeHDPlot(cluster, ax)
-				plt.show()
-			elif 'both' in self.plot_type:
-				fig, (ax1, ax0) = plt.subplots(1,2)
-				# ratemap
-				self.makeRateMap(cluster, ax0)
-				# path / spikes
-				self.makeSpikePathPlot(cluster, ax1)
-				plt.show()
-			elif 'speed' in self.plot_type:
-				fig = plt.figure()
-				ax = fig.add_subplot(111)
-				self.makeSpeedVsRatePlot(cluster, 0.0, 40.0, 3.0, ax)
-			elif 'sp_hd' in self.plot_type:
-				fig = plt.figure()
-				ax = fig.add_subplot(111)
-				self.makeSpeedVsHeadDirectionPlot(cluster, ax)
-			elif 'all' in self.plot_type:
-				fig = plt.figure(figsize=[9.6, 6.0])
-				fig.suptitle("Cluster {}".format(cluster))
-				ax1 = fig.add_subplot(2, 3, 1)
-				self.makeSpikePathPlot(cluster, ax1)
-				ax0 = fig.add_subplot(2, 3, 2)
-				rmap = self.makeRateMap(cluster, ax0)
-				ax2 = fig.add_subplot(2, 3, 3)
-				d = self.makeSAC(rmap, cluster, ax2)
-				print("Gridscore: {:.2f}".format(d['gridness']))
-				ax3 = fig.add_subplot(2, 3, 4, projection='polar')
-				self.makeHDPlot(cluster, ax3, add_mrv=True)
-				ax4 = fig.add_subplot(2, 3, 5)
-				self.makeSpeedVsRatePlot(cluster, 0.0, 40.0, 3.0, ax4)
-				ax5 = fig.add_subplot(2, 3, 6)
-				self.makeSpeedVsHeadDirectionPlot(cluster, ax5)
-				plt.show()
-			yield cluster
-	'''
-	def makeSAC(self, rmap, cluster, ax=None):
+
+	@stripAxes
+	def makeSAC(self, cluster, ax=None):
+		pos_w = np.ones_like(self.pos_ts)
+		mapMaker = binning.RateMap(self.xy, None, None, pos_w, ppm=self.ppm)
+		spk_w = np.bincount(self.spk_pos_idx, self.spk_clusters==cluster, minlength=self.pos_ts.shape[0])
+		rmap = mapMaker.getMap(spk_w)
 		from ephysiopy.common import gridcell
 		S = gridcell.SAC()
 		nodwell = ~np.isfinite(rmap[0])
@@ -969,7 +918,7 @@ class MapCalcsGeneric(object):
 			f.close()
 		if ax is not None:
 			S.show(sac, measures, ax)
-		return measures
+		return ax
 
 	@stripAxes
 	def makeRateMap(self, cluster, ax=None, **kwargs):
@@ -986,15 +935,16 @@ class MapCalcsGeneric(object):
 		return ax
 
 	@stripAxes
-	def makeSpikePathPlot(self, cluster, ax=None, **kwargs):
+	def makeSpikePathPlot(self, cluster=None, ax=None, **kwargs):
 		if 'mec' or 'c' not in kwargs.keys():
 			kwargs['c'] = tcols.colours[1]
 			kwargs['mec'] = tcols.colours[1]
 		ax.plot(self.xy[0], self.xy[1], c=tcols.colours[0], zorder=1)
 		ax.set_aspect('equal')
 		ax.invert_yaxis()
-		idx = self.spk_pos_idx[self.spk_clusters==cluster]
-		ax.plot(self.xy[0,idx], self.xy[1,idx], 's', **kwargs)
+		if cluster is not None:
+			idx = self.spk_pos_idx[self.spk_clusters==cluster]
+			ax.plot(self.xy[0,idx], self.xy[1,idx], 's', **kwargs)
 		return ax
 
 	@stripAxes
@@ -1014,7 +964,6 @@ class MapCalcsGeneric(object):
 			r = np.insert(r, -1, r[0])
 			ax.plot(theta, r)
 			ax.set_aspect('equal')
-			ax.tick_params(axis='both', which='both', bottom=False, left=False, right=False, top=False, labelbottom=False, labelleft=False, labeltop=False, labelright=False)
 
 			# See if we should add the mean resultant vector (mrv)
 			if 'add_mrv' in kwargs.keys():
@@ -1026,10 +975,10 @@ class MapCalcsGeneric(object):
 				# print('\tUnit vector length: {:.3f}\n\tVector angle: {:.2f}'.format(r,np.rad2deg(th)))
 				ax.plot([th, th],[0, r*np.max(rmap[0])],'r')
 			ax.set_thetagrids([0, 90, 180, 270])
-			return ax
+		return ax
 
 	@stripAxes
-	def makeSpeedVsRatePlot(self, cluster, minSpeed=0.0, maxSpeed=40.0, sigma=3.0, ax=None, **kwargs):
+	def makeSpeedVsRatePlot(self, cluster, ax=None, minSpeed=0.0, maxSpeed=40.0, sigma=3.0, **kwargs):
 		"""
 		Plots the instantaneous firing rate of a cell against running speed
 		Also outputs a couple of measures as with Kropff et al., 2015; the
@@ -1062,6 +1011,7 @@ class MapCalcsGeneric(object):
 			plt.yticks([0,np.nanmax(mn_rate)*self.pos_sample_rate], ['0', '{:.2f}'.format(np.nanmax(mn_rate))], fontweight='normal', size=6)
 		return ax
 
+	@stripAxes
 	def makeSpeedVsHeadDirectionPlot(self, cluster, ax=None):
 		idx = self.spk_pos_idx[self.spk_clusters==cluster]
 		w = np.bincount(idx, minlength=self.speed.shape[0])
@@ -1101,9 +1051,9 @@ class MapCalcsGeneric(object):
 			
 		gridness,scale,orientation,HDtuning,HDangle,speedCorr,speedMod = [],[],[],[],[],[],[]
 		for i,cl in enumerate(cluster):
-			rmap = self.makeRateMap(cl, None)
+			self.makeRateMap(cl, None)
 			try:
-				m = self.makeSAC(rmap, cl, None)
+				m = self.makeSAC(cl, None)
 			except:
 				m = np.nan
 			try:

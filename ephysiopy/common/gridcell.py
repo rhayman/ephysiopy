@@ -207,7 +207,8 @@ class SAC(object):
 		Am[~inDict['gridnessMaskAll']] = np.nan
 		Am = np.ma.masked_invalid(np.atleast_2d(Am))
 		ret = ax.imshow(A, cmap=cm.gray_r, interpolation='nearest')
-		cmap = plt.cm.jet
+		import copy
+		cmap = copy.copy(plt.cm.jet)
 		cmap.set_bad('w', 0)
 		ax.pcolormesh(Am, cmap=cmap, edgecolors='face')
 		# horizontal green line at 3 o'clock
