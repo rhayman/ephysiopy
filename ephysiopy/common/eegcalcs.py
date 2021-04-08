@@ -136,7 +136,7 @@ class EEGCalcs(EEGIO):
 	
 		# loop through all scales and compute transform
 		for a1 in range(0, int(J1+1)):
-			daughter, fourier_factor, coi, dofmin = self.wave_bases(mother, k, scale[a1], param)
+			daughter, fourier_factor, coi, _ = self.wave_bases(mother, k, scale[a1], param)
 			wave[a1, :] = np.fft.ifft(f * daughter)  # wavelet transform[Eqn(4)]
 	
 		period = fourier_factor * scale  #[Table(1)]
@@ -191,7 +191,6 @@ class EEGCalcs(EEGIO):
 	def wave_signif(self, Y, dt, scale, sigtest=-1, lag1=-1, siglvl=-1, dof=-1, mother=-1, param=-1):
 		n1 = len(np.atleast_1d(Y))
 		J1 = len(scale) - 1
-		s0 = np.min(scale)
 		dj = np.log2(scale[1] / scale[0])
 	
 		if n1 == 1:
@@ -329,7 +328,6 @@ class EEGCalcs(EEGIO):
 		the inverse fft without those frequencies
 		"""
 		from scipy import signal
-		origLen = len(sig)
 		nyq = fs / 2.0
 		fftRes = np.fft.fft(sig)
 		f = nyq * np.linspace(0, 1, len(fftRes)/2)
@@ -344,10 +342,6 @@ class EEGCalcs(EEGIO):
 		pollutedIdx = np.sum(idx, 0)
 		fftRes[pollutedIdx] = np.mean(fftRes)
 		
-		reconSig = np.fft.ifft(fftRes)
-			
-		
-
 	def filterForLaser(self, E=None, width=0.125, dip=15.0, stimFreq=6.66):
 		"""
 		In some of the optogenetic experiments I ran the frequency of laser
@@ -501,7 +495,7 @@ class EEGCalcs(EEGIO):
 		calcs = StatsCalcs()
 		plv = calcs.circ_r(phasedf)
 		th = np.linspace(0.0, 2*np.pi, 20, endpoint=False)
-		h, xe = np.histogram(phasedf, bins=20)
+		h, _ = np.histogram(phasedf, bins=20)
 		h = h / float(len(phasedf))
 		
 		if plot:
@@ -635,7 +629,7 @@ class EEGCalcs(EEGIO):
 			ax.set_ylabel('Power density (W/Hz)')
 		out_dict = {'maxFreq': freqAtBandMaxPower, 'Power': power_sm,
 					'Freqs': freqs, 's2n': s2n, 'Power_raw': power, 'k': k, 'kernelLen': kernelLen,
-					'kernelSig': kernelSig, 'binsPerHz': binsPerHz, 'kernelLen': kernelLen}
+					'kernelSig': kernelSig, 'binsPerHz': binsPerHz}
 		return out_dict
 
 	def _nextpow2(self, val):
@@ -798,7 +792,7 @@ class phasePrecession():
 		"""
 		if 'binsizes' in kwargs.keys():
 			self.binsizes = kwargs.pop('binsizes')
-		peaksXY, peaksRate, labels, rmap = self.partitionFields(tetrode, cluster, plot=True)
+		peaksXY, _, labels, _ = self.partitionFields(tetrode, cluster, plot=True)
 		posD, runD = self.getPosProps(tetrode, cluster, labels, peaksXY, laserEvents=laserEvents, plot=True)
 		self.getThetaProps(tetrode, cluster)
 		spkD = self.getSpikeProps(tetrode, cluster, posD['runLabel'], runD['meanDir'],
@@ -1386,7 +1380,6 @@ class phasePrecession():
 			raise AttributeError("I need a tetrode!")
 		if self.cluster is None:
 			raise AttributeError("I need a cluster!")
-		idx = self.Trial.TETRODE[self.tetrode].getClustIdx(self.cluster)
 		t = self.Trial._getClusterPhaseVals(self.tetrode, self.cluster)
 		x = self._getClusterXPos(self.tetrode, self.cluster)
 		label, xe, _ = self.Trial._getFieldLims(self.tetrode, self.cluster)

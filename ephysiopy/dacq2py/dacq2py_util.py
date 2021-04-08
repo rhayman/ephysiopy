@@ -329,7 +329,7 @@ class Trial(axonaIO.IO, SAC, dict):
 					stim_dict[k]['name'] = phase_name
 					if not (phase_name.startswith("Pause")):
 						# find the matching string in the stim_patt_dict
-						for kk,vv in stim_patt_dict.items():
+						for _,vv in stim_patt_dict.items():
 							split_str = vv.split('"')
 							patt_name = split_str[1]
 							if (patt_name == phase_name):
@@ -381,7 +381,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		Examples
 		--------
 		>>> import numpy as np
-		>>> T = dacq2py_util.Trial(r'D:\M851\M851_140908t1rh')
+		>>> T = dacq2py_util.Trial(os.path.join('/home/robin/Data/M851/M851_140908t1rh'))
 		>>> T.posFilter = {'time': np.array([600,1200])}
 		"""
 
@@ -1158,7 +1158,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		if not isinstance(clusters, (np.ndarray, list)):
 			clusters = [clusters]
 		xy = self.POS.xy
-		for i, clust in enumerate(clusters):
+		for _, clust in enumerate(clusters):
 			if ax is None:
 				fig = plt.figure()
 				ax = fig.add_subplot(111)
@@ -1298,10 +1298,8 @@ class Trial(axonaIO.IO, SAC, dict):
 			yticks[i].set_visible(False)
 
 		histColor = [192/255.0,192/255.0,192/255.0]
-		histX = axHistx.hist(x, bins=np.arange(dt[0], dt[1] + ms_per_bin, ms_per_bin),
+		axHistx.hist(x, bins=np.arange(dt[0], dt[1] + ms_per_bin, ms_per_bin),
 							 color=histColor, alpha=0.6, range=dt, rasterized=True, histtype='stepfilled')
-		vals = histX[0]
-		bins = histX[1]
 		if 'rate' in histtype:
 			axHistx.set_ylabel('Rate')
 			# mn_rate_pre_stim = np.mean(vals[bins[1:] < 0])
@@ -1419,9 +1417,9 @@ class Trial(axonaIO.IO, SAC, dict):
 		"""
 		pulsePause = 0
 		if evenOnsets:
-			for k, v in self.STM.items():
+			for _, v in self.STM.items():
 				if isinstance(v, OrderedDict):
-					for kk, vv in v.items():
+					for _, vv in v.items():
 						for kkk, vvv in vv.items():
 							if 'Pause' in kkk:
 								if vvv is not None:
@@ -1460,7 +1458,7 @@ class Trial(axonaIO.IO, SAC, dict):
 				ax.add_patch(Rectangle((p, 0), width=stim_pwidth/1000., height=1,
 							 transform=axTrans,
 							 color=[1, 1, 0], alpha=0.5))
-			ax.set_ylabel('LFP ($\mu$V)')
+			ax.set_ylabel(r'LFP ($\mu$V)')
 			ax.set_xlabel('Time(ms)')
 			return result
 
@@ -1847,7 +1845,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		ax.boxplot(X, positions=sp_bins, boxprops=bprops, whiskerprops=wprops)
 		medians = np.array([np.nanmedian(x) for x in X])
 		nan_idx = np.isnan(medians)
-		slope, intercept, r_value, p_value, std_err = stats.linregress(sp_bins[~nan_idx], medians[~nan_idx])
+		slope, intercept, _, _,_ = stats.linregress(sp_bins[~nan_idx], medians[~nan_idx])
 		minFreq = np.min(medians[~nan_idx]) - 1.0
 		maxFreq = np.max(medians[~nan_idx]) + 1.0
 		ax.set_ylim(minFreq, maxFreq)
@@ -2497,7 +2495,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		"""
 
 		# label is a mask of the place field - this could be hijacked to cover the whole track
-		label, xe, ye = self._getFieldLims(tetrode, cluster, binsize)
+		label, xe, _ = self._getFieldLims(tetrode, cluster, binsize)
 		S = skimage.measure.regionprops(label)
 		areas = [s['area'] for s in S]# get the biggest field
 		bigFieldIdx = np.argmax(areas)
@@ -2572,6 +2570,8 @@ class Trial(axonaIO.IO, SAC, dict):
 		Calculates the ratio of time spent in the middle of the environment
 		to the amount of time spent in the central part
 		"""
+
+		'''
 		dwellmap = self._getMap(smooth=False)[0] # unsmoothed dwell map
 		# simply calculate the sums in the corners and see if this 
 		# goes above some threshold
@@ -2581,12 +2581,8 @@ class Trial(axonaIO.IO, SAC, dict):
 		bl = dwellmap[-corner_sz:, 0:corner_sz]
 		br = dwellmap[-corner_sz:, -corner_sz:]
 		corner_dwell = np.sum([tl, tr, bl, br])
-
-		if corner_dwell > 20:
-			shape = 'square'
-
-		else:
-			shape = 'circle'
+		'''
+		pass
 
 	def getBorderScore(self, tetrode, cluster, debug=False, **kwargs):
 		"""
@@ -2617,8 +2613,6 @@ class Trial(axonaIO.IO, SAC, dict):
 		br = dwellmap[-corner_sz:, -corner_sz:]
 		corner_dwell = np.sum([tl, tr, bl, br])
 
-		A_rows, A_cols = np.shape(A)
-
 		if corner_dwell > 20:
 			shape = 'square'
 		else:
@@ -2643,9 +2637,9 @@ class Trial(axonaIO.IO, SAC, dict):
 		dirs_st[0] = dirs_en[-1]
 
 		if 'polar' in maptype:
-			fig, axes = plt.subplots(nrows=3, ncols=3, subplot_kw={'projection': 'polar'})
+			_, axes = plt.subplots(nrows=3, ncols=3, subplot_kw={'projection': 'polar'})
 		else:
-			fig, axes = plt.subplots(nrows=3, ncols=3)
+			_, axes = plt.subplots(nrows=3, ncols=3)
 		ax0 = axes[0][0] # top-left
 		ax1 = axes[0][1] # top-middle
 		ax2 = axes[0][2] # top-right

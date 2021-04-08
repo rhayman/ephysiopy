@@ -251,7 +251,7 @@ class StatsCalcs():
 		R = np.hypot(C, S)
 		R_hat = (R_1 + R_2) / float(N)
 		import os
-		fid = os.path.join(os.path.getcwd(), 'mle_von_mises_vals.txt')
+		fid = os.path.join(os.getcwd(), 'mle_von_mises_vals.txt')
 		with open(fid, 'r') as f:
 			mle_von_mises = np.loadtxt(f)
 		mle_von_mises = np.sort(mle_von_mises, 0)
