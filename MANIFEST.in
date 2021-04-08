@@ -1,3 +1,4 @@
 include LICENSE
 include README.rst
-include ephyssiopy/dacq2py/*.pkl
+include ephysiopy/dacq2py/*.pkl
+include ephysiopy/data/random_walk_xy.npy
