@@ -12,7 +12,7 @@ from ephysiopy.common.utils import blur_image
 
 """
 NB AS OF 19/10/20 I MOVED MOST OF THE METHODS OF THE CLASSSPIKECALCS
-INTO EPHYSIOPY.COMMON.SPIKECALCS.SPIKECALCSGENERIC
+INTO EPHYSIOPY.COMMON.EPHYS_GENERIC.SPIKECALCSGENERIC
 
 THE ONES REMAINING BELOW INVOLVE COMBINING SPIKES AND POSITION
 INFORMATION SO SHOULD BE IN SOME OTHER PLACE...
@@ -123,35 +123,5 @@ class SpikeCalcs(object):
 			print("PPMC: {0}".format(res[0]))
 
 
-	def smoothSpikePosCount(self, x1, npos, sigma=3.0, shuffle=None):
-		"""
-		Returns a spike train the same length as num pos samples that has been
-		smoothed in time with a gaussian kernel M in width and standard deviation
-		equal to sigma
-		
-		Parameters
-		--------------
-		x1 : np.array
-			The pos indices the spikes occured at
-		npos : int
-			The number of position samples captured
-		sigma : float
-			the standard deviation of the gaussian used to smooth the spike
-			train
-		shuffle: int
-			The number of seconds to shift the spike train by. Default None
-		
-		Returns
-		-----------
-		smoothed_spikes : np.array
-			The smoothed spike train
-		"""
-		spk_hist = np.bincount(x1, minlength=npos)
-		if shuffle is not None:
-			spk_hist = np.roll(spk_hist, int(shuffle * 50))
-		# smooth the spk_hist (which is a temporal histogram) with a 250ms
-		# gaussian as with Kropff et al., 2015
-		h = signal.gaussian(13, sigma)
-		h = h / float(np.sum(h))
-		return signal.filtfilt(h.ravel(), 1, spk_hist)
+	
 	

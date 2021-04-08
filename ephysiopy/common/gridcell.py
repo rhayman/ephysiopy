@@ -5,7 +5,6 @@ and some graphical output etc
 
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.ephys_generic import FieldCalcs
 from ephysiopy.common.utils import rect, polar
@@ -127,7 +126,7 @@ class SAC(object):
 
 		"""
 		R = RateMap()
-		return R.t_win_SAC(xy, spkIdx, ppm, winSize, pos_sample_rate, nbins, boxcar, Pthresh, downsampfreq, plot)
+		return R.tWinSAC(xy, spkIdx, ppm, winSize, pos_sample_rate, nbins, boxcar, Pthresh, downsampfreq, plot)
 		
 	def getMeasures(self, A, maxima='centroid', field_extent_method=2, allProps=True, **kwargs):
 		"""
@@ -206,9 +205,9 @@ class SAC(object):
 		Am = A.copy()
 		Am[~inDict['gridnessMaskAll']] = np.nan
 		Am = np.ma.masked_invalid(np.atleast_2d(Am))
-		ret = ax.imshow(A, cmap=cm.gray_r, interpolation='nearest')
+		ret = ax.imshow(A, cmap=plt.cm.get_cmap("gray_r"), interpolation='nearest')
 		import copy
-		cmap = copy.copy(plt.cm.jet)
+		cmap = copy.copy(plt.cm.get_cmap("jet"))
 		cmap.set_bad('w', 0)
 		ax.pcolormesh(Am, cmap=cmap, edgecolors='face')
 		# horizontal green line at 3 o'clock

@@ -6,7 +6,6 @@ import re
 from glob import glob
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 import matplotlib.colors as colors
 from matplotlib.patches import Rectangle
 import matplotlib.transforms as transforms
@@ -16,8 +15,9 @@ import warnings
 from ephysiopy.dacq2py import axonaIO
 from ephysiopy.dacq2py.tetrode_dict import TetrodeDict
 from ephysiopy.common import binning
+from ephysiopy.common.binning import RateMap
 from ephysiopy.common.ephys_generic import FieldCalcs
-from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
+from ephysiopy.common.ephys_generic import SpikeCalcsGeneric, SpikeCalcsTetrode
 from ephysiopy.common.eegcalcs import EEGCalcs
 from ephysiopy.dacq2py.cluster import Kluster
 from ephysiopy.dacq2py import tintcolours as tcols
@@ -109,8 +109,8 @@ class Trial(axonaIO.IO, SAC, dict):
 			self.TETRODE = TetrodeDict(filename_root)
 		self._posFilter = None  # a dict used to filter pos
 		self._setheader = None
-		self.ratemap = None #becomes binning.RateMap instance - see POS getter property below
-		self.spikecalcs = SpikeCalcs()
+		self.ratemap = RateMap()
+		self.spikecalcs = None # becomes an instance of SpikeCalcsTetrode - a subclass of SpikeCalcsGeneric
 		self.fieldcalcs = FieldCalcs()
 		self._isinteractive = 1
 		self._figNum = 1
@@ -593,7 +593,7 @@ class Trial(axonaIO.IO, SAC, dict):
 											  exclude_border=False,
 											  labels=sm_rmap > thresh)
 		label = ndimage.label(mask)[0]
-		w = watershed(-distance, label,
+		w = watershed(0-distance, label,
 										 mask=sm_rmap > thresh)
 		label = ndimage.label(w)[0]
 		return label, xe, ye
@@ -634,7 +634,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		troughs = pts[sm_eeg[pts] < 0] + 2
 		return peaks, troughs
 
-	def _getSpikeInCycle(self, peakIdx, spkIdx, whichSpk='first'):
+	def _getSpikeInCycle(self, peakIdx, spkIdx, tetrode, whichSpk='first'):
 		"""
 		given an array of spike indices into eeg and indices of peaks in the
 		smoothed, theta-filtered eeg signal this returns the first spike in the
@@ -646,7 +646,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		elif 'last' in whichSpk:
 			side = 'right'
 		peaks, _ = self._getThetaCycles()
-		spk2eeg_idx = (spkIdx / (self.TETRODE[self.tetrode].timebase /
+		spk2eeg_idx = (spkIdx / (self.TETRODE[tetrode].timebase /
 					   self.EEG.sample_rate)).astype(np.int)
 		idx = np.searchsorted(peaks, spk2eeg_idx, side=side)
 		_, unique_indices = np.unique(idx, return_index=True)
@@ -817,7 +817,7 @@ class Trial(axonaIO.IO, SAC, dict):
 			spk_weights = np.roll(spk_weights, int(kwargs['shuffle'] * 50))
 		inc = (np.pi*2) / 120.0
 		h = self.ratemap._RateMap__binData(np.deg2rad(self.POS.dir), np.arange(0, np.pi*2+inc, inc), spk_weights)
-		from statscalcs import StatsCalcs
+		from ephysiopy.common.statscalcs import StatsCalcs
 		S = StatsCalcs()
 		R = S.circ_r(h[1][0][0:-1], h[0])
 		return R
@@ -850,7 +850,7 @@ class Trial(axonaIO.IO, SAC, dict):
 
 		ratemap = self._getMap(tetrode, cluster, binsize=binsize, **kwargs)[0]
 		dwelltimes = self._getMap(binsize=binsize, **kwargs)[0]
-		ratemap, _, dwelltimes = self.ratemap._RateMap__adaptiveMap(ratemap, dwelltimes)
+		ratemap, _, dwelltimes = self.ratemap.getAdaptiveMap(ratemap, dwelltimes)
 		return self.fieldcalcs.skaggsInfo(ratemap, dwelltimes)
 
 	def getTsAndCs(self, verbose=False):
@@ -1063,7 +1063,7 @@ class Trial(axonaIO.IO, SAC, dict):
 				ax.set_rmax(kwargs['vmax'])
 			# See if we should add the mean resultant vector (mrv)
 			if 'add_mrv' in kwargs.keys():
-				from statscalcs import StatsCalcs
+				from ephysiopy.common.statscalcs import StatsCalcs
 				S = StatsCalcs()
 				idx = self.TETRODE[tetrode].getClustIdx(cluster)
 				angles = self.POS.dir[idx]
@@ -1088,7 +1088,7 @@ class Trial(axonaIO.IO, SAC, dict):
 				vmax = kwargs['vmax']
 			else:
 				vmax = np.max(np.ravel(ratemap))
-			ax.pcolormesh(x, y, ratemap, cmap=cm.jet, edgecolors='face', vmax=vmax)
+			ax.pcolormesh(x, y, ratemap, cmap=plt.cm.get_cmap("jet"), edgecolors='face', vmax=vmax)
 			ax.axis([x.min(), x.max(), y.min(), y.max()])
 			ax.set_aspect('equal')
 			plt.setp(ax.get_xticklabels(), visible=False)
@@ -1156,10 +1156,7 @@ class Trial(axonaIO.IO, SAC, dict):
 
 		"""
 		if not isinstance(clusters, (np.ndarray, list)):
-			if isinstance(clusters, str):
-				clusters = self.availableClusters
-			else:
-				clusters = [clusters]
+			clusters = [clusters]
 		xy = self.POS.xy
 		for i, clust in enumerate(clusters):
 			if ax is None:
@@ -1307,14 +1304,14 @@ class Trial(axonaIO.IO, SAC, dict):
 		bins = histX[1]
 		if 'rate' in histtype:
 			axHistx.set_ylabel('Rate')
-			mn_rate_pre_stim = np.mean(vals[bins[1:] < 0])
-			idx = np.logical_and(bins[1:] > 0, bins[1:] < 10).nonzero()[0]
-			mn_rate_post_stim = np.mean(vals[idx])
-			above_half_idx = idx[(vals[idx] < mn_rate_pre_stim * prc_max).nonzero()[0]]
-			half_pre_rate_ms = bins[above_half_idx[0]]
-			print('\ntime to {0}% of pre-stimulus rate = {1}ms'.format(*(prc_max * 100, half_pre_rate_ms)))
-			print('mean pre-laser rate = {0}Hz'.format(mn_rate_pre_stim))
-			print('mean 10ms post-laser rate = {0}'.format(mn_rate_post_stim))
+			# mn_rate_pre_stim = np.mean(vals[bins[1:] < 0])
+			# idx = np.logical_and(bins[1:] > 0, bins[1:] < 10).nonzero()[0]
+			# mn_rate_post_stim = np.mean(vals[idx])
+			# above_half_idx = idx[(vals[idx] < mn_rate_pre_stim * prc_max).nonzero()[0]]
+			# half_pre_rate_ms = bins[above_half_idx[0]]
+			# print('\ntime to {0}% of pre-stimulus rate = {1}ms'.format(*(prc_max * 100, half_pre_rate_ms)))
+			# print('mean pre-laser rate = {0}Hz'.format(mn_rate_pre_stim))
+			# print('mean 10ms post-laser rate = {0}'.format(mn_rate_post_stim))
 		else:
 			axHistx.set_ylabel('Spike count', labelpad=-2.5)
 		plt.setp(axHistx.get_xticklabels(),
@@ -1555,7 +1552,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		min_speed : float
 		plot : bool
 		"""
-		grandMedian = stats.nanmedian(self.POS.speed, 1)
+		grandMedian = np.nanmedian(self.POS.speed, 1)
 		sortedSpIdx = np.argsort(self.POS.speed)
 		sortedSp = np.sort(self.POS.speed)
 		indMedian = np.nonzero(sortedSp >= grandMedian)[1][0]
@@ -1769,6 +1766,8 @@ class Trial(axonaIO.IO, SAC, dict):
 		"""
 
 		x1 = self.TETRODE[tetrode].getClustIdx(cluster)
+		ts = self.TETRODE[tetrode].getClustTS(cluster)
+		self.spikecalcs = SpikeCalcsTetrode(ts)
 		spk_sm = self.spikecalcs.smoothSpikePosCount(x1, self.POS.npos, sigma, shuffle)
 		return spk_sm
 
@@ -1846,7 +1845,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		bprops = {'c': [0.8627, 0.8627, 0.8627]}
 		wprops = {'c': [0.8627, 0.8627, 0.8627]}
 		ax.boxplot(X, positions=sp_bins, boxprops=bprops, whiskerprops=wprops)
-		medians = np.array([stats.nanmedian(x) for x in X])
+		medians = np.array([np.nanmedian(x) for x in X])
 		nan_idx = np.isnan(medians)
 		slope, intercept, r_value, p_value, std_err = stats.linregress(sp_bins[~nan_idx], medians[~nan_idx])
 		minFreq = np.min(medians[~nan_idx]) - 1.0
@@ -1925,11 +1924,9 @@ class Trial(axonaIO.IO, SAC, dict):
 		cluster : int
 		ax : matplotlib.Axes
 		"""
-		if not self.EEG:
-			self.EEG = EEG(self.filename_root)
 		self.EEG.thetaAmpPhase()
 		self.EEG.EEGphase = np.rad2deg(self.EEG.EEGphase)
-		runs_to_keep, spk_in_run, run_duration = self.getFieldRuns(tetrode, cluster)
+		_, spk_in_run, _ = self.getFieldRuns(tetrode, cluster)
 		if ax is None:
 			ax = plt.gca()
 		else:
@@ -2556,7 +2553,7 @@ class Trial(axonaIO.IO, SAC, dict):
 			xy = self._getPath()
 		T = np.zeros(int(np.shape(xy)[1]/50))
 		idx = 0
-		for i in xrange(0, xy.shape[1]-50, 50):
+		for i in np.arange(0, xy.shape[1]-50, 50):
 			straight_line = np.hypot(xy[0,i] - xy[0,i+50], xy[1,i] - xy[1,i+50])
 			path_segment = np.nansum(np.hypot(np.diff(xy[0,i:i+50]),np.diff(xy[1,i:i+50])))
 			T[idx] = path_segment / straight_line

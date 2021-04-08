@@ -10,11 +10,9 @@ from operator import itemgetter
 from ephysiopy.common.statscalcs import StatsCalcs
 from ephysiopy.common.utils import bwperim
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 from matplotlib.collections import LineCollection
 from scipy.special._ufuncs import gammainc, gamma
 from scipy.optimize import fminbound
-
 import skimage
 import matplotlib
 from ephysiopy.dacq2py import axonaIO
@@ -29,9 +27,9 @@ class EEGCalcs(EEGIO):
 				 smthKernelWidth=2, smthKernelSigma=0.1875, sn2Width=2,
 				 maxFreq=125, ymax=None, xmax=25):
 		if eegType == 'eeg':
-			egf = 0;
+			egf = 0
 		elif eegType == 'egf':
-			egf = 1;
+			egf = 1
 		self.fname = os.path.basename(fname)
 		self.EEG = EEGIO(fname, egf=egf)
 		self.posSampFreq = 50
@@ -281,7 +279,7 @@ class EEGCalcs(EEGIO):
 			Smid = np.exp((np.log(s1) + np.log(s2)) / 2.)  # power-of-two midpoint
 			dof = (dofmin * navg * Savg / Smid) * np.sqrt(1 + (navg * dj / dj0) ** 2)  # [Eqn(28)]
 			fft_theor = Savg * np.sum(fft_theor[avg] / scale[avg])  # [Eqn(27)]
-			chisquare = chisquare_inv(siglvl, dof) / dof
+			chisquare = self.chisquare_inv(siglvl, dof) / dof
 			signif = (dj * dt / Cdelta / Savg) * fft_theor * chisquare  # [Eqn(26)]
 		else:
 			print('ERROR: sigtest must be either 0, 1, or 2')
@@ -435,7 +433,8 @@ class EEGCalcs(EEGIO):
 			s = np.nanmedian(ampEEG) / 50. * scale
 			phaseInd = np.round(np.mod(phaseEEG, 2*np.pi) / (2 * np.pi) * 100)
 			phaseInd[phaseInd==0] = 100
-			S = cm.ScalarMappable()
+			from matplotlib.cm import ScalarMappable
+			S = ScalarMappable()
 			phaseImg = S.to_rgba(phaseInd)
 			phaseImg = phaseImg[:, 0:3]
 			ax.imshow(phaseImg, extent=[0, times[-1], -s, s])
@@ -851,7 +850,7 @@ class phasePrecession():
 		# NB I've tried a variety of techniques to optimise this part and the
 		# best seems to be the local adaptive thresholding technique which)
 		# smooths locally with a gaussian - see the skimage docs for more
-		markers = skimage.filters.threshold_adaptive(rmap, 3, 'gaussian', mode='mirror', param=self.smthKernSig)
+		markers = skimage.filters.threshold_local(rmap, 3, 'gaussian', mode='mirror', param=self.smthKernSig)
 		# label these markers so each blob has a unique id
 		labels = ndimage.label(markers)[0]
 		# labels is now a labelled int array from 0 to however many fields have
@@ -1137,7 +1136,7 @@ class phasePrecession():
 			imM = np.ma.MaskedArray(im, mask=~fieldPerimMask, copy=True)
 			#############################################
 			# create custom colormap
-			cmap = plt.cm.jet_r
+			cmap = plt.cm.get_cmap("jet_r")
 			cmaplist = [cmap(i) for i in range(cmap.N)]
 			cmaplist[0] = (1, 1, 1, 1)
 			cmap = cmap.from_list('Runvals cmap', cmaplist, cmap.N)
@@ -1155,7 +1154,7 @@ class phasePrecession():
 			# add a custom colorbar for colors in runVals
 
 			# create a custom colormap for the plot
-			cmap = plt.cm.hsv
+			cmap = plt.cm.get_cmap("hsv")
 			cmaplist = [cmap(i) for i in range(cmap.N)]
 			cmaplist[0] = (1, 1, 1, 1)
 			cmap = cmap.from_list('Perim cmap', cmaplist, cmap.N)
@@ -1664,8 +1663,8 @@ class phasePrecession():
 		phi = phi.ravel()
 
 		if not len(theta) == len(phi):
-			raise ValueError()
 			print('theta and phi not same length - try again!')
+			raise ValueError()
 
 		# estimate correlation
 		rho = self._ccc(theta, phi)
@@ -1675,9 +1674,6 @@ class phasePrecession():
 		if k:
 			p_shuff = self._shuffledPVal(theta, phi, rho, k, hyp)
 			p = np.nan
-		else:
-			p = self._analyticPVal(theta, phi, rho, n, alpha, hyp)
-			p_shuff = np.nan
 
 		#estimtate ci's for correlation
 		if n >= conf:
@@ -1696,7 +1692,7 @@ class phasePrecession():
 				rho_boot.append(self._ccc(theta[i], phi[i]))
 			rho_boot = np.mean(rho_boot)
 			import scipy.stats as stats
-			ci = stats.t.interval(alpha=alpha, n_samples=k, loc=np.mean(theta), scale=stas.sem(theta))
+			ci = stats.t.interval(alpha=alpha, n_samples=k, loc=np.mean(theta), scale=stats.sem(theta))
 		else:
 			rho_boot = np.nan
 			ci = np.nan
@@ -1760,6 +1756,6 @@ class phasePrecession():
 		cost = lambda m, x, t: -np.abs(np.sum(np.exp(1j*(t-m*x)))) / len(t-m*x)
 		slope = optimize.fminbound(cost, -1*max_slope, max_slope, args=(xn, tn))
 		intercept = np.arctan2(np.sum(np.sin(tn - slope*xn)), np.sum(np.cos(tn - slope*xn)))
-		intercept = intercept + (-slope*(mnx / mxx))
+		intercept = intercept + ((0-slope)*(mnx / mxx))
 		slope = slope / mxx
 		return slope, intercept

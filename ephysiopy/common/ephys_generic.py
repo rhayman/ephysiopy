@@ -5,14 +5,13 @@ autocorrelograms, power spectrum calculation and so on
 """
 import functools
 import numpy as np
-from scipy import signal, spatial, misc, ndimage, stats, io
+from scipy import signal, spatial, ndimage, stats, io
 from scipy.signal import gaussian, boxcar
 import skimage
 from skimage import feature
 from skimage.segmentation import watershed
 import matplotlib
 import matplotlib.pylab as plt
-from matplotlib.cm import jet
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.transforms as transforms
 from matplotlib.patches import Rectangle
@@ -344,13 +343,113 @@ class SpikeCalcsGeneric(object):
 			ax.set_title(cluster, fontweight='bold', size=10, pad=1)
 		plt.show()
 
+	def thetaModIdx(self, x1):
+		"""
+		Calculates a theta modulation index of a spike train based on the cells
+		autocorrelogram
+		
+		Parameters
+		----------
+		x1: np.array
+			The spike time-series
+		Returns
+		-------
+		thetaMod: float
+			The difference of the values at the first peak and trough of the
+			autocorrelogram
+		"""
+		y = self.xcorr(x1)
+		corr, _ = np.histogram(y[y != 0], bins=201, range=np.array([-500,500]))
+		# Take the fft of the spike train autocorr (from -500 to +500ms)
+		from scipy.signal import periodogram
+		freqs, power = periodogram(corr, fs=200, return_onesided=True)
+		# Smooth the power over +/- 1Hz
+		b = signal.boxcar(3)
+		h = signal.filtfilt(b, 3, power)
+		
+		# Square the amplitude first
+		sqd_amp = h ** 2
+		# Then find the mean power in the +/-1Hz band either side of that
+		theta_band_max_idx = np.nonzero(sqd_amp==np.max(sqd_amp[np.logical_and(freqs>6, freqs<11)]))[0][0]
+		mean_theta_band_power = np.mean(sqd_amp[theta_band_max_idx-1:theta_band_max_idx+1])
+		# Find the mean amplitude in the 2-50Hz range
+		other_band_idx = np.logical_and(freqs>2, freqs<50)
+		mean_other_band_power = np.mean(sqd_amp[other_band_idx])
+		# Find the ratio of these two - this is the theta modulation index
+		return (mean_theta_band_power - mean_other_band_power) / (mean_theta_band_power + mean_other_band_power)
+
+	def thetaModIdxV2(self, x1):
+		"""
+		This is a simpler alternative to the thetaModIdx method in that it
+		calculates the difference between the normalized temporal autocorrelogram
+		at the trough between 50-70ms and the peak between 100-140ms over
+		their sum (data is binned into 5ms bins)
+		
+		Measure used in Cacucci et al., 2004 and Kropff et al 2015
+		"""
+		y = self.xcorr(x1)
+		corr, bins = np.histogram(y[y != 0], bins=201, range=np.array([-500,500]))
+		# 'close' the right-hand bin
+		bins = bins[0:-1]
+		# normalise corr so max is 1.0
+		corr = corr/float(np.max(corr))
+		thetaAntiPhase = np.min(corr[np.logical_and(bins>50,bins<70)])
+		thetaPhase = np.max(corr[np.logical_and(bins>100, bins<140)])
+		return (thetaPhase-thetaAntiPhase) / (thetaPhase+thetaAntiPhase)
+
+	def thetaBandMaxFreq(self, x1):
+		"""
+		Calculates the frequency with the max power in the theta band (6-12Hz)
+		of a spike trains autocorrelogram. Partly to look for differences
+		in theta frequency in different running directions a la Blair (Welday paper)
+		"""
+		y = self.xcorr(x1)
+		corr, _ = np.histogram(y[y != 0], bins=201, range=np.array([-500,500]))
+		# Take the fft of the spike train autocorr (from -500 to +500ms)
+		from scipy.signal import periodogram
+		freqs, power = periodogram(corr, fs=200, return_onesided=True)
+		power_masked = np.ma.MaskedArray(power,np.logical_or(freqs<6,freqs>12))
+		return freqs[np.argmax(power_masked)]
+
 class SpikeCalcsTetrode(SpikeCalcsGeneric):
 	"""
 	Encapsulates methods specific to the geometry inherent in tetrode-based
 	recordings
 	"""
-	def __init__(self):
-		pass
+	def __init__(self, spike_times, waveforms=None, **kwargs):
+		super().__init__(spike_times, waveforms,** kwargs)
+
+	def smoothSpikePosCount(self, x1, npos, sigma=3.0, shuffle=None):
+		"""
+		Returns a spike train the same length as num pos samples that has been
+		smoothed in time with a gaussian kernel M in width and standard deviation
+		equal to sigma
+		
+		Parameters
+		--------------
+		x1 : np.array
+			The pos indices the spikes occured at
+		npos : int
+			The number of position samples captured
+		sigma : float
+			the standard deviation of the gaussian used to smooth the spike
+			train
+		shuffle: int
+			The number of seconds to shift the spike train by. Default None
+		
+		Returns
+		-----------
+		smoothed_spikes : np.array
+			The smoothed spike train
+		"""
+		spk_hist = np.bincount(x1, minlength=npos)
+		if shuffle is not None:
+			spk_hist = np.roll(spk_hist, int(shuffle * 50))
+		# smooth the spk_hist (which is a temporal histogram) with a 250ms
+		# gaussian as with Kropff et al., 2015
+		h = signal.gaussian(13, sigma)
+		h = h / float(np.sum(h))
+		return signal.filtfilt(h.ravel(), 1, spk_hist)
 
 class SpikeCalcsProbe(SpikeCalcsGeneric):
 	"""
@@ -931,7 +1030,7 @@ class MapCalcsGeneric(object):
 		ratemap = np.ma.MaskedArray(rmap[0], np.isnan(rmap[0]), copy=True)
 		x, y = np.meshgrid(rmap[1][1][0:-1], rmap[1][0][0:-1][::-1])
 		vmax = np.max(np.ravel(ratemap))
-		ax.pcolormesh(x, y, ratemap, cmap=jet, edgecolors='face', vmax=vmax, **kwargs)
+		ax.pcolormesh(x, y, ratemap, cmap=plt.cm.get_cmap("jet"), edgecolors='face', vmax=vmax, **kwargs)
 		ax.axis([x.min(), x.max(), y.min(), y.max()])
 		ax.set_aspect('equal')
 		return ax
@@ -1136,7 +1235,7 @@ class FieldCalcs:
 		"""
 		n = int(n)
 		if ny is None:
-			ny = n
+			ny = int(n)
 		else:
 			ny = int(ny)
 		#  keep track of nans
@@ -1148,7 +1247,7 @@ class FieldCalcs:
 			elif np.ndim(im) == 2:
 				g = signal.boxcar([n, ny]) / float(n)
 		elif ftype == 'gaussian':
-			x, y = np.mgrid[-n:n+1, -ny:ny+1]
+			x, y = np.mgrid[-n:n+1, int(0-ny):ny+1]
 			g = np.exp(-(x**2/float(n) + y**2/float(ny)))
 		g = g / g.sum()
 		if np.ndim(im) == 1:
@@ -1489,7 +1588,6 @@ class FieldCalcs:
 			The properties of the field(s) in the input ratemap A
 		"""
 
-		from scipy.spatial import Delaunay
 		from skimage.measure import find_contours
 		from sklearn.neighbors import NearestNeighbors
 		from ephysiopy.common import gridcell
@@ -1579,12 +1677,12 @@ class FieldCalcs:
 			else:
 				ax = ax
 			Am = np.ma.MaskedArray(Ac, mask=nan_idx, copy=True)
-			ax.pcolormesh(Am, cmap=jet, edgecolors='face')
+			ax.pcolormesh(Am, cmap=plt.cm.get_cmap("jet"), edgecolors='face')
 			for c in contours:
 				ax.plot(c[:, 1], c[:, 0], 'k')
 			# do the delaunay thing
 			if tri:
-				tri = Delaunay(peak_idx)
+				tri = spatial.Delaunay(peak_idx)
 				ax.triplot(peak_idx[:, 1], peak_idx[:, 0],
 						   tri.simplices.copy(), color='w', marker='o')
 			ax.set_xlim(0, Ac.shape[1] - 0.5)
@@ -1655,9 +1753,9 @@ class FieldCalcs:
 		correlates two ratemaps together ignoring areas that have zero sampling
 		"""
 		if map1.shape > map2.shape:
-			map2 = misc.imresize(map2, map1.shape, interp='nearest', mode='F')
+			map2 = skimage.transform.resize(map2, map1.shape, mode='reflect')
 		elif map1.shape < map2.shape:
-			map1 = misc.imresize(map1, map2.shape, interp='nearest', mode='F')
+			map1 = skimage.transform.resize(map1, map2.shape, mode='reflect')
 		map1 = map1.flatten()
 		map2 = map2.flatten()
 		if 'normal' in maptype:
@@ -2126,7 +2224,7 @@ class FieldCalcs:
 		skimage.exposure.rescale_intensity : for rescaling following deformation
 		"""
 		if circleXY is None or ellipseXY is None:
-			SAC_stats = getGridFieldMeasures(A)
+			SAC_stats = self.getGridFieldMeasures(A)
 			circleXY = SAC_stats['circleXY']
 			ellipseXY = SAC_stats['ellipseXY']
 			# The ellipse detection stuff might have failed, if so return the original SAC

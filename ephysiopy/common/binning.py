@@ -306,7 +306,7 @@ class RateMap(object):
 				g = signal.boxcar([n, ny]) / float(n)
 				g = g[None, :, :]
 		elif 'gaussian' in ftype:
-			x, y = np.mgrid[-n:n+1, -ny:ny+1]
+			x, y = np.mgrid[-n:n+1, 0-ny:ny+1]
 			g = np.exp(-(x**2/float(n) + y**2/float(ny)))
 			g = g / g.sum()
 			if np.ndim(im) == 1:
@@ -412,7 +412,7 @@ class RateMap(object):
 		var = np.concatenate((var[t2:tn], var, var[0:t2]))
 		if ny is None:
 			ny = n
-		x, y = np.mgrid[-n:n+1, -ny:ny+1]
+		x, y = np.mgrid[-n:n+1, 0-ny:ny+1]
 		g = np.exp(-(x**2/float(n) + y**2/float(ny)))
 		if np.ndim(var) == 1:
 			g = g[n, :]
