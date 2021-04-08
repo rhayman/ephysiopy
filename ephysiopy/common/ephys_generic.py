@@ -9,6 +9,7 @@ from scipy import signal, spatial, misc, ndimage, stats, io
 from scipy.signal import gaussian, boxcar
 import skimage
 from skimage import feature
+from skimage.segmentation import watershed
 import matplotlib
 import matplotlib.pylab as plt
 from matplotlib.cm import jet
@@ -318,8 +319,6 @@ class SpikeCalcsGeneric(object):
 		fig : matplotlib.figure instance, optional, default None
 			If provided the figure will contain all the axes
 		"""
-		from ephysiopy.dacq2py import spikecalcs
-		SpkCalcs = spikecalcs.SpikeCalcs()
 		if fig is None:
 			fig = plt.figure(figsize=(10,20))
 
@@ -329,7 +328,7 @@ class SpikeCalcsGeneric(object):
 			cluster_idx = np.nonzero(self.spk_clusters == cluster)[0]
 			cluster_ts = np.ravel(self.spike_times[cluster_idx])
 			ax = fig.add_subplot(nrows,nrows,i+1)
-			y = SpkCalcs.xcorr(cluster_ts.T / float(self.sample_rate / 1000)) # ms
+			y = self.xcorr(cluster_ts.T / float(self.sample_rate / 1000)) # ms
 			ax.hist(y[y != 0], bins=201, range=[-500, 500], color='k', histtype='stepfilled')
 			ax.set_xlim(-500,500)
 			ax.set_xticks((-500, 0, 500))
@@ -798,7 +797,10 @@ class MapCalcsGeneric(object):
 		if (spk_ts.ndim == 2):
 			spk_ts = np.ravel(spk_ts)
 		self.spk_ts = spk_ts
-		self.plot_type = plot_type
+		if type(plot_type) is str:
+			self.plot_type = [plot_type]
+		else:
+			self.plot_type = list(plot_type)
 		self.spk_pos_idx = self.__interpSpkPosTimes()
 		self.__good_clusters = None
 		self.__spk_clusters = None
@@ -848,7 +850,7 @@ class MapCalcsGeneric(object):
 		idx[idx==len(self.pos_ts)] = len(self.pos_ts) - 1
 		return idx
 
-	def plotAll(self):
+	def plotAll(self, **kwargs):
 		"""
 		Plots rate maps and other graphical output
 
@@ -886,11 +888,11 @@ class MapCalcsGeneric(object):
 				else:
 					ax = fig.add_subplot(inner[plot_type_idx])
 				if 'path' in plot_type:
-					self.makeSpikePathPlot(cluster, ax)
+					self.makeSpikePathPlot(cluster, ax, **kwargs)
 				if 'map' in plot_type:
 					self.makeRateMap(cluster, ax)
 				if 'hdir' in plot_type:
-					self.makeHDPlot(cluster, ax, add_mrv=True)
+					self.makeHDPlot(cluster, ax, add_mrv=True, **kwargs)
 				if 'sac' in plot_type:
 					self.makeSAC(cluster, ax)
 				if 'speed' in plot_type:
@@ -963,6 +965,8 @@ class MapCalcsGeneric(object):
 			r = rmap[0]
 			r = np.insert(r, -1, r[0])
 			ax.plot(theta, r)
+			if 'fill' in kwargs:
+				ax.fill(theta, r, alpha=0.5)
 			ax.set_aspect('equal')
 
 			# See if we should add the mean resultant vector (mrv)
@@ -1050,7 +1054,7 @@ class MapCalcsGeneric(object):
 			cluster = [cluster]
 			
 		gridness,scale,orientation,HDtuning,HDangle,speedCorr,speedMod = [],[],[],[],[],[],[]
-		for i,cl in enumerate(cluster):
+		for _,cl in enumerate(cluster):
 			self.makeRateMap(cl, None)
 			try:
 				m = self.makeSAC(cl, None)
@@ -1171,7 +1175,7 @@ class FieldCalcs:
 											 exclude_border=False,
 											 indices=False)
 		peak_labels = skimage.measure.label(peak_mask, 8)
-		field_labels = skimage.morphology.watershed(image=-Ac,
+		field_labels = watershed(image=-Ac,
 											  markers=peak_labels)
 		nFields = np.max(field_labels)
 		sub_field_mask = np.zeros((nFields, Ac.shape[0], Ac.shape[1]))
@@ -1225,7 +1229,7 @@ class FieldCalcs:
 											 exclude_border=False,
 											 indices=False)
 		peak_labels = skimage.measure.label(peak_mask, 8)
-		field_labels = skimage.morphology.watershed(image=-Ac,
+		field_labels = watershed(image=-Ac,
 											  markers=peak_labels)
 		nFields = np.max(field_labels)
 		return nFields
@@ -1248,7 +1252,7 @@ class FieldCalcs:
 											 exclude_border=False,
 											 indices=False)
 		peak_labels = skimage.measure.label(peak_mask, 8)
-		field_labels = skimage.morphology.watershed(image=-Ac,
+		field_labels = watershed(image=-Ac,
 											  markers=peak_labels)
 		nFields = np.max(field_labels)
 		sub_field_mask = np.zeros((nFields, Ac.shape[0], Ac.shape[1]))
@@ -1488,7 +1492,7 @@ class FieldCalcs:
 		from scipy.spatial import Delaunay
 		from skimage.measure import find_contours
 		from sklearn.neighbors import NearestNeighbors
-		import gridcell
+		from ephysiopy.common import gridcell
 		import matplotlib.cm as cm
 
 		nan_idx = np.isnan(A)
@@ -1514,7 +1518,7 @@ class FieldCalcs:
 		peak_mask = feature.peak_local_max(Ac, min_distance=min_dist, exclude_border=clear_border,
 											 indices=False)
 		peak_labels = skimage.measure.label(peak_mask, 8)
-		field_labels = skimage.morphology.watershed(image=-Ac,
+		field_labels = watershed(image=-Ac,
 											  markers=peak_labels)
 		nFields = np.max(field_labels)
 		sub_field_mask = np.zeros((nFields, Ac.shape[0], Ac.shape[1]))
@@ -1656,10 +1660,10 @@ class FieldCalcs:
 			map1 = misc.imresize(map1, map2.shape, interp='nearest', mode='F')
 		map1 = map1.flatten()
 		map2 = map2.flatten()
-		if maptype is 'normal':
+		if 'normal' in maptype:
 			valid_map1 = np.logical_or((map1 > 0), ~np.isnan(map1))
 			valid_map2 = np.logical_or((map2 > 0), ~np.isnan(map2))
-		elif maptype is 'grid':
+		elif 'grid' in maptype:
 			valid_map1 = ~np.isnan(map1)
 			valid_map2 = ~np.isnan(map2)
 		valid = np.logical_and(valid_map1, valid_map2)
@@ -1902,8 +1906,8 @@ class FieldCalcs:
 			fieldsMask = fieldsLabel > 0
 		elif field_extent_method == 2:
 			# 2a find the inverse drainage bin for each peak
-			fieldsLabel = skimage.morphology.watershed(image=-A_tmp, markers=peaksLabel)
-#            fieldsLabel = skimage.segmentation.random_walker(-A, peaksLabel)
+			fieldsLabel = watershed(image=-A_tmp, markers=peaksLabel)
+            #fieldsLabel = skimage.segmentation.random_walker(-A, peaksLabel)
 			# 2b. Work out what threshold to use in each drainage-basin
 			nZones = np.max(fieldsLabel.ravel())
 			fieldIDs = fieldsLabel[closestPeaksCoord[:,0],closestPeaksCoord[:,1]]

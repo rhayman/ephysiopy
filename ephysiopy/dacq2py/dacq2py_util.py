@@ -17,7 +17,7 @@ from ephysiopy.dacq2py import axonaIO
 from ephysiopy.dacq2py.tetrode_dict import TetrodeDict
 from ephysiopy.common import binning
 from ephysiopy.common.ephys_generic import FieldCalcs
-from ephysiopy.dacq2py.spikecalcs import SpikeCalcs
+from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 from ephysiopy.common.eegcalcs import EEGCalcs
 from ephysiopy.dacq2py.cluster import Kluster
 from ephysiopy.dacq2py import tintcolours as tcols
@@ -26,6 +26,7 @@ from itertools import combinations
 from mpl_toolkits.axes_grid1 import ImageGrid
 import skimage, skimage.morphology
 from skimage import feature
+from skimage.segmentation import watershed
 from collections import OrderedDict
 
 warnings.filterwarnings("ignore",
@@ -592,7 +593,7 @@ class Trial(axonaIO.IO, SAC, dict):
 											  exclude_border=False,
 											  labels=sm_rmap > thresh)
 		label = ndimage.label(mask)[0]
-		w = skimage.morphology.watershed(-distance, label,
+		w = watershed(-distance, label,
 										 mask=sm_rmap > thresh)
 		label = ndimage.label(w)[0]
 		return label, xe, ye
@@ -952,7 +953,7 @@ class Trial(axonaIO.IO, SAC, dict):
 				tetDict = self.getTsAndCs()
 				setattr(self, 'clusters', tetDict[tetrode])
 		clusters = getattr(self, 'clusters', None)
-#		var2bin = getattr(self, 'var2bin', 'pos')
+		# var2bin = getattr(self, 'var2bin', 'pos')
 		ax = getattr(self, 'ax', None)
 		binsize = getattr(self, 'binsize', 3)
 		smooth_sz = getattr(self.ratemap, 'smooth_sz', 5)
@@ -986,7 +987,7 @@ class Trial(axonaIO.IO, SAC, dict):
 			ax, ratemap = self._plotMap(tetrode=tetrode, cluster=cluster, var2bin=var2bin, ax=ax,
 					  binsize=binsize, smooth_sz=smooth_sz, smooth=smooth, *args, **kwargs)
 			axes = ax
-#			# check kwargs to see if we want to add peak rate to axes
+			# check kwargs to see if we want to add peak rate to axes
 			if "add_peak_rate" in kwargs:
 				if kwargs['add_peak_rate']:
 					ax.annotate('{:.2f}'.format(np.max(ratemap)), (0.9,0.15), \
@@ -1851,14 +1852,14 @@ class Trial(axonaIO.IO, SAC, dict):
 		minFreq = np.min(medians[~nan_idx]) - 1.0
 		maxFreq = np.max(medians[~nan_idx]) + 1.0
 		ax.set_ylim(minFreq, maxFreq)
-#        ax.set_xlim(0, sp_bins[-1])
-#		ylims = np.array(ax.get_ylim())
+        #ax.set_xlim(0, sp_bins[-1])
+		#ylims = np.array(ax.get_ylim())
 		xlims = np.array(ax.get_xlim())
 		res = stats.theilslopes(medians[~nan_idx], sp_bins[~nan_idx], 0.90)
 		ax.plot([0,xlims[1]], (res[1], res[1] + (res[0] * sp_bins[-1])), 'r-')
 		ax.plot([0,xlims[1]], (res[1], res[1] + (res[2] * sp_bins[-1])), 'r--')
 		ax.plot([0,xlims[1]], (res[1], res[1] + (res[3] * sp_bins[-1])), 'r--')
-#        ax.plot([0,xlims[1]], (intercept, intercept + (sp_bins[-1] * slope)), 'k--', lw=2)
+        #ax.plot([0,xlims[1]], (intercept, intercept + (sp_bins[-1] * slope)), 'k--', lw=2)
 		ax.set_ylabel('Frequency(Hz)')
 		ax.set_xlabel('Speed (cm/s)')
 		ax.set_title('Intercept: {0:.3f}    Slope: {1:.5f}'.format(intercept, slope))
@@ -1868,7 +1869,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		h,e = np.histogram(np.ma.compressed(sp), bins=len(sp_bins)*10, range=(0, sp_bins[-1]))
 		ax1.bar(e[0:-1], h, color=[0.6667, 0.6667, 0], linewidth=0, align='edge')
 		ax1.set_ylim(0, np.max(h) * 4) # reduce the 'height' of the secondary plot
-#        ax1.set_xlim(0, sp_bins[-1]+spStep)
+        #ax1.set_xlim(0, sp_bins[-1]+spStep)
 		ax1.set_ylabel('Position samples', color=[0.6667, 0.6667, 0])
 		ax1.yaxis.set_label_coords(1.1,.15)
 		ylabels = ax1.yaxis.get_majorticklabels()
@@ -1987,8 +1988,6 @@ class Trial(axonaIO.IO, SAC, dict):
 
 			mask[600*int(Fs):1800*int(Fs)] = False
 			# filter
-#			import pdb
-#			pdb.set_trace()
 			fx = EE.filterForLaser(E=E[~mask], width=width, dip=dip)
 			# reassemble
 			Etmp = np.zeros_like(E)
@@ -2000,7 +1999,7 @@ class Trial(axonaIO.IO, SAC, dict):
 			fx = E
 		nperseg = int(Fs * secsPerBin)
 		freqs, times, Sxx = signal.spectrogram(fx, Fs, nperseg=nperseg)
-#		Sxx_sm = self.ratemap.blurImage(Sxx, (secsPerBin*2)+1)
+		#Sxx_sm = self.ratemap.blurImage(Sxx, (secsPerBin*2)+1)
 		Sxx_sm = Sxx
 		x, y = np.meshgrid(times, freqs)
 		if ax is None:
@@ -2178,7 +2177,7 @@ class Trial(axonaIO.IO, SAC, dict):
 		else:
 			ax = ax
 		ax.axis('off')
-#        fig = plt.gcf()
+        #fig = plt.gcf()
 		rect = ax.get_position().bounds
 		grid = ImageGrid(fig, rect, nrows_ncols= (2,3), axes_pad=0.1)
 		if 'Amp' in param:
@@ -2293,7 +2292,7 @@ class Trial(axonaIO.IO, SAC, dict):
 								ax.annotate('{:.2f}'.format(np.max(modIdx)), (0.15,0.9), \
 										xycoords='axes fraction', textcoords='axes fraction', color='k', size=30, weight='bold', ha='center', va='center')
 
-	#                    ax.set_title('Cluster ' + str(cluster_a) + ' vs Cluster ' + str(cluster_b) +'\ntheta modulation=' + str(modIdx))
+	                    #ax.set_title('Cluster ' + str(cluster_a) + ' vs Cluster ' + str(cluster_b) +'\ntheta modulation=' + str(modIdx))
 				else:
 					ax.set_title('Cluster ' + str(cluster_a) + ' vs Cluster ' + str(cluster_b))
 		ax.set_xlabel('Time(ms)')

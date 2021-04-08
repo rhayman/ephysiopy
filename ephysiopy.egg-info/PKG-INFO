@@ -1,6 +1,10 @@
 Metadata-Version: 2.1
 Name: ephysiopy
+<<<<<<< HEAD
 Version: 1.7.56
+=======
+Version: 1.7.34
+>>>>>>> restructure
 Summary: Analysis of electrophysiology data
 Home-page: https://github.com/rhayman/ephysiopy
 Author: Robin Hayman
