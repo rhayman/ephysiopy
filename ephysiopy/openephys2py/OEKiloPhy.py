@@ -225,7 +225,7 @@ class OpenEphysBase(object):
 		"""
 		if self.kilodata is None:
 			self.loadKilo(**kwargs)
-		if ( 'ppm' in kwargs.keys() ):
+		if 'ppm' in kwargs.keys():
 			ppm = kwargs['ppm']
 		else:
 			ppm = 400
@@ -238,12 +238,13 @@ class OpenEphysBase(object):
 		xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
 		self.hdir = hdir
 		spk_times = (self.kilodata.spk_times.T / 3e4)
-		if 'plot_type' in kwargs:
-			plot_type = kwargs['plot_type']
-		else:
-			plot_type = 'map'
-		mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, plot_type, **kwargs)
-		if 'cluster' in kwargs:
+		
+		# default plot is a 2D rate map
+		if 'plot_type' not in kwargs.keys():
+			kwargs['plot_type'] = 'map'
+
+		mapiter = MapCalcsGeneric(xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times, **kwargs)
+		if 'cluster' in kwargs.keys():
 			if type(kwargs['cluster']) == int:
 				mapiter.good_clusters = np.intersect1d([kwargs['cluster']], self.kilodata.good_clusters)
 
@@ -309,7 +310,7 @@ class OpenEphysBase(object):
 			return ax, xy
 		return xy
 
-	def plotMaps(self, plot_type='map', **kwargs):
+	def plotMaps(self, **kwargs):
 		"""
 		Parameters
 		------------
@@ -340,6 +341,9 @@ class OpenEphysBase(object):
 		in one figure window
 
 		"""
+		if 'plot_type' not in kwargs.keys():
+			 kwargs['plot_type'] = 'map'
+
 		self.prepareMaps(**kwargs)
 		if 'clusters' in kwargs:
 			if type(kwargs['clusters']) == int:
@@ -740,11 +744,11 @@ class OpenEphysNPX(OpenEphysBase):
 	def plotPos(self, jumpmax=None, show=True, **kwargs):
 		super().plotPos(jumpmax, show, **kwargs)
 
-	def plotMaps(self, plot_type='map', **kwargs):
-		super().plotMaps(plot_type, **kwargs)
+	def plotMaps(self, **kwargs):
+		super().plotMaps(**kwargs)
 
-	def plotMapsOneAtATime(self, plot_type='map', **kwargs):
-		super().plotMapsOneAtATime(plot_type, **kwargs)
+	def plotMapsOneAtATime(self, **kwargs):
+		super().plotMapsOneAtATime(**kwargs)
 
 	def plotEEGPower(self, channel=0, **kwargs):
 		super().plotEEGPower(channel, **kwargs)
@@ -883,11 +887,11 @@ class OpenEphysNWB(OpenEphysBase):
 		xy = super().plotPos(jumpmax, show)
 		return xy
 
-	def plotMaps(self, plot_type='map', **kwargs):
-		super().plotMaps(plot_type, **kwargs)
+	def plotMaps(self, **kwargs):
+		super().plotMaps(**kwargs)
 
-	def plotMapsOneAtATime(self, plot_type='map', **kwargs):
-		super().plotMapsOneAtATime(plot_type, **kwargs)
+	def plotMapsOneAtATime(self, **kwargs):
+		super().plotMapsOneAtATime(**kwargs)
 
 	def plotEEGPower(self, channel=0):
 		super().plotEEGPower(channel)
@@ -1014,11 +1018,11 @@ class OpenEphysBinary(OpenEphysBase):
 		xy = super().plotPos(jumpmax, show)
 		return xy
 
-	def plotMaps(self, plot_type='map', **kwargs):
-		super().plotMaps(plot_type, **kwargs)
+	def plotMaps(self, **kwargs):
+		super().plotMaps(**kwargs)
 
-	def plotMapsOneAtATime(self, plot_type='map', **kwargs):
-		super().plotMapsOneAtATime(plot_type, **kwargs)
+	def plotMapsOneAtATime(self, **kwargs):
+		super().plotMapsOneAtATime(**kwargs)
 
 	def plotEEGPower(self, channel=0):
 		super().plotEEGPower(channel)
