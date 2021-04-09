@@ -1,5 +1,4 @@
 import setuptools
-import os
 from ephysiopy import __about__
 
 with open("README.rst", "r") as fh:
@@ -16,7 +15,7 @@ setuptools.setup(
     url="https://github.com/rhayman/ephysiopy",
     packages=setuptools.find_packages(),
     include_package_data=True,
-    package_data={"" : ["*.pkl", "*.txt"]},
+    package_data={"": ["*.pkl", "*.txt"]},
     install_requires=[
         "numpy",
         "scipy",
