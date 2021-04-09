@@ -834,7 +834,7 @@ class PosCalcsGeneric(object):
         self.tracker_params = None
         self.sample_rate = None
 
-    def postprocesspos(self, tracker_params, **kwargs) -> tuple:
+    def postprocesspos(self, tracker_params=dict(), **kwargs) -> tuple:
         """
         Post-process position data
 
@@ -939,8 +939,8 @@ class PosCalcsGeneric(object):
                 except ValueError:
                     pass
         xy.mask = 0
-        print("{} bad/ jumpy positions were interpolated \
-            over".format(len(missing_idx)))  # this is wrong i think
+        print("{} bad positions were interpolated over".format(
+            len(missing_idx)))  # this is wrong i think
         return xy
 
     def smoothPos(self, xy):
@@ -1015,8 +1015,12 @@ class PosCalcsGeneric(object):
         """
         from scipy import signal
         denom = np.gcd(upsample_rate, 30)
-        new_xy = signal.resample_poly(xy, upsample_rate/denom, 30/denom)
-        return new_xy
+
+        new_x = signal.resample_poly(
+            xy[0, :], upsample_rate/denom, 30/denom)
+        new_y = signal.resample_poly(
+            xy[1, :], upsample_rate/denom, 30/denom)
+        return np.array(new_x, new_y)
 
 
 class MapCalcsGeneric(object):
