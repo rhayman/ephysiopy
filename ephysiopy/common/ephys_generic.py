@@ -1987,7 +1987,7 @@ class FieldCalcs:
     def _getAng(self, a, b, c):
         """
         Given lengths a,b,c of the sides of a triangle this returns the angles
-        in degress of all 3 angles
+        in degress of the angle between the first 2 args
         """
         return np.degrees(np.arccos((c**2 - b**2 - a**2)/(-2.0 * a * b)))
 
@@ -2239,9 +2239,11 @@ class FieldCalcs:
             min_distance = kwargs.pop('min_distance')
         else:
             min_distance = np.ceil(np.min(A_sz / 2) / 8.).astype(int)
+        import skimage.feature
         peaksMask = feature.peak_local_max(
             A_tmp, indices=False, min_distance=min_distance,
             exclude_border=False)
+        import skimage
         peaksLabel = skimage.measure.label(peaksMask, connectivity=2)
         if maxima == 'centroid':
             S = skimage.measure.regionprops(peaksLabel)
@@ -2488,6 +2490,7 @@ class FieldCalcs:
         # as values are cropped to lie between 0 and 1.0
         in_range = (np.nanmin(image), np.nanmax(image))
         out_range = (0, 1)
+        import skimage
         autoCorrMiddleRescaled = skimage.exposure.rescale_intensity(
             image, in_range, out_range)
         origNanIdx = np.isnan(autoCorrMiddleRescaled.ravel())
@@ -2555,7 +2558,12 @@ class FieldCalcs:
             ellipseXY = ellipseXY.T
 
         tform = skimage.transform.AffineTransform()
-        tform.estimate(ellipseXY, circleXY)
+        try:
+            tform.estimate(ellipseXY, circleXY)
+        except np.linalg.LinAlgError:  # failed to converge
+            print("Failed to estimate ellipse. Returning original SAC")
+            return A
+
         """
         the transformation algorithms used here crop values < 0 to 0. Need to
         rescale the SAC values before doing the deformation and then rescale

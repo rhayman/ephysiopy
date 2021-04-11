@@ -36,3 +36,7 @@ ephysiopy/format_converters/__init__.py
 ephysiopy/openephys2py/OEKiloPhy.py
 ephysiopy/openephys2py/OESettings.py
 ephysiopy/openephys2py/__init__.py
+ephysiopy/tests/__init__.py
+ephysiopy/tests/conftest.py
+ephysiopy/tests/test_binning.py
+ephysiopy/tests/test_ephys_generic.py
