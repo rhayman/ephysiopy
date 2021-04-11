@@ -9,7 +9,6 @@ import os
 import pickle
 import fnmatch
 from ephysiopy.common.utils import smooth
-from ephysiopy.dacq2py.spikecalcs import SpikeCalcs
 
 MAXSPEED = 4.0  # pos data speed filter in m/s
 BOXCAR = 20  # this gives a 400ms smoothing window for pos averaging
@@ -632,7 +631,7 @@ class Pos(IO):
         return np.expand_dims(np.any(~bool_arr, axis=0), 0)
 
 
-class Tetrode(IO, SpikeCalcs):
+class Tetrode(IO):
     """
     Processes tetrode files recorded with the Axona recording system
 

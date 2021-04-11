@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 from pathlib import Path
+from ephysiopy.common.ephys_generic import PosCalcsGeneric
 
 
 @pytest.fixture()
@@ -53,3 +54,15 @@ def basic_ratemap():
     x, y = np.ogrid[-np.pi:np.pi:100j, -np.pi:np.pi:100j]
     r = np.sin(np.exp((np.sin(x)**3 + np.cos(y)**2)))
     return r
+
+
+@pytest.fixture
+def basic_PosCalcs(basic_xy):
+    '''
+    Returns a PosCalcsGeneric instance initialised with some random
+    walk xy data
+    '''
+    x = basic_xy[0]
+    y = basic_xy[1]
+    ppm = 300  # pixels per metre value
+    return PosCalcsGeneric(x, y, ppm)

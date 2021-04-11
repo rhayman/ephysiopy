@@ -1157,7 +1157,7 @@ class MapCalcsGeneric(object):
             inner_nrows = 1
         else:
             inner_nrows = 2
-        
+
         try:
             iter(self.good_clusters)
         except Exception:
@@ -1223,7 +1223,7 @@ class MapCalcsGeneric(object):
         if ax is not None:
             ax.pcolormesh(
                 x, y, ratemap, cmap=plt.cm.get_cmap("jet"), edgecolors='face',
-                vmax=vmax, **kwargs)
+                vmax=vmax, shading='auto', **kwargs)
             ax.axis([x.min(), x.max(), y.min(), y.max()])
             ax.set_aspect('equal')
         return ax
@@ -1365,7 +1365,8 @@ class MapCalcsGeneric(object):
             self.makeRateMap(cl, None)
             try:
                 pos_w = np.ones_like(self.pos_ts)
-                mapMaker = binning.RateMap(self.xy, None, None, pos_w, ppm=self.ppm)
+                mapMaker = binning.RateMap(
+                    self.xy, None, None, pos_w, ppm=self.ppm)
                 spk_w = np.bincount(
                     self.spk_pos_idx, self.spk_clusters == cluster,
                     minlength=self.pos_ts.shape[0])

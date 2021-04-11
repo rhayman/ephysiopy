@@ -9,9 +9,6 @@ class SAC(object):
     """
     Spatial AutoCorrelation (SAC) class
     """
-    def __init__(self):
-        pass
-
     def autoCorr2D(self, A, nodwell, tol=1e-10):
         """
         Performs a spatial autocorrelation on the array A
@@ -202,8 +199,8 @@ class SAC(object):
 
         Returns
         -------
-        ret : matplotlib.image.AxesImage
-            The axes in which the SAC is shown
+        fig : matplotlib.Figure instance
+            The Figure on which the SAC is shown
 
         See Also
         --------
@@ -213,10 +210,12 @@ class SAC(object):
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
+        else:
+            fig = plt.gcf()
         Am = A.copy()
         Am[~inDict['gridnessMaskAll']] = np.nan
         Am = np.ma.masked_invalid(np.atleast_2d(Am))
-        ret = ax.imshow(
+        ax.imshow(
             A, cmap=plt.cm.get_cmap("gray_r"), interpolation='nearest')
         import copy
         cmap = copy.copy(plt.cm.get_cmap("jet"))
@@ -264,4 +263,5 @@ class SAC(object):
                 '{:.2f}'.format(inDict['gridness']), (0.9, 0.15),
                 xycoords='figure fraction', textcoords='figure fraction',
                 color='k', size=30, weight='bold', ha='center', va='center')
-        return ret
+        if fig:
+            return fig

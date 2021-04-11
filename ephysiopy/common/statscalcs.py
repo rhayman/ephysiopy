@@ -3,9 +3,6 @@ import numpy as np
 
 class StatsCalcs():
 
-    def __init__(self):
-        pass
-
     def circ_r(self, alpha, w=None, d=0, axis=0):
         """
         Computes the mean resultant vector length for circular data.
@@ -223,7 +220,7 @@ class StatsCalcs():
             else:
                 print('The Watsons U2 statistic is not \
                     significant at p={0}'.format(key))
-                return
+        return U2n
 
     def watsonWilliams(self, a, b):
         """

@@ -14,9 +14,12 @@ import skimage
 import matplotlib
 from ephysiopy.dacq2py import axonaIO
 from ephysiopy.dacq2py import dacq2py_util
-from sklearn.utils import resample
+import random  # used in bootstrapping in _circCircCorrTLinear()
 
 
+# This class is basically a mixin with dacq2py_util.TETRODE
+# It is not used anywhere else - other LFP analysis uses EEGCalcsGeneric
+# in the ephysiopy.common.ephys_generic module
 class EEGCalcs(EEGIO):
     """
     Has some useful methods in particularly to do with
@@ -1808,7 +1811,7 @@ class phasePrecession():
                     n)) * rho_jack_std * stats.norm.ppf(alpha/2, (0, 1))[0])
         elif conf and k and n < 25 and n > 4:
             # set up the bootstrapping parameters
-            idx = resample(theta, n_samples=k)
+            idx = random.choices(theta, k=k)
             rho_boot = []
             for i in idx:
                 rho_boot.append(self._ccc(theta[i], phi[i]))

@@ -14,6 +14,7 @@ warnings.filterwarnings(
     "ignore", message="invalid value encountered in greater")
 warnings.filterwarnings(
     "ignore", message="invalid value encountered in true_divide")
+np.seterr(divide='ignore', invalid='ignore')
 
 
 class RateMap(object):
@@ -87,14 +88,14 @@ class RateMap(object):
     @ppm.setter
     def ppm(self, value):
         self.__ppm = value
-        self.__binsize__ = self.__calcBinSize(self.cmsPerBin)
+        self.__binsize__ = self.__calcBinSize__(self.cmsPerBin)
 
     @property
     def binsize(self):
-        # Returns binsize calculated in __calcBinSize and based on cmsPerBin
+        # Returns binsize calculated in __calcBinSize__ and based on cmsPerBin
         if self.__binsize__ is None:
             try:
-                self.__binsize__ = self.__calcBinSize(self.cmsPerBin)
+                self.__binsize__ = self.__calcBinSize__(self.cmsPerBin)
             except AttributeError:
                 self.__binsize__ = None
         return self.__binsize__
@@ -112,6 +113,8 @@ class RateMap(object):
         data, but usefully can be adjusted when masking data in the trial
         by
         """
+        if self.__pos_weights is None:
+            self.__pos_weights = np.ones(self.xy.shape[1])
         return self.__pos_weights
 
     @pos_weights.setter
@@ -126,7 +129,7 @@ class RateMap(object):
     @cmsPerBin.setter
     def cmsPerBin(self, value):
         self.__cmsPerBin = value
-        self.__binsize__ = self.__calcBinSize(self.cmsPerBin)
+        self.__binsize__ = self.__calcBinSize__(self.cmsPerBin)
 
     @property
     def smooth_sz(self):
@@ -154,7 +157,7 @@ class RateMap(object):
         else:
             return (getattr(self, 'ppm') / 100.) * getattr(self, 'cmsPerBin')
 
-    def __calcBinSize(self, cmsPerBin=3):
+    def __calcBinSize__(self, cmsPerBin=3):
         """
         Aims to get the right number of bins for x and y dims given the ppm
         in the set header and the x and y extent
@@ -209,7 +212,7 @@ class RateMap(object):
         # might happen if head direction not supplied for example
 
         if 'xy' in varType:
-            self.binsize = self.__calcBinSize(self.cmsPerBin)
+            self.binsize = self.__calcBinSize__(self.cmsPerBin)
         elif 'dir' in varType:
             self.binsize = np.arange(0, 360+self.cmsPerBin, self.cmsPerBin)
         elif 'speed' in varType:
@@ -279,14 +282,20 @@ class RateMap(object):
                     if binned_spk.ndim == 2:
                         pass
                     elif (binned_spk.ndim == 3 or binned_spk.ndim == 1):
-                        binned_spk_tmp = np.zeros(
-                            [binned_spk.shape[0], binned_spk[0].shape[0],
-                                binned_spk[0].shape[1]])
+                        if binned_spk.ndim == 3:
+                            binned_spk_tmp = np.zeros(
+                                [binned_spk.shape[0], binned_spk[0].shape[0],
+                                    binned_spk[0].shape[1]])
+                        if binned_spk.ndim == 1:
+                            binned_spk_tmp = np.zeros(
+                                [binned_spk.shape[0],
+                                    binned_spk.shape[0], 1])
                         for i in range(binned_spk.shape[0]):
                             binned_spk_tmp[i, :, :] = binned_spk[i]
                         binned_spk = binned_spk_tmp
                     binned_spk = self.blurImage(
-                        binned_spk, self.smooth_sz, ftype=self.smoothingType)
+                        np.squeeze(binned_spk),
+                        self.smooth_sz, ftype=self.smoothingType)
                     rmap = binned_spk / binned_pos
                     if rmap.ndim <= 2:
                         rmap[nanIdx] = np.nan
@@ -551,10 +560,12 @@ class RateMap(object):
             h = self.__circularStructure(r)
             h[h >= np.max(h) / 3.0] = 1
             h[h != 1] = 0
+            if h.shape >= pos_binned.shape:
+                break
             # filter the arrays using astropys convolution
-            filtPos = convolution.convolve(pos_binned, h, boundary='None')
-            filtSpk = convolution.convolve(spk_binned, h, boundary='None')
-            filtVisited = convolution.convolve(visited, h, boundary='None')
+            filtPos = convolution.convolve(pos_binned, h, boundary=None)
+            filtSpk = convolution.convolve(spk_binned, h, boundary=None)
+            filtVisited = convolution.convolve(visited, h, boundary=None)
             # get the bins which made it through this iteration
             trueBins = alpha / (np.sqrt(filtSpk) * filtPos) <= r
             trueBins = np.logical_and(trueBins, ~binCheck)
@@ -774,7 +785,7 @@ class RateMap(object):
         # [Stage 1] Calculate number of spikes in the window for each spikeInd
         # (ignoring spike itself)
         # 1a. Loop preparation
-        nSpikesInWin = np.zeros(n_spks, dtype=np.int)
+        nSpikesInWin = np.zeros(n_spks, dtype=int)
 
         # 1b. Keep looping until we have dealt with all spikes
         for i, s in enumerate(spkIdx):
@@ -805,7 +816,7 @@ class RateMap(object):
             # calculate dwell displacements
             winInd_dwell = np.arange(
                 spkIdx[i] + 1, np.minimum(
-                    spkIdx[i]+winSizeBins, n_samps), downsample, dtype=np.int)
+                    spkIdx[i]+winSizeBins, n_samps), downsample, dtype=int)
             WL = len(winInd_dwell)
             dwell[:, filled_pvals:filled_pvals + WL] = np.rot90(
                 np.array(np.rot90(xy[:, winInd_dwell]) - xy[:, spkIdx[i]]))
@@ -835,7 +846,7 @@ class RateMap(object):
         spike = np.round(
             (spike - np.ones_like(spike) * dwell_min[:, np.newaxis]) / binsize)
 
-        binsize = np.max(dwell, axis=1)
+        binsize = np.max(dwell, axis=1).astype(int)
         binedges = np.array(((-0.5, -0.5), binsize+0.5)).T
         Hp = np.histogram2d(
             dwell[0, :], dwell[1, :], range=binedges, bins=binsize)[0]

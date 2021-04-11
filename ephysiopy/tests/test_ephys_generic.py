@@ -1,6 +1,5 @@
 import pytest
 import numpy as np
-from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 from ephysiopy.common.ephys_generic import SpikeCalcsGeneric
 from ephysiopy.common.ephys_generic import SpikeCalcsTetrode
@@ -9,18 +8,6 @@ from ephysiopy.common.ephys_generic import FieldCalcs
 
 
 # Fixtures setting up/ returning instances of the various classes to be tested
-@pytest.fixture
-def basic_PosCalcs(basic_xy):
-    '''
-    Returns a PosCalcsGeneric instance initialised with some random
-    walk xy data
-    '''
-    x = basic_xy[0]
-    y = basic_xy[1]
-    ppm = 300  # pixels per metre value
-    return PosCalcsGeneric(x, y, ppm)
-
-
 @pytest.fixture
 def basic_MapCalcs(basic_PosCalcs, basic_SpikeCalcs):
     # MapCalcs needs xy, hdir, speed and pos and spike timestamps (in secs)
