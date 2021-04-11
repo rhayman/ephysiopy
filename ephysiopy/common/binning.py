@@ -171,7 +171,7 @@ class RateMap(object):
             (np.ceil(
                 np.ptp(y_lims) / ppb)-1,
                 np.ceil(
-                    np.ptp(x_lims) / ppb)-1), dtype=np.int)
+                    np.ptp(x_lims) / ppb)-1), dtype=int)
         return self.binsize
 
     def getMap(self, spkWeights, varType='xy', mapType='rate', smoothing=True):
@@ -273,7 +273,7 @@ class RateMap(object):
                     for i in range(spkWeights.shape[0]):
                         rmap[i, :] = binned_spk[i] / binned_pos
             else:
-                if isinstance(binned_spk.dtype, np.object):
+                if isinstance(binned_spk.dtype, object):
                     binned_pos = self.blurImage(
                         binned_pos, self.smooth_sz, ftype=self.smoothingType)
                     if binned_spk.ndim == 2:
@@ -328,6 +328,8 @@ class RateMap(object):
             elif im.ndim == 2:
                 g = signal.boxcar(n) / float(n)
                 g = np.tile(g, (1, ny, 1))
+                g = g / g.sum()
+                g = np.squeeze(g)  # extra dim introduced in np.tile above
             elif im.ndim == 3:  # mutlidimensional binning
                 g = signal.boxcar([n, ny]) / float(n)
                 g = g[None, :, :]

@@ -29,6 +29,8 @@ def stripAxes(func):
             ax = kwargs['ax']
         else:
             ax = args[2]  # len of args includes self
+        if ax is None:
+            return original
         plt.setp(ax.get_xticklabels(), visible=False)
         plt.setp(ax.get_yticklabels(), visible=False)
         ax.axes.get_xaxis().set_visible(False)
@@ -175,7 +177,7 @@ class SpikeCalcsGeneric(object):
             warnings.warn("Cluster not available")
             return
         bins = 201
-        trange = np.array((-500, 500))
+        trange = np.array((-n/self.sample_rate, n/self.sample_rate))
         t = self.spike_times[self.spk_clusters == cluster]
         y = self.xcorr(t, Trange=trange)
         y = y.astype(np.int64)  # See xcorr docs
@@ -252,7 +254,7 @@ class SpikeCalcsGeneric(object):
             y.extend(np.repeat(i, len(tmp)))
         return x, y
 
-    def plotPSTH(self, cluster, fig=None):
+    def plotPSTH(self, cluster, fig=None, **kwargs):
         """
         Plots the PSTH for a cluster
 
@@ -270,7 +272,6 @@ class SpikeCalcsGeneric(object):
         show = False  # show the figure or leave this to the caller
         if fig is None:
             fig = plt.figure(figsize=(4.0, 7.0))
-            show = True
         scatter_ax = fig.add_subplot(111)
         scatter_ax.scatter(x, y, marker='.', s=2, rasterized=False)
         divider = make_axes_locatable(scatter_ax)
@@ -293,7 +294,7 @@ class SpikeCalcsGeneric(object):
                     (0, 0), width=self.stim_width, height=1,
                     transform=histTrans,
                     color=[0, 0, 1], alpha=0.5))
-        scatter_ax.set_ylabel('Laser stimulation events', labelpad=-18.5)
+        scatter_ax.set_ylabel('Laser stimulation events')
         scatter_ax.set_xlabel('Time to stimulus onset(secs)')
         nStms = int(len(self.event_ts))
         scatter_ax.set_ylim(0, nStms)
@@ -324,7 +325,7 @@ class SpikeCalcsGeneric(object):
         scatter_ax.set_xlim(self.event_window)
         if show:
             plt.show()
-        yield cluster, 1
+        return fig
 
     def plotAllXCorrs(self, clusters, fig=None):
         """
@@ -337,6 +338,10 @@ class SpikeCalcsGeneric(object):
         fig : matplotlib.figure instance, optional, default None
             If provided the figure will contain all the axes
         """
+        try:
+            iter(clusters)
+        except Exception:
+            clusters = [clusters]
         if fig is None:
             fig = plt.figure(figsize=(10, 20))
         nrows = np.ceil(np.sqrt(len(clusters))).astype(int)
@@ -361,7 +366,7 @@ class SpikeCalcsGeneric(object):
             ax.spines['left'].set_visible(False)
             ax.xaxis.set_ticks_position('bottom')
             ax.set_title(cluster, fontweight='bold', size=10, pad=1)
-        plt.show()
+        return fig
 
     def thetaModIdx(self, x1):
         """
@@ -443,15 +448,6 @@ class SpikeCalcsGeneric(object):
             power, np.logical_or(freqs < 6, freqs > 12))
         return freqs[np.argmax(power_masked)]
 
-
-class SpikeCalcsTetrode(SpikeCalcsGeneric):
-    """
-    Encapsulates methods specific to the geometry inherent in tetrode-based
-    recordings
-    """
-    def __init__(self, spike_times, waveforms=None, **kwargs):
-        super().__init__(spike_times, waveforms, ** kwargs)
-
     def smoothSpikePosCount(self, x1, npos, sigma=3.0, shuffle=None):
         """
         Returns a spike train the same length as num pos samples that has been
@@ -483,6 +479,15 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
         h = signal.gaussian(13, sigma)
         h = h / float(np.sum(h))
         return signal.filtfilt(h.ravel(), 1, spk_hist)
+
+
+class SpikeCalcsTetrode(SpikeCalcsGeneric):
+    """
+    Encapsulates methods specific to the geometry inherent in tetrode-based
+    recordings
+    """
+    def __init__(self, spike_times, waveforms=None, **kwargs):
+        super().__init__(spike_times, waveforms, ** kwargs)
 
     def ifr_sp_corr(self, x1, speed, minSpeed=2.0, maxSpeed=40.0, sigma=3,
                     shuffle=False, nShuffles=100, minTime=30, plot=False):
@@ -539,14 +544,13 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
             from ephysiopy.common.binning import RateMap
             R = RateMap()
             sm_binned_rate = R.blurImage(binned_rate, 5)
-            plt.figure()
+            fig = plt.figure()
             from matplotlib.colors import LogNorm
             plt.pcolormesh(
                 speed_mesh, spk_mesh, sm_binned_rate,
                 norm=LogNorm(), alpha=0.5, shading='flat', edgecolors='None')
             # overlay the smoothed binned rate against speed
-            ax = plt.gca()
-            ax.hold(True)
+            ax = fig.add_subplot(1, 1, 1)
             plt.plot(sp_bin_edges, binned_spk_rate, 'r')
             # do the linear regression and plot the fit too
             # TODO: linear regression is broken ie not regressing the correct
@@ -579,12 +583,13 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
                 shuffled_results.append(stats.pearsonr(
                     spk_count_sm, speed_filt)[0])
             if plot:
-                plt.figure()
-                ax = plt.gca()
+                fig = plt.figure()
+                ax = fig.add_subplot(1, 1, 1)
                 ax.hist(np.abs(shuffled_results), 20)
                 ylims = ax.get_ylim()
                 ax.vlines(res, ylims[0], ylims[1], 'r')
-        print("PPMC: {0}".format(res[0]))
+        if isinstance(fig, plt.Figure):
+            return fig
 
 
 class SpikeCalcsProbe(SpikeCalcsGeneric):
@@ -710,9 +715,8 @@ class EEGCalcsGeneric(object):
         # calculate
         self.calcEEGPowerSpectrum()
         # plotting
-        import matplotlib.pylab as plt
-        plt.figure()
-        ax = plt.gca()
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
         freqs = self.freqs[0::50]
         power = self.power[0::50]
         sm_power = self.sm_power[0::50]
@@ -735,7 +739,8 @@ class EEGCalcsGeneric(object):
             self.thetaRange[0], 0), width=np.diff(self.thetaRange)[0],
             height=np.diff(ax.get_ylim())[0], alpha=0.25, color='r', ec='none')
         ax.add_patch(r)
-        plt.show()
+        # plt.show()
+        return fig
 
     def plotEventEEG(
             self, event_ts, event_window=(-0.05, 0.1), stim_width=0.01,
@@ -758,9 +763,11 @@ class EEGCalcsGeneric(object):
         """
         # bandpass filter the raw data first
         from scipy import signal
-        nyq = sample_rate / 2
-        highlim = 500 / nyq
-        b, a = signal.butter(5, highlim, btype='lowpass')
+        # nyq = sample_rate / 2
+        highlim = 500
+        if highlim >= sample_rate/2:
+            highlim = (sample_rate-1)/2
+        b, a = signal.butter(5, highlim, fs=sample_rate, btype='lowpass')
         sig = signal.filtfilt(b, a, self.sig)
 
         event_idx = np.round(event_ts*sample_rate).astype(int)
@@ -796,7 +803,7 @@ class EEGCalcsGeneric(object):
                 color=[1, 1, 0], alpha=0.5))
         ax.set_ylabel(r'LFP ($\mu$V)')
         ax.set_xlabel('Time(s)')
-        plt.show()
+        return fig
 
 
 class PosCalcsGeneric(object):
@@ -832,7 +839,7 @@ class PosCalcsGeneric(object):
         self.nleds = np.ndim(x)
         self.npos = len(x)
         self.tracker_params = None
-        self.sample_rate = None
+        self.sample_rate = 30
 
     def postprocesspos(self, tracker_params=dict(), **kwargs) -> tuple:
         """
@@ -860,9 +867,9 @@ class PosCalcsGeneric(object):
         """
         xy = self.xy
         xy = np.ma.MaskedArray(xy, dtype=np.int32)
-        x_zero = xy[:, 0] < 0
-        y_zero = xy[:, 1] < 0
-        xy[np.logical_or(x_zero, y_zero), :] = np.ma.masked
+        x_zero = xy[0, :] < 0
+        y_zero = xy[1, :] < 0
+        xy[:, np.logical_or(x_zero, y_zero)] = np.ma.masked
 
         self.tracker_params = tracker_params
         if 'LeftBorder' in tracker_params:
@@ -882,7 +889,7 @@ class PosCalcsGeneric(object):
         else:
             self.sample_rate = 30
 
-        xy = xy.T
+        # xy = xy.T
         xy = self.speedfilter(xy)
         xy = self.interpnans(xy)  # ADJUST THIS SO NP.MASKED ARE INTERPOLATED
         xy = self.smoothPos(xy)
@@ -890,7 +897,7 @@ class PosCalcsGeneric(object):
 
         import math
         pos2 = np.arange(0, self.npos-1)
-        xy_f = xy.astype(np.float)
+        xy_f = xy.astype(float)
         self.dir[pos2] = np.mod(
             ((180/math.pi) * (np.arctan2(
                 -xy_f[1, pos2+1] + xy_f[1, pos2], +xy_f[0, pos2+1]-xy_f[
@@ -916,31 +923,31 @@ class PosCalcsGeneric(object):
             The xy data with speeds > self.jumpmax masked
         """
 
-        disp = np.hypot(xy[:, 0], xy[:, 1])
+        disp = np.hypot(xy[0, :], xy[1, :])
         disp = np.diff(disp, axis=0)
         disp = np.insert(disp, -1, 0)
-        xy[np.abs(disp) > self.jumpmax, :] = np.ma.masked
+        xy[:, np.abs(disp) > self.jumpmax] = np.ma.masked
         return xy
 
     def interpnans(self, xy):
-        for i in range(0, np.shape(xy)[-1], 2):
-            missing = xy.mask.any(axis=-1)
+        for i in range(0, np.shape(xy)[0], 2):
+            missing = xy.mask.any(axis=0)
             ok = np.logical_not(missing)
             ok_idx = np.ravel(np.nonzero(np.ravel(ok))[0])
             missing_idx = np.ravel(np.nonzero(np.ravel(missing))[0])
             if len(missing_idx) > 0:
                 try:
-                    good_data = np.ravel(xy.data[ok_idx, i])
-                    good_data1 = np.ravel(xy.data[ok_idx, i+1])
-                    xy.data[missing_idx, i] = np.interp(
+                    good_data = np.ravel(xy.data[i, ok_idx])
+                    good_data1 = np.ravel(xy.data[i+1, ok_idx])
+                    xy.data[i, missing_idx] = np.interp(
                         missing_idx, ok_idx, good_data)
-                    xy.data[missing_idx, i+1] = np.interp(
+                    xy.data[i+1, missing_idx] = np.interp(
                         missing_idx, ok_idx, good_data1)
                 except ValueError:
                     pass
         xy.mask = 0
         print("{} bad positions were interpolated over".format(
-            len(missing_idx)))  # this is wrong i think
+            len(missing_idx)))
         return xy
 
     def smoothPos(self, xy):
@@ -957,17 +964,15 @@ class PosCalcsGeneric(object):
         xy : array_like
             The smoothed positional data
         """
-        # Extract boundaries of window used in recording
-
-        x = xy[:, 0].astype(np.float64)
-        y = xy[:, 1].astype(np.float64)
+        x = xy[0, :].astype(np.float64)
+        y = xy[1, :].astype(np.float64)
 
         from ephysiopy.common.utils import smooth
         # TODO: calculate window_len from pos sampling rate
         # 11 is roughly equal to 400ms at 30Hz (window_len needs to be odd)
         sm_x = smooth(x, window_len=11, window='flat')
         sm_y = smooth(y, window_len=11, window='flat')
-        return np.array([sm_x, sm_y])
+        return np.ma.masked_array([sm_x, sm_y])
 
     def calcSpeed(self, xy):
         """
@@ -1020,7 +1025,7 @@ class PosCalcsGeneric(object):
             xy[0, :], upsample_rate/denom, 30/denom)
         new_y = signal.resample_poly(
             xy[1, :], upsample_rate/denom, 30/denom)
-        return np.array(new_x, new_y)
+        return np.array([new_x, new_y])
 
 
 class MapCalcsGeneric(object):
@@ -1034,6 +1039,8 @@ class MapCalcsGeneric(object):
         The positional data usually as a 2D numpy array
     hdir : array_like
         The head direction data usually a 1D numpy array
+    speed : array like
+        The speed data, usually a 1D numpy array
     pos_ts : array_like
         1D array of timestamps in seconds
     spk_ts : array_like
@@ -1057,30 +1064,32 @@ class MapCalcsGeneric(object):
             self, xy, hdir, speed, pos_ts, spk_ts, plot_type='map', **kwargs):
         if (np.argmin(np.shape(xy)) == 1):
             xy = xy.T
+        assert(xy.ndim == 2)
+        assert(xy.shape[1] == hdir.shape[0] == speed.shape[0])
         self.xy = xy
         self.hdir = hdir
         self.speed = speed
         self.pos_ts = pos_ts
         if (spk_ts.ndim == 2):
             spk_ts = np.ravel(spk_ts)
-        self.spk_ts = spk_ts
+        self.spk_ts = spk_ts  # All spike times regardless of cluster id
         if type(plot_type) is str:
             self.plot_type = [plot_type]
         else:
             self.plot_type = list(plot_type)
-        self.spk_pos_idx = self.__interpSpkPosTimes()
+        self.spk_pos_idx = self.__interpSpkPosTimes__()
         self.__good_clusters = None
         self.__spk_clusters = None
         self.save_grid_output_location = None
-        if ('ppm' in kwargs.keys()):
+        if ('ppm' in kwargs):
             self.__ppm = kwargs['ppm']
         else:
             self.__ppm = 400
-        if 'pos_sample_rate' in kwargs.keys():
+        if 'pos_sample_rate' in kwargs:
             self.pos_sample_rate = kwargs['pos_sample_rate']
         else:
             self.pos_sample_rate = 30
-        if 'save_grid_summary_location' in kwargs.keys():
+        if 'save_grid_summary_location' in kwargs:
             self.save_grid_output_location = kwargs[
                 'save_grid_summary_location']
 
@@ -1108,7 +1117,7 @@ class MapCalcsGeneric(object):
     def ppm(self, value):
         self.__ppm = value
 
-    def __interpSpkPosTimes(self):
+    def __interpSpkPosTimes__(self):
         """
         Interpolates spike times into indices of position data
         NB Assumes pos times have been zeroed correctly - see comments in
@@ -1148,6 +1157,11 @@ class MapCalcsGeneric(object):
             inner_nrows = 1
         else:
             inner_nrows = 2
+        
+        try:
+            iter(self.good_clusters)
+        except Exception:
+            self.good_clusters = [self.good_clusters]
 
         for i, cluster in enumerate(self.good_clusters):
             inner = gridspec.GridSpecFromSubplotSpec(
@@ -1171,7 +1185,7 @@ class MapCalcsGeneric(object):
                 if 'sp_hd' in plot_type:
                     self.makeSpeedVsHeadDirectionPlot(cluster, ax)
                 ax.set_title(cluster, fontweight='bold', size=8)
-        plt.show()
+        return fig
 
     @stripAxes
     def makeSAC(self, cluster, ax=None):
@@ -1206,11 +1220,12 @@ class MapCalcsGeneric(object):
         ratemap = np.ma.MaskedArray(rmap[0], np.isnan(rmap[0]), copy=True)
         x, y = np.meshgrid(rmap[1][1][0:-1], rmap[1][0][0:-1][::-1])
         vmax = np.max(np.ravel(ratemap))
-        ax.pcolormesh(
-            x, y, ratemap, cmap=plt.cm.get_cmap("jet"), edgecolors='face',
-            vmax=vmax, **kwargs)
-        ax.axis([x.min(), x.max(), y.min(), y.max()])
-        ax.set_aspect('equal')
+        if ax is not None:
+            ax.pcolormesh(
+                x, y, ratemap, cmap=plt.cm.get_cmap("jet"), edgecolors='face',
+                vmax=vmax, **kwargs)
+            ax.axis([x.min(), x.max(), y.min(), y.max()])
+            ax.set_aspect('equal')
         return ax
 
     @stripAxes
@@ -1218,12 +1233,13 @@ class MapCalcsGeneric(object):
         if 'mec' or 'c' not in kwargs.keys():
             kwargs['c'] = tcols.colours[1]
             kwargs['mec'] = tcols.colours[1]
-        ax.plot(self.xy[0], self.xy[1], c=tcols.colours[0], zorder=1)
-        ax.set_aspect('equal')
-        ax.invert_yaxis()
-        if cluster is not None:
-            idx = self.spk_pos_idx[self.spk_clusters == cluster]
-            ax.plot(self.xy[0, idx], self.xy[1, idx], 's', **kwargs)
+        if ax is not None:
+            ax.plot(self.xy[0], self.xy[1], c=tcols.colours[0], zorder=1)
+            ax.set_aspect('equal')
+            ax.invert_yaxis()
+            if cluster is not None:
+                idx = self.spk_pos_idx[self.spk_clusters == cluster]
+                ax.plot(self.xy[0, idx], self.xy[1, idx], 's', **kwargs)
         return ax
 
     @stripAxes
@@ -1319,9 +1335,10 @@ class MapCalcsGeneric(object):
         im = np.ma.masked_where(im <= 1, im)
         # ... and where less than 0.5% of data is accounted for
         x, y = np.meshgrid(dir_bins, spd_bins)
-        ax.pcolormesh(x, y, im.T)
-        plt.xticks([90, 180, 270], fontweight='normal', size=6)
-        plt.yticks([10, 20], fontweight='normal', size=6)
+        if ax is not None:
+            ax.pcolormesh(x, y, im.T)
+            plt.xticks([90, 180, 270], fontweight='normal', size=6)
+            plt.yticks([10, 20], fontweight='normal', size=6)
         return ax
 
     def getSpatialStats(self, cluster):
@@ -1341,14 +1358,24 @@ class MapCalcsGeneric(object):
         except Exception:
             cluster = [cluster]
 
+        from ephysiopy.common import gridcell
         gridness, scale, orientation, HDtuning, HDangle, \
             speedCorr, speedMod = [], [], [], [], [], [], []
         for _, cl in enumerate(cluster):
             self.makeRateMap(cl, None)
             try:
-                m = self.makeSAC(cl, None)
+                pos_w = np.ones_like(self.pos_ts)
+                mapMaker = binning.RateMap(self.xy, None, None, pos_w, ppm=self.ppm)
+                spk_w = np.bincount(
+                    self.spk_pos_idx, self.spk_clusters == cluster,
+                    minlength=self.pos_ts.shape[0])
+                rmap = mapMaker.getMap(spk_w)
+                S = gridcell.SAC()
+                nodwell = ~np.isfinite(rmap[0])
+                sac = S.autoCorr2D(rmap[0], nodwell)
+                m = S.getMeasures(sac)
             except Exception:
-                m = np.nan
+                m['gridness'] = np.nan
             try:
                 r, th = self.getHDtuning(cl)
             except Exception:
@@ -1371,6 +1398,7 @@ class MapCalcsGeneric(object):
             'orientation': orientation, 'HDtuning': HDtuning,
             'HDangle': HDangle, 'speedCorr': speedCorr, 'speedMod': speedMod}
         self.spatialStats = pd.DataFrame(d)
+        return self.spatialStats
 
     def getHDtuning(self, cluster):
         # HWPD 20200527
@@ -1439,7 +1467,10 @@ class FieldCalcs:
             if np.ndim(im) == 1:
                 g = signal.boxcar(n) / float(n)
             elif np.ndim(im) == 2:
-                g = signal.boxcar([n, ny]) / float(n)
+                g = signal.boxcar(n) / float(n)
+                g = np.tile(g, (1, ny, 1))
+                g = g / g.sum()
+                g = np.squeeze(g)  # extra dim introduced in np.tile above
         elif ftype == 'gaussian':
             x, y = np.mgrid[-n:n+1, int(0-ny):ny+1]
             g = np.exp(-(x**2/float(n) + y**2/float(ny)))
@@ -2232,7 +2263,7 @@ class FieldCalcs:
         # NB closest peak at index 0 will be centre
         closestPeaks = orderOfClose[0:np.min((7, len(orderOfClose)))]
         closestPeaksCoord = xyCoordPeaks[closestPeaks, :]
-        closestPeaksCoord = np.floor(closestPeaksCoord).astype(np.int)
+        closestPeaksCoord = np.floor(closestPeaksCoord).astype(int)
         # [Stage 2] Expand peak pixels into the surrounding half-height region
         if field_extent_method == 1:
             peakLabel = np.zeros((A.shape[0], A.shape[1], len(closestPeaks)))
