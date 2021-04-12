@@ -841,7 +841,7 @@ class PosCalcsGeneric(object):
         self.tracker_params = None
         self.sample_rate = 30
 
-    def postprocesspos(self, tracker_params=dict(), **kwargs) -> tuple:
+    def postprocesspos(self, tracker_params={}, **kwargs) -> tuple:
         """
         Post-process position data
 
@@ -1212,7 +1212,8 @@ class MapCalcsGeneric(object):
     @stripAxes
     def makeRateMap(self, cluster, ax=None, **kwargs):
         pos_w = np.ones_like(self.pos_ts)
-        mapMaker = binning.RateMap(self.xy, None, None, pos_w, ppm=self.ppm)
+        mapMaker = binning.RateMap(
+            self.xy, pos_weights=pos_w, ppm=self.ppm)
         spk_w = np.bincount(
             self.spk_pos_idx, self.spk_clusters == cluster,
             minlength=self.pos_ts.shape[0])

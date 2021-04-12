@@ -207,7 +207,7 @@ class RateMap(object):
             for respectively
 
         """
-        sample = getattr(self, varType)
+        sample = getattr(self, varType, 'xy')
         assert(sample is not None)
         # might happen if head direction not supplied for example
 
@@ -218,17 +218,16 @@ class RateMap(object):
         elif 'speed' in varType:
             self.binsize = np.arange(0, 50, 1)
 
-        binned_pos = self.__binData(sample, self.binsize, self.pos_weights)
+        binned_pos = self.__binData__(sample, self.binsize, self.pos_weights)
 
-        if binned_pos.ndim == 1:  # directional binning
-            binned_pos_edges = binned_pos[1]
-            binned_pos = binned_pos[0]
-        elif binned_pos.ndim == 2:
-            binned_pos_edges = (binned_pos[1])
-            binned_pos = binned_pos[0]
-        elif len(binned_pos) == 3:
+        if len(binned_pos[1]) == 3:
             binned_pos_edges = binned_pos[1:]
-            binned_pos = binned_pos[0]
+            
+        else:
+            binned_pos_edges = binned_pos[1]
+        
+        binned_pos = binned_pos[0]
+
         nanIdx = binned_pos == 0
 
         if 'pos' in mapType:  # return just binned up position
@@ -240,11 +239,12 @@ class RateMap(object):
                     binned_pos = self.blurImage(
                         binned_pos, self.smooth_sz, ftype=self.smoothingType)
             return binned_pos, binned_pos_edges
-        binned_spk = self.__binData(sample, self.binsize, spkWeights)[0]
+        
+        binned_spk = self.__binData__(sample, self.binsize, spkWeights)[0]
         # binned_spk is returned as a tuple of the binned data and the bin
         # edges
         if 'after' in self.whenToSmooth:
-            rmap = binned_spk[0] / binned_pos
+            rmap = binned_spk / binned_pos
             if 'dir' in varType:
                 rmap = self.__circPadSmooth(rmap, self.smooth_sz)
             else:
@@ -276,31 +276,30 @@ class RateMap(object):
                     for i in range(spkWeights.shape[0]):
                         rmap[i, :] = binned_spk[i] / binned_pos
             else:
-                if isinstance(binned_spk.dtype, object):
-                    binned_pos = self.blurImage(
-                        binned_pos, self.smooth_sz, ftype=self.smoothingType)
-                    if binned_spk.ndim == 2:
-                        pass
-                    elif (binned_spk.ndim == 3 or binned_spk.ndim == 1):
-                        if binned_spk.ndim == 3:
-                            binned_spk_tmp = np.zeros(
-                                [binned_spk.shape[0], binned_spk[0].shape[0],
-                                    binned_spk[0].shape[1]])
-                        if binned_spk.ndim == 1:
-                            binned_spk_tmp = np.zeros(
-                                [binned_spk.shape[0],
-                                    binned_spk.shape[0], 1])
-                        for i in range(binned_spk.shape[0]):
-                            binned_spk_tmp[i, :, :] = binned_spk[i]
-                        binned_spk = binned_spk_tmp
-                    binned_spk = self.blurImage(
-                        np.squeeze(binned_spk),
-                        self.smooth_sz, ftype=self.smoothingType)
-                    rmap = binned_spk / binned_pos
-                    if rmap.ndim <= 2:
-                        rmap[nanIdx] = np.nan
-                    elif rmap.ndim == 3:
-                        rmap[:, nanIdx] = np.nan
+                binned_pos = self.blurImage(
+                    binned_pos, self.smooth_sz, ftype=self.smoothingType)
+                if binned_spk.ndim == 2:
+                    pass
+                elif (binned_spk.ndim == 3 or binned_spk.ndim == 1):
+                    if binned_spk.ndim == 3:
+                        binned_spk_tmp = np.zeros(
+                            [binned_spk.shape[0], binned_spk[0].shape[0],
+                                binned_spk[0].shape[1]])
+                    if binned_spk.ndim == 1:
+                        binned_spk_tmp = np.zeros(
+                            [binned_spk.shape[0],
+                                binned_spk.shape[0], 1])
+                    for i in range(binned_spk.shape[0]):
+                        binned_spk_tmp[i, :, :] = binned_spk[i]
+                    binned_spk = binned_spk_tmp
+                binned_spk = self.blurImage(
+                    np.squeeze(binned_spk),
+                    self.smooth_sz, ftype=self.smoothingType)
+                rmap = binned_spk / binned_pos
+                if rmap.ndim <= 2:
+                    rmap[nanIdx] = np.nan
+                elif rmap.ndim == 3:
+                    rmap[:, nanIdx] = np.nan
 
         return rmap, binned_pos_edges
 
@@ -340,19 +339,22 @@ class RateMap(object):
                 g = g / g.sum()
                 g = np.squeeze(g)  # extra dim introduced in np.tile above
             elif im.ndim == 3:  # mutlidimensional binning
-                g = signal.boxcar([n, ny]) / float(n)
-                g = g[None, :, :]
+                g = signal.boxcar(n) / float(n)
+                g = np.tile(g, (1, ny, 1))
+                g = g / g.sum()
         elif 'gaussian' in ftype:
             x, y = np.mgrid[-n:n+1, 0-ny:ny+1]
             g = np.exp(-(x**2/float(n) + y**2/float(ny)))
             g = g / g.sum()
             if np.ndim(im) == 1:
                 g = g[n, :]
+            if np.ndim(im) == 3:
+                g = np.tile(g, (1, ny, 1))
         improc = signal.convolve(im, g, mode='same')
         improc[nan_idx] = np.nan
         return improc
 
-    def __binData(self, var, bin_edges, weights):
+    def __binData__(self, var, bin_edges, weights):
         """
         Bins data taking account of possible multi-dimensionality
 
@@ -393,7 +395,7 @@ class RateMap(object):
 
         >>> rng = np.array((np.ma.min(
             trial.POS.xy, 1).data, np.ma.max(rial.POS.xy, 1).data))
-        >>> h = __binData(
+        >>> h = __binData__(
             var=trial.POS.xy, bin_edges=np.array([64, 64]),
             weights=spk_W, rng=rng)
 
@@ -866,9 +868,4 @@ class RateMap(object):
         H = fHs / fHp
         H[Hp < Pthresh] = np.nan
 
-        if plot:
-            import matplotlib.pylab as plt
-            plt.figure()
-            plt.imshow(H.T, interpolation='nearest')
-            plt.show()
         return H

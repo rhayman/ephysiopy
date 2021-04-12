@@ -256,10 +256,8 @@ class StatsCalcs():
         R_2 = np.hypot(C_2, S_2)
         R = np.hypot(C, S)
         R_hat = (R_1 + R_2) / float(N)
-        import os
-        fid = os.path.join(os.getcwd(), 'mle_von_mises_vals.txt')
-        with open(fid, 'r') as f:
-            mle_von_mises = np.loadtxt(f)
+        from ephysiopy.common.mle_von_mises_vals import vals
+        mle_von_mises = np.array(vals)
         mle_von_mises = np.sort(mle_von_mises, 0)
         k_hat = mle_von_mises[(np.abs(mle_von_mises[:, 0]-R_hat)).argmin(), 1]
         g = 1 - (3 / 8 * k_hat)

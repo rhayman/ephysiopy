@@ -258,10 +258,10 @@ class SAC(object):
         ax.spines['top'].set_visible(False)
         ax.spines['bottom'].set_visible(False)
         ax.spines['left'].set_visible(False)
-        if "show_gridscore" in kwargs.keys():
-            ax.annotate(
-                '{:.2f}'.format(inDict['gridness']), (0.9, 0.15),
-                xycoords='figure fraction', textcoords='figure fraction',
-                color='k', size=30, weight='bold', ha='center', va='center')
+        # if "show_gridscore" in kwargs.keys():
+        #     ax.annotate(
+        #         '{:.2f}'.format(inDict['gridness']), (0.9, 0.15),
+        #         xycoords='figure fraction', textcoords='figure fraction',
+        #         color='k', size=30, weight='bold', ha='center', va='center')
         if fig:
             return fig

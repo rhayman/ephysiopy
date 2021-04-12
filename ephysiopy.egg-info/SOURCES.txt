@@ -16,6 +16,7 @@ ephysiopy/common/eegcalcs.py
 ephysiopy/common/ephys_generic.py
 ephysiopy/common/gridcell.py
 ephysiopy/common/rhythmicity.py
+ephysiopy/common/spikecalcs.py
 ephysiopy/common/statscalcs.py
 ephysiopy/common/utils.py
 ephysiopy/dacq2py/__init__.py
@@ -40,3 +41,5 @@ ephysiopy/tests/__init__.py
 ephysiopy/tests/conftest.py
 ephysiopy/tests/test_binning.py
 ephysiopy/tests/test_ephys_generic.py
+ephysiopy/tests/test_gridcell.py
+ephysiopy/tests/test_statscalcs.py

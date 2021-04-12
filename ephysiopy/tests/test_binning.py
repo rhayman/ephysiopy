@@ -17,9 +17,39 @@ def standard_Ratemap(basic_PosCalcs):
     return RateMap(P.xy, P.dir, P.speed)
 
 
+def test_pixels_per_bin(standard_Ratemap):
+    ppb = standard_Ratemap.pixelsPerBin
+    assert(isinstance(ppb, (int, float)))
+
+
 def test_calc_bin_size(standard_Ratemap):
     bs = standard_Ratemap.__calcBinSize__()
     assert(isinstance(bs, np.ndarray))
+
+
+def test_blur_image(basic_ratemap, standard_Ratemap):
+    filt = ['box', 'gaussian']
+    rmap1D = basic_ratemap[0, :]
+    rmap2D = basic_ratemap
+    rmap3D = np.atleast_3d(rmap2D)
+    rmaps = [rmap1D, rmap2D, rmap3D]
+    for f in filt:
+        for rmap in rmaps:
+            b = standard_Ratemap.blurImage(rmap, 3, ftype=f)
+            assert(isinstance(b, np.ndarray))
+
+
+def test_bin_data(standard_Ratemap):
+    R = standard_Ratemap
+    xy = getattr(R, 'xy')
+    xy_bins = R.binsize
+    hd = getattr(R, 'dir')
+    hd_bins = np.arange(0, 360+R.cmsPerBin, R.cmsPerBin)
+    samples = [xy, hd]
+    bins = [xy_bins, hd_bins]
+    for sample in zip(samples, bins):
+        ret = R.__binData__(sample[0], sample[1], R.pos_weights)
+        assert(isinstance(ret, np.ndarray))
 
 
 def test_get_map(standard_Ratemap):
@@ -35,17 +65,20 @@ def test_get_map(standard_Ratemap):
     vars_2_bin = ['xy', 'dir', 'speed']
     map_types = ['rate', 'pos']
     smoothing_when = ['after', 'before']
+    do_smooth = [True, False]
     # There is a member variable to smooth before or after dividing
     # binned spikes by the spatial variable that needs to be set in the
     # iteration below
 
     for var in vars_2_bin:
         for map_type in map_types:
-            for when2smooth in smoothing_when:
-                rmap, bin_edges = standard_Ratemap.getMap(
-                    spk_weights, varType=var, mapType=map_type,
-                    smoothing=when2smooth)
-                assert(isinstance(rmap, np.ndarray))
+            for smooth in do_smooth:
+                for when2smooth in smoothing_when:
+                    standard_Ratemap.whenToSmooth = when2smooth
+                    ret = standard_Ratemap.getMap(
+                        spk_weights, varType=var, mapType=map_type,
+                        smoothing=smooth)
+                    assert(isinstance(ret[0], np.ndarray))
 
 
 def test_get_adaptive_map(standard_Ratemap):
@@ -56,13 +89,13 @@ def test_get_adaptive_map(standard_Ratemap):
     spk_weights[spk_weights >= 0.99] = 3
     spk_weights[spk_weights < 0.95] = 0
 
-    rmap, _ = standard_Ratemap.getMap(
+    rmap = standard_Ratemap.getMap(
         spk_weights)
     pos_binned, _ = standard_Ratemap.getMap(
         spk_weights, mapType='pos')
     pos_binned[~np.isfinite(pos_binned)] = 0
     smthdRate, smthdSpk, smthdPos = standard_Ratemap.getAdaptiveMap(
-        rmap, pos_binned)
+        rmap[0], pos_binned)
     assert(isinstance(smthdRate, np.ndarray))
 
 

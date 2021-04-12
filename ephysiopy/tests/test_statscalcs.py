@@ -51,10 +51,10 @@ def test_watsons_U2_n():
     assert(isinstance(v, float))
 
 
-# def test_watson_williams():
-#     t = np.linspace(0, 2*np.pi, 100)
-#     a = np.cos(t)
-#     b = np.roll(a, 20)
-#     S = StatsCalcs()
-#     u2 = S.watsonWilliams(a, b)
-#     assert(isinstance(u2, float))
+def test_watson_williams():
+    t = np.linspace(0, 2*np.pi, 100)
+    a = np.cos(t)
+    b = np.roll(a, 20)
+    S = StatsCalcs()
+    u2 = S.watsonWilliams(a, b)
+    assert(isinstance(u2, float))
