@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import signal
 import matplotlib.pylab as plt
 from ephysiopy.common.ephys_generic import PosCalcsGeneric, SpikeCalcsGeneric
 
@@ -12,7 +13,7 @@ class CosineDirectionalTuning(object):
     def __init__(
             self, spike_times: np.array, pos_times: np.array,
             spk_clusters: np.array, x: np.array, y: np.array,
-            tracker_params: dict):
+            tracker_params={}):
         """
         Parameters
         ----------
@@ -448,3 +449,186 @@ class CosineDirectionalTuning(object):
             'kernelLen': kernelLen, 'kernelSig': kernelSig,
             'binsPerHz': binsPerHz, 'kernelLen': kernelLen}
         return out_dict
+
+
+class LFPOscialltions(object):
+    '''
+    Does stuff with the LFP such as looking at nested oscillations
+    (theta/ gamma coupling), the modulation index of such phenomena,
+    filtering out certain frequencies in the LFP, getting the instantaneous
+    phase and amplitude and so on
+
+    '''
+    def __init__(self, sig, fs, **kwargs):
+        self.sig = sig
+        self.fs = fs
+
+    def getFreqPhase(self, sig, band2filter: list, ford=5):
+        '''
+        Uses the Hilbert transform to calculate the instantaneous phase and
+        amplitude of the time series in sig
+
+        Parameters
+        ----------
+        sig: np.array
+            The signal to be analysed
+        ford: int
+            The order for the Butterworth filter
+        band2filter: list
+            The two frequencies to be filtered for e.g. [6, 12]
+        '''
+        if sig is None:
+            sig = self.sig
+        band2filter = np.array(band2filter, dtype=float)
+
+        b, a = signal.butter(
+            ford, band2filter / (self.fs / 2), btype='band')
+
+        filt_sig = signal.filtfilt(b, a, sig, padtype='odd')
+        phase = np.angle(signal.hilbert(filt_sig))
+        amplitude = np.abs(signal.hilbert(filt_sig))
+        amplitude_filtered = signal.filtfilt(b, a, amplitude, padtype='odd')
+        return filt_sig, phase, amplitude, amplitude_filtered
+
+    def modulationindex(self, sig=None, nbins=20, forder=2,
+                        thetaband=[4, 8], gammaband=[30, 80],
+                        plot=True):
+        '''
+        Calculates the modulation index of theta and gamma oscillations
+        Specifically this is the circular correlation between the phase of
+        theta and the power of theta
+
+        Parameters
+        ----------
+        sig; np.array
+            The LFP signal
+        nbins: int
+            The number of bins in the circular range 0 to 2*pi
+        forder: int
+            The order of the butterworth filter
+        thetaband: list
+            The lower and upper bands of the theta frequency range
+        gammaband: list
+            The lower and upper bands of the gamma frequency range
+        plot: bool
+            Show some pics or not
+
+        '''
+        if sig is None:
+            sig = self.sig
+        sig = sig - np.ma.mean(sig)
+        if np.ma.is_masked(sig):
+            sig = np.ma.compressed(sig)
+        _, lowphase, _, _ = self.getFreqPhase(
+            sig, forder, thetaband)
+        _, _, highamp, _ = self.getFreqPhase(
+            sig, forder, gammaband)
+        inc = 2*np.pi/nbins
+        a = np.arange(-np.pi+inc/2, np.pi, inc)
+        dt = np.array([-inc/2, inc/2])
+        pbins = a[:, np.newaxis] + dt[np.newaxis, :]
+        amp = np.zeros((nbins))
+        phaselen = np.arange(len(lowphase))
+        for i in range(nbins):
+            pts = np.nonzero((lowphase >= pbins[i, 0]) * (
+                lowphase < pbins[i, 1]) * phaselen)
+            amp[i] = np.mean(highamp[pts])
+        amp = amp / np.sum(amp)
+        from ephysiopy.common.statscalcs import StatsCalcs
+        calcs = StatsCalcs()
+        mi = calcs.circ_r(pbins[:, 1], amp)
+        if plot:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, polar=True)
+            w = np.pi / (nbins/2)
+            ax.bar(pbins[:, 1], amp, width=w)
+            ax.set_title("Modulation index={0:.5f}".format(mi))
+            fig.canvas.set_window_title(self.fname)
+        return mi
+
+    def plv(self, sig=None, forder=2, thetaband=[4, 8], gammaband=[30, 80],
+            plot=True, **kwargs):
+        '''
+        Computes the phase-amplitude coupling (PAC) of nested oscillations.
+        More specifically this is the phase-locking value (PLV) between two
+        nested oscillations in EEG data, in this case theta (default 4-8Hz)
+        and gamma (defaults to 30-80Hz). A PLV of unity indicates perfect phase
+        locking (here PAC) and a value of zero indicates no locking (no PAC)
+
+        Parameters
+        ----------
+        eeg: numpy array
+            the eeg data itself. This is a 1-d array which can be masked or not
+        forder: int
+            the order of the filter(s) applied to the eeg data
+        thetaband/ gammaband: list/ array
+            the range of values to bandpass filter for for the theta and gamma
+            ranges
+        plot: bool (default True)
+            whether to plot the resulting binned up polar plot which shows the
+            amplitude of the gamma oscillation found at different phases of the
+            theta oscillation
+        Returns
+        -------
+        plv: float
+            the value of the phase-amplitude coupling
+        '''
+
+        if sig is None:
+            sig = self.sig
+        sig = sig - np.ma.mean(sig)
+        if np.ma.is_masked(sig):
+            sig = np.ma.compressed(sig)
+
+        _, lowphase, _, _ = self.getFreqPhase(
+            sig, forder, thetaband)
+        _, _, _, highamp_f = self.getFreqPhase(
+            sig, forder, gammaband)
+
+        highampphase = np.angle(signal.hilbert(highamp_f))
+        phasedf = highampphase - lowphase
+        phasedf = np.exp(1j * phasedf)
+        phasedf = np.angle(phasedf)
+        from ephysiopy.common.statscalcs import StatsCalcs
+        calcs = StatsCalcs()
+        plv = calcs.circ_r(phasedf)
+        th = np.linspace(0.0, 2*np.pi, 20, endpoint=False)
+        h, _ = np.histogram(phasedf, bins=20)
+        h = h / float(len(phasedf))
+
+        if plot:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, polar=True)
+            w = np.pi / 10
+            ax.bar(th, h, width=w, bottom=0.0)
+        return plv, th, h
+
+    def filterForLaser(self, sig=None, width=0.125, dip=15.0, stimFreq=6.66):
+        """
+        In some of the optogenetic experiments I ran the frequency of laser
+        stimulation was at 6.66Hz - this method attempts to filter those
+        frequencies out
+
+        NB: This never worked as well as I would have liked as it required
+        tailoring for each trial almost. Maybe a better way to do this using
+        mean power or something...
+        """
+        from scipy.signal import kaiserord, firwin, filtfilt
+        nyq = self.fs / 2.
+        width = width / nyq
+        dip = dip
+        N, beta = kaiserord(dip, width)
+        print("N: {0}\nbeta: {1}".format(N, beta))
+        upper = np.ceil(nyq/stimFreq)
+        c = np.arange(stimFreq, upper*stimFreq, stimFreq)
+        dt = np.array([-0.125, 0.125])
+        cutoff_hz = dt[:, np.newaxis] + c[np.newaxis, :]
+        cutoff_hz = cutoff_hz.ravel()
+        cutoff_hz = np.append(cutoff_hz, nyq-1)
+        cutoff_hz.sort()
+        cutoff_hz_nyq = cutoff_hz / nyq
+        taps = firwin(N, cutoff_hz_nyq, window=('kaiser', beta))
+        if sig is None:
+            sig = self.sig
+        fx = filtfilt(taps, [1.0], sig)
+        return fx

@@ -4,6 +4,8 @@ format and encapsulate some generic mechanisms for producing
 things like spike timing autocorrelograms, power spectrum calculation and so on
 """
 import functools
+from itertools import groupby
+from operator import itemgetter
 import numpy as np
 from scipy import signal, spatial, ndimage, stats
 from scipy.signal import gaussian
@@ -689,7 +691,13 @@ class EEGCalcsGeneric(object):
         """
         nqlim = self.fs / 2
         origlen = len(self.sig)
-        fftlen = 2 ** self._nextpow2(origlen).astype(int)
+
+        if 'pad2pow' not in kwargs:
+            fftlen = int(np.power(2, self._nextpow2(origlen)))
+        else:
+            pad2pow = kwargs.pop('pad2pow')
+            fftlen = int(np.power(2, pad2pow))
+
         freqs, power = signal.periodogram(
             self.sig, self.fs, return_onesided=True, nfft=fftlen)
         ffthalflen = fftlen / 2+1
@@ -804,6 +812,39 @@ class EEGCalcsGeneric(object):
         ax.set_ylabel(r'LFP ($\mu$V)')
         ax.set_xlabel('Time(s)')
         return fig
+
+    def intrinsic_freq_autoCorr(
+            self, spkTimes=None, posMask=None, maxFreq=25,
+            acBinSize=0.002, acWindow=0.5, plot=True, posSampleFreq=30,
+            spkSampleFreq=30000, **kwargs):
+        """
+        SEE EPHYSIOPY.COMMON.RHYTHMICITY.COSINEDIRECTIONALTUNING
+
+        Calculates the intrinsic frequency autocorr of a cell
+
+        Parameters
+        ----------
+        spkTimes: np.array
+            times the cell fired in seconds
+        posMask: logical mask
+            Presumably a mask the same length as the number of pos samples
+            where Trues are position samples you want to examine that are
+            used to figure out which bit of the spike train to keep
+        maxFreq: int
+            maximum frequency to consider - used as input to power_spectrum()
+        acBinSize: float
+            The binsize of the autocorrelogram in seconds
+        acWindow: float
+            The window to look at in seconds
+
+        Notes
+        -----
+        Be careful that if you've called dacq2py.Tetrode.getSpkTS()
+        that they are divided by
+        96000 to get into seconds before using here
+        """
+
+        pass
 
 
 class PosCalcsGeneric(object):
