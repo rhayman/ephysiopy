@@ -71,8 +71,8 @@ class phasePrecession():
     def __init__(self, lfp_sig: np.array, lfp_fs: int,
                  xy: np.array,
                  pp_config: dict = phase_precession_config):
-        for k in pp_config.keys():
-            setattr(self, k, pp_config[k])
+
+        [setattr(self, k, pp_config[k]) for k in pp_config.keys()]
 
         # Create a dict to hold the stats values
         stats_dict = {
@@ -92,7 +92,9 @@ class phasePrecession():
                           'pos_d_meanDir', 'pos_d_currentdir',
                           'spk_thetaBatchLabelInRun']
         [self.regressors[k] for k in regressor_keys]
-        
+        # each of the regressors in regressor_keys is a key with a value
+        # of stats_dict
+
         self.k = 1000
         self.alpha = 0.05
         self.hyp = 0

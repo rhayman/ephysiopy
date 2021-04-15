@@ -618,8 +618,8 @@ class OpenEphysNPX(OpenEphysBase):
             pos_ts = np.load(os.path.join(self.path2PosData, 'timestamps.npy'))
             self.xyTS = pos_ts / 30.0 / 1000.0
 
-        ap_sample_rate = 30000
-        n_channels = 384
+        ap_sample_rate = getattr(self, 'ap_sample_rate', 30000)
+        n_channels = getattr(self, 'n_channels', 384)
         trial_length = 0  # make sure a trial_length has a value
         if self.path2APdata is not None:
             if fileExists(self.path2APdata, 'continuous.dat'):
