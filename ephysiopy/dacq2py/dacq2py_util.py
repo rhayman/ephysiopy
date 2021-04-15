@@ -116,7 +116,7 @@ class AxonaTrial():
     def settings(self, value):
         self._setheader = value
 
-'''
+
 class Trial(axonaIO.IO, SAC, dict):
     """
     Provides methods to plot electrophysiology data acquired using the
@@ -224,101 +224,6 @@ class Trial(axonaIO.IO, SAC, dict):
     def __repr__(self):
         return '{self.__class__.__name__}({self.filename_root})'.format(
             self=self)
-
-    def hasFiles(self):
-        """
-        Checks for some automated yaml processing
-        """
-
-        for i in self.axona_files:
-            if os.path.isfile(self.filename_root + i):
-                self['has_' + i[1:]] = True
-            else:
-                self['has_' + i[1:]] = False
-
-    def getFullFile(self, filename):
-        """
-        Used to constuct filename_root in __init__
-
-        Parameters
-        ----------
-        filename : str
-            The absolute path the files being analysed here without any suffix
-        """
-
-        if os.path.isdir(r'/home/robin/Dropbox/Science/Recordings'):
-            pname, _ = os.path.split(filename)
-            if len(pname) == 0:
-                defaultDir = r'/home/robin/Dropbox/Science/Recordings'
-                animal = filename.split('_')[0]
-                filename = os.path.join(defaultDir, animal, filename)
-        return filename
-
-    @property
-    def setheader(self):
-        """
-        Returns
-        ----------
-        dict : setheader
-            Matches contents of .set file with keys and values all
-            mapped as strings
-        """
-
-        if self._setheader is None:
-            try:
-                self._setheader = self.getHeader(self.filename_root + '.set')
-            except IOError:
-                self._setheader = None
-        return self._setheader
-
-    @setheader.setter
-    def setheader(self, value):
-        self._setheader = value
-
-    @property
-    def ppm(self):
-        return self.__ppm
-
-    @ppm.setter
-    def ppm(self, value):
-        self.__ppm = value
-        # Update POS
-        self.POS.ppm = value
-        # Update Ratemap
-        self.ratemap = binning.RateMap(
-            self.POS.xy, self.POS.dir, self.POS.speed, self.pos_weights,
-            self.POS.ppm, self.useCm)
-
-    @property
-    def POS(self):
-        """
-        Returns
-        -------
-        ephysiopy.dacq2py.axonaIO.POS:
-            Contains raw and post-processed position data
-        """
-
-        if self._POS is None:
-            try:
-                self._POS = axonaIO.Pos(self.filename_root, cm=self.useCm)
-                self._POS.postprocesspos()
-                self._xlims = (int(self.POS.xy[0, :].min()),
-                               int(self.POS.xy[0, :].max()))
-                self._ylims = (int(self.POS.xy[1, :].min()),
-                               int(self.POS.xy[1, :].max()))
-                self.pos_weights = np.ravel(np.ones(
-                    (1, self.POS.npos), dtype=np.float) /
-                        self.POS.pos_sample_rate)
-                self.ratemap = binning.RateMap(
-                    self.POS.xy, self.POS.dir, self.POS.speed,
-                    self.pos_weights, self.POS.ppm, self.useCm)
-            except IOError:
-                self._POS = None
-        return self._POS
-
-    @POS.setter
-    def POS(self, value):
-        self._POS = value
 
     @property
     def EEG(self):
@@ -556,13 +461,6 @@ class Trial(axonaIO.IO, SAC, dict):
                 self.EEG.EEGphase)
         self._posFilter = value
 
-    def print_stim_dict(self):
-        """
-        Prints out keys/ values of STM dict
-        """
-        for k, v in self.STM.items():
-            print(k, v)
-
     def _filterForStm(self, laser=None):
         """
         Cycles through the STM dict and fiters for laser on / off periods and
@@ -600,95 +498,6 @@ class Trial(axonaIO.IO, SAC, dict):
                 elif laser == 1:
                     if 'Pause' not in k:
                         self.posFilter = {'time': np.array(v)}
-
-    def _getAvailableFiles(self):
-        self._available_files = glob(self.filename_root + '*')
-
-    def _getMap(self, tetrode=None, cluster=None, var2bin='pos', binsize=3,
-                smooth_sz=5, smooth=True, **kwargs):
-        """
-        Returns the ratemap (smoothed or unsmoothed) for a given tetrode and
-        cluster
-
-        Parameters
-        ----------
-        tetrode : int
-                 the tetrode you want to look at
-        cluster : int, 1xn array/ list
-                 a single number or list (or 1xn array) of the clusters to plot
-        binsize : int, optional
-                 size of bins. Defaults to 3
-        smooth_sz : int
-            the width of the smoothing kernel (see **kwargs for more)
-        var2bin : str
-            (Optional) Defaults to 'pos'. Which variable to bin. Can be either
-            'pos', 'dir' or 'speed'. Works with masked arrays
-        smooth : bool, optional.
-            Defaults to true. Whether to smooth the data or not
-        **kwargs : extra arguments include:
-                    'gaussian' - the smoothing kernel used is gaussian in shape
-                    not the default boxcar
-                    'after' - smoothing of the pos and spike maps is done after
-                    spikes are divided by pos
-                    'shuffle' - the time in ms by how much to shift the spikes
-                    by. Used for generated distributions for null hypothesis
-                    testing
-
-        Returns
-        -------
-        rmap : np.array
-            The data binned up as requested
-        """
-        if 'pos' in var2bin:
-            varType = 'xy'
-        else:
-            varType = var2bin
-        if tetrode is None:
-            idx = np.arange(0, self.POS.npos)
-            mapType = 'pos'
-        else:
-            idx = self.TETRODE[tetrode].getClustIdx(cluster)
-            mapType = 'rate'
-        spk_weights = np.bincount(idx, minlength=self.POS.npos)
-        if 'shuffle' in kwargs.keys():
-            # * 50 to go from seconds into pos_samples
-            spk_weights = np.roll(spk_weights, int(kwargs['shuffle']) * 50)
-        if np.ma.is_masked(self.POS.xy):
-            mask = ~np.ma.getmask(self.POS.xy[0])
-            pos_weights = mask.astype(np.int)
-            self.ratemap.pos_weights = pos_weights
-            spk_weights[~mask] = 0
-        # Update the ratemap instance with arguments fed into this method
-        self.ratemap.binsize = binsize
-        self.ratemap.smooth_sz = smooth_sz
-        if 'cmsPerBin' in kwargs:
-            self.ratemap.cmsPerBin = kwargs['cmsPerBin']
-        if 'ppm' in kwargs:
-            self.ratemap.ppm = kwargs['ppm']
-        rmap = self.ratemap.getMap(spk_weights, varType, mapType, smooth)
-        return rmap
-
-    def _getPath(self):
-        """
-        Returns
-        -------
-        self.POS.xy : np.array
-            The smoothed xy positions filtered appropriately
-        """
-        if np.ma.is_masked(self.POS.xy):
-            return self.POS.xy[:, ~self.POS.xy.mask[0, :]]
-        return self.POS.xy
-
-    def _getDir(self):
-        """
-        Returns
-        ------------
-        self.POS.dir : np.array
-            The smoothed directional data filtered appropriately
-        """
-        if np.ma.is_masked(self.POS.dir):
-            return self.POS.dir[:, ~self.POS.dir.mask[0, :]]
-        return self.POS.dir
 
     def _getFieldLims(self, tetrode, cluster, binsize=3):
         """
@@ -778,26 +587,6 @@ class Trial(axonaIO.IO, SAC, dict):
         idx = np.searchsorted(peaks, spk2eeg_idx, side=side)
         _, unique_indices = np.unique(idx, return_index=True)
         return spk2eeg_idx[unique_indices]
-
-    def _parseMetaData(self):
-        """
-        Parses the filename (mine has a standard format) to populate some of
-        the objects properties (self.animal_id, self.trial_num etc)
-        """
-        pname, fname = os.path.split(self.filename_root)
-        self.metadata['Filename'] = fname
-        self.metadata['Path'] = pname
-        if 'R' in fname[0]:
-            self.metadata['Animal'] = 'Rat'
-        else:
-            self.metadata['Animal'] = 'Mouse'
-        self.metadata['Experimenter'] = fname[-2:]
-        self.metadata['Animal_id'] = fname.rsplit('_')[0]
-        trial_date = self.setheader['trial_date'] + \
-            ':' + self.setheader['trial_time']
-        self.metadata['Trial_date'] = datetime.strptime(
-            trial_date, '%A, %d %b %Y:%H:%M:%S')
-        self.metadata['Trial_num'] = int(fname.rsplit('t')[1][0:-2])
 
     def _set_figure_title(self, fig, tet, clust):
         fig.canvas.set_window_title('Tetrode: {0} Cluster: {1}'.format(
@@ -990,46 +779,6 @@ class Trial(axonaIO.IO, SAC, dict):
         ratemap, _, dwelltimes = self.ratemap.getAdaptiveMap(
             ratemap, dwelltimes)
         return self.fieldcalcs.skaggsInfo(ratemap, dwelltimes)
-
-    def getTsAndCs(self, verbose=False):
-        """
-        Prints out the available tetrodes and clusters
-        """
-        cut_files = [(f) for f in glob(self.filename_root + '*') if 'cut' in f]
-        m = re.compile('(.*)_(.*).cut', re.M | re.I)
-        tAndCdict = {}
-        if cut_files:
-            for f in cut_files:
-                tet = int(m.match(f).group(2))
-                try:
-                    data = self.getCut(tet)
-                    clusters = list(np.unique(data))
-                    if clusters[0] == 0:
-                        clusters.pop(0)
-                        if clusters:
-                            tAndCdict[tet] = clusters
-                    if verbose:
-                        print('\nTetrode {0} contains clusters: {1}'.format(
-                            tet, clusters))
-                except Exception:
-                    if verbose:
-                        print('\nTetrode{0} has no cut'.format(tet))
-        else:
-            pass
-        if tAndCdict:
-            tets = []
-            clusts = []
-            for t, c in tAndCdict.items():
-                for cc in c:
-                    tets.append(str(t))
-                    clusts.append(str(cc))
-            """
-            The two fucking stupid lines below are so yaml can
-            serialize the object correctly
-            """
-            self.tetrodes = map(int, tets)
-            self.clusters = map(int, clusts)
-            return tAndCdict
 
     def plotMap(
             self, tetrode, clusters, ax=None, var2bin='pos', *args, **kwargs):
