@@ -161,9 +161,10 @@ class OpenEphysBase(object):
     really have this concept but it forms the backbone for two other classes
     (OpenEphysNPX & OpenEphysNWB)
     """
-    def __init__(self, pname_root, **kwargs):
+    def __init__(self, pname_root: str, **kwargs):
         super().__init__()
         # top-level directory, typically of form YYYY-MM-DD_HH-MM-SS
+        assert(os.path.exists(pname_root))
         self.pname_root = pname_root
         self.settings = None
         self.kilodata = None

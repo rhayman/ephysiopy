@@ -15,6 +15,7 @@ ephysiopy/common/binning.py
 ephysiopy/common/eegcalcs.py
 ephysiopy/common/ephys_generic.py
 ephysiopy/common/gridcell.py
+ephysiopy/common/mle_von_mises_vals.py
 ephysiopy/common/rhythmicity.py
 ephysiopy/common/spikecalcs.py
 ephysiopy/common/statscalcs.py

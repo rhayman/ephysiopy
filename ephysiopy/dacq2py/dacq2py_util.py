@@ -1,4 +1,3 @@
-from __future__ import division
 from scipy import signal, stats, ndimage
 from datetime import datetime
 import os
@@ -18,7 +17,8 @@ from ephysiopy.common import binning
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.ephys_generic import FieldCalcs
 from ephysiopy.common.ephys_generic import SpikeCalcsTetrode
-from ephysiopy.common.eegcalcs import EEGCalcs
+from ephysiopy.common.ephys_generic import PosCalcsGeneric
+# from ephysiopy.common.eegcalcs import EEGCalcs
 from ephysiopy.dacq2py.cluster import Kluster
 from ephysiopy.dacq2py import tintcolours as tcols
 from ephysiopy.common.gridcell import SAC
@@ -31,6 +31,7 @@ from skimage import feature
 from skimage.segmentation import watershed
 from collections import OrderedDict
 
+
 warnings.filterwarnings(
     "ignore", message="divide by zero encountered in int_scalars")
 warnings.filterwarnings(
@@ -42,6 +43,80 @@ warnings.filterwarnings(
         discards the imaginary part")
 
 
+class AxonaTrial():
+    def __init__(self, fileset_root: str, **kwargs):
+        # fileset_root here is the fully qualified path to the .set file
+        assert(os.path.exists(fileset_root))
+        self.fileset_root = fileset_root
+        self.common_name = os.path.splitext(fileset_root)[0]
+        self.__settings = None  # will become a dict ~= the .set file
+        self.__ppm = None
+        self.xy = None
+        self.xyTS = None
+
+        self.ttl_data = None
+        self.recording_start_time = 0
+
+    def load(self, *args, **kwargs):
+        '''
+        Minially, there should be at least a .set file
+        Other files (.eeg, .pos, .stm, .1, .2 etc) are essentially optional
+
+        '''
+        if self.settings is not None:
+            print("Loaded .set file")
+        # Give ppm a default value from the set file...
+        self.ppm = int(self.settings['tracker_pixels_per_metre'])
+        # ...with the option to over-ride
+        if 'ppm' in kwargs:
+            self.ppm = kwargs['ppm']
+
+        # ------------------------------------
+        # ------------- Pos data -------------
+        # ------------------------------------
+        if self.xy is None:
+            try:
+                AxonaPos = axonaIO.Pos(self.common_name)
+                P = PosCalcsGeneric(
+                    AxonaPos.led_pos[0, :], AxonaPos.led_pos[1, :],
+                    cm=True, ppm=self.ppm)
+                xy, hdir = P.postprocesspos()
+                self.xy = xy
+                self.dir = hdir
+                self.speed = P.speed
+                self.pos_sample_rate = AxonaPos.getHeaderVal(
+                    AxonaPos.header, 'sample_rate')
+            except IOError:
+                print("Couldn't load the pos data")
+        # ------------------------------------
+        # ------------ LFP data --------------
+        # ------------------------------------
+
+    @property
+    def ppm(self):
+        return self.__ppm
+
+    @ppm.setter
+    def ppm(self, value):
+        self.__ppm = value
+
+    @property
+    def settings(self):
+        if self.__settings is None:
+            try:
+                from ephysiopy.dacq2py.axonaIO import IO
+                settings_io = IO()
+                self.__settings = settings_io.getHeader(self.fileset_root)
+            except IOError:
+                print(".set file not loaded")
+                self._setheader = None
+        return self.__settings
+
+    @settings.setter
+    def settings(self, value):
+        self._setheader = value
+
+'''
 class Trial(axonaIO.IO, SAC, dict):
     """
     Provides methods to plot electrophysiology data acquired using the
@@ -2803,7 +2878,7 @@ class Trial(axonaIO.IO, SAC, dict):
         to the amount of time spent in the central part
         """
 
-        '''
+        
         dwellmap = self._getMap(smooth=False)[0] # unsmoothed dwell map
         # simply calculate the sums in the corners and see if this
         # goes above some threshold
@@ -2813,7 +2888,7 @@ class Trial(axonaIO.IO, SAC, dict):
         bl = dwellmap[-corner_sz:, 0:corner_sz]
         br = dwellmap[-corner_sz:, -corner_sz:]
         corner_dwell = np.sum([tl, tr, bl, br])
-        '''
+        
         pass
 
     def getBorderScore(self, tetrode, cluster, debug=False, **kwargs):
@@ -2944,3 +3019,4 @@ class Trial(axonaIO.IO, SAC, dict):
             ax4.set_title('')
             ax4.set_xticklabels('')
         return dir_rates
+'''
