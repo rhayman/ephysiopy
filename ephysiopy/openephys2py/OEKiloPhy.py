@@ -249,12 +249,18 @@ class OpenEphysBase(FigureMaker):
                 order='F')
             return mmap
 
-    def getClusterSpikeTimes(self, cluster):
+    def getClusterSpikeTimes(self, cluster: int):
         '''
         Returns the spike times in seconds of the given cluster
         '''
         spk_times = (self.kilodata.spk_times.T / 3e4)
         return spk_times[self.kilodata.spk_clusters == cluster]
+
+    def plotMap(self, cluster: int):
+        ts = self.getClusterSpikeTimes(cluster)
+        ax = self.plotRateMap(ts)
+        plt.show()
+        return ax
 
     def prepareMaps(self, **kwargs):
         """Initialises a MapCalcsGeneric object by providing it with positional and

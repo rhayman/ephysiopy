@@ -2,7 +2,6 @@ import os
 import re
 import numpy as np
 import warnings
-import functools
 import matplotlib.pylab as plt
 from ephysiopy.dacq2py import axonaIO
 from ephysiopy.dacq2py.tetrode_dict import TetrodeDict
@@ -21,32 +20,6 @@ warnings.filterwarnings(
 warnings.filterwarnings(
     "ignore", message="Casting complex values to real\
         discards the imaginary part")
-
-
-# Decorators
-def stripAxes(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        original = func(*args, **kwargs)
-        if 'ax' in kwargs.keys():
-            ax = kwargs['ax']
-        else:
-            ax = args[2]  # len of args includes self
-        if ax is None:
-            return original
-        plt.setp(ax.get_xticklabels(), visible=False)
-        plt.setp(ax.get_yticklabels(), visible=False)
-        ax.axes.get_xaxis().set_visible(False)
-        ax.axes.get_yaxis().set_visible(False)
-        if 'polar' in ax.name:
-            ax.set_rticks([])
-        else:
-            ax.spines['right'].set_visible(False)
-            ax.spines['top'].set_visible(False)
-            ax.spines['bottom'].set_visible(False)
-            ax.spines['left'].set_visible(False)
-        return original
-    return wrapper
 
 
 class AxonaTrial(FigureMaker):
@@ -256,15 +229,13 @@ class AxonaTrial(FigureMaker):
         ts = None
         if tetrode is not None:
             ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax = self.makeSpikePathPlot(ts, ax=ax, **kwargs)
+        ax = self.makeSpikePathPlot(ts, **kwargs)
         plt.show()
         return ax
 
     def plotRateMap(self, tetrode, cluster, **kwargs):
         ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
-        ax = self.makeRateMap(ts, ax=None)
+        ax = self.makeRateMap(ts)
         plt.show()
         return ax
 
