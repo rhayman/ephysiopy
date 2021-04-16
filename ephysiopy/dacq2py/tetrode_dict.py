@@ -30,3 +30,14 @@ class TetrodeDict(dict):
                     except IOError:
                         print("IOError for file {} on tetrode {}".format(
                             self.filename_root, key))
+
+    def get_spike_ts(self, tetrode, cluster):
+        '''
+        Returns spike times in seconds for given cluster from given
+        tetrode
+        '''
+        try:
+            this_tet = self[tetrode]
+            return this_tet.getClustTS(cluster) / this_tet.timebase
+        except Exception:
+            print(f'Could not get timestamps for cluster: {cluster}')

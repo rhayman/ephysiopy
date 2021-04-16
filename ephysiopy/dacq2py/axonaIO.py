@@ -298,6 +298,7 @@ class Pos(IO):
                     posData['pos'][:, 2], posData['pos'][:, 3]], 1023)
             self.led_pix = np.ma.masked_values(
                 [posData['pos'][:, 4], posData['pos'][:, 5]], 1023)
+        self.ts = np.array(posData['ts'])
         self.npos = len(self.led_pos[0])
         self.xy = np.ones([2, self.npos]) * np.nan
         self.dir = np.ones([self.npos]) * np.nan

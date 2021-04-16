@@ -222,12 +222,9 @@ class RateMap(object):
 
         if len(binned_pos[1]) == 3:
             binned_pos_edges = binned_pos[1:]
-            
         else:
             binned_pos_edges = binned_pos[1]
-        
         binned_pos = binned_pos[0]
-
         nanIdx = binned_pos == 0
 
         if 'pos' in mapType:  # return just binned up position
@@ -276,6 +273,10 @@ class RateMap(object):
                     for i in range(spkWeights.shape[0]):
                         rmap[i, :] = binned_spk[i] / binned_pos
             else:
+                print(f'len binned_pos ={len(binned_pos)}')
+                print(f'shape binned_pos ={binned_pos.shape}')
+                print(f'smooth_sz = {self.smooth_sz}')
+                print(f'smoothing type = {self.smoothingType}')
                 binned_pos = self.blurImage(
                     binned_pos, self.smooth_sz, ftype=self.smoothingType)
                 if binned_spk.ndim == 2:

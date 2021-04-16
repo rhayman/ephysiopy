@@ -3,6 +3,7 @@ import matplotlib.pylab as plt
 import warnings
 import os
 from ephysiopy.openephys2py.OESettings import Settings
+from ephysiopy.visualise.plotting import FigureMaker
 
 
 def fileExists(pname, fname) -> bool:
@@ -145,7 +146,7 @@ class KiloSortSession(object):
                 self.good_clusters.append(cluster_id)
 
 
-class OpenEphysBase(object):
+class OpenEphysBase(FigureMaker):
     """
     Base class for openephys anaylsis with data recorded in either
     the NWB or binary format
@@ -248,6 +249,13 @@ class OpenEphysBase(object):
                 order='F')
             return mmap
 
+    def getClusterSpikeTimes(self, cluster):
+        '''
+        Returns the spike times in seconds of the given cluster
+        '''
+        spk_times = (self.kilodata.spk_times.T / 3e4)
+        return spk_times[self.kilodata.spk_clusters == cluster]
+
     def prepareMaps(self, **kwargs):
         """Initialises a MapCalcsGeneric object by providing it with positional and
         spiking data.
@@ -308,47 +316,12 @@ class OpenEphysBase(object):
             clusts2plot = self.kilodata.good_clusters
         corriter.plotAllXCorrs(clusters=clusts2plot)
 
-    def plotPos(self, jumpmax=None, show=True, **kwargs):
-        """
-        Plots x vs y position for the current trial
-
-        Parameters
-        ----------
-        jumpmax : int
-            The max amount the LED is allowed to instantaneously move
-        show : bool
-            Whether to plot the pos into a figure window or not (default True)
-
-        Returns
-        ----------
-        xy : array_like
-            positional data following post-processing
-        """
-        if jumpmax is None:
-            jumpmax = self.jumpmax
-        import matplotlib.pylab as plt
-        from ephysiopy.common.ephys_generic import PosCalcsGeneric
-
-        self.__loadSettings__()
-        if self.xy is None:
-            self.__loaddata__(**kwargs)
-        posProcessor = PosCalcsGeneric(
-            self.xy[:, 0], self.xy[:, 1], ppm=300, cm=True, jumpmax=jumpmax)
-        xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
-        self.hdir = hdir
-        if 'saveas' in kwargs:
-            saveas = kwargs['saveas']
-            plt.plot(xy[0], xy[1])
-            plt.gca().invert_yaxis()
-            plt.axis('off')
-            plt.savefig(saveas)
-        if show:
-            plt.plot(xy[0], xy[1])
-            plt.gca().invert_yaxis()
-            ax = plt.gca()
-            plt.show()
-            return ax, xy
-        return xy
+    def plotSpikesOnPath(self, cluster=None, **kwargs):
+        ts = None
+        if cluster is not None:
+            ts = self.getClusterSpikeTimes(cluster)  # in seconds
+        ax = self.makeSpikePathPlot(ts, **kwargs)
+        ax.show()
 
     def plotMaps(self, **kwargs):
         """

@@ -3,9 +3,6 @@ The classes contained in this module are supposed to be agnostic to recording
 format and encapsulate some generic mechanisms for producing
 things like spike timing autocorrelograms, power spectrum calculation and so on
 """
-import functools
-from itertools import groupby
-from operator import itemgetter
 import numpy as np
 from scipy import signal, spatial, ndimage, stats
 from scipy.signal import gaussian
@@ -18,34 +15,7 @@ import matplotlib.transforms as transforms
 from matplotlib.patches import Rectangle
 from ephysiopy.common import binning
 from ephysiopy.common.utils import bwperim
-from ephysiopy.dacq2py import tintcolours as tcols
 import warnings
-
-
-# Decorators
-def stripAxes(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        original = func(*args, **kwargs)
-        if 'ax' in kwargs.keys():
-            ax = kwargs['ax']
-        else:
-            ax = args[2]  # len of args includes self
-        if ax is None:
-            return original
-        plt.setp(ax.get_xticklabels(), visible=False)
-        plt.setp(ax.get_yticklabels(), visible=False)
-        ax.axes.get_xaxis().set_visible(False)
-        ax.axes.get_yaxis().set_visible(False)
-        if 'polar' in ax.name:
-            ax.set_rticks([])
-        else:
-            ax.spines['right'].set_visible(False)
-            ax.spines['top'].set_visible(False)
-            ax.spines['bottom'].set_visible(False)
-            ax.spines['left'].set_visible(False)
-        return original
-    return wrapper
 
 
 class SpikeCalcsGeneric(object):
@@ -813,6 +783,43 @@ class EEGCalcsGeneric(object):
         ax.set_xlabel('Time(s)')
         return fig
 
+    def ifftFilter(self, sig, freqs, fs=250):
+        """
+        Calculates the dft of signal and filters out the frequencies in
+        freqs from the result and reconstructs the original signal using
+        the inverse fft without those frequencies
+
+        Parameters
+        ----------
+        sig : np.array
+            The LFP signal to be filtered
+        freqs: list
+            The frequencies to be filtered out
+        fs: int
+            The sampling frequency of sig
+
+        Returns
+        -------
+        fftRes: np.array
+            The filtered LFP signal
+        """
+        # from scipy import signal
+        nyq = fs / 2.0
+        fftRes = np.fft.fft(sig)
+        f = nyq * np.linspace(0, 1, len(fftRes)/2)
+        f = np.concatenate([f, f - nyq])
+
+        band = 0.0625
+        idx = np.zeros([len(freqs), len(f)]).astype(bool)
+
+        for i, freq in enumerate(freqs):
+            idx[i, :] = np.logical_and(np.abs(f) < freq+band, np.abs(f) >
+                                       freq-band)
+
+        pollutedIdx = np.sum(idx, 0)
+        fftRes[pollutedIdx] = np.mean(fftRes)
+        return fftRes
+
     def intrinsic_freq_autoCorr(
             self, spkTimes=None, posMask=None, maxFreq=25,
             acBinSize=0.002, acWindow=0.5, plot=True, posSampleFreq=30,
@@ -1068,6 +1075,14 @@ class PosCalcsGeneric(object):
             xy[1, :], upsample_rate/denom, 30/denom)
         return np.array([new_x, new_y])
 
+    def filterPos(self, filter_dict: dict = {}):
+        '''
+        Filters data based on key/ values in filter_dict
+        Meant to replicate a similar function in dacq2py_util.Trial
+        called filterPos
+        '''
+        pass
+
 
 class MapCalcsGeneric(object):
     """
@@ -1167,7 +1182,7 @@ class MapCalcsGeneric(object):
         idx = np.searchsorted(self.pos_ts, self.spk_ts)
         idx[idx == len(self.pos_ts)] = len(self.pos_ts) - 1
         return idx
-
+    '''
     def plotAll(self, **kwargs):
         """
         Plots rate maps and other graphical output
@@ -1227,162 +1242,7 @@ class MapCalcsGeneric(object):
                     self.makeSpeedVsHeadDirectionPlot(cluster, ax)
                 ax.set_title(cluster, fontweight='bold', size=8)
         return fig
-
-    @stripAxes
-    def makeSAC(self, cluster, ax=None):
-        pos_w = np.ones_like(self.pos_ts)
-        mapMaker = binning.RateMap(self.xy, None, None, pos_w, ppm=self.ppm)
-        spk_w = np.bincount(
-            self.spk_pos_idx, self.spk_clusters == cluster,
-            minlength=self.pos_ts.shape[0])
-        rmap = mapMaker.getMap(spk_w)
-        from ephysiopy.common import gridcell
-        S = gridcell.SAC()
-        nodwell = ~np.isfinite(rmap[0])
-        sac = S.autoCorr2D(rmap[0], nodwell)
-        measures = S.getMeasures(sac)
-        if self.save_grid_output_location:
-            measures['Cluster'] = cluster
-            f = open(self.save_grid_output_location + "_" + str(cluster), 'w')
-            f.write(str(measures))
-            f.close()
-        if ax is not None:
-            S.show(sac, measures, ax)
-        return ax
-
-    @stripAxes
-    def makeRateMap(self, cluster, ax=None, **kwargs):
-        pos_w = np.ones_like(self.pos_ts)
-        mapMaker = binning.RateMap(
-            self.xy, pos_weights=pos_w, ppm=self.ppm)
-        spk_w = np.bincount(
-            self.spk_pos_idx, self.spk_clusters == cluster,
-            minlength=self.pos_ts.shape[0])
-        rmap = mapMaker.getMap(spk_w)
-        ratemap = np.ma.MaskedArray(rmap[0], np.isnan(rmap[0]), copy=True)
-        x, y = np.meshgrid(rmap[1][1][0:-1], rmap[1][0][0:-1][::-1])
-        vmax = np.max(np.ravel(ratemap))
-        if ax is not None:
-            ax.pcolormesh(
-                x, y, ratemap, cmap=plt.cm.get_cmap("jet"), edgecolors='face',
-                vmax=vmax, shading='auto', **kwargs)
-            ax.axis([x.min(), x.max(), y.min(), y.max()])
-            ax.set_aspect('equal')
-        return ax
-
-    @stripAxes
-    def makeSpikePathPlot(self, cluster=None, ax=None, **kwargs):
-        if 'mec' or 'c' not in kwargs.keys():
-            kwargs['c'] = tcols.colours[1]
-            kwargs['mec'] = tcols.colours[1]
-        if ax is not None:
-            ax.plot(self.xy[0], self.xy[1], c=tcols.colours[0], zorder=1)
-            ax.set_aspect('equal')
-            ax.invert_yaxis()
-            if cluster is not None:
-                idx = self.spk_pos_idx[self.spk_clusters == cluster]
-                ax.plot(self.xy[0, idx], self.xy[1, idx], 's', **kwargs)
-        return ax
-
-    @stripAxes
-    def makeHDPlot(self, cluster, ax=None, **kwargs):
-        pos_w = np.ones_like(self.pos_ts)
-        mapMaker = binning.RateMap(
-            self.xy, self.hdir, None, pos_w, ppm=self.ppm)
-        spk_w = np.bincount(
-            self.spk_pos_idx, self.spk_clusters == cluster,
-            minlength=self.pos_ts.shape[0])
-        rmap = mapMaker.getMap(spk_w, 'dir', 'rate')
-        if rmap[0].ndim == 1:
-            # polar plot
-            if ax is None:
-                fig = plt.figure()
-                ax = fig.add_subplot(111, projection='polar')
-            theta = np.deg2rad(rmap[1][0])
-            ax.clear()
-            r = rmap[0]
-            r = np.insert(r, -1, r[0])
-            ax.plot(theta, r)
-            if 'fill' in kwargs:
-                ax.fill(theta, r, alpha=0.5)
-            ax.set_aspect('equal')
-
-            # See if we should add the mean resultant vector (mrv)
-            if 'add_mrv' in kwargs.keys():
-                from ephysiopy.common import statscalcs
-                S = statscalcs.StatsCalcs()
-                angles = self.hdir[
-                    self.spk_pos_idx[self.spk_clusters == cluster]]
-                r, th = S.mean_resultant_vector(np.deg2rad(angles))
-                ax.plot([th, th], [0, r*np.max(rmap[0])], 'r')
-            ax.set_thetagrids([0, 90, 180, 270])
-        return ax
-
-    @stripAxes
-    def makeSpeedVsRatePlot(
-            self, cluster, ax=None, minSpeed=0.0, maxSpeed=40.0, sigma=3.0,
-            **kwargs):
-        """
-        Plots the instantaneous firing rate of a cell against running speed
-        Also outputs a couple of measures as with Kropff et al., 2015; the
-        Pearsons correlation and the depth of modulation (dom) - see below for
-        details
-        """
-        speed = np.ravel(self.speed)
-        if np.nanmax(speed) < maxSpeed:
-            maxSpeed = np.nanmax(speed)
-        spd_bins = np.arange(minSpeed, maxSpeed, 1.0)
-        # Construct the mask
-        speed_filt = np.ma.MaskedArray(speed)
-        speed_filt = np.ma.masked_where(speed_filt < minSpeed, speed_filt)
-        speed_filt = np.ma.masked_where(speed_filt > maxSpeed, speed_filt)
-        from ephysiopy.common.ephys_generic import SpikeCalcsGeneric
-        x1 = self.spk_pos_idx[self.spk_clusters == cluster]
-        S = SpikeCalcsGeneric(x1)
-        spk_sm = S.smoothSpikePosCount(x1, self.pos_ts.shape[0], sigma, None)
-        spk_sm = np.ma.MaskedArray(spk_sm, mask=np.ma.getmask(speed_filt))
-        from scipy import stats
-        stats.mstats.pearsonr(spk_sm, speed_filt)
-        spd_dig = np.digitize(speed_filt, spd_bins, right=True)
-        mn_rate = np.array([np.ma.mean(
-            spk_sm[spd_dig == i]) for i in range(0, len(spd_bins))])
-        var = np.array([np.ma.std(
-            spk_sm[spd_dig == i]) for i in range(0, len(spd_bins))])
-        np.array([np.ma.sum(
-            spk_sm[spd_dig == i]) for i in range(0, len(spd_bins))])
-        if ax is not None:
-            ax.errorbar(
-                spd_bins, mn_rate * self.pos_sample_rate,
-                yerr=var, color='k')
-            ax.set_xlim(spd_bins[0], spd_bins[-1])
-            plt.xticks([spd_bins[0], spd_bins[-1]], ['0', '{:.2g}'.format(
-                spd_bins[-1])], fontweight='normal', size=6)
-            plt.yticks([0, np.nanmax(
-                mn_rate)*self.pos_sample_rate], ['0', '{:.2f}'.format(
-                    np.nanmax(mn_rate))], fontweight='normal', size=6)
-        return ax
-
-    @stripAxes
-    def makeSpeedVsHeadDirectionPlot(self, cluster, ax=None):
-        idx = self.spk_pos_idx[self.spk_clusters == cluster]
-        w = np.bincount(idx, minlength=self.speed.shape[0])
-        dir_bins = np.arange(0, 360, 6)
-        spd_bins = np.arange(0, 30, 1)
-        h = np.histogram2d(
-            self.hdir, self.speed, [dir_bins, spd_bins], weights=w)
-        b = binning.RateMap()
-        im = b.blurImage(h[0], 5, ftype='gaussian')
-        im = np.ma.MaskedArray(im)
-        # mask low rates...
-        im = np.ma.masked_where(im <= 1, im)
-        # ... and where less than 0.5% of data is accounted for
-        x, y = np.meshgrid(dir_bins, spd_bins)
-        if ax is not None:
-            ax.pcolormesh(x, y, im.T)
-            plt.xticks([90, 180, 270], fontweight='normal', size=6)
-            plt.yticks([10, 20], fontweight='normal', size=6)
-        return ax
-
+    '''
     def getSpatialStats(self, cluster):
         # HWPD 20200527
         """
