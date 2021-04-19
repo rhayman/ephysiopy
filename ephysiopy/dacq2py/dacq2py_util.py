@@ -263,6 +263,20 @@ class AxonaTrial(FigureMaker):
         plt.show()
         return ax
 
+    def plotEEGPower(self, eeg_type='eeg'):
+        from ephysiopy.common.ephys_generic import EEGCalcsGeneric
+        if 'eeg' in eeg_type:
+            E = EEGCalcsGeneric(self.EEG.sig, self.EEG.sample_rate)
+        elif 'egf' in eeg_type:
+            E = EEGCalcsGeneric(self.EGF.sig, self.EGF.sample_rate)
+        power_res = E.calcEEGPowerSpectrum()
+        ax = self.makePowerSpectrum(
+            power_res[0], power_res[1], power_res[2],
+            power_res[3], power_res[4],
+        )
+        plt.show()
+        return ax
+
     def klustakwik(self, d):
         """
         Calls two methods below (kluster and getPC) to run klustakwik on

@@ -226,6 +226,38 @@ class FigureMaker(object):
         plt.yticks([10, 20], fontweight='normal', size=6)
         return ax
 
+    def makePowerSpectrum(
+            self, freqs, power, sm_power,
+            band_max_power, freq_at_band_max_power,
+            max_freq=50, theta_range=[6, 12],
+            ax=None, **kwargs):
+            
+        # downsample frequencies and power
+        freqs = freqs[0::50]
+        power = power[0::50]
+        sm_power = sm_power[0::50]
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+        ax.plot(freqs, power, alpha=0.5, color=[0.8627, 0.8627, 0.8627])
+        ax.plot(freqs, sm_power)
+        ax.set_xlim(0, max_freq)
+        ylim = [0, band_max_power / 0.8]
+        if 'ylim' in kwargs:
+            ylim = kwargs['ylim']
+        ax.set_ylim(ylim)
+        ax.set_ylabel('Power')
+        ax.set_xlabel('Frequency')
+        ax.text(
+            x=theta_range[1] / 0.9, y=band_max_power,
+            s=str(freq_at_band_max_power)[0:4], fontsize=20)
+        from matplotlib.patches import Rectangle
+        r = Rectangle((
+            theta_range[0], 0), width=np.diff(theta_range)[0],
+            height=np.diff(ax.get_ylim())[0], alpha=0.25, color='r', ec='none')
+        ax.add_patch(r)
+        return ax
+
     # ----------------------------------------------------------
     # ---------------- TO BE IMPLEMENTED -----------------------
     # ----------------------------------------------------------

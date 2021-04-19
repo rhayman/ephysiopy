@@ -256,173 +256,43 @@ class OpenEphysBase(FigureMaker):
         spk_times = (self.kilodata.spk_times.T / 3e4)
         return spk_times[self.kilodata.spk_clusters == cluster]
 
-    def plotMap(self, cluster: int):
-        ts = self.getClusterSpikeTimes(cluster)
-        ax = self.plotRateMap(ts)
-        plt.show()
-        return ax
-
-    def prepareMaps(self, **kwargs):
-        """Initialises a MapCalcsGeneric object by providing it with positional and
-        spiking data.
-
-        I don't like the name of this method but it is useful to be able to
-        separate out the preparation of the MapCalcsGeneric object
-        as there are two major uses; actually plotting the maps
-        and/ or extracting data from them without plotting
-        """
-        if self.kilodata is None:
-            self.loadKilo(**kwargs)
-        if 'ppm' in kwargs:
-            ppm = kwargs['ppm']
-        else:
-            ppm = 400
-        from ephysiopy.common.ephys_generic import PosCalcsGeneric
-        from ephysiopy.common.ephys_generic import MapCalcsGeneric
-        if self.xy is None:
-            self.__loaddata__(**kwargs)
-        posProcessor = PosCalcsGeneric(
-            self.xy[:, 0], self.xy[:, 1], ppm, jumpmax=self.jumpmax)
-        self.__loadSettings__()
-        xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
-        self.hdir = hdir
-        spk_times = (self.kilodata.spk_times.T / 3e4)
-        if 'plot_type' in kwargs:
-            plot_type = kwargs.pop('plot_type')
-        else:
-            plot_type = 'map'
-        mapiter = MapCalcsGeneric(
-            xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times,
-            plot_type, **kwargs)
-        if 'cluster' in kwargs:
-            if type(kwargs['cluster']) == int:
-                mapiter.good_clusters = np.intersect1d(
-                    [kwargs['cluster']], self.kilodata.good_clusters)
-
-            else:
-                mapiter.good_clusters = np.intersect1d(
-                    kwargs['cluster'], self.kilodata.good_clusters)
-        else:
-            mapiter.good_clusters = self.kilodata.good_clusters
-        mapiter.spk_clusters = self.kilodata.spk_clusters
-        self.mapiter = mapiter
-        return mapiter
-
-    def plotXCorrs(self, **kwargs):
-        if self.kilodata is None:
-            self.loadKilo(**kwargs)
-        from ephysiopy.common.ephys_generic import SpikeCalcsGeneric
-        corriter = SpikeCalcsGeneric(self.kilodata.spk_times)
-        corriter.spk_clusters = self.kilodata.spk_clusters
-        clusts2plot = []
-        if 'cluster' in kwargs:
-            clusts2plot = np.intersect1d(
-                kwargs['cluster'], self.kilodata.good_clusters)
-        else:
-            clusts2plot = self.kilodata.good_clusters
-        corriter.plotAllXCorrs(clusters=clusts2plot)
-
-    def plotSpikesOnPath(self, cluster=None, **kwargs):
+    def plotSpikesOnPath(self, cluster: int = None, **kwargs):
         ts = None
         if cluster is not None:
             ts = self.getClusterSpikeTimes(cluster)  # in seconds
         ax = self.makeSpikePathPlot(ts, **kwargs)
-        ax.show()
+        plt.show()
+        return ax
 
-    def plotMaps(self, **kwargs):
-        """
-        Parameters
-        ------------
-        plot_type : str or list
-            The type of map to plot. Valid strings include:
-            * 'map' - just ratemap plotted
-            * 'path' - just spikes on path
-            * 'both' - both of the above
-            * 'all' - both spikes on path, ratemap & SAC plotted
-        Valid kwargs: 'ppm' - this is an integer denoting pixels per metre:
-                lower values = more bins in ratemap / SAC
-                'cluster' - int or list of ints - which clusters to plot
+    def plotRateMap(self, cluster, **kwargs):
+        ts = self.getClusterSpikeTimes(cluster)  # in seconds
+        ax = self.makeRateMap(ts)
+        plt.show()
+        return ax
 
-        Notes
-        -----
-        If providing a specific cluster or  list of clusters to this method
-        with the keyword 'cluster' then this is compared against the list
-        of clusters from the Kilosort session.
-        Only clusters that are in both lists will be plotted.
+    def plotHDMap(self, cluster, **kwargs):
+        ts = self.getClusterSpikeTimes(cluster)  # in seconds
+        ax = self.makeHDPlot(ts, **kwargs)
+        plt.show()
+        return ax
 
-        Examples
-        --------
-        >>> from ephysiopy.openephys2py.OEKiloPhy import OpenEphysNPX
-        >>> npx = OpenEphysNPX('/path/to/data')
-        >>> npx.load()
-        >>> npx.plotMaps(plot_type='path', clusters=[1, 4, 6, 16, 22])
+    def plotSAC(self, cluster, **kwargs):
+        ts = self.getClusterSpikeTimes(cluster)  # in seconds
+        ax = self.makeSAC(ts, **kwargs)
+        plt.show()
+        return ax
 
-        Will plot the spikes from clusters 1, 4, 6, 16, and 22 overlaid onto
-        the xy position data in one figure window
+    def plotSpeedVsRate(self, cluster, **kwargs):
+        ts = self.getClusterSpikeTimes(cluster)  # in seconds
+        ax = self.makeSpeedVsHeadDirectionPlot(ts, **kwargs)
+        plt.show()
+        return ax
 
-        """
-        if 'plot_type' not in kwargs:
-            kwargs['plot_type'] = 'map'
-
-        self.prepareMaps(**kwargs)
-        if 'clusters' in kwargs:
-            if type(kwargs['clusters']) == int:
-                self.mapiter.good_clusters = np.intersect1d(
-                    [kwargs['clusters']], self.kilodata.good_clusters)
-            else:
-                self.mapiter.good_clusters = np.intersect1d(
-                    kwargs['clusters'], self.kilodata.good_clusters)
-
-        self.mapiter.plotAll(**kwargs)
-
-    def plotMapsOneAtATime(self, plot_type='map', **kwargs):
-        """
-        Parameters
-        ----------
-        plot_type : str or list
-            The kind of plot to produce.  Valid strings include:
-            * 'map' - just ratemap plotted
-            * 'path' - just spikes on path
-            * 'both' - both of the above
-            * 'all' - both spikes on path, ratemap & SAC plotted
-        kwargs :
-        * 'ppm' - int - pixels per metre; low values = more bins
-        * 'clusters' - int or list of ints describing which clusters to plot
-        * 'save_grid_summary_location' - bool; if True the dictionary
-            returned from gridcell.SAC.getMeasures is saved for each cluster
-        """
-
-        if self.kilodata is None:
-            self.loadKilo(**kwargs)
-        if ('ppm' in kwargs.keys()):
-            ppm = kwargs['ppm']
-        else:
-            ppm = 400
-        from ephysiopy.common.ephys_generic import PosCalcsGeneric
-        from ephysiopy.common.ephys_generic import MapCalcsGeneric
-        if self.xy is None:
-            self.__loaddata__(**kwargs)
-        posProcessor = PosCalcsGeneric(
-            self.xy[:, 0], self.xy[:, 1], ppm, jumpmax=self.jumpmax)
-        self.__loadSettings__()
-        xy, hdir = posProcessor.postprocesspos(self.settings.tracker_params)
-        self.hdir = hdir
-        spk_times = (self.kilodata.spk_times.T / 3e4)
-        mapiter = MapCalcsGeneric(
-            xy, np.squeeze(hdir), posProcessor.speed, self.xyTS, spk_times,
-            plot_type, **kwargs)
-        if 'clusters' in kwargs:
-            if type(kwargs['clusters']) == int:
-                mapiter.good_clusters = np.intersect1d(
-                    [kwargs['clusters']], self.kilodata.good_clusters)
-            else:
-                mapiter.good_clusters = np.intersect1d(
-                    kwargs['clusters'], self.kilodata.good_clusters)
-        else:
-            mapiter.good_clusters = self.kilodata.good_clusters
-        mapiter.spk_clusters = self.kilodata.spk_clusters
-        self.mapiter = mapiter
-        [print("") for cluster in mapiter]
+    def plotSpeedVsHeadDirection(self, cluster, **kwargs):
+        ts = self.getClusterSpikeTimes(cluster)  # in seconds
+        ax = self.makeSpeedVsHeadDirectionPlot(ts, **kwargs)
+        plt.show()
+        return ax
 
     def plotEEGPower(self, channel=0):
         """
@@ -445,37 +315,13 @@ class OpenEphysBase(FigureMaker):
         n_samples = np.shape(self.rawData[:, channel])[0]
         s = signal.resample(self.rawData[:, channel], int(n_samples/3e4) * 500)
         E = EEGCalcsGeneric(s, 500)
-        E.plotPowerSpectrum()
-
-    def plotSpectrogram(
-            self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250):
-        from ephysiopy.common.ephys_generic import EEGCalcsGeneric
-        if self.rawData is None:
-            print("Loading raw data...")
-            self.load(loadraw=True)
-        # load first 30 seconds by default
-        fs = 3e4
-        E = EEGCalcsGeneric(self.rawData[0:int(3e4*nSeconds), 0], fs)
-        nperseg = int(fs * secsPerBin)
-        from scipy import signal
-        freqs, times, Sxx = signal.spectrogram(E.sig, fs, nperseg=nperseg)
-        Sxx_sm = Sxx
-        from ephysiopy.common import binning
-        R = binning.RateMap()
-        Sxx_sm = R.blurImage(Sxx, (secsPerBin*2)+1)
-        x, y = np.meshgrid(times, freqs)
-        from matplotlib import colors
-        if ax is None:
-            plt.figure()
-            ax = plt.gca()
-            ax.pcolormesh(
-                x, y, Sxx_sm, edgecolors='face', norm=colors.LogNorm())
-        ax.pcolormesh(
-            x, y, Sxx_sm, edgecolors='face', norm=colors.LogNorm())
-        ax.set_xlim(times[0], times[-1])
-        ax.set_ylim(ymin, ymax)
-        ax.set_xlabel('Time(s)')
-        ax.set_ylabel('Frequency(Hz)')
+        power_res = E.calcEEGPowerSpectrum()
+        ax = self.makePowerSpectrum(
+            power_res[0], power_res[1], power_res[2],
+            power_res[3], power_res[4],
+        )
+        plt.show()
+        return ax
 
     def plotPSTH(self, **kwargs):
         """Plots the peri-stimulus time histogram for all the 'good' clusters
@@ -843,36 +689,6 @@ class OpenEphysNPX(OpenEphysBase):
         else:
             super().loadKilo(**kwargs)
 
-    def plotPos(self, jumpmax=None, show=True, **kwargs):
-        super().plotPos(jumpmax, show, **kwargs)
-
-    def plotMaps(self, **kwargs):
-        super().plotMaps(**kwargs)
-
-    def plotMapsOneAtATime(self, **kwargs):
-        super().plotMapsOneAtATime(**kwargs)
-
-    def plotEEGPower(self, channel=0, **kwargs):
-        super().plotEEGPower(channel, **kwargs)
-
-    def plotSpectrogram(
-            self, nSeconds=30, secsPerBin=2, ax=None,
-            ymin=0, ymax=250, **kwargs):
-        super().plotSpectrogram(nSeconds, secsPerBin, ax, ymin, ymax, **kwargs)
-
-    def plotPSTH(self, **kwargs):
-        super().plotPSTH(**kwargs)
-
-    def plotEventEEG(self, **kwargs):
-        super().plotEventEEG(**kwargs)
-
-    def plotWaves(self, **kwargs):
-        super().plotWaves(**kwargs)
-
-    def plotXCorrs(self, **kwargs):
-        super().plotXCorrs(**kwargs)
-
-
 class OpenEphysNWB(OpenEphysBase):
     """
     Parameters
@@ -1029,28 +845,6 @@ class OpenEphysNWB(OpenEphysBase):
         xy = super().plotPos(jumpmax, show)
         return xy
 
-    def plotMaps(self, **kwargs):
-        super().plotMaps(**kwargs)
-
-    def plotMapsOneAtATime(self, **kwargs):
-        super().plotMapsOneAtATime(**kwargs)
-
-    def plotEEGPower(self, channel=0):
-        super().plotEEGPower(channel)
-
-    def plotSpectrogram(self, nSeconds=30, secsPerBin=2,
-                        ax=None, ymin=0, ymax=250):
-        super().plotSpectrogram(nSeconds, secsPerBin, ax, ymin, ymax)
-
-    def plotPSTH(self):
-        super().plotPSTH()
-
-    def plotEventEEG(self):
-        super().plotEventEEG()
-
-    def plotWaves(self):
-        super().plotWaves()
-
 
 class OpenEphysBinary(OpenEphysBase):
     """
@@ -1179,32 +973,6 @@ class OpenEphysBinary(OpenEphysBase):
 
     def loadKilo(self, **kwargs):
         super().loadKilo(**kwargs)
-
-    def plotPos(self, jumpmax=None, show=True):
-        xy = super().plotPos(jumpmax, show)
-        return xy
-
-    def plotMaps(self, **kwargs):
-        super().plotMaps(**kwargs)
-
-    def plotMapsOneAtATime(self, **kwargs):
-        super().plotMapsOneAtATime(**kwargs)
-
-    def plotEEGPower(self, channel=0):
-        super().plotEEGPower(channel)
-
-    def plotSpectrogram(
-            self, nSeconds=30, secsPerBin=2, ax=None, ymin=0, ymax=250):
-        super().plotSpectrogram(nSeconds, secsPerBin, ax, ymin, ymax)
-
-    def plotPSTH(self):
-        super().plotPSTH()
-
-    def plotEventEEG(self):
-        super().plotEventEEG()
-
-    def plotWaves(self):
-        super().plotWaves()
 
 
 class SpkTimeCorrelogram(object):

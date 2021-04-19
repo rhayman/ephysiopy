@@ -647,7 +647,7 @@ class EEGCalcsGeneric(object):
 
         Returns
         -------
-        Nothing. Sets a bunch of instance variables:
+        A 5-tuple of the following and sets a bunch of member variables:
             freqs : array_like
                 The frequencies at which the spectrogram was calculated
             power : array_like
@@ -688,37 +688,7 @@ class EEGCalcsGeneric(object):
         self.sm_power = sm_power
         self.bandmaxpower = bandmaxpower
         self.freqatbandmaxpower = freqatbandmaxpower
-
-    def plotPowerSpectrum(self, **kwargs):
-        # calculate
-        self.calcEEGPowerSpectrum()
-        # plotting
-        fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1)
-        freqs = self.freqs[0::50]
-        power = self.power[0::50]
-        sm_power = self.sm_power[0::50]
-        ax.plot(freqs, power, alpha=0.5, color=[0.8627, 0.8627, 0.8627])
-        ax.plot(freqs, sm_power)
-        ax.set_xlim(0, self.maxFreq)
-        if 'ylim' in kwargs.keys():
-            ylim = kwargs['ylim']
-        else:
-            ylim = [0, self.bandmaxpower / 0.8]
-
-        ax.set_ylim(ylim)
-        ax.set_ylabel('Power')
-        ax.set_xlabel('Frequency')
-        ax.text(
-            x=self.thetaRange[1] / 0.9, y=self.bandmaxpower,
-            s=str(self.freqatbandmaxpower)[0:4], fontsize=20)
-        from matplotlib.patches import Rectangle
-        r = Rectangle((
-            self.thetaRange[0], 0), width=np.diff(self.thetaRange)[0],
-            height=np.diff(ax.get_ylim())[0], alpha=0.25, color='r', ec='none')
-        ax.add_patch(r)
-        # plt.show()
-        return fig
+        return freqs, power, sm_power, bandmaxpower, freqatbandmaxpower
 
     def plotEventEEG(
             self, event_ts, event_window=(-0.05, 0.1), stim_width=0.01,
