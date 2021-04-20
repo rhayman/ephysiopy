@@ -37,6 +37,7 @@ class AxonaTrial(FigureMaker):
         self.TETRODE = TetrodeDict(self.common_name, volts=True)
         self.__STM = None
         self.ttl_data = None
+        self.ttl_timestamps = None
         self.recording_start_time = 0
         self.data_loaded = False
 
@@ -94,12 +95,12 @@ class AxonaTrial(FigureMaker):
                 self.__settings = settings_io.getHeader(self.fileset_root)
             except IOError:
                 print(".set file not loaded")
-                self._setheader = None
+                self.__settings = None
         return self.__settings
 
     @settings.setter
     def settings(self, value):
-        self._setheader = value
+        self.__settings = value
 
     @property
     def EEG(self):
@@ -140,25 +141,28 @@ class AxonaTrial(FigureMaker):
         """
         if self.__STM is None:
             try:
-                self.__STM = axonaIO.Stim(self.filename_root)
+                self.__STM = axonaIO.Stim(self.common_name)
                 """
                 update the STM dict with some relevant values from
                 the .set file and the headers of the eeg and pos files
                 """
-                posHdr = self.getHeader(self.filename_root + '.pos')
-                eegHdr = self.getHeader(self.filename_root + '.eeg')
-                self.__STM['posSampRate'] = self.getHeaderVal(
+                from ephysiopy.dacq2py.axonaIO import IO
+                io = IO()
+                posHdr = io.getHeader(self.common_name + '.pos')
+                eegHdr = io.getHeader(self.common_name + '.eeg')
+                self.__STM['posSampRate'] = io.getHeaderVal(
                     posHdr, 'sample_rate')
-                self.__STM['eegSampRate'] = self.getHeaderVal(
+                self.__STM['eegSampRate'] = io.getHeaderVal(
                     eegHdr, 'sample_rate')
                 try:
-                    egfHdr = self.getHeader(self.filename_root + '.egf')
-                    self.__STM['egfSampRate'] = self.getHeaderVal(
+                    egfHdr = io.getHeader(self.common_name + '.egf')
+                    self.__STM['egfSampRate'] = io.getHeaderVal(
                         egfHdr, 'sample_rate')
                 except Exception:
                     pass
                 # get into ms
-                stim_pwidth = int(self.setheader['stim_pwidth']) / int(1000)
+                self.settings
+                stim_pwidth = int(self.settings['stim_pwidth']) / int(1000)
                 self.__STM['off'] = self.__STM['on'] + int(stim_pwidth)
                 """
                 There are a set of key / value pairs in the set file that
@@ -174,10 +178,6 @@ class AxonaTrial(FigureMaker):
                 Within that window they are actually called "Phase 1",
                 "Phase 2" etc.
 
-                To keep everything in order it's best to iterate through using
-                a loop - a dict is not guaranteed to be ordered and I cba
-                to use an OrderedDict.
-
                 In dacqUSB nomencalture the pattern is actually the
                 stimulation you want to apply i.e. 10ms pulse every 150ms
                 or whatever. The "pattern" is what is applied
@@ -189,7 +189,7 @@ class AxonaTrial(FigureMaker):
                 phase_info = dict.fromkeys(phase_info_keys, None)
                 stim_dict = {}
                 stim_patt_dict = {}
-                for k, v in self.setheader.items():
+                for k, v in self.settings.items():
                     if k.startswith("stim_patternmask_"):
                         if (int(v) == 1):
                             # get the number of the phase
@@ -201,8 +201,8 @@ class AxonaTrial(FigureMaker):
                 for k, v in stim_dict.items():
                     phase_num = k[-1]
                     stim_dict[k]['duration'] = int(
-                        self.setheader['stim_patterntimes_' + phase_num])
-                    phase_name = self.setheader[
+                        self.settings['stim_patterntimes_' + phase_num])
+                    phase_name = self.settings[
                         'stim_patternnames_' + phase_num]
                     stim_dict[k]['name'] = phase_name
                     if not (phase_name.startswith("Pause")):
@@ -274,6 +274,12 @@ class AxonaTrial(FigureMaker):
             power_res[0], power_res[1], power_res[2],
             power_res[3], power_res[4],
         )
+        plt.show()
+        return ax
+
+    def plotXCorr(self, tetrode, cluster, **kwargs):
+        ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
+        ax = self.makeXCorr(ts)
         plt.show()
         return ax
 

@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pylab as plt
 import warnings
 import os
+from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.visualise.plotting import FigureMaker
 
@@ -182,10 +183,11 @@ class OpenEphysBase(FigureMaker):
         self.accelerometerData = None
         # OESettings.Settings instance
         self.settings = None
-        if ('jumpmax' in kwargs.keys()):
+        if ('jumpmax' in kwargs):
             self.jumpmax = kwargs['jumpmax']
         else:
             self.jumpmax = 100
+        self.ppm = getattr(self, 'ppm', 300)
 
     def load(self, *args, **kwargs):
         # Overridden by sub-classes
@@ -249,6 +251,23 @@ class OpenEphysBase(FigureMaker):
                 order='F')
             return mmap
 
+    def exportPos(self):
+        xy = self.plotPos(show=False)
+        out = np.hstack([xy, self.xyTS[:, np.newaxis]])
+        np.savetxt(
+            'position.txt', out, delimiter=',',
+            fmt=['%3.3i', '%3.3i', '%3.3f'])
+
+    def save_ttl(self, out_fname):
+        """
+        Saves the ttl data to text file out_fname
+        """
+        if (len(self.ttl_data) > 0) and (len(self.ttl_timestamps) > 0):
+            data = np.array([self.ttl_data, self.ttl_timestamps])
+            if data.shape[0] == 2:
+                data = data.T
+            np.savetxt(out_fname, data, delimiter='\t')
+
     def getClusterSpikeTimes(self, cluster: int):
         '''
         Returns the spike times in seconds of the given cluster
@@ -264,31 +283,31 @@ class OpenEphysBase(FigureMaker):
         plt.show()
         return ax
 
-    def plotRateMap(self, cluster, **kwargs):
+    def plotRateMap(self, cluster: int, **kwargs):
         ts = self.getClusterSpikeTimes(cluster)  # in seconds
         ax = self.makeRateMap(ts)
         plt.show()
         return ax
 
-    def plotHDMap(self, cluster, **kwargs):
+    def plotHDMap(self, cluster: int, **kwargs):
         ts = self.getClusterSpikeTimes(cluster)  # in seconds
         ax = self.makeHDPlot(ts, **kwargs)
         plt.show()
         return ax
 
-    def plotSAC(self, cluster, **kwargs):
+    def plotSAC(self, cluster: int, **kwargs):
         ts = self.getClusterSpikeTimes(cluster)  # in seconds
         ax = self.makeSAC(ts, **kwargs)
         plt.show()
         return ax
 
-    def plotSpeedVsRate(self, cluster, **kwargs):
+    def plotSpeedVsRate(self, cluster: int, **kwargs):
         ts = self.getClusterSpikeTimes(cluster)  # in seconds
-        ax = self.makeSpeedVsHeadDirectionPlot(ts, **kwargs)
+        ax = self.makeSpeedVsRatePlot(ts, **kwargs)
         plt.show()
         return ax
 
-    def plotSpeedVsHeadDirection(self, cluster, **kwargs):
+    def plotSpeedVsHeadDirection(self, cluster: int, **kwargs):
         ts = self.getClusterSpikeTimes(cluster)  # in seconds
         ax = self.makeSpeedVsHeadDirectionPlot(ts, **kwargs)
         plt.show()
@@ -323,232 +342,11 @@ class OpenEphysBase(FigureMaker):
         plt.show()
         return ax
 
-    def plotPSTH(self, **kwargs):
-        """Plots the peri-stimulus time histogram for all the 'good' clusters
-
-        Given some data has been recorded in the ttl channel, this method plots
-        the PSTH for each 'good' cluster and just keeps spitting out figure
-        windows
-        """
-        self.__loadSettings__()
-        self.settings.parseStimControl()
-        if self.kilodata is None:
-            self.loadKilo(**kwargs)
-        from ephysiopy.common.ephys_generic import SpikeCalcsGeneric
-        # in seconds
-        spk_times = (self.kilodata.spk_times.T[0] / 3e4) + self.ts[0]
-        S = SpikeCalcsGeneric(spk_times)
-        # this is because some of the trials have two weird events
-        # logged at about 2-3 minutes in...
-        S.event_ts = self.ttl_timestamps[2::2]
-        S.spk_clusters = self.kilodata.spk_clusters
-        S.stim_width = 0.01  # in seconds
-        for x in self.kilodata.good_clusters:
-            print(next(S.plotPSTH(x)))
-
-    def plotEventEEG(self):
-        from ephysiopy.common.ephys_generic import EEGCalcsGeneric
-        if self.rawData is None:
-            print("Loading raw data...")
-            self.load(loadraw=True)
-        E = EEGCalcsGeneric(self.rawData[:, 0], 3e4)
-        # this is because some of the trials have two weird events
-        # logged at about 2-3 minutes in...
-        event_ts = self.ttl_timestamps[2::2]
-        E.plotEventEEG(event_ts)
-
-    def plotWaves(self, **kwargs):
-        if self.kilodata is None:
-            self.loadKilo(**kwargs)
-        if self.rawData is None:
-            print("Loading raw data...")
-            self.load(loadraw=True)
-        # Find the amplitudes.npy file
-        import os
-        amplitudes = None
-        for d, _, f in os.walk(self.pname_root):
-            for ff in f:
-                if 'amplitudes.npy' in ff:
-                    amplitudes = np.load(os.path.join(d, 'amplitudes.npy'))
-        if amplitudes is None:
-            import warnings
-            warnings.warn("No amplitudes.npy file was found so cant plot \
-                waveforms. Have you run Kilosort?")
-            return
-        waveiter = SpkWaveform(
-            self.kilodata.good_clusters, self.kilodata.spk_times,
-            self.kilodata.spk_clusters, amplitudes, self.rawData)
-        for cluster in waveiter:
-            print("Cluster {}".format(cluster))
-
-
-class OpenEphysNPX(OpenEphysBase):
-    """
-    The main class for dealing with data recorded using Neuropixels probes
-    under openephys.
-    """
-    def __init__(self, pname_root):
-        super().__init__(pname_root)
-        self.path2PosData = None
-        self.path2APdata = None
-        self.path2LFPdata = None
-
-    def load(
-            self, pname_root=None, experiment_name='experiment1',
-            recording_name='recording1', **kwargs):
-        """
-        Loads data recorded in the OE 'flat' binary format.
-
-        Parameters
-        ----------
-        pname_root : str
-            The top level directory, typically in form of YYYY-MM-DD_HH-MM-SS
-
-        recording_name : str
-            The directory immediately beneath pname_root
-
-        See Also
-        --------
-        See open-ephys wiki pages
-        """
-        self.isBinary = True
-        import os
-        import re
-        APdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].0')
-        LFPdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].1')
-        sync_message_file = None
-        self.recording_start_time = None
-
-        if pname_root is None:
-            pname_root = self.pname_root
-
-        for d, c, f in os.walk(pname_root):
-            for ff in f:
-                if '.' not in c:  # ignore hidden directories
-                    if 'data_array.npy' in ff:
-                        self.path2PosData = os.path.join(d)
-                    if 'continuous.dat' in ff:
-                        if APdata_match.search(d):
-                            self.path2APdata = os.path.join(d)
-                        if LFPdata_match.search(d):
-                            self.path2LFPdata = os.path.join(d)
-                    if 'sync_messages.txt' in ff:
-                        sync_message_file = os.path.join(
-                            d, 'sync_messages.txt')
-
-        if self.path2PosData is not None:
-            pos_data = np.load(os.path.join(
-                self.path2PosData, 'data_array.npy'))
-            self.xy = pos_data[:, 0:2]
-            pos_ts = np.load(os.path.join(self.path2PosData, 'timestamps.npy'))
-            self.xyTS = pos_ts / 30.0 / 1000.0
-
-        ap_sample_rate = getattr(self, 'ap_sample_rate', 30000)
-        n_channels = getattr(self, 'n_channels', 384)
-        trial_length = 0  # make sure a trial_length has a value
-        if self.path2APdata is not None:
-            if fileExists(self.path2APdata, 'continuous.dat'):
-                trial_length = self.__calcTrialLengthFromBinarySize__(
-                    os.path.join(self.path2APdata, 'continuous.dat'),
-                    n_channels, ap_sample_rate)
-        # Load the start time from the sync_messages file
-        if sync_message_file is not None:
-            with open(sync_message_file, 'r') as f:
-                sync_strs = f.read()
-            sync_lines = sync_strs.split('\n')
-            for line in sync_lines:
-                if 'subProcessor: 0' in line:
-                    idx = line.find('start time: ')
-                    start_val = line[idx + len('start time: '):-1]
-                    tmp = start_val.split('@')
-                    recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
-            self.xyTS = self.xyTS - recording_start_time
-        else:
-            recording_start_time = self.xyTS[0]
-        self.recording_start_time = recording_start_time
-        self.ts = np.arange(
-            recording_start_time, trial_length+recording_start_time,
-            1.0 / ap_sample_rate)
-
-    def loadLite(
-            self, pname_root=None, experiment_name='experiment1',
-            recording_name='recording1'):
-        # HWPD 20200529
-        """
-        Loads data recorded in the OE 'flat' binary format but doesn't require
-        the large continuous.dat file
-
-        Parameters
-        ----------
-        pname_root : str
-            The top level directory, typically in form of YYYY-MM-DD_HH-MM-SS
-
-        recording_name : str
-            The directory immediately beneath pname_root
-        """
-        self.isBinary = True
-        import os
-        import re
-        APdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].0')
-        LFPdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].1')
-        sync_message_file = None
-        self.recording_start_time = None
-
-        if pname_root is None:
-            pname_root = self.pname_root
-
-        for d, c, f in os.walk(pname_root):
-            for ff in f:
-                if '.' not in c:  # ignore hidden directories
-                    if 'data_array.npy' in ff:
-                        self.path2PosData = os.path.join(d)
-                    if 'spike_times.npy' in ff:  # changed from continuous.dat
-                        if APdata_match.search(d):
-                            self.path2APdata = os.path.join(d)
-                        if LFPdata_match.search(d):
-                            self.path2LFPdata = os.path.join(d)
-                    if 'sync_messages.txt' in ff:
-                        sync_message_file = os.path.join(
-                            d, 'sync_messages.txt')
-
-        if self.path2PosData is not None:
-            pos_data = np.load(os.path.join(
-                self.path2PosData, 'data_array.npy'))
-            self.xy = pos_data[:, 0:2]
-            pos_ts = np.load(os.path.join(self.path2PosData, 'timestamps.npy'))
-            self.xyTS = pos_ts / 30.0 / 1000.0
-
-        ap_sample_rate = 30000
-        spk_times = np.squeeze(np.load(os.path.join(
-            self.path2APdata, 'spike_times.npy')))
-        last_spike_time = spk_times.max() / ap_sample_rate
-        # Load the start time from the sync_messages file
-        if sync_message_file is not None:
-            with open(sync_message_file, 'r') as f:
-                sync_strs = f.read()
-            sync_lines = sync_strs.split('\n')
-            for line in sync_lines:
-                if 'subProcessor: 0' in line:
-                    idx = line.find('start time: ')
-                    start_val = line[idx + len('start time: '):-1]
-                    tmp = start_val.split('@')
-                    recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
-            self.xyTS = self.xyTS - recording_start_time
-        else:
-            recording_start_time = self.xyTS[0]
-        self.recording_start_time = recording_start_time
-        self.ts = np.arange(
-            recording_start_time, last_spike_time,
-            1.0 / ap_sample_rate)
-
-    def __calcTrialLengthFromBinarySize__(
-            self, path2file: str, n_channels=384, sample_rate=30000):
-        """
-        Returns the time taken to run the trial (in seconds) based on the size
-        of the binary file on disk
-        """
-        return super().__calcTrialLengthFromBinarySize__(
-            path2file, n_channels, sample_rate)
+    def plotXCorr(self, cluster: int, **kwargs):
+        ts = self.getClusterSpikeTimes(cluster)
+        ax = self.makeXCorr(ts)
+        plt.show()
+        return ax
 
     def plotSpectrogramByDepth(
             self, nchannels=384, nseconds=100, maxFreq=125,
@@ -683,11 +481,135 @@ class OpenEphysNPX(OpenEphysBase):
             plt.savefig(saveas)
         plt.show()
 
-    def loadKilo(self, **kwargs):
+    def plotPSTH(self, **kwargs):
+        """Plots the peri-stimulus time histogram for all the 'good' clusters
+
+        Given some data has been recorded in the ttl channel, this method plots
+        the PSTH for each 'good' cluster and just keeps spitting out figure
+        windows
+        """
+        self.__loadSettings__()
+        self.settings.parseStimControl()
+        if self.kilodata is None:
+            self.loadKilo(**kwargs)
+        from ephysiopy.common.ephys_generic import SpikeCalcsGeneric
+        # in seconds
+        spk_times = (self.kilodata.spk_times.T[0] / 3e4) + self.ts[0]
+        S = SpikeCalcsGeneric(spk_times)
+        # this is because some of the trials have two weird events
+        # logged at about 2-3 minutes in...
+        S.event_ts = self.ttl_timestamps[2::2]
+        S.spk_clusters = self.kilodata.spk_clusters
+        S.stim_width = 0.01  # in seconds
+        for x in self.kilodata.good_clusters:
+            print(next(S.plotPSTH(x)))
+
+    def plotEventEEG(self):
+        from ephysiopy.common.ephys_generic import EEGCalcsGeneric
+        if self.rawData is None:
+            print("Loading raw data...")
+            self.load(loadraw=True)
+        E = EEGCalcsGeneric(self.rawData[:, 0], 3e4)
+        # this is because some of the trials have two weird events
+        # logged at about 2-3 minutes in...
+        event_ts = self.ttl_timestamps[2::2]
+        E.plotEventEEG(event_ts)
+
+
+class OpenEphysNPX(OpenEphysBase):
+    """
+    The main class for dealing with data recorded using Neuropixels probes
+    under openephys.
+    """
+    def __init__(self, pname_root):
+        super().__init__(pname_root)
+        self.path2PosData = None
+        self.path2APdata = None
+        self.path2LFPdata = None
+
+    def load(
+            self, pname_root=None, experiment_name='experiment1',
+            recording_name='recording1', **kwargs):
+        """
+        Loads data recorded in the OE 'flat' binary format.
+
+        Parameters
+        ----------
+        pname_root : str
+            The top level directory, typically in form of YYYY-MM-DD_HH-MM-SS
+
+        recording_name : str
+            The directory immediately beneath pname_root
+
+        See Also
+        --------
+        See open-ephys wiki pages
+        """
+        self.isBinary = True
+        import os
+        import re
+        APdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].0')
+        LFPdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].1')
+        sync_message_file = None
+        self.recording_start_time = None
+
+        if pname_root is None:
+            pname_root = self.pname_root
+
+        for d, c, f in os.walk(pname_root):
+            for ff in f:
+                if '.' not in c:  # ignore hidden directories
+                    if 'data_array.npy' in ff:
+                        self.path2PosData = os.path.join(d)
+                    if 'continuous.dat' in ff:
+                        if APdata_match.search(d):
+                            self.path2APdata = os.path.join(d)
+                        if LFPdata_match.search(d):
+                            self.path2LFPdata = os.path.join(d)
+                    if 'sync_messages.txt' in ff:
+                        sync_message_file = os.path.join(
+                            d, 'sync_messages.txt')
+
+        if self.path2PosData is not None:
+            pos_data = np.load(os.path.join(
+                self.path2PosData, 'data_array.npy'))
+            P = PosCalcsGeneric(
+                pos_data[:, 0], pos_data[:, 1], cm=True, ppm=self.ppm)
+            xy, hdir = P.postprocesspos()
+            self.xy = xy
+            self.dir = hdir
+            self.speed = P.speed
+            pos_ts = np.load(os.path.join(self.path2PosData, 'timestamps.npy'))
+            self.xyTS = pos_ts / 30.0 / 1000.0
+            self.pos_sample_rate = 30
+
+        ap_sample_rate = getattr(self, 'ap_sample_rate', 30000)
+        n_channels = getattr(self, 'n_channels', 384)
+        trial_length = 0  # make sure a trial_length has a value
         if self.path2APdata is not None:
-            super().loadKilo(pname=self.path2APdata)
+            if fileExists(self.path2APdata, 'continuous.dat'):
+                trial_length = self.__calcTrialLengthFromBinarySize__(
+                    os.path.join(self.path2APdata, 'continuous.dat'),
+                    n_channels, ap_sample_rate)
+        # Load the start time from the sync_messages file
+        if sync_message_file is not None:
+            with open(sync_message_file, 'r') as f:
+                sync_strs = f.read()
+            sync_lines = sync_strs.split('\n')
+            for line in sync_lines:
+                if 'subProcessor: 0' in line:
+                    idx = line.find('start time: ')
+                    start_val = line[idx + len('start time: '):-1]
+                    tmp = start_val.split('@')
+                    recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
+            self.xyTS = self.xyTS - recording_start_time
         else:
-            super().loadKilo(**kwargs)
+            recording_start_time = self.xyTS[0]
+        self.recording_start_time = recording_start_time
+        self.ts = np.arange(
+            recording_start_time, trial_length+recording_start_time,
+            1.0 / ap_sample_rate)
+
 
 class OpenEphysNWB(OpenEphysBase):
     """
@@ -779,7 +701,7 @@ class OpenEphysNWB(OpenEphysBase):
             self.ts = np.array(
                 self.nwbData['acquisition']['timeseries']
                 [self.recording_name]['continuous'][fpgaNode]['timestamps'])
-            if (loadraw is True):
+            if loadraw is True:
                 print("Attempting to reference ALL the raw data...")
                 self.rawData = self.nwbData['acquisition']['time\
                     series'][self.recording_name]['\
@@ -820,30 +742,6 @@ class OpenEphysNWB(OpenEphysBase):
                 self.spikeData = electrode_dict
         except Exception:
             self.ts = self.xy
-
-    def save_ttl(self, out_fname):
-        """
-        Saves the ttl data to text file out_fname
-        """
-        if (len(self.ttl_data) > 0) and (len(self.ttl_timestamps) > 0):
-            data = np.array([self.ttl_data, self.ttl_timestamps])
-            if data.shape[0] == 2:
-                data = data.T
-            np.savetxt(out_fname, data, delimiter='\t')
-
-    def exportPos(self):
-        xy = self.plotPos(show=False)
-        out = np.hstack([xy.T, self.xyTS[:, np.newaxis]])
-        np.savetxt(
-            'position.txt', out, delimiter=',',
-            fmt=['%3.3i', '%3.3i', '%3.3f'])
-
-    def loadKilo(self, **kwargs):
-        super().loadKilo(pname=self.pname_root)
-
-    def plotPos(self, jumpmax=None, show=True):
-        xy = super().plotPos(jumpmax, show)
-        return xy
 
 
 class OpenEphysBinary(OpenEphysBase):
@@ -904,7 +802,7 @@ class OpenEphysBinary(OpenEphysBase):
         if self.path2PosData is not None:
             pos_data = np.load(os.path.join(
                 self.path2PosData, 'data_array.npy'))
-            self.xy = pos_data[:, 0:2]
+            self.xy = pos_data[:, 0:2].T
             pos_ts = np.load(os.path.join(
                 self.path2PosData, 'timestamps.npy'))
             self.xyTS = pos_ts / 30.0 / 1000.0
@@ -915,7 +813,7 @@ class OpenEphysBinary(OpenEphysBase):
                 os.path.join(self.path2APdata, 'continuous.dat'),
                 n_channels, ap_sample_rate)
 
-        if loadraw:
+        if loadraw is True:
             if fileExists(self.path2APdata, 'continuous.dat'):
                 status = os.stat(os.path.join(
                     self.path2APdata, 'continuous.dat'))
@@ -944,196 +842,3 @@ class OpenEphysBinary(OpenEphysBase):
         self.ts = np.arange(
             recording_start_time, trial_length+recording_start_time,
             1.0 / ap_sample_rate)
-
-    def __calcTrialLengthFromBinarySize__(self, path2file: str, n_channels=384,
-                                          sample_rate=30000):
-        """
-        Returns the time taken to run the trial (in seconds) based on the size
-        of the binary file on disk
-        """
-        return super().__calcTrialLengthFromBinarySize__(
-            path2file, n_channels, sample_rate)
-
-    def save_ttl(self, out_fname):
-        """
-        Saves the ttl data to text file out_fname
-        """
-        if (len(self.ttl_data) > 0) and (len(self.ttl_timestamps) > 0):
-            data = np.array([self.ttl_data, self.ttl_timestamps])
-        if data.shape[0] == 2:
-            data = data.T
-        np.savetxt(out_fname, data, delimiter='\t')
-
-    def exportPos(self):
-        xy = self.plotPos(show=False)
-        out = np.hstack([xy.T, self.xyTS[:, np.newaxis]])
-        np.savetxt(
-            'position.txt', out, delimiter=',',
-            fmt=['%3.3i', '%3.3i', '%3.3f'])
-
-    def loadKilo(self, **kwargs):
-        super().loadKilo(**kwargs)
-
-
-class SpkTimeCorrelogram(object):
-    def __init__(self, clusters, spk_times, spk_clusters):
-        from ephysiopy.dacq2py import spikecalcs
-        self.SpkCalcs = spikecalcs.SpikeCalcs()
-        self.clusters = clusters
-        self.spk_times = spk_times
-        self.spk_clusters = spk_clusters
-
-    def plotAll(self):
-        fig = plt.figure(figsize=(10, 20))
-        nrows = np.ceil(np.sqrt(len(self.clusters))).astype(int)
-        for i, cluster in enumerate(self.clusters):
-            cluster_idx = np.nonzero(self.spk_clusters == cluster)[0]
-            cluster_ts = np.ravel(self.spk_times[cluster_idx])
-            # ts into milliseconds ie OE sample rate / 1000
-            y = self.SpkCalcs.xcorr(cluster_ts.T / 30.)
-            ax = fig.add_subplot(nrows, nrows, i+1)
-            ax.hist(
-                y[y != 0], bins=201, range=[-500, 500], color='k',
-                histtype='stepfilled')
-            ax.set_xlabel('Time(ms)')
-            ax.set_xlim(-500, 500)
-            ax.set_xticks((-500, 0, 500))
-            ax.set_xticklabels((str(-500), '0', str(500)))
-            ax.tick_params(
-                axis='both', which='both', left=False, right=False,
-                bottom=False, top=False)
-            ax.set_yticklabels('')
-            ax.spines['right'].set_visible(False)
-            ax.spines['top'].set_visible(False)
-            ax.spines['left'].set_visible(False)
-            ax.xaxis.set_ticks_position('bottom')
-            ax.set_title(cluster, fontweight='bold', size=8, pad=1)
-        plt.show()
-
-    def __iter__(self):
-        # NOTE:
-        # Will plot clusters in self.clusters in separate figure windows
-        for cluster in self.clusters:
-            cluster_idx = np.nonzero(self.spk_clusters == cluster)[0]
-            cluster_ts = np.ravel(self.spk_times[cluster_idx])
-            # ts into milliseconds ie OE sample rate / 1000
-            y = self.SpkCalcs.xcorr(cluster_ts.T / 30.)
-            plt.figure()
-            ax = plt.gca()
-            ax.hist(
-                y[y != 0], bins=201, range=[-500, 500],
-                color='k', histtype='stepfilled')
-            ax.set_xlabel('Time(ms)')
-            ax.set_xlim(-500, 500)
-            ax.set_xticks((-500, 0, 500))
-            ax.set_xticklabels((str(-500), '0', str(500)))
-            ax.tick_params(
-                axis='both', which='both', left='off', right='off',
-                bottom='off', top='off')
-            ax.set_yticklabels('')
-            ax.spines['right'].set_visible(False)
-            ax.spines['top'].set_visible(False)
-            ax.spines['left'].set_visible(False)
-            ax.xaxis.set_ticks_position('bottom')
-            ax.set_title('Cluster ' + str(cluster))
-            plt.show()
-            yield cluster
-
-
-class SpkWaveform(object):
-    """
-
-    """
-    def __init__(
-            self, clusters, spk_times, spk_clusters, amplitudes, raw_data):
-        """
-        spk_times in samples
-        """
-        self.clusters = clusters
-        self.spk_times = spk_times
-        self.spk_clusters = spk_clusters
-        self.amplitudes = amplitudes
-        self.raw_data = raw_data
-
-    def __iter__(self):
-        # NOTE:
-        # Will plot in a separate figure window for each cluster
-        # in self.clusters
-        # get 500us pre-spike and 1000us post-spike interval
-        # calculate outside for loop
-        pre = int(0.5 * 3e4 / 1000)
-        post = int(1.0 * 3e4 / 1000)
-        nsamples = np.shape(self.raw_data)[0]
-        nchannels = np.shape(self.raw_data)[1]
-        times = np.linspace(
-            -pre, post, pre+post, endpoint=False) / (3e4 / 1000)
-        times = np.tile(np.expand_dims(times, 1), nchannels)
-        for cluster in self.clusters:
-            cluster_idx = np.nonzero(self.spk_clusters == cluster)[0]
-            nspikes = len(cluster_idx)
-            data_idx = self.spk_times[cluster_idx]
-            data_from_idx = (data_idx-pre).astype(int)
-            data_to_idx = (data_idx+post).astype(int)
-            raw_waves = np.zeros(
-                [nspikes, pre+post, nchannels], dtype=np.int16)
-
-            for i, idx in enumerate(zip(data_from_idx, data_to_idx)):
-                if (idx[0][0] < 0):
-                    raw_waves[i, 0:idx[1][0], :] = self.raw_data[
-                        0:idx[1][0], :]
-                elif (idx[1][0] > nsamples):
-                    raw_waves[i, (pre+post)-((pre+post)-(idx[1][0]-nsamples)):(
-                        pre+post), :] = self.raw_data[idx[0][0]:nsamples, :]
-                else:
-                    raw_waves[i, :, :] = self.raw_data[idx[0][0]:idx[1][0]]
-            mean_filt_waves = np.mean(raw_waves, 0)
-            plt.figure()
-            ax = plt.gca()
-            ax.plot(times, mean_filt_waves[:, :])
-            ax.set_title('Cluster ' + str(cluster))
-            plt.show()
-            yield cluster
-
-    def plotAll(self):
-        # NOTE:
-        # Will plot all clusters in self.clusters in a single figure window
-        fig = plt.figure(figsize=(10, 20))
-        nrows = np.ceil(np.sqrt(len(self.clusters))).astype(int)
-        pre = int(0.5 * 3e4 / 1000)
-        post = int(1.0 * 3e4 / 1000)
-        nsamples = np.shape(self.raw_data)[0]
-        nchannels = np.shape(self.raw_data)[1]
-        times = np.linspace(
-            -pre, post, pre+post, endpoint=False) / (3e4 / 1000)
-        for i, cluster in enumerate(self.clusters):
-            cluster_idx = np.nonzero(self.spk_clusters == cluster)[0]
-            nspikes = len(cluster_idx)
-            data_idx = self.spk_times[cluster_idx]
-            data_from_idx = (data_idx-pre).astype(int)
-            data_to_idx = (data_idx+post).astype(int)
-            raw_waves = np.zeros(
-                [nspikes, pre+post, nchannels], dtype=np.int16)
-
-            for i, idx in enumerate(zip(data_from_idx, data_to_idx)):
-                if (idx[0][0] < 0):
-                    raw_waves[i, 0:idx[1][0], :] = self.raw_data[
-                        0:idx[1][0], :]
-                elif (idx[1][0] > nsamples):
-                    raw_waves[i, (pre+post)-((pre+post)-(idx[1][0]-nsamples)):(
-                        pre+post), :] = self.raw_data[idx[0][0]:nsamples, :]
-                else:
-                    raw_waves[i, :, :] = self.raw_data[idx[0][0]:idx[1][0]]
-
-            mean_filt_waves = np.mean(raw_waves, 0)
-            ax = fig.add_subplot(nrows, nrows, i+1)
-            ax.plot(times, mean_filt_waves[:, :])
-            ax.set_title(cluster, fontweight='bold', size=8)
-        plt.show()
-
-    def butterFilter(self, sig, low, high, order=5):
-        nyqlim = 3e4 / 2
-        lowcut = low / nyqlim
-        highcut = high / nyqlim
-        from scipy import signal as signal
-        b, a = signal.butter(order, [lowcut, highcut], btype='band')
-        return signal.filtfilt(b, a, sig)

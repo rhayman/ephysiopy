@@ -2,7 +2,11 @@ import matplotlib.pylab as plt
 import numpy as np
 import functools
 from ephysiopy.common.binning import RateMap
+from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 from ephysiopy.dacq2py import tintcolours as tcols
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+import matplotlib.transforms as transforms
+from matplotlib.patches import Rectangle
 
 
 # Decorators
@@ -54,9 +58,10 @@ class FigureMaker(object):
         if not self.data_loaded:
             self.initialise()
         pos_sample_rate = getattr(self, 'pos_sample_rate')
-        spk_times_in_pos_samples = spk_times * pos_sample_rate
+        spk_times_in_pos_samples = np.array(
+            spk_times * pos_sample_rate, dtype=int)
         spk_weights = np.bincount(
-            spk_times_in_pos_samples.astype(int), minlength=self.npos)
+            spk_times_in_pos_samples, minlength=self.npos)
         rmap = self.RateMapMaker.getMap(spk_weights)
         ratemap = np.ma.MaskedArray(rmap[0], np.isnan(rmap[0]), copy=True)
         x, y = np.meshgrid(rmap[1][1][0:-1], rmap[1][0][0:-1][::-1])
@@ -96,9 +101,10 @@ class FigureMaker(object):
         if not self.data_loaded:
             self.initialise()
         pos_sample_rate = getattr(self, 'pos_sample_rate')
-        spk_times_in_pos_samples = spk_times * pos_sample_rate
+        spk_times_in_pos_samples = np.array(
+            spk_times * pos_sample_rate, dtype=int)
         spk_weights = np.bincount(
-            spk_times_in_pos_samples.astype(int), minlength=self.npos)
+            spk_times_in_pos_samples, minlength=self.npos)
         rmap = self.RateMapMaker.getMap(spk_weights)
         from ephysiopy.common import gridcell
         S = gridcell.SAC()
@@ -121,9 +127,10 @@ class FigureMaker(object):
         if not self.data_loaded:
             self.initialise()
         pos_sample_rate = getattr(self, 'pos_sample_rate')
-        spk_times_in_pos_samples = spk_times * pos_sample_rate
+        spk_times_in_pos_samples = np.array(
+            spk_times * pos_sample_rate, dtype=int)
         spk_weights = np.bincount(
-            spk_times_in_pos_samples.astype(int), minlength=self.npos)
+            spk_times_in_pos_samples, minlength=self.npos)
         rmap = self.RateMapMaker.getMap(spk_weights, 'dir', 'rate')
         if ax is None:
             fig = plt.figure()
@@ -161,7 +168,8 @@ class FigureMaker(object):
         if not self.data_loaded:
             self.initialise()
         pos_sample_rate = getattr(self, 'pos_sample_rate')
-        spk_times_in_pos_samples = spk_times * pos_sample_rate
+        spk_times_in_pos_samples = np.array(
+            spk_times * pos_sample_rate, dtype=int)
 
         speed = np.ravel(self.speed)
         if np.nanmax(speed) < maxSpeed:
@@ -206,12 +214,12 @@ class FigureMaker(object):
             self.initialise()
         pos_sample_rate = getattr(self, 'pos_sample_rate')
         spk_times_in_pos_samples = spk_times * pos_sample_rate
-        idx = spk_times_in_pos_samples
+        idx = np.array(spk_times_in_pos_samples, dtype=int)
         w = np.bincount(idx, minlength=self.speed.shape[0])
         dir_bins = np.arange(0, 360, 6)
         spd_bins = np.arange(0, 30, 1)
         h = np.histogram2d(
-            self.hdir, self.speed, [dir_bins, spd_bins], weights=w)
+            self.dir, self.speed, [dir_bins, spd_bins], weights=w)
         b = self.RateMapMaker
         im = b.blurImage(h[0], 5, ftype='gaussian')
         im = np.ma.MaskedArray(im)
@@ -231,7 +239,6 @@ class FigureMaker(object):
             band_max_power, freq_at_band_max_power,
             max_freq=50, theta_range=[6, 12],
             ax=None, **kwargs):
-            
         # downsample frequencies and power
         freqs = freqs[0::50]
         power = power[0::50]
@@ -258,20 +265,41 @@ class FigureMaker(object):
         ax.add_patch(r)
         return ax
 
-    # ----------------------------------------------------------
-    # ---------------- TO BE IMPLEMENTED -----------------------
-    # ----------------------------------------------------------
-    '''
-    def _plotRaster(
-            self, tetrode, cluster, dt=(-50, 100), prc_max=0.5,
+    def makeXCorr(self, spk_times: np.array, ax=None, **kwargs):
+        # spk_times in seconds provided in seconds but convert to
+        # ms for a more display friendly scale
+        spk_times = spk_times * 1000.
+        S = SpikeCalcsGeneric(spk_times)
+        y = S.xcorr(spk_times)
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+        ax.hist(
+                y[y != 0], bins=201, range=[-500, 500],
+                color='k', histtype='stepfilled')
+        ax.set_xlim(-500, 500)
+        ax.set_xticks((-500, 0, 500))
+        ax.set_xticklabels('')
+        ax.tick_params(
+            axis='both', which='both', left=False, right=False,
+            bottom=False, top=False)
+        ax.set_yticklabels('')
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        ax.spines['left'].set_visible(False)
+        ax.xaxis.set_ticks_position('bottom')
+        return ax
+
+    def makeRaster(
+            self, spk_times: np.array, dt=(-50, 100), prc_max=0.5,
             ax=None, ms_per_bin=1, histtype='count', **kwargs):
         """
         Plots a raster plot for a specified tetrode/ cluster
 
         Parameters
         ----------
-        tetrode : int
-        cluster : int
+        spk_times: np.array
+            The spike times in seconds
         dt : 2-tuple
             the window of time in ms to examine zeroed on the event of interest
             i.e. the first value will probably be negative as in the  example
@@ -287,14 +315,12 @@ class FigureMaker(object):
             the raster plot will consist of either the counts of spikes in
             ms_per_bin or the mean rate in ms_per_bin
         """
-
-        if 'x1' in kwargs.keys():
-            x1 = kwargs.pop('x1')
-        else:
-            x1 = self.TETRODE[tetrode].getClustTS(cluster)
-            x1 = x1 / int(self.TETRODE[tetrode].timebase / 1000.)  # in ms
+        if getattr(self, 'ttl_timestamps', None) is None:
+            print("Need some event timestamps")
+            return
+        x1 = spk_times * 1000.  # get into ms
         x1.sort()
-        on_good = self.STM.getTS()
+        on_good = getattr(self, 'ttl_timestamps')
         dt = np.array(dt)
         irange = on_good[:, np.newaxis] + dt[np.newaxis, :]
         dts = np.searchsorted(x1, irange)
@@ -306,7 +332,6 @@ class FigureMaker(object):
             y.extend(np.repeat(i, len(tmp)))
         if ax is None:
             fig = plt.figure(figsize=(4.0, 7.0))
-            self._set_figure_title(fig, tetrode, cluster)
             axScatter = fig.add_subplot(111)
         else:
             axScatter = ax
@@ -412,7 +437,7 @@ class FigureMaker(object):
             return np.histogram(
                 x, bins=np.arange(
                     dt[0], dt[1]+1, 1), range=dt)[0]
-
+    '''
     def plotDirFilteredRmaps(self, tetrode, cluster, maptype='rmap', **kwargs):
         """
         Plots out directionally filtered ratemaps for the tetrode/ cluster
@@ -506,4 +531,4 @@ class FigureMaker(object):
             ax4.set_title('')
             ax4.set_xticklabels('')
         return dir_rates
-    '''
+        '''
