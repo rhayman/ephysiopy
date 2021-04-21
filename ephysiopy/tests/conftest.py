@@ -1,20 +1,28 @@
 import pytest
 import numpy as np
 from pathlib import Path
+import os
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 
 
-@pytest.fixture()
+@pytest.fixture
 def basic_xy():
     '''
     Returns a random 2D walk as x, y tuple
     '''
-    pname = Path(__file__).parents[1] / 'data'
-    xy_test_data_path = Path(pname, "random_walk_xy.npy")
+    path = Path(__file__).parents[0] / 'data'
+    xy_test_data_path = Path(path, "random_walk_xy.npy")
     xy = np.load(xy_test_data_path)
     x = xy[0]
     y = xy[1]
     return x, y
+
+
+@pytest.fixture
+def path_to_axona_data():
+    path = Path(__file__).parents[0] / 'data'
+    axona_data_path = Path(path, "M845_140911t1rh.set")
+    return os.path.join(axona_data_path)
 
 
 @pytest.fixture

@@ -6,8 +6,6 @@ import matplotlib.pylab as plt
 from ephysiopy.dacq2py import axonaIO
 from ephysiopy.dacq2py.tetrode_dict import TetrodeDict
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
-# from ephysiopy.common.eegcalcs import EEGCalcs
-from ephysiopy.dacq2py.cluster import Kluster
 from collections import OrderedDict
 from ephysiopy.visualise.plotting import FigureMaker
 
@@ -229,41 +227,65 @@ class AxonaTrial(FigureMaker):
         ts = None
         if tetrode is not None:
             ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
+        plot = True
+        if 'plot' in kwargs:
+            plot = kwargs.pop('plot')
         ax = self.makeSpikePathPlot(ts, **kwargs)
-        plt.show()
+        if plot:
+            plt.show()
         return ax
 
     def plotRateMap(self, tetrode, cluster, **kwargs):
         ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
         ax = self.makeRateMap(ts)
-        plt.show()
+        plot = True
+        if 'plot' in kwargs:
+            plot = kwargs.pop('plot')
+        if plot:
+            plt.show()
         return ax
 
     def plotHDMap(self, tetrode, cluster, **kwargs):
         ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
         ax = self.makeHDPlot(ts, ax=None, **kwargs)
-        plt.show()
+        plot = True
+        if 'plot' in kwargs:
+            plot = kwargs.pop('plot')
+        if plot:
+            plt.show()
         return ax
 
     def plotSAC(self, tetrode, cluster, **kwargs):
         ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
         ax = self.makeSAC(ts, ax=None, **kwargs)
-        plt.show()
+        plot = True
+        if 'plot' in kwargs:
+            plot = kwargs.pop('plot')
+        if plot:
+            plt.show()
         return ax
 
     def plotSpeedVsRate(self, tetrode, cluster, **kwargs):
         ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
         ax = self.makeSpeedVsHeadDirectionPlot(ts, ax=None, **kwargs)
-        plt.show()
+        plot = True
+        if 'plot' in kwargs:
+            plot = kwargs.pop('plot')
+        if plot:
+            plt.show()
         return ax
 
     def plotSpeedVsHeadDirection(self, tetrode, cluster, **kwargs):
         ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
         ax = self.makeSpeedVsHeadDirectionPlot(ts, ax=None, **kwargs)
-        plt.show()
+        plot = True
+        if 'plot' in kwargs:
+            plot = kwargs.pop('plot')
+        if plot:
+            plt.show()
         return ax
 
-    def plotEEGPower(self, eeg_type='eeg'):
+    def plotEEGPower(self, eeg_type='eeg', **kwargs):
         from ephysiopy.common.ephys_generic import EEGCalcsGeneric
         if 'eeg' in eeg_type:
             E = EEGCalcsGeneric(self.EEG.sig, self.EEG.sample_rate)
@@ -274,15 +296,24 @@ class AxonaTrial(FigureMaker):
             power_res[0], power_res[1], power_res[2],
             power_res[3], power_res[4],
         )
-        plt.show()
+        plot = True
+        if 'plot' in kwargs:
+            plot = kwargs.pop('plot')
+        if plot:
+            plt.show()
         return ax
 
     def plotXCorr(self, tetrode, cluster, **kwargs):
         ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
         ax = self.makeXCorr(ts)
-        plt.show()
+        plot = True
+        if 'plot' in kwargs:
+            plot = kwargs.pop('plot')
+        if plot:
+            plt.show()
         return ax
 
+    '''
     def klustakwik(self, d):
         """
         Calls two methods below (kluster and getPC) to run klustakwik on
@@ -296,6 +327,8 @@ class AxonaTrial(FigureMaker):
             and the values are the features used to do the clustering for
             that tetrode (i.e. 'PC1', 'PC2', 'Amp' (amplitude) etc
         """
+        from ephysiopy.common.spikecalcs.SpikeCalcsAxona import getParam
+        from ephysiopy.dacq2py.cluster import Kluster
 
         legal_values = ['PC1', 'PC2', 'PC3', 'PC4', 'Amp',
                         'Vt', 'P', 'T', 'tP', 'tT', 'En', 'Ar']
@@ -316,7 +349,7 @@ class AxonaTrial(FigureMaker):
                 for pc in pcs:
                     max_pc.append(int(pc[2]))
                 num_pcs = np.max(max_pc)  # get max number of prin comps
-                princomp = self.TETRODE[i_tet].getParam(
+                princomp = getParam(
                     waves, param='PCA', fet=num_pcs)
                 # Rearrange the output from PCA calc to match the
                 # number of requested principal components
@@ -329,13 +362,14 @@ class AxonaTrial(FigureMaker):
             for value in d[i_tet]:
                 if 'PC' not in value:
                     out.append(
-                        self.TETRODE[i_tet].getParam(waves, param=value))
+                        getParam(waves, param=value))
             if princomp is not None:
                 out.append(princomp)
             out = np.hstack(out)
 
-            c = Kluster(self.filename_root, i_tet, out)
+            c = Kluster(self.common_name, i_tet, out)
             c.make_fet()
             mask = c.get_mask()
             c.make_fmask(mask)
             c.kluster()
+    '''

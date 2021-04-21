@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
 from ephysiopy.common.ephys_generic import EEGCalcsGeneric
-from ephysiopy.common.ephys_generic import SpikeCalcsGeneric
-from ephysiopy.common.ephys_generic import SpikeCalcsTetrode
+from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
+from ephysiopy.common.spikecalcs import SpikeCalcsTetrode
 from ephysiopy.common.ephys_generic import MapCalcsGeneric
 from ephysiopy.common.ephys_generic import FieldCalcs
 
@@ -28,8 +28,7 @@ def basic_MapCalcs(basic_PosCalcs, basic_SpikeCalcs):
 
 @pytest.fixture
 def basic_EEGCalcs(basic_eeg):
-    sig = basic_eeg[0]
-    fs = basic_eeg[1]
+    sig, fs = basic_eeg
     return EEGCalcsGeneric(sig, fs)
 
 
@@ -89,6 +88,27 @@ def test_calcSpeed(basic_PosCalcs, basic_xy):
     assert(xy.shape[1] == speed.shape[0])
 
 
+def test_filter_pos(basic_PosCalcs):
+    basic_PosCalcs.postprocesspos({})
+    x_min = np.min(basic_PosCalcs.xy[0, :])
+    y_min = np.min(basic_PosCalcs.xy[1, :])
+    x_max = np.max(basic_PosCalcs.xy[0, :])
+    y_max = np.max(basic_PosCalcs.xy[1, :])
+    pos_filter = {'dir': 'w',
+                  'dir1': 'e',
+                  'dir2': 'n',
+                  'dir3': 's',
+                  'speed': [1, 10],
+                  'time': [0, 3],
+                  'xrange': [x_min+10, x_max-10],
+                  'yrange': [y_min+10, y_max-10]}
+    this_filt = {}
+    for k in pos_filter.keys():
+        this_filt[k] = pos_filter[k]
+        val = basic_PosCalcs.filterPos(this_filt)
+        assert(isinstance(val, np.ndarray))
+
+
 # postprocesspos calls the functions in the above 4 tests
 def test_postprocesspos(basic_PosCalcs):
     xy, hdir = basic_PosCalcs.postprocesspos({})
@@ -124,21 +144,10 @@ def test_nextpow2(basic_EEGCalcs):
     assert(isinstance(val, float))
 
 
-@pytest.mark.mpl_image_compare
-def test_plot_power_spectrum(basic_EEGCalcs):
-    fig = basic_EEGCalcs.plotPowerSpectrum()
-    return fig
-
-
-@pytest.mark.mpl_image_compare
-def test_plot_event_eef(basic_EEGCalcs):
-    # Need to supply the fcn to be tested with some
-    # timestamps in seconds for when 'events' occurred
-    # The artificial eeg created and a member of basic_EEGCalcs
-    # is sampled at 250Hz and 1e5 samples long (400 seconds)
-    event_ts = np.arange(20, 380, 10)
-    fig = basic_EEGCalcs.plotEventEEG(event_ts, sample_rate=250)
-    return fig
+def test_ifft_filter(basic_EEGCalcs):
+    val = basic_EEGCalcs.ifftFilter(
+        basic_EEGCalcs.sig, [50, 60], basic_EEGCalcs.fs)
+    assert(isinstance(val, np.ndarray))
 
 
 # -----------------------------------------------------------------------
@@ -169,21 +178,6 @@ def test_calculate_psth(basic_SpikeCalcs):
     x, y = basic_SpikeCalcs.calculatePSTH(1)
     assert(isinstance(x, list))
     assert(isinstance(y, list))
-
-
-@pytest.mark.mpl_image_compare
-def test_plot_psth(basic_SpikeCalcs):
-    basic_SpikeCalcs.stim_width = 0.01  # * \
-    basic_SpikeCalcs.spike_times = basic_SpikeCalcs.spike_times / \
-        basic_SpikeCalcs.sample_rate
-    fig = basic_SpikeCalcs.plotPSTH(1)
-    return fig
-
-
-@pytest.mark.mpl_image_compare
-def test_plot_all_xcorrs(basic_SpikeCalcs):
-    fig = basic_SpikeCalcs.plotAllXCorrs(1)
-    return fig
 
 
 def test_theta_mod_idx(basic_SpikeCalcs):
@@ -239,16 +233,6 @@ def test_plot_ifr_sp_corr(basic_SpikeCalcsTetrode, basic_xy):
 def test_interp_spike_pos_times(basic_MapCalcs):
     idx = basic_MapCalcs.__interpSpkPosTimes__()
     assert(isinstance(idx, np.ndarray))
-
-
-@pytest.mark.mpl_image_compare
-def test_plot_all(basic_MapCalcs):
-    M = basic_MapCalcs
-    # this should call all member plotting fcns of MapCalcsGeneric
-    M.plot_type = 'all'
-    M.good_clusters = [1]
-    fig = M.plotAll()
-    return fig
 
 
 def test_get_spatial_stats(basic_MapCalcs):
@@ -310,7 +294,7 @@ try:
         F = FieldCalcs()
         fp = F.get_field_props(basic_ratemap)
         assert(isinstance(fp, dict))
-    
+
     def test_calc_angs(basic_ratemap):
         F = FieldCalcs()
         fp = F.get_field_props(basic_ratemap)
@@ -373,3 +357,22 @@ def test_deform_SAC(basic_ratemap):
     F = FieldCalcs()
     deformed_SAC = F.deformSAC(basic_ratemap)
     assert(isinstance(deformed_SAC, np.ndarray))
+
+# -----------------------------------------------------------------------
+# ------------------------- Misc testing --------------------------------
+# -----------------------------------------------------------------------
+
+
+def test_tint_colours():
+    from ephysiopy.dacq2py import tintcolours
+    assert(isinstance(tintcolours.colours, list))
+
+
+def test_about():
+    from ephysiopy import __about__
+    assert(isinstance(__about__.__author__, str))
+
+
+def test_init():
+    import ephysiopy
+    assert(isinstance(ephysiopy.lfp_highcut, int))

@@ -209,6 +209,7 @@ class EEGCalcsGeneric(object):
         self.freqatbandmaxpower = freqatbandmaxpower
         return freqs, power, sm_power, bandmaxpower, freqatbandmaxpower
 
+    '''
     def plotEventEEG(
             self, event_ts, event_window=(-0.05, 0.1), stim_width=0.01,
             sample_rate=3e4):
@@ -271,6 +272,7 @@ class EEGCalcsGeneric(object):
         ax.set_ylabel(r'LFP ($\mu$V)')
         ax.set_xlabel('Time(s)')
         return fig
+    '''
 
     def ifftFilter(self, sig, freqs, fs=250):
         """
@@ -295,7 +297,7 @@ class EEGCalcsGeneric(object):
         # from scipy import signal
         nyq = fs / 2.0
         fftRes = np.fft.fft(sig)
-        f = nyq * np.linspace(0, 1, len(fftRes)/2)
+        f = nyq * np.linspace(0, 1, int(len(fftRes)/2))
         f = np.concatenate([f, f - nyq])
 
         band = 0.0625
@@ -402,7 +404,13 @@ class PosCalcsGeneric(object):
         is modified throughout this method.
 
         """
-        xy = self.xy>
+        xy = self.xy
+        xy = np.ma.MaskedArray(xy, dtype=np.int32)
+        x_zero = xy[0, :] < 0
+        y_zero = xy[1, :] < 0
+        xy[:, np.logical_or(x_zero, y_zero)] = np.ma.masked
+
+        self.tracker_params = tracker_params
         if 'LeftBorder' in tracker_params:
             min_x = tracker_params['LeftBorder']
             xy[:, xy[0, :] <= min_x] = np.ma.masked
@@ -628,13 +636,9 @@ class PosCalcsGeneric(object):
             elif 'time' in key:
                 # takes the form of 'from' - 'to' times in SECONDS
                 # such that only pos's between these ranges are KEPT
-                filter_dict[key] = filter_dict[key] * self.sample_rate
-                if filter_dict[key].ndim == 1:
-                    bool_arr[idx, filter_dict[
-                        key][0]:filter_dict[key][1]] = False
-                else:
-                    for i in filter_dict[key]:
-                        bool_arr[idx, i[0]:i[1]] = False
+                for i in filter_dict[key]:
+                    bool_arr[
+                        idx, i*self.sample_rate:i*self.sample_rate] = False
                 bool_arr = ~bool_arr
             else:
                 print("Unrecognised key in dict")
@@ -822,7 +826,6 @@ class MapCalcsGeneric(object):
         gridness, scale, orientation, HDtuning, HDangle, \
             speedCorr, speedMod = [], [], [], [], [], [], []
         for _, cl in enumerate(cluster):
-            self.makeRateMap(cl, None)
             try:
                 pos_w = np.ones_like(self.pos_ts)
                 mapMaker = binning.RateMap(
@@ -886,7 +889,7 @@ class MapCalcsGeneric(object):
         speed_filt = np.ma.masked_where(speed_filt < minSpeed, speed_filt)
         speed_filt = np.ma.masked_where(speed_filt > maxSpeed, speed_filt)
         x1 = self.spk_pos_idx[self.spk_clusters == cluster]
-        from ephysiopy.common.ephys_generic import SpikeCalcsGeneric
+        from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
         S = SpikeCalcsGeneric(x1)
         spk_sm = S.smoothSpikePosCount(x1, self.pos_ts.shape[0], sigma, None)
         spk_sm = np.ma.MaskedArray(spk_sm, mask=np.ma.getmask(speed_filt))

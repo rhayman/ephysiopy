@@ -754,8 +754,6 @@ class EEG(IO):
             self.eeg = self.eeg[0:int(self.header['num_EGF_samples'])]
         else:
             self.eeg = self.eeg[0:int(self.header['num_EEG_samples'])]
-        if egf == 1:
-            self.eeg = self.eeg[:, 1]
         self.sample_rate = int(self.getHeaderVal(self.header, 'sample_rate'))
         set_header = self.getHeader(self.filename_root + '.set')
         eeg_ch = int(set_header['EEG_ch_1']) - 1
@@ -783,7 +781,7 @@ class EEG(IO):
         self.scaling = scaling
         self.gain = eeg_gain
         self.polarity = polarity
-        self.eeg = (self.eeg / denom) * scaling * polarity  # eeg in microvolts
+        self.sig = (self.eeg / denom) * scaling * polarity  # eeg in microvolts
         self.EEGphase = None
         # x1 / x2 are the lower and upper limits of the eeg filter
         self.x1 = 6

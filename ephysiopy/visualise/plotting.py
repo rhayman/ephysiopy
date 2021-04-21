@@ -80,7 +80,7 @@ class FigureMaker(object):
     def makeSpikePathPlot(self, spk_times: np.array = None, ax=None, **kwargs):
         if not self.data_loaded:
             self.initialise()
-        if 'mec' or 'c' not in kwargs.keys():
+        if 'mec' or 'c' not in kwargs:
             kwargs['c'] = tcols.colours[1]
             kwargs['mec'] = tcols.colours[1]
         if ax is None:
