@@ -236,7 +236,7 @@ class RateMap(object):
                     binned_pos = self.blurImage(
                         binned_pos, self.smooth_sz, ftype=self.smoothingType)
             return binned_pos, binned_pos_edges
-        
+
         binned_spk = self.__binData__(sample, self.binsize, spkWeights)[0]
         # binned_spk is returned as a tuple of the binned data and the bin
         # edges

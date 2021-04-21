@@ -181,7 +181,7 @@ class OpenEphysBase(FigureMaker):
         # format nspikes x 4 x 40
         self.spikeData = None
         self.accelerometerData = None
-        # OESettings.Settings instance
+        # This will become an instance of OESettings.Settings
         self.settings = None
         if ('jumpmax' in kwargs):
             self.jumpmax = kwargs['jumpmax']
@@ -348,6 +348,135 @@ class OpenEphysBase(FigureMaker):
         plt.show()
         return ax
 
+    def plotPSTH(self, **kwargs):
+        """Plots the peri-stimulus time histogram for all the 'good' clusters
+
+        Given some data has been recorded in the ttl channel, this method plots
+        the PSTH for each 'good' cluster and just keeps spitting out figure
+        windows
+        """
+        self.__loadSettings__()
+        self.settings.parseStimControl()
+        if self.kilodata is None:
+            self.loadKilo(**kwargs)
+        from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
+        # in seconds
+        spk_times = (self.kilodata.spk_times.T[0] / 3e4) + self.ts[0]
+        S = SpikeCalcsGeneric(spk_times)
+        # this is because some of the trials have two weird events
+        # logged at about 2-3 minutes in...
+        S.event_ts = self.ttl_timestamps[2::2]
+        S.spk_clusters = self.kilodata.spk_clusters
+        S.stim_width = 0.01  # in seconds
+        for x in self.kilodata.good_clusters:
+            print(next(S.plotPSTH(x)))
+
+    def plotEventEEG(self):
+        from ephysiopy.common.ephys_generic import EEGCalcsGeneric
+        if self.rawData is None:
+            print("Loading raw data...")
+            self.load(loadraw=True)
+        E = EEGCalcsGeneric(self.rawData[:, 0], 3e4)
+        # this is because some of the trials have two weird events
+        # logged at about 2-3 minutes in...
+        event_ts = self.ttl_timestamps[2::2]
+        E.plotEventEEG(event_ts)
+
+
+class OpenEphysNPX(OpenEphysBase):
+    """
+    The main class for dealing with data recorded using Neuropixels probes
+    under openephys.
+    """
+    def __init__(self, pname_root):
+        super().__init__(pname_root)
+        self.path2PosData = None
+        self.path2APdata = None
+        self.path2LFPdata = None
+
+    def load(
+            self, pname_root=None, experiment_name='experiment1',
+            recording_name='recording1', **kwargs):
+        """
+        Loads data recorded in the OE 'flat' binary format.
+
+        Parameters
+        ----------
+        pname_root : str
+            The top level directory, typically in form of YYYY-MM-DD_HH-MM-SS
+
+        recording_name : str
+            The directory immediately beneath pname_root
+
+        See Also
+        --------
+        See open-ephys wiki pages
+        """
+        self.isBinary = True
+        import os
+        import re
+        APdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].0')
+        LFPdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].1')
+        sync_message_file = None
+        self.recording_start_time = None
+
+        if pname_root is None:
+            pname_root = self.pname_root
+
+        for d, c, f in os.walk(pname_root):
+            for ff in f:
+                if '.' not in c:  # ignore hidden directories
+                    if 'data_array.npy' in ff:
+                        self.path2PosData = os.path.join(d)
+                    if 'continuous.dat' in ff:
+                        if APdata_match.search(d):
+                            self.path2APdata = os.path.join(d)
+                        if LFPdata_match.search(d):
+                            self.path2LFPdata = os.path.join(d)
+                    if 'sync_messages.txt' in ff:
+                        sync_message_file = os.path.join(
+                            d, 'sync_messages.txt')
+
+        if self.path2PosData is not None:
+            pos_data = np.load(os.path.join(
+                self.path2PosData, 'data_array.npy'))
+            P = PosCalcsGeneric(
+                pos_data[:, 0], pos_data[:, 1], cm=True, ppm=self.ppm)
+            xy, hdir = P.postprocesspos()
+            self.xy = xy
+            self.dir = hdir
+            self.speed = P.speed
+            pos_ts = np.load(os.path.join(self.path2PosData, 'timestamps.npy'))
+            self.xyTS = pos_ts / 30.0 / 1000.0
+            self.pos_sample_rate = 30
+
+        ap_sample_rate = getattr(self, 'ap_sample_rate', 30000)
+        n_channels = getattr(self, 'n_channels', 384)
+        trial_length = 0  # make sure a trial_length has a value
+        if self.path2APdata is not None:
+            if fileExists(self.path2APdata, 'continuous.dat'):
+                trial_length = self.__calcTrialLengthFromBinarySize__(
+                    os.path.join(self.path2APdata, 'continuous.dat'),
+                    n_channels, ap_sample_rate)
+        # Load the start time from the sync_messages file
+        if sync_message_file is not None:
+            with open(sync_message_file, 'r') as f:
+                sync_strs = f.read()
+            sync_lines = sync_strs.split('\n')
+            for line in sync_lines:
+                if 'subProcessor: 0' in line:
+                    idx = line.find('start time: ')
+                    start_val = line[idx + len('start time: '):-1]
+                    tmp = start_val.split('@')
+                    recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
+            self.xyTS = self.xyTS - recording_start_time
+        else:
+            recording_start_time = self.xyTS[0]
+        self.recording_start_time = recording_start_time
+        self.ts = np.arange(
+            recording_start_time, trial_length+recording_start_time,
+            1.0 / ap_sample_rate)
+
     def plotSpectrogramByDepth(
             self, nchannels=384, nseconds=100, maxFreq=125,
             **kwargs):
@@ -480,135 +609,6 @@ class OpenEphysBase(FigureMaker):
             saveas = kwargs['saveas']
             plt.savefig(saveas)
         plt.show()
-
-    def plotPSTH(self, **kwargs):
-        """Plots the peri-stimulus time histogram for all the 'good' clusters
-
-        Given some data has been recorded in the ttl channel, this method plots
-        the PSTH for each 'good' cluster and just keeps spitting out figure
-        windows
-        """
-        self.__loadSettings__()
-        self.settings.parseStimControl()
-        if self.kilodata is None:
-            self.loadKilo(**kwargs)
-        from ephysiopy.common.ephys_generic import SpikeCalcsGeneric
-        # in seconds
-        spk_times = (self.kilodata.spk_times.T[0] / 3e4) + self.ts[0]
-        S = SpikeCalcsGeneric(spk_times)
-        # this is because some of the trials have two weird events
-        # logged at about 2-3 minutes in...
-        S.event_ts = self.ttl_timestamps[2::2]
-        S.spk_clusters = self.kilodata.spk_clusters
-        S.stim_width = 0.01  # in seconds
-        for x in self.kilodata.good_clusters:
-            print(next(S.plotPSTH(x)))
-
-    def plotEventEEG(self):
-        from ephysiopy.common.ephys_generic import EEGCalcsGeneric
-        if self.rawData is None:
-            print("Loading raw data...")
-            self.load(loadraw=True)
-        E = EEGCalcsGeneric(self.rawData[:, 0], 3e4)
-        # this is because some of the trials have two weird events
-        # logged at about 2-3 minutes in...
-        event_ts = self.ttl_timestamps[2::2]
-        E.plotEventEEG(event_ts)
-
-
-class OpenEphysNPX(OpenEphysBase):
-    """
-    The main class for dealing with data recorded using Neuropixels probes
-    under openephys.
-    """
-    def __init__(self, pname_root):
-        super().__init__(pname_root)
-        self.path2PosData = None
-        self.path2APdata = None
-        self.path2LFPdata = None
-
-    def load(
-            self, pname_root=None, experiment_name='experiment1',
-            recording_name='recording1', **kwargs):
-        """
-        Loads data recorded in the OE 'flat' binary format.
-
-        Parameters
-        ----------
-        pname_root : str
-            The top level directory, typically in form of YYYY-MM-DD_HH-MM-SS
-
-        recording_name : str
-            The directory immediately beneath pname_root
-
-        See Also
-        --------
-        See open-ephys wiki pages
-        """
-        self.isBinary = True
-        import os
-        import re
-        APdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].0')
-        LFPdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].1')
-        sync_message_file = None
-        self.recording_start_time = None
-
-        if pname_root is None:
-            pname_root = self.pname_root
-
-        for d, c, f in os.walk(pname_root):
-            for ff in f:
-                if '.' not in c:  # ignore hidden directories
-                    if 'data_array.npy' in ff:
-                        self.path2PosData = os.path.join(d)
-                    if 'continuous.dat' in ff:
-                        if APdata_match.search(d):
-                            self.path2APdata = os.path.join(d)
-                        if LFPdata_match.search(d):
-                            self.path2LFPdata = os.path.join(d)
-                    if 'sync_messages.txt' in ff:
-                        sync_message_file = os.path.join(
-                            d, 'sync_messages.txt')
-
-        if self.path2PosData is not None:
-            pos_data = np.load(os.path.join(
-                self.path2PosData, 'data_array.npy'))
-            P = PosCalcsGeneric(
-                pos_data[:, 0], pos_data[:, 1], cm=True, ppm=self.ppm)
-            xy, hdir = P.postprocesspos()
-            self.xy = xy
-            self.dir = hdir
-            self.speed = P.speed
-            pos_ts = np.load(os.path.join(self.path2PosData, 'timestamps.npy'))
-            self.xyTS = pos_ts / 30.0 / 1000.0
-            self.pos_sample_rate = 30
-
-        ap_sample_rate = getattr(self, 'ap_sample_rate', 30000)
-        n_channels = getattr(self, 'n_channels', 384)
-        trial_length = 0  # make sure a trial_length has a value
-        if self.path2APdata is not None:
-            if fileExists(self.path2APdata, 'continuous.dat'):
-                trial_length = self.__calcTrialLengthFromBinarySize__(
-                    os.path.join(self.path2APdata, 'continuous.dat'),
-                    n_channels, ap_sample_rate)
-        # Load the start time from the sync_messages file
-        if sync_message_file is not None:
-            with open(sync_message_file, 'r') as f:
-                sync_strs = f.read()
-            sync_lines = sync_strs.split('\n')
-            for line in sync_lines:
-                if 'subProcessor: 0' in line:
-                    idx = line.find('start time: ')
-                    start_val = line[idx + len('start time: '):-1]
-                    tmp = start_val.split('@')
-                    recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
-            self.xyTS = self.xyTS - recording_start_time
-        else:
-            recording_start_time = self.xyTS[0]
-        self.recording_start_time = recording_start_time
-        self.ts = np.arange(
-            recording_start_time, trial_length+recording_start_time,
-            1.0 / ap_sample_rate)
 
 
 class OpenEphysNWB(OpenEphysBase):

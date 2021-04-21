@@ -24,11 +24,71 @@ class EventsGeneric(object):
     Idea is to present a generic interface to other classes/ functions
     regardless of how the events were created.
 
-    As a starting point lets base this on the dacq2py STM method/ member
-    variable
+    As a starting point lets base this on the dacq2py STM class which extends
+    dict() and dacq2py.axonaIO.IO().
+
+    For a fairly complete description of the nomenclature used for the
+    timulation / event parameters see the STM property of the
+    axonaIO.Stim() class
+
+    Once a .stm file is loaded the keys for STM are:
+
+    on: np.array
+        time in samples of the event
+    trial_date: str
+    trial_time: str
+    experimenter: str
+    comments: str
+    duration: str
+    sw_version: str
+    num_chans: str
+    timebase: str
+    bytes_per_timestamp: str
+    data_format: str
+    num_stm_samples: str
+    posSampRate: int
+    eegSampRate: int
+    egfSampRate: int
+    off: np.array
+    stim_params: OrderedDict()
+        This has keys:
+            Phase_1: str
+            Phase_2: str
+            Phase_3: str
+            etc
+                Each of these keys is also a dict with keys:
+                    startTime: None
+                    duration: int (in seconds)
+                    name: str
+                    pulseWidth: int (microseconds)
+                    pulseRatio: None
+                    pulsePause: int (microseconds)
+
+    The most important entries are the on and off numpy arrays and pulseWidth,
+    the last mostly for plotting purposes.
+
+    Let's emulate that dict generically so it can be co-opted for use with
+    the various types of open-ephys recordings using the Arduino-based plugin
+    (called StimControl - see https://github.com/rhayman/StimControl)
     """
     def __init__(self):
-        pass
+        level_one_keys = ['on', 'trial_date', 'trial_time', 'experimenter',
+                          'comments', 'duration', 'sw_version', 'num_chans',
+                          'timebase', 'bytes_per_timestamp', 'data_format',
+                          'num_stm_samples', 'posSampRate', 'eegSampRate',
+                          'egfSampRate', 'off', 'stim_params']
+        level_two_keys = ['Phase_1', 'Phase_2', 'Phase_3']
+        level_three_keys = ['startTime', 'duration', 'name', 'pulseWidth',
+                            'pulseRatio', 'pulsePause']
+
+        from collections import OrderedDict
+        self.__event_dict = dict.fromkeys(
+            level_one_keys)
+        self.__event_dict['stim_params'] = OrderedDict.fromkeys(
+            level_two_keys)
+        for k in self.__event_dict['stim_params'].keys():
+            self.__event_dict['stim_params'][k] = dict.fromkeys(
+                level_three_keys)
 
 
 class EEGCalcsGeneric(object):
@@ -342,13 +402,7 @@ class PosCalcsGeneric(object):
         is modified throughout this method.
 
         """
-        xy = self.xy
-        xy = np.ma.MaskedArray(xy, dtype=np.int32)
-        x_zero = xy[0, :] < 0
-        y_zero = xy[1, :] < 0
-        xy[:, np.logical_or(x_zero, y_zero)] = np.ma.masked
-
-        self.tracker_params = tracker_params
+        xy = self.xy>
         if 'LeftBorder' in tracker_params:
             min_x = tracker_params['LeftBorder']
             xy[:, xy[0, :] <= min_x] = np.ma.masked
@@ -509,8 +563,83 @@ class PosCalcsGeneric(object):
         Filters data based on key/ values in filter_dict
         Meant to replicate a similar function in dacq2py_util.Trial
         called filterPos
+
+        Parameters
+        ----------
+        filterDict : dict
+            Contains the type(s) of filter to be used and the
+            range of values to filter for. Values are pairs specifying the
+            range of values to filter for NB can take multiple filters and
+             iteratively apply them
+            legal values are:
+            * 'dir' - the directional range to filter for NB this can
+                contain 'w','e','s' or 'n'
+            * 'speed' - min and max speed to filter for
+            * 'xrange' - min and max values to filter x pos values
+            * 'yrange' - same as xrange but for y pos
+            * 'time' - the times to keep / remove specified in ms
+
+        Returns
+        --------
+        pos_index_to_keep : ndarray
+            The position indices that should be kept
         '''
-        pass
+        if filter_dict is None:
+            return
+        bool_arr = np.ones(shape=(len(filter_dict), self.npos), dtype=np.bool)
+        for idx, key in enumerate(filter_dict):
+            if isinstance(filter_dict[key], str):
+                if len(filter_dict[key]) == 1 and 'dir' in key:
+                    if 'w' in filter_dict[key]:
+                        filter_dict[key] = (135, 225)
+                    elif 'e' in filter_dict[key]:
+                        filter_dict[key] = (315, 45)
+                    elif 's' in filter_dict[key]:
+                        filter_dict[key] = (225, 315)
+                    elif 'n' in filter_dict[key]:
+                        filter_dict[key] = (45, 135)
+                else:
+                    raise ValueError("filter must contain a key / value pair")
+            if 'speed' in key:
+                if filter_dict[key][0] > filter_dict[key][1]:
+                    raise ValueError("First value must be less \
+                        than the second one")
+                else:
+                    bool_arr[idx, :] = np.logical_and(
+                        self.speed > filter_dict[key][0],
+                        self.speed < filter_dict[key][1])
+            elif 'dir' in key:
+                if filter_dict[key][0] < filter_dict[key][1]:
+                    bool_arr[idx, :] = np.logical_and(
+                        self.dir > filter_dict[key][0],
+                        self.dir < filter_dict[key][1])
+                else:
+                    bool_arr[idx, :] = np.logical_or(
+                        self.dir > filter_dict[key][0],
+                        self.dir < filter_dict[key][1])
+            elif 'xrange' in key:
+                bool_arr[idx, :] = np.logical_and(
+                    self.xy[0, :] > filter_dict[key][0],
+                    self.xy[0, :] < filter_dict[key][1])
+            elif 'yrange' in key:
+                bool_arr[idx, :] = np.logical_and(
+                    self.xy[1, :] > filter_dict[key][0],
+                    self.xy[1, :] < filter_dict[key][1])
+            elif 'time' in key:
+                # takes the form of 'from' - 'to' times in SECONDS
+                # such that only pos's between these ranges are KEPT
+                filter_dict[key] = filter_dict[key] * self.sample_rate
+                if filter_dict[key].ndim == 1:
+                    bool_arr[idx, filter_dict[
+                        key][0]:filter_dict[key][1]] = False
+                else:
+                    for i in filter_dict[key]:
+                        bool_arr[idx, i[0]:i[1]] = False
+                bool_arr = ~bool_arr
+            else:
+                print("Unrecognised key in dict")
+                pass
+        return np.expand_dims(np.any(~bool_arr, axis=0), 0)
 
 
 class MapCalcsGeneric(object):
