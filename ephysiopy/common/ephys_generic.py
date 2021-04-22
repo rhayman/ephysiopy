@@ -311,39 +311,6 @@ class EEGCalcsGeneric(object):
         fftRes[pollutedIdx] = np.mean(fftRes)
         return fftRes
 
-    def intrinsic_freq_autoCorr(
-            self, spkTimes=None, posMask=None, maxFreq=25,
-            acBinSize=0.002, acWindow=0.5, plot=True, posSampleFreq=30,
-            spkSampleFreq=30000, **kwargs):
-        """
-        SEE EPHYSIOPY.COMMON.RHYTHMICITY.COSINEDIRECTIONALTUNING
-
-        Calculates the intrinsic frequency autocorr of a cell
-
-        Parameters
-        ----------
-        spkTimes: np.array
-            times the cell fired in seconds
-        posMask: logical mask
-            Presumably a mask the same length as the number of pos samples
-            where Trues are position samples you want to examine that are
-            used to figure out which bit of the spike train to keep
-        maxFreq: int
-            maximum frequency to consider - used as input to power_spectrum()
-        acBinSize: float
-            The binsize of the autocorrelogram in seconds
-        acWindow: float
-            The window to look at in seconds
-
-        Notes
-        -----
-        Be careful that if you've called dacq2py.Tetrode.getSpkTS()
-        that they are divided by
-        96000 to get into seconds before using here
-        """
-
-        pass
-
 
 class PosCalcsGeneric(object):
     """
@@ -423,7 +390,7 @@ class PosCalcsGeneric(object):
         if 'BottomBorder' in tracker_params:
             max_y = tracker_params['BottomBorder']
             xy[:, xy[1, :] >= max_y] = np.ma.masked
-        if 'SampleRate' in tracker_params.keys():
+        if 'SampleRate' in tracker_params:
             self.sample_rate = int(tracker_params['SampleRate'])
         else:
             self.sample_rate = 30
@@ -483,7 +450,7 @@ class PosCalcsGeneric(object):
                     xy.data[i+1, missing_idx] = np.interp(
                         missing_idx, ok_idx, good_data1)
                 except ValueError:
-                    pass
+                    raise ValueError("interpnans failed")
         xy.mask = 0
         print("{} bad positions were interpolated over".format(
             len(missing_idx)))
@@ -553,7 +520,7 @@ class PosCalcsGeneric(object):
             The upsampled xy positional data
 
         Notes
-        -----
+        -----E = 
         This is mostly to get pos data recorded using PosTracker at 30Hz
         into Axona format 50Hz data
         """
@@ -641,8 +608,7 @@ class PosCalcsGeneric(object):
                         idx, i*self.sample_rate:i*self.sample_rate] = False
                 bool_arr = ~bool_arr
             else:
-                print("Unrecognised key in dict")
-                pass
+                raise KeyError("Unrecognised key")
         return np.expand_dims(np.any(~bool_arr, axis=0), 0)
 
 
@@ -680,16 +646,14 @@ class MapCalcsGeneric(object):
     """
     def __init__(
             self, xy, hdir, speed, pos_ts, spk_ts, plot_type='map', **kwargs):
-        if (np.argmin(np.shape(xy)) == 1):
-            xy = xy.T
+        assert(xy.shape[0] == 2)
         assert(xy.ndim == 2)
         assert(xy.shape[1] == hdir.shape[0] == speed.shape[0])
+        assert(spk_ts.ndim == 1)
         self.xy = xy
         self.hdir = hdir
         self.speed = speed
         self.pos_ts = pos_ts
-        if (spk_ts.ndim == 2):
-            spk_ts = np.ravel(spk_ts)
         self.spk_ts = spk_ts  # All spike times regardless of cluster id
         if type(plot_type) is str:
             self.plot_type = [plot_type]
@@ -698,8 +662,7 @@ class MapCalcsGeneric(object):
         self.spk_pos_idx = self.__interpSpkPosTimes__()
         self.__good_clusters = None
         self.__spk_clusters = None
-        self.save_grid_output_location = None
-        if ('ppm' in kwargs):
+        if 'ppm' in kwargs:
             self.__ppm = kwargs['ppm']
         else:
             self.__ppm = 400
@@ -707,10 +670,7 @@ class MapCalcsGeneric(object):
             self.pos_sample_rate = kwargs['pos_sample_rate']
         else:
             self.pos_sample_rate = 30
-        if 'save_grid_summary_location' in kwargs:
-            self.save_grid_output_location = kwargs[
-                'save_grid_summary_location']
-
+        
     @property
     def good_clusters(self):
         return self.__good_clusters
@@ -825,8 +785,8 @@ class MapCalcsGeneric(object):
         from ephysiopy.common import gridcell
         gridness, scale, orientation, HDtuning, HDangle, \
             speedCorr, speedMod = [], [], [], [], [], [], []
-        for _, cl in enumerate(cluster):
-            try:
+        for cl in cluster:
+            if cl in self.spk_clusters:
                 pos_w = np.ones_like(self.pos_ts)
                 mapMaker = binning.RateMap(
                     self.xy, None, None, pos_w, ppm=self.ppm)
@@ -838,24 +798,15 @@ class MapCalcsGeneric(object):
                 nodwell = ~np.isfinite(rmap[0])
                 sac = S.autoCorr2D(rmap[0], nodwell)
                 m = S.getMeasures(sac)
-            except Exception:
-                m['gridness'] = np.nan
-            try:
                 r, th = self.getHDtuning(cl)
-            except Exception:
-                r = th = np.nan
-            try:
                 spC, spM = self.getSpeedTuning(cl)
-            except Exception:
-                spC = spM = np.nan
-
-            gridness.append(m['gridness'])
-            scale.append(m['scale'])
-            orientation.append(m['orientation'])
-            HDtuning.append(r)
-            HDangle.append(th)
-            speedCorr.append(spC)
-            speedMod.append(spM)
+                gridness.append(m['gridness'])
+                scale.append(m['scale'])
+                orientation.append(m['orientation'])
+                HDtuning.append(r)
+                HDangle.append(th)
+                speedCorr.append(spC)
+                speedMod.append(spM)
 
         d = {
             'id': cluster, 'gridness': gridness, 'scale': scale,
@@ -939,8 +890,6 @@ class FieldCalcs:
             x, y = np.mgrid[-n:n+1, int(0-ny):ny+1]
             g = np.exp(-(x**2/float(n) + y**2/float(ny)))
         g = g / g.sum()
-        if np.ndim(im) == 1:
-            g = g[n, :]
         improc = signal.convolve(im, g, mode='same')
         improc[nan_idx] = np.nan
         return improc
@@ -960,6 +909,8 @@ class FieldCalcs:
         g = np.exp(-(x**2/float(n) + y**2/float(ny)))
         g = g / g.sum()
         Ac = signal.convolve(Ac, g, mode='same')
+        # remove really small values
+        Ac[Ac < 1e-10] = 0
         peak_mask = feature.peak_local_max(
             Ac, min_distance=min_dist,
             exclude_border=False,
@@ -1184,11 +1135,6 @@ class FieldCalcs:
         labels, nFields = ndimage.label(A_thresh)
         # remove small objects
         min_size = int(minArea / binSize) - 1
-        if debug:
-            plt.figure()
-            plt.imshow(A_thresh)
-            ax = plt.gca()
-            ax.set_title('Before removing small objects')
         skimage.morphology.remove_small_objects(
             labels, min_size=min_size, connectivity=2, in_place=True)
         labels = skimage.segmentation.relabel_sequential(labels)[0]
@@ -1220,22 +1166,6 @@ class FieldCalcs:
                         fieldAngularCoverage[0, i-1] = subtended_angle
 
                 fieldsToKeep = np.logical_or(fieldsToKeep, labels == i)
-        if debug:
-            _, ax = plt.subplots(4, 1, figsize=(3, 9))
-            ax1 = ax[0]
-            ax2 = ax[1]
-            ax3 = ax[2]
-            ax4 = ax[3]
-            ax1.imshow(A)
-            ax2.imshow(labels)
-            ax3.imshow(A_thresh)
-            ax4.imshow(fieldsToKeep)
-            plt.show()
-            for i, f in enumerate(fieldAngularCoverage.ravel()):
-                print("angle subtended by field {0} = {1:.2f}".format(i+1, f))
-            for i, f in enumerate(fractionOfPixelsOnBorder.ravel()):
-                print("% pixels on border for \
-                    field {0} = {1:.2f}".format(i+1, f))
         fieldAngularCoverage = (fieldAngularCoverage / 360.)
         if np.sum(fieldsToKeep) == 0:
             return np.nan
@@ -1376,6 +1306,7 @@ class FieldCalcs:
         else:
             angs = None
 
+        '''
         if plot:
             if ax is None:
                 fig = plt.figure()
@@ -1396,6 +1327,7 @@ class FieldCalcs:
             ax.set_xticklabels('')
             ax.set_yticklabels('')
             ax.invert_yaxis()
+        '''
         props = {
             'Ac': Ac, 'Peak_rate': np.nanmax(A), 'Mean_rate': np.nanmean(A),
             'Field_size': np.mean(sub_field_size),
@@ -1520,7 +1452,8 @@ class FieldCalcs:
         normdPolar = polarPlot / float(np.nansum(polarPlot))
         nDirBins = polarPlot.shape[1]
         compCirc = np.ones_like(polarPlot) / float(nDirBins)
-        kldivergence = self.kldiv(np.arange(0, nDirBins), normdPolar, compCirc)
+        X = np.arange(0, nDirBins)
+        kldivergence = self.kldiv(np.atleast_2d(X), normdPolar, compCirc)
         return kldivergence
 
     def kldiv(self, X, pvect1, pvect2, variant=None):
@@ -1567,15 +1500,14 @@ class FieldCalcs:
         This function is taken from one on the Mathworks file exchange
         """
 
-        if not np.equal(np.unique(X), np.sort(X)).all():
+        if len(np.unique(X)) != len(np.sort(X)):
             warnings.warn(
                 'X contains duplicate values. Treated as distinct values.',
                 UserWarning)
         if not np.equal(
             np.shape(X), np.shape(pvect1)).all() or not np.equal(
                 np.shape(X), np.shape(pvect2)).all():
-            warnings.warn(
-                'All inputs must have the same dimension.', UserWarning)
+            raise ValueError("Inputs are not the same size")
         if (np.abs(
             np.sum(pvect1) - 1) > 0.00001) or (np.abs(
                 np.sum(pvect2) - 1) > 0.00001):

@@ -210,8 +210,6 @@ class SAC(object):
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-        else:
-            fig = plt.gcf()
         Am = A.copy()
         Am[~inDict['gridnessMaskAll']] = np.nan
         Am = np.ma.masked_invalid(np.atleast_2d(Am))

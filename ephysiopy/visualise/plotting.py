@@ -111,10 +111,6 @@ class FigureMaker(object):
         nodwell = ~np.isfinite(rmap[0])
         sac = S.autoCorr2D(rmap[0], nodwell)
         measures = S.getMeasures(sac)
-        if 'save_grid_output_location' in kwargs:
-            f = open(self.save_grid_output_location, 'w')
-            f.write(str(measures))
-            f.close()
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
@@ -148,8 +144,7 @@ class FigureMaker(object):
         if 'add_mrv' in kwargs:
             from ephysiopy.common import statscalcs
             S = statscalcs.StatsCalcs()
-            angles = self.hdir[
-                self.spk_times_in_pos_samples]
+            angles = self.dir[spk_times_in_pos_samples]
             r, th = S.mean_resultant_vector(np.deg2rad(angles))
             ax.plot([th, th], [0, r*np.max(rmap[0])], 'r')
         ax.set_thetagrids([0, 90, 180, 270])

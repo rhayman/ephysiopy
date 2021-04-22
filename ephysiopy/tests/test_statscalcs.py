@@ -8,6 +8,8 @@ def test_circ_r():
     S = StatsCalcs()
     r = S.circ_r(y)
     assert(isinstance(r, float))
+    r = S.circ_r(y, d=0.2)
+    assert(isinstance(r, float))
 
 
 def test_mean_resultant_vector():
@@ -44,9 +46,21 @@ def test_watsons_U2():
 
 
 def test_watsons_U2_n():
-    t = np.linspace(0, 2*np.pi, 100)
-    y = np.cos(t)
+    from numpy.random import default_rng
+    rng = default_rng()
+    # draw 100 samples from a von mises distribution
+    # with a mode of 0 and a dispersion of 0.1
+    # this should give a non-significant result for the
+    # Watson U2n test
+    y = np.rad2deg(rng.vonmises(0, 0.1, 100))
     S = StatsCalcs()
+    v = S.watsonsU2n(y)
+    assert(isinstance(v, float))
+    # draw 100 samples from a von mises distribution
+    # with a mode of 0 and a dispersion of 0.6
+    # this should give a significant result for the
+    # Watson U2n test
+    y = np.rad2deg(rng.vonmises(0, 0.6, 100))
     v = S.watsonsU2n(y)
     assert(isinstance(v, float))
 

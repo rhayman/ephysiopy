@@ -27,8 +27,6 @@ class StatsCalcs():
 
         if w is None:
             w = np.ones_like(alpha, dtype=float)
-        else:
-            assert(len(alpha) == len(w))
         # TODO: error check for size constancy
         r = np.sum(w * np.exp(1j * alpha))
         r = np.abs(r) / np.sum(w)
@@ -73,11 +71,6 @@ class StatsCalcs():
             Vector of angular values in degrees
         test_direction : int
             A single angular value in degrees
-
-        Returns
-        -------
-        float : The V statistic
-
         Notes
         -----
         For grouped data the length of the mean vector must be adjusted,

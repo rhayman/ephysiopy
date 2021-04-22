@@ -1,6 +1,5 @@
 import numpy as np
-from scipy.signal import boxcar
-from scipy.signal import convolve
+from astropy.convolution import convolve
 
 
 def smooth(x, window_len=9, window='hanning'):
@@ -68,50 +67,19 @@ def smooth(x, window_len=9, window='hanning'):
         w = np.ones(window_len, 'd')
     else:
         w = eval('np.'+window+'(window_len)')
-    from astropy.convolution import convolve
     y = convolve(x, w/w.sum(), normalize_kernel=False, boundary='extend')
     # return the smoothed signal
     return y
 
 
-def blur_image(im, n, ny=None, ftype='boxcar'):
-    """ blurs the image by convolving with a filter ('gaussian' or
-        'boxcar') of
-        size n. The optional keyword argument ny allows for a different
-        size in the y direction.
-    """
-    n = int(n)
-    if not ny:
-        ny = n
-    else:
-        ny = int(ny)
-    #  keep track of nans
-    nan_idx = np.isnan(im)
-    im[nan_idx] = 0
-    if ftype == 'boxcar':
-        if np.ndim(im) == 1:
-            g = boxcar(n) / float(n)
-        elif np.ndim(im) == 2:
-            g = boxcar([n, ny]) / float(n)
-    elif ftype == 'gaussian':
-        x, y = np.mgrid[-n:n+1, -ny:ny+1]
-        g = np.exp(-(x**2/float(n) + y**2/float(ny)))
-        if np.ndim(im) == 1:
-            g = g[n, :]
-        g = g / g.sum()
-    improc = convolve(im, g, mode='same')
-    improc[nan_idx] = np.nan
-    return improc
-
-
-def count_to(self, n):
+def count_to(n):
     """By example:
 
         #    0  1  2  3  4  5  6  7  8
         n = [0, 0, 3, 0, 0, 2, 0, 2, 1]
         res = [0, 1, 2, 0, 1, 0, 1, 0]
 
-    That is it is equivalent to something like this :
+    That is, it is equivalent to something like this :
 
         hstack((arange(n_i) for n_i in n))
 
@@ -130,7 +98,7 @@ def count_to(self, n):
     return np.cumsum(ret)[:-1]
 
 
-def repeat_ind(self, n):
+def repeat_ind(n: np.array):
     """
     Examples
     --------
@@ -150,20 +118,11 @@ def repeat_ind(self, n):
     if n.ndim != 1:
         raise Exception("n is supposed to be 1d array.")
 
-    n_mask = n.astype(bool)
-    n_inds = np.nonzero(n_mask)[0]
-    # take diff and leave 0th value in place
-    n_inds[1:] = n_inds[1:]-n_inds[:-1]
-    n_cumsum = np.empty(len(n)+1, dtype=int)
-    n_cumsum[0] = 0
-    n_cumsum[1:] = np.cumsum(n)
-    ret = np.zeros(n_cumsum[-1], dtype=int)
-    # note that n_mask is 1 element shorter than n_cumsum
-    ret[n_cumsum[n_mask]] = n_inds
-    return np.cumsum(ret)
+    res = [[idx]*a for idx, a in enumerate(n) if a != 0]
+    return np.concatenate(res)
 
 
-def rect(r, w, deg=0):
+def rect(r, w, deg=False):
     """
     Convert from polar (r,w) to rectangular (x,y)
     x = r cos(w)
@@ -173,54 +132,6 @@ def rect(r, w, deg=0):
     if deg:
         w = np.pi * w / 180.0
     return r * np.cos(w), r * np.sin(w)
-
-
-def polar(x, y, deg=0):
-    """
-    Converts from rectangular coordinates to polar ones
-
-    Parameters
-    ----------
-    x, y : array_like, list_like
-        The x and y coordinates
-    deg : int
-        radian if deg=0; degree if deg=1
-
-    Returns
-    -------
-    p : array_like
-        The polar version of x and y
-    """
-    if deg:
-        return np.hypot(x, y), 180.0 * np.arctan2(y, x) / np.pi
-    else:
-        return np.hypot(x, y), np.arctan2(y, x)
-
-
-def spiral(self, X, Y):
-    """
-    Given an array of shape X x Y this returns the coordinates needed to step
-    out from the centre of the array to the edge in a spiral fashion:
-
-    See Also
-    --------
-    See http://stackoverflow.com/questions/398299/looping-in-a-spiral?rq=1
-    for original code and question/ solution(s)
-    """
-    x = 0
-    y = 0
-    dx = 0
-    dy = -1
-    x_out = []
-    y_out = []
-    for i in range(max(X, Y)**2):
-        x_out.append(x)
-        y_out.append(y)
-        if x == y or (x < 0 and x == -y) or (x > 0 and x == 1-y):
-            dx, dy = -dy, dx
-        x, y = x+dx, y+dy
-
-    return np.array(x_out), np.array(y_out)
 
 
 def bwperim(bw, n=4):

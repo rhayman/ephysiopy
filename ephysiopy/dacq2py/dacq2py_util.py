@@ -1,6 +1,4 @@
 import os
-import re
-import numpy as np
 import warnings
 import matplotlib.pylab as plt
 from ephysiopy.dacq2py import axonaIO
