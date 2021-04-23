@@ -1,7 +1,8 @@
 import numpy as np
 from scipy import signal
 import matplotlib.pylab as plt
-from ephysiopy.common.ephys_generic import PosCalcsGeneric, SpikeCalcsGeneric
+from ephysiopy.common.ephys_generic import PosCalcsGeneric
+from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 
 
 class CosineDirectionalTuning(object):

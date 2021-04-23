@@ -1,8 +1,5 @@
-import numpy as np
-import matplotlib.pyplot as plt
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.ephys_generic import FieldCalcs
-from ephysiopy.common.utils import rect
 
 
 class SAC(object):
@@ -207,59 +204,6 @@ class SAC(object):
         ephysiopy.common.binning.RateMap.autoCorr2D()
         ephysiopy.common.ephys_generic.FieldCalcs.getMeaures()
         """
-        if ax is None:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-        Am = A.copy()
-        Am[~inDict['gridnessMaskAll']] = np.nan
-        Am = np.ma.masked_invalid(np.atleast_2d(Am))
-        ax.imshow(
-            A, cmap=plt.cm.get_cmap("gray_r"), interpolation='nearest')
-        import copy
-        cmap = copy.copy(plt.cm.get_cmap("jet"))
-        cmap.set_bad('w', 0)
-        ax.pcolormesh(Am, cmap=cmap, edgecolors='face')
-        # horizontal green line at 3 o'clock
-        ax.plot(
-            (inDict['closestPeaksCoord'][0, 1], np.max(
-                inDict['closestPeaksCoord'][:, 1])),
-            (inDict['closestPeaksCoord'][0, 0],
-                inDict['closestPeaksCoord'][0, 0]), '-g', **kwargs)
-        mag = inDict['scale'] * 0.5
-        th = np.linspace(0, inDict['orientation'], 50)
-        [x, y] = rect(mag, th, deg=1)
-        # angle subtended by orientation
-        ax.plot(
-            x + (inDict['gridnessMask'].shape[1] / 2),
-                (inDict['gridnessMask'].shape[0] / 2) - y, 'r', **kwargs)
-        # plot lines from centre to peaks above middle
-        for p in inDict['closestPeaksCoord']:
-            if p[0] <= inDict['gridnessMask'].shape[0] / 2:
-                ax.plot(
-                    (inDict['gridnessMask'].shape[1]/2, p[1]),
-                    (inDict['gridnessMask'].shape[0] / 2, p[0]), 'k', **kwargs)
-        all_ax = ax.axes
-        x_ax = all_ax.get_xaxis()
-        x_ax.set_tick_params(which='both', bottom=False, labelbottom=False,
-                             top=False)
-        y_ax = all_ax.get_yaxis()
-        y_ax.set_tick_params(which='both', left=False, labelleft=False,
-                             right=False)
-        all_ax.set_aspect('equal')
-        all_ax.set_xlim((0.5, inDict['gridnessMask'].shape[1]-1.5))
-        all_ax.set_ylim((inDict['gridnessMask'].shape[0]-.5, -.5))
-        plt.setp(ax.get_xticklabels(), visible=False)
-        plt.setp(ax.get_yticklabels(), visible=False)
-        ax.axes.get_xaxis().set_visible(False)
-        ax.axes.get_yaxis().set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.spines['top'].set_visible(False)
-        ax.spines['bottom'].set_visible(False)
-        ax.spines['left'].set_visible(False)
-        # if "show_gridscore" in kwargs.keys():
-        #     ax.annotate(
-        #         '{:.2f}'.format(inDict['gridness']), (0.9, 0.15),
-        #         xycoords='figure fraction', textcoords='figure fraction',
-        #         color='k', size=30, weight='bold', ha='center', va='center')
-        if fig:
-            return fig
+        from ephysiopy.visualise.plotting import FigureMaker
+        F = FigureMaker()
+        F.show_SAC(A, inDict, ax, **kwargs)

@@ -114,8 +114,7 @@ class FigureMaker(object):
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-        if 'show' in kwargs:
-            S.show(sac, measures, ax)
+        ax = self.show_SAC(sac, measures, ax)
         return ax
 
     @stripAxes
@@ -127,7 +126,7 @@ class FigureMaker(object):
             spk_times * pos_sample_rate, dtype=int)
         spk_weights = np.bincount(
             spk_times_in_pos_samples, minlength=self.npos)
-        rmap = self.RateMapMaker.getMap(spk_weights, 'dir', 'rate')
+        rmap = self.RateMapMaker.getMap(spk_weights, 'dir')
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='polar')
@@ -432,6 +431,78 @@ class FigureMaker(object):
             return np.histogram(
                 x, bins=np.arange(
                     dt[0], dt[1]+1, 1), range=dt)[0]
+
+    @stripAxes
+    def show_SAC(self, A, inDict, ax=None, **kwargs):
+        """
+        Displays the result of performing a spatial autocorrelation (SAC)
+        on a grid cell.
+
+        Uses the dictionary containing measures of the grid cell SAC to
+        make a pretty picture
+
+        Parameters
+        ----------
+        A : array_like
+            The spatial autocorrelogram
+        inDict : dict
+            The dictionary calculated in getmeasures
+        ax : matplotlib.axes._subplots.AxesSubplot, optional
+            If given the plot will get drawn in these axes. Default None
+
+        Returns
+        -------
+        fig : matplotlib.Figure instance
+            The Figure on which the SAC is shown
+
+        See Also
+        --------
+        ephysiopy.common.binning.RateMap.autoCorr2D()
+        ephysiopy.common.ephys_generic.FieldCalcs.getMeaures()
+        """
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+        Am = A.copy()
+        Am[~inDict['gridnessMaskAll']] = np.nan
+        Am = np.ma.masked_invalid(np.atleast_2d(Am))
+        ax.imshow(
+            A, cmap=plt.cm.get_cmap("gray_r"), interpolation='nearest')
+        import copy
+        cmap = copy.copy(plt.cm.get_cmap("jet"))
+        cmap.set_bad('w', 0)
+        ax.pcolormesh(Am, cmap=cmap, edgecolors='face')
+        # horizontal green line at 3 o'clock
+        ax.plot(
+            (inDict['closestPeaksCoord'][0, 1], np.max(
+                inDict['closestPeaksCoord'][:, 1])),
+            (inDict['closestPeaksCoord'][0, 0],
+                inDict['closestPeaksCoord'][0, 0]), '-g', **kwargs)
+        mag = inDict['scale'] * 0.5
+        th = np.linspace(0, inDict['orientation'], 50)
+        from ephysiopy.common.utils import rect
+        [x, y] = rect(mag, th, deg=1)
+        # angle subtended by orientation
+        ax.plot(
+            x + (inDict['gridnessMask'].shape[1] / 2),
+                (inDict['gridnessMask'].shape[0] / 2) - y, 'r', **kwargs)
+        # plot lines from centre to peaks above middle
+        for p in inDict['closestPeaksCoord']:
+            if p[0] <= inDict['gridnessMask'].shape[0] / 2:
+                ax.plot(
+                    (inDict['gridnessMask'].shape[1]/2, p[1]),
+                    (inDict['gridnessMask'].shape[0] / 2, p[0]), 'k', **kwargs)
+        all_ax = ax.axes
+        x_ax = all_ax.get_xaxis()
+        x_ax.set_tick_params(which='both', bottom=False, labelbottom=False,
+                             top=False)
+        y_ax = all_ax.get_yaxis()
+        y_ax.set_tick_params(which='both', left=False, labelleft=False,
+                             right=False)
+        all_ax.set_aspect('equal')
+        all_ax.set_xlim((0.5, inDict['gridnessMask'].shape[1]-1.5))
+        all_ax.set_ylim((inDict['gridnessMask'].shape[0]-.5, -.5))
+        return ax
     '''
     def plotDirFilteredRmaps(self, tetrode, cluster, maptype='rmap', **kwargs):
         """

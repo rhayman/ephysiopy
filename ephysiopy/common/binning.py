@@ -259,10 +259,9 @@ class RateMap(object):
                         for i in range(nClusters):
                             multi_binned_spks[:, :, i] = binned_spk[i]
                         return multi_binned_spks/binned_pos[:, :, np.newaxis],
-                        binned_pos_edges[0], binned_pos_edges[1]
+                        (binned_pos_edges[0], binned_pos_edges[1])
                     else:
-                        return binned_spk / binned_pos,
-                        binned_pos_edges[0], binned_pos_edges[1]
+                        return binned_spk / binned_pos, binned_pos_edges
             if 'dir' in varType:
                 binned_pos = self.__circPadSmooth(binned_pos, self.smooth_sz)
                 binned_spk = self.__circPadSmooth(binned_spk, self.smooth_sz)

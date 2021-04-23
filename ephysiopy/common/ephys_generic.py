@@ -520,7 +520,7 @@ class PosCalcsGeneric(object):
             The upsampled xy positional data
 
         Notes
-        -----E = 
+        -----E =
         This is mostly to get pos data recorded using PosTracker at 30Hz
         into Axona format 50Hz data
         """
@@ -670,7 +670,7 @@ class MapCalcsGeneric(object):
             self.pos_sample_rate = kwargs['pos_sample_rate']
         else:
             self.pos_sample_rate = 30
-        
+
     @property
     def good_clusters(self):
         return self.__good_clusters
@@ -893,6 +893,38 @@ class FieldCalcs:
         improc = signal.convolve(im, g, mode='same')
         improc[nan_idx] = np.nan
         return improc
+
+    def getFieldLims(self, A):
+        """
+        Returns a labelled matrix of the ratemap A.
+        Uses anything >
+        than the half peak rate to select as a field. Data is heavily smoothed
+        Parameters
+        ----------
+        A: np.array
+            The ratemap
+        Returns
+        -------
+        label: np.array
+            The labelled ratemap
+        """
+        nan_idx = np.isnan(A)
+        A[nan_idx] = 0
+        h = int(np.max(A.shape) / 2)
+        sm_rmap = self._blur_image(A, h, ftype='gaussian')
+        thresh = np.max(sm_rmap.ravel()) * 0.2  # select area > 20% of peak
+        from scipy import ndimage
+        distance = ndimage.distance_transform_edt(sm_rmap > thresh)
+        mask = feature.peak_local_max(
+            distance, indices=False,
+            exclude_border=False,
+            labels=sm_rmap > thresh)
+        label = ndimage.label(mask)[0]
+        w = skimage.morphology.watershed(
+            -distance, label,
+            mask=sm_rmap > thresh)
+        label = ndimage.label(w)[0]
+        return label
 
     def limit_to_one(self, A, prc=50, min_dist=5):
         """

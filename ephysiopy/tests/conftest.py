@@ -21,7 +21,7 @@ def basic_xy():
 @pytest.fixture
 def path_to_axona_data():
     path = Path(__file__).parents[0] / 'data'
-    axona_data_path = Path(path, "M845_140911t1rh.set")
+    axona_data_path = Path(path, "M845_140919t1rh.set")
     return os.path.join(axona_data_path)
 
 
