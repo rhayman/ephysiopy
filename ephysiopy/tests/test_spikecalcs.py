@@ -1,3 +1,4 @@
+import numpy as np
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 from ephysiopy.dacq2py.dacq2py_util import AxonaTrial
 
@@ -43,23 +44,26 @@ def test_mean_isi_range(path_to_axona_data):
     S.spk_clusters = spk_clusters
     r = S.mean_isi_range(1, 50)
     assert(isinstance(r, float))
-    S.mean_isi_range(99, 50)
+    S.mean_isi_range(999, 50)
 
 
 def test_xcorr(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     T.load()
-    spk_ts = T.TETRODE.get_spike_ts(1, 1)
+    spk_ts = T.TETRODE.get_spike_ts(3, 3)
     S = SpikeCalcsGeneric(T.TETRODE[1].spk_ts)
     S.xcorr(spk_ts)
+    y = S.xcorr(spk_ts, Trange=[-100, 100])
+    assert(isinstance(y, np.ndarray))
 
 
 def test_mean_waveforms(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     T.load()
     spk_ts = T.TETRODE[1].spk_ts
-    spk_clusters = T.TETRODE[1].cut
-    waveforms = T.TETRODE[1].waveforms
-    S = SpikeCalcsGeneric(spk_ts, waveforms=waveforms)
-    S.spk_clusters = spk_clusters
-    S.getMeanWaveform(1, 1)
+    # spk_clusters = T.TETRODE[1].cut
+    # waveforms = T.TETRODE[1].waveforms
+    S = SpikeCalcsGeneric(spk_ts)
+    S.getClusterWaveforms(1, 1)
+    S.waveforms = 1
+    S.getClusterWaveforms(1, 1)

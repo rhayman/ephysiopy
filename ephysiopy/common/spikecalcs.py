@@ -26,9 +26,9 @@ class SpikeCalcsGeneric(object):
     internally to milliseconds
     """
     def __init__(self, spike_times, waveforms=None, **kwargs):
-        self.spike_times = spike_times
+        self.spike_times = spike_times  # IN SECONDS
         self.waveforms = waveforms
-        self._event_ts = None  # the times that events occured
+        self._event_ts = None  # the times that events occured IN SECONDS
         # vector of cluster ids, same length as spike_times
         self._spk_clusters = None
         # window, in seconds, either side of the stimulus, to examine
@@ -183,7 +183,7 @@ class SpikeCalcsGeneric(object):
             x2 = x1.copy()
         if Trange is None:
             Trange = np.array([-500, 500])
-        if type(Trange) == tuple:
+        if type(Trange) == list:
             Trange = np.array(Trange)
         y = []
         irange = x1[:, np.newaxis] + Trange[np.newaxis, :]
