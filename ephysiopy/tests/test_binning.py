@@ -44,6 +44,8 @@ def test_bin_data(standard_Ratemap):
     xy = getattr(R, 'xy')
     xy_bins = R.binsize
     hd = getattr(R, 'dir')
+    R.inCms
+    R.inCms = True
     hd_bins = np.arange(0, 360+R.cmsPerBin, R.cmsPerBin)
     samples = [xy, hd]
     bins = [xy_bins, hd_bins]

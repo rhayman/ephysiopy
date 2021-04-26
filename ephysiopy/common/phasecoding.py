@@ -1,5 +1,6 @@
 import numpy as np
-from scipy import signal, ndimage, stats, optimize
+from scipy.stats import norm
+from scipy import signal, ndimage, optimize
 from ephysiopy.common.utils import bwperim
 from ephysiopy.common.rhythmicity import LFPOscialltions
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
@@ -92,7 +93,8 @@ class phasePrecession2D(object):
         # for each regressor
         from collections import defaultdict
         self.regressors = {}
-        self.regressors = defaultdict(lambda: stats_dict, self.regressors)
+        self.regressors = defaultdict(
+            lambda: stats_dict.copy(), self.regressors)
         regressor_keys = ['spk_numWithinRun', 'pos_exptdRate_cum',
                           'pos_instFR', 'pos_timeInRun', 'pos_d_cum',
                           'pos_d_meanDir', 'pos_d_currentdir',
@@ -207,7 +209,7 @@ class phasePrecession2D(object):
         rmap : numpy.ndarray
             The ratemap of the tetrode / cluster
         '''
-        rmap, (x_bins_in_pixels, y_bins_in_pixels) = self.RateMap.getMap(
+        rmap, (xe, ye) = self.RateMap.getMap(
             self.spk_weights)
         nan_idx = np.isnan(rmap)
         rmap[nan_idx] = 0
@@ -232,8 +234,8 @@ class phasePrecession2D(object):
             ndimage.measurements.maximum_position(
                 rmap, labels=labels, index=fieldId)).astype(int)
         peaksXY = np.vstack(
-            (x_bins_in_pixels[peakCoords[:, 0]],
-             y_bins_in_pixels[peakCoords[:, 1]])).T
+            (xe[peakCoords[:, 0]],
+             ye[peakCoords[:, 1]])).T
         # find the peak rate at each of the centre of the detected fields to
         # subsequently threshold the field at some fraction of the peak value
         peakRates = rmap[peakCoords[:, 0], peakCoords[:, 1]]
@@ -251,29 +253,31 @@ class phasePrecession2D(object):
         # peakBinInds = peakBinInds[peakLabels-1, :]
         # peaksXY = peakCoords - np.min(xy, 1)
 
-        if ~np.isnan(self.area_threshold):
-            # TODO: this needs fixing so sensible values are used and that the
-            # modified bool array is propagated to the relevant arrays ie makes
-            # sense to have a function that applies a bool array to whatever
-            # arrays are used as output and call it in a couple of places
-            # areaInBins = self.area_threshold * self.binsPerCm
-            lb = ndimage.label(markers)[0]
-            rp = skimage.measure.regionprops(lb)
-            for reg in rp:
-                print(reg.filled_area)
-            markers = skimage.morphology.remove_small_objects(
-                lb, min_size=4000, connectivity=4, in_place=True)
+        # if ~np.isnan(self.area_threshold):
+        #     # TODO: this needs fixing so sensible values are used and that the
+        #     # modified bool array is propagated to the relevant arrays ie makes
+        #     # sense to have a function that applies a bool array to whatever
+        #     # arrays are used as output and call it in a couple of places
+        #     # areaInBins = self.area_threshold * self.binsPerCm
+        #     lb = ndimage.label(markers)[0]
+        #     rp = skimage.measure.regionprops(lb)
+        #     for reg in rp:
+        #         print(reg.filled_area)
+        #     markers = skimage.morphology.remove_small_objects(
+        #         lb, min_size=4000, connectivity=4, in_place=True)
         if plot:
             fig = plt.figure()
             ax = fig.add_subplot(211)
-            ax.imshow(rmap, interpolation='nearest', origin='lower')
+            ax.pcolormesh(
+                xe, ye, rmap,
+                cmap=plt.cm.get_cmap("jet"), edgecolors='face')
             ax.set_title('Smoothed ratemap + peaks')
             ax.xaxis.set_visible(False)
             ax.yaxis.set_visible(False)
             ax.set_aspect('equal')
             xlim = ax.get_xlim()
             ylim = ax.get_ylim()
-            ax.plot(peakCoords[:, 1], peakCoords[:, 0], 'ko')
+            ax.plot(peaksXY[:, 1], peaksXY[:, 0], 'ko')
             ax.set_ylim(ylim)
             ax.set_xlim(xlim)
 
@@ -300,7 +304,21 @@ class phasePrecession2D(object):
             The x-y coords of the peaks in the ratemap
         laserEvents : array_like
             The position indices of on events (laser on)
+        fieldPerimMask = bwperim(labels)
+        fieldPerimYBins, fieldPerimXBins = np.nonzero(fieldPerimMask)
+        fieldPerimX = ye[fieldPerimXBins]
+        fieldPerimY = xe[fieldPerimYBins]
+        fieldPerimXY = np.vstack((fieldPerimX, fieldPerimY))
+        peaksXYBins = np.array(
+            ndimage.measurements.maximum_position(
+                rmap, labels=labels, index=np.unique(labels)[1::])).astype(int)
+        peakY = xe[peaksXYBins[:, 0]]
+        peakX = ye[peaksXYBins[:, 1]]
+        peaksXY = np.vstack((peakX, peakY)).T
 
+        posRUnsmthd = np.zeros((nPos)) * np.nan
+        posAngleFromPeak = np.zeros_like(posRUnsmthd) * np.nan
+        perimAngleFromPeak = np.zeros((fieldPerimXY.shape[1])) * np.nan
         Returns
         -------
         pos_dict, run_dict : dict
@@ -313,11 +331,6 @@ class phasePrecession2D(object):
         xy = self.RateMap.xy
         xydir = self.RateMap.dir
         spd = self.RateMap.speed
-
-        if xydir.ndim == 2:
-            xydir = np.squeeze(xydir)
-        if spd.ndim == 2:
-            spd = np.squeeze(spd)
         spkPosInd = np.ceil(spikeTS * self.pos_sample_rate).astype(int) - 1
         spkPosInd[spkPosInd > len(xy.T)] = len(xy.T) - 1
         nPos = xy.shape[1]
@@ -329,6 +342,12 @@ class phasePrecession2D(object):
             self.spk_weights)
         xe = x_bins_in_pixels
         ye = y_bins_in_pixels
+
+        # The large number of bins combined with the super-smoothed ratemap
+        # will lead to fields labelled with lots of small holes in. Fill those
+        # gaps in here and calculate the perimeter of the fields based on that
+        # labelled image
+        labels = ndimage.binary_fill_holes(labels)
 
         rmap[np.isnan(rmap)] = 0
         xBins = np.digitize(xy[0], ye[:-1])
@@ -353,8 +372,8 @@ class phasePrecession2D(object):
         for i, peak in enumerate(peaksXY):
             i = i + 1
             # grab each fields perim coords and the pos samples within it
-            x_ind, y_ind = np.nonzero(labels[fieldPerimMask == i])
-            thisFieldPerim = fieldPerimXY[:, labels[fieldPerimMask] == i]
+            y_ind, x_ind = np.nonzero(fieldPerimMask == i)
+            thisFieldPerim = np.array([xe[x_ind], ye[y_ind]])
             if thisFieldPerim.any():
                 this_xy = xy[:, fieldLabel == i]
                 # calculate angle from the field peak for each point on the
@@ -448,7 +467,7 @@ class phasePrecession2D(object):
         for i in range(len(runStartIdx)):
             if filtLen[i] > 2:
                 filt = signal.firwin(
-                    filtLen[i] - 1, cutoff=self.spatial_lowpass_cutoff /
+                    int(filtLen[i] - 1), cutoff=self.spatial_lowpass_cutoff /
                     self.pos_sample_rate*2,
                     window='blackman')
                 xy_new[:, runStartIdx[i]:runEndIdx[i]] = signal.filtfilt(
@@ -540,7 +559,6 @@ class phasePrecession2D(object):
                 runVals, cmap=cmap, norm=norm,
                 origin='lower', interpolation='nearest')
             plt.colorbar(imm, orientation='horizontal')
-            ax.hold(True)
             ax.set_aspect('equal')
             # add a custom colorbar for colors in runVals
 
@@ -549,7 +567,7 @@ class phasePrecession2D(object):
             cmaplist = [cmap(i) for i in range(cmap.N)]
             cmaplist[0] = (1, 1, 1, 1)
             cmap = cmap.from_list('Perim cmap', cmaplist, cmap.N)
-            bounds = np.linspace(0, 360, 361)
+            bounds = np.linspace(0, 360, cmap.N)
             norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N)
 
             imm = ax.imshow(
@@ -795,7 +813,7 @@ class phasePrecession2D(object):
 
     def plotPPRegression(
             self, regressorDict, regressor2plot='pos_d_cum', ax=None):
-        
+
         t = self.getLFPPhaseValsForSpikeTS()
         idx = np.array(self.spike_ts * self.pos_sample_rate, dtype=int)
         x = self.RateMap.xy[0, idx]
@@ -1093,9 +1111,9 @@ class phasePrecession2D(object):
             rho_jack = n * rho - (n - 1) * rho_jack
             rho_boot = np.mean(rho_jack)
             rho_jack_std = np.std(rho_jack)
-            ci = (rho_boot - (1 / np.sqrt(n)) * rho_jack_std * stats.norm.ppf(
-                alpha/2, (0, 1))[0], rho_boot + (1 / np.sqrt(
-                    n)) * rho_jack_std * stats.norm.ppf(alpha/2, (0, 1))[0])
+            ci = (rho_boot - (1 / np.sqrt(n)) * rho_jack_std * norm.ppf(
+                  alpha/2, (0, 1))[0], rho_boot + (1 / np.sqrt(
+                      n)) * rho_jack_std * norm.ppf(alpha/2, (0, 1))[0])
         elif conf and k and n < 25 and n > 4:
             # set up the bootstrapping parameters
             idx = random.choices(theta, k=k)
@@ -1169,10 +1187,10 @@ class phasePrecession2D(object):
         max_slope = (2 * np.pi) / (np.max(xn) - np.min(xn))
 
         # perform slope optimisation and find intercept
-        def _cost(self, m, x, t):
+        def _cost(m, x, t):
             return -np.abs(np.sum(np.exp(1j*(t-m*x)))) / len(t-m*x)
         slope = optimize.fminbound(
-            self._cost, -1*max_slope, max_slope, args=(xn, tn))
+            _cost, -1*max_slope, max_slope, args=(xn, tn))
         intercept = np.arctan2(
             np.sum(np.sin(tn - slope*xn)), np.sum(np.cos(tn - slope*xn)))
         intercept = intercept + ((0-slope)*(mnx / mxx))

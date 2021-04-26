@@ -249,19 +249,7 @@ class RateMap(object):
                     rmap, self.smooth_sz, ftype=self.smoothingType)
         else:  # default case
             if not smoothing:
-                if len(binned_pos_edges) == 1:  # directional map
-                    return binned_spk / binned_pos, binned_pos_edges
-                elif len(binned_pos_edges) == 2:
-                    if binned_spk.ndim == 3:
-                        nClusters = spkWeights.shape[0]
-                        multi_binned_spks = np.zeros(
-                            [self.binsize[0], self.binsize[1], nClusters])
-                        for i in range(nClusters):
-                            multi_binned_spks[:, :, i] = binned_spk[i]
-                        return multi_binned_spks/binned_pos[:, :, np.newaxis],
-                        (binned_pos_edges[0], binned_pos_edges[1])
-                    else:
-                        return binned_spk / binned_pos, binned_pos_edges
+                return binned_spk / binned_pos, binned_pos_edges
             if 'dir' in varType:
                 binned_pos = self.__circPadSmooth(binned_pos, self.smooth_sz)
                 binned_spk = self.__circPadSmooth(binned_spk, self.smooth_sz)
@@ -272,10 +260,6 @@ class RateMap(object):
                     for i in range(spkWeights.shape[0]):
                         rmap[i, :] = binned_spk[i] / binned_pos
             else:
-                print(f'len binned_pos ={len(binned_pos)}')
-                print(f'shape binned_pos ={binned_pos.shape}')
-                print(f'smooth_sz = {self.smooth_sz}')
-                print(f'smoothing type = {self.smoothingType}')
                 binned_pos = self.blurImage(
                     binned_pos, self.smooth_sz, ftype=self.smoothingType)
                 if binned_spk.ndim == 2:
