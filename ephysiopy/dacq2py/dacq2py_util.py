@@ -127,6 +127,10 @@ class AxonaTrial(FigureMaker):
         self.__EGF = value
 
     @property
+    def ttl_timestamps(self):
+        return self.STM['on']
+
+    @property
     def STM(self):
         """
         Returns
@@ -160,6 +164,7 @@ class AxonaTrial(FigureMaker):
                 self.settings
                 stim_pwidth = int(self.settings['stim_pwidth']) / int(1000)
                 self.__STM['off'] = self.__STM['on'] + int(stim_pwidth)
+                setattr(self, 'ttl_timestamps', self.__STM['on'])
                 """
                 There are a set of key / value pairs in the set file that
                 correspond to the patterns/ protocols specified in the
@@ -265,7 +270,7 @@ class AxonaTrial(FigureMaker):
 
     def plotSpeedVsRate(self, tetrode, cluster, **kwargs):
         ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
-        ax = self.makeSpeedVsHeadDirectionPlot(ts, ax=None, **kwargs)
+        ax = self.makeSpeedVsRatePlot(ts, ax=None, **kwargs)
         plot = True
         if 'plot' in kwargs:
             plot = kwargs.pop('plot')
@@ -309,6 +314,12 @@ class AxonaTrial(FigureMaker):
             plot = kwargs.pop('plot')
         if plot:
             plt.show()
+        return ax
+
+    def plotRaster(self, tetrode, cluster, **kwargs):
+        ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
+        self.ttl_timestamps = self.STM['on']
+        ax = self.makeRaster(ts)
         return ax
 
     '''

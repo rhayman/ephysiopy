@@ -173,7 +173,7 @@ class FigureMaker(object):
         speed_filt = np.ma.MaskedArray(speed)
         speed_filt = np.ma.masked_where(speed_filt < minSpeed, speed_filt)
         speed_filt = np.ma.masked_where(speed_filt > maxSpeed, speed_filt)
-        from ephysiopy.common.ephys_generic import SpikeCalcsGeneric
+        from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 
         x1 = spk_times_in_pos_samples
         S = SpikeCalcsGeneric(x1)
@@ -337,7 +337,7 @@ class FigureMaker(object):
                                       transform=axScatter.transAxes)
         scattTrans = transforms.blended_transform_factory(axScatter.transData,
                                                           axScatter.transAxes)
-        stim_pwidth = int(self.setheader['stim_pwidth'])
+        stim_pwidth = int(self.settings['stim_pwidth'])
         axScatter.add_patch(
             Rectangle(
                 (0, 0), width=stim_pwidth/1000., height=1,
@@ -391,10 +391,15 @@ class FigureMaker(object):
             yticks[i].set_visible(False)
         axHistx.set_xlim(dt)
         axScatter.set_xlim(dt)
-        return x, y
+        return axScatter
 
-    def getRasterHist(self, tetrode, cluster, dt=(-50, 100), hist=True):
+    def getRasterHist(
+            self, spike_ts: np.array,
+            sample_rate: int,
+            dt=(-50, 100), hist=True):
         """
+        MOVE TO SPIKECALCS
+        
         Calculates the histogram of the raster of spikes during a series of
         events
 
@@ -408,17 +413,16 @@ class FigureMaker(object):
         hist : bool
             not sure
         """
-        x1 = self.TETRODE[tetrode].getClustTS(cluster)
-        x1 = x1 / int(self.TETRODE[tetrode].timebase / 1000.)  # in ms
-        x1.sort()
-        on_good = self.STM.getTS()
+        spike_ts = spike_ts * float(sample_rate)  # in ms
+        spike_ts.sort()
+        on_good = getattr(self, 'ttl_timestamps') / sample_rate / float(1000)
         dt = np.array(dt)
         irange = on_good[:, np.newaxis] + dt[np.newaxis, :]
-        dts = np.searchsorted(x1, irange)
+        dts = np.searchsorted(spike_ts, irange)
         y = []
         x = []
         for i, t in enumerate(dts):
-            tmp = x1[t[0]:t[1]] - on_good[i]
+            tmp = spike_ts[t[0]:t[1]] - on_good[i]
             x.extend(tmp)
             y.extend(np.repeat(i, len(tmp)))
 

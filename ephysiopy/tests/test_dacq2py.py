@@ -96,6 +96,14 @@ def test_plot_axona_xcorr(path_to_axona_data):
     return ax
 
 
+@pytest.mark.mpl_image_compare
+def test_plot_raster(path_to_axona_data):
+    T = AxonaTrial(path_to_axona_data)
+    T.load()
+    ax = T.plotRaster(1, 1, plot=False)
+    return ax
+
+
 def test_axona_properties(path_to_axona_data):
     from ephysiopy.dacq2py.axonaIO import EEG
     T = AxonaTrial(path_to_axona_data)
