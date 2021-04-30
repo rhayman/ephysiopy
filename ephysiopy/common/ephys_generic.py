@@ -9,7 +9,6 @@ from scipy.signal import gaussian
 import skimage
 from skimage import feature
 from skimage.segmentation import watershed
-import matplotlib.pylab as plt
 from ephysiopy.common import binning
 from ephysiopy.common.utils import bwperim
 import warnings
@@ -42,7 +41,7 @@ class EventsGeneric(object):
     duration: str
     sw_version: str
     num_chans: str
-    timebase: str
+    timebase: strxy_ts[3] = juce::uint32(frameTime * 1e6);
     bytes_per_timestamp: str
     data_format: str
     num_stm_samples: str
@@ -82,12 +81,12 @@ class EventsGeneric(object):
                             'pulseRatio', 'pulsePause']
 
         from collections import OrderedDict
-        self.__event_dict = dict.fromkeys(
+        self._event_dict = dict.fromkeys(
             level_one_keys)
-        self.__event_dict['stim_params'] = OrderedDict.fromkeys(
+        self._event_dict['stim_params'] = OrderedDict.fromkeys(
             level_two_keys)
-        for k in self.__event_dict['stim_params'].keys():
-            self.__event_dict['stim_params'][k] = dict.fromkeys(
+        for k in self._event_dict['stim_params'].keys():
+            self._event_dict['stim_params'][k] = dict.fromkeys(
                 level_three_keys)
 
 
@@ -704,67 +703,7 @@ class MapCalcsGeneric(object):
         idx = np.searchsorted(self.pos_ts, self.spk_ts)
         idx[idx == len(self.pos_ts)] = len(self.pos_ts) - 1
         return idx
-    '''
-    def plotAll(self, **kwargs):
-        """
-        Plots rate maps and other graphical output
-
-        Notes
-        ----
-        This method uses the data provided to the class instance to plot
-        various maps into a single figure window for each cluster. The things
-        to plot are given in self.plot_type and the list of clusters in
-        self.good_clusters
-        """
-        if 'all' in self.plot_type:
-            what_to_plot = ['map', 'path', 'hdir', 'sac', 'speed', 'sp_hd']
-            fig = plt.figure(figsize=(20, 10))
-        else:
-            fig = plt.gcf()
-            if type(self.plot_type) is str:
-                what_to_plot = [self.plot_type]  # turn into list
-            else:
-                what_to_plot = self.plot_type
-
-        import matplotlib.gridspec as gridspec
-        nrows = np.ceil(np.sqrt(len(self.good_clusters))).astype(int)
-        outer = gridspec.GridSpec(nrows, nrows, figure=fig)
-
-        inner_ncols = int(np.ceil(len(what_to_plot) / 2))  # max 2 cols
-        if len(what_to_plot) == 1:
-            inner_nrows = 1
-        else:
-            inner_nrows = 2
-
-        try:
-            iter(self.good_clusters)
-        except Exception:
-            self.good_clusters = [self.good_clusters]
-
-        for i, cluster in enumerate(self.good_clusters):
-            inner = gridspec.GridSpecFromSubplotSpec(
-                inner_nrows, inner_ncols, subplot_spec=outer[i])
-            for plot_type_idx, plot_type in enumerate(what_to_plot):
-                if 'hdir' in plot_type:
-                    ax = fig.add_subplot(
-                        inner[plot_type_idx], projection='polar')
-                else:
-                    ax = fig.add_subplot(inner[plot_type_idx])
-                if 'path' in plot_type:
-                    self.makeSpikePathPlot(cluster, ax, **kwargs)
-                if 'map' in plot_type:
-                    self.makeRateMap(cluster, ax)
-                if 'hdir' in plot_type:
-                    self.makeHDPlot(cluster, ax, add_mrv=True, **kwargs)
-                if 'sac' in plot_type:
-                    self.makeSAC(cluster, ax)
-                if 'speed' in plot_type:
-                    self.makeSpeedVsRatePlot(cluster, ax, 0.0, 40.0, 3.0)
-                if 'sp_hd' in plot_type:
-                    self.makeSpeedVsHeadDirectionPlot(cluster, ax)
-                ax.set_title(cluster, fontweight='bold', size=8)
-        return fig
-    '''
+        
     def getSpatialStats(self, cluster):
         # HWPD 20200527
         """

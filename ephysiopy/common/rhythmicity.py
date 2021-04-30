@@ -21,7 +21,7 @@ class CosineDirectionalTuning(object):
         spike_times - 1d np.array
         pos_times - 1d np.array
         spk_clusters - 1d np.array
-        pos_xy - 1d np.array
+        x and y - 1d np.array
         tracker_params - dict - from the PosTracker as created in
             OEKiloPhy.Settings.parsePos
 

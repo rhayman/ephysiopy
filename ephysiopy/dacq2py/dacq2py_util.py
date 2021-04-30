@@ -33,7 +33,7 @@ class AxonaTrial(FigureMaker):
         self.TETRODE = TetrodeDict(self.common_name, volts=True)
         self.__STM = None
         self.ttl_data = None
-        self.ttl_timestamps = None
+        self.__ttl_timestamps = None
         self.recording_start_time = 0
         self.data_loaded = False
 
@@ -129,6 +129,10 @@ class AxonaTrial(FigureMaker):
     @property
     def ttl_timestamps(self):
         return self.STM['on']
+
+    @ttl_timestamps.setter
+    def ttl_timestamps(self, value):
+        self.__ttl_timestamps = value
 
     @property
     def STM(self):

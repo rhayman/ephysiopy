@@ -6,7 +6,6 @@ from ephysiopy.common.rhythmicity import LFPOscialltions
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.common.binning import RateMap
 import matplotlib.pyplot as plt
-import skimage
 import matplotlib
 import random  # used in bootstrapping in _circCircCorrTLinear()
 

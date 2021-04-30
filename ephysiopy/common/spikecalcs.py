@@ -208,7 +208,10 @@ class SpikeCalcsGeneric(object):
         np.array : the waveforms
         """
         if self.waveforms is not None:
-            pass
+            return self.waveforms[
+                self.spk_clusters == cluster_id,
+                channel_id,
+                :]
         else:
             return None
 
@@ -229,9 +232,10 @@ class SpikeCalcsGeneric(object):
         std_wvs: ndarray (floats) - usually 4x50 for tetrode recordings
             the standard deviations of the waveforms
         """
-        if self.waveforms and self.spk_clusters is not None:
+        if self.spk_clusters is not None:
             if cluster_id not in self.spk_clusters:
                 warnings.warn('Cluster not available. Try again!')
+                raise IndexError("cluster_id not available")
             x = self.getClusterWaveforms(cluster_id, channel_id)
             if x is not None:
                 return np.mean(x, axis=0), np.std(x, axis=0)
@@ -274,80 +278,6 @@ class SpikeCalcsGeneric(object):
             x.extend(tmp)
             y.extend(np.repeat(i, len(tmp)))
         return x, y
-
-    def plotPSTH(self, cluster, fig=None):
-        """
-        Plots the PSTH for a cluster
-
-        Parameters
-        ----------
-        cluster : int
-            The cluster to examine
-
-        Returns
-        -------
-        cluster, i : int
-            The cluster and a junk variable (not sure why for now)
-        """
-        x, y = self.calculatePSTH(cluster)
-        show = False  # used below to show the figure or not
-        if fig is None:
-            fig = plt.figure(figsize=(4.0, 7.0))
-            show = True
-        scatter_ax = fig.add_subplot(111)
-        scatter_ax.scatter(x, y, marker='.', s=2, rasterized=False)
-        divider = make_axes_locatable(scatter_ax)
-        scatter_ax.set_xticks((self.event_window[0], 0, self.event_window[1]))
-        scatter_ax.set_xticklabels(
-            (str(self.event_window[0]), '0', str(self.event_window[1])))
-        hist_ax = divider.append_axes("top", 0.95, pad=0.2, sharex=scatter_ax,
-                                      transform=scatter_ax.transAxes)
-        scattTrans = transforms.blended_transform_factory(scatter_ax.transData,
-                                                          scatter_ax.transAxes)
-        if self.stim_width is not None:
-            scatter_ax.add_patch(Rectangle(
-                (0, 0), width=self.stim_width, height=1,
-                transform=scattTrans,
-                color=[0, 0, 1], alpha=0.5))
-            histTrans = transforms.blended_transform_factory(hist_ax.transData,
-                                                             hist_ax.transAxes)
-            hist_ax.add_patch(Rectangle(
-                (0, 0), width=self.stim_width, height=1,
-                transform=histTrans,
-                color=[0, 0, 1], alpha=0.5))
-        scatter_ax.set_ylabel('Laser stimulation events', labelpad=-18.5)
-        scatter_ax.set_xlabel('Time to stimulus onset(secs)')
-        nStms = int(len(self.event_ts))
-        scatter_ax.set_ylim(0, nStms)
-        # Label only the min and max of the y-axis
-        ylabels = scatter_ax.get_yticklabels()
-        for i in range(1, len(ylabels)-1):
-            ylabels[i].set_visible(False)
-        yticks = scatter_ax.get_yticklines()
-        for i in range(1, len(yticks)-1):
-            yticks[i].set_visible(False)
-        histColor = [192/255.0, 192/255.0, 192/255.0]
-        hist_ax.hist(
-            x, bins=np.arange(
-                self.event_window[0],
-                self.event_window[1] + self._secs_per_bin,
-                self._secs_per_bin),
-            color=histColor, alpha=0.6, range=self.event_window,
-            rasterized=True, histtype='stepfilled')
-        hist_ax.set_ylabel("Spike count", labelpad=-2.5)
-        plt.setp(hist_ax.get_xticklabels(), visible=False)
-        # Label only the min and max of the y-axis
-        ylabels = hist_ax.get_yticklabels()
-        for i in range(1, len(ylabels)-1):
-            ylabels[i].set_visible(False)
-        yticks = hist_ax.get_yticklines()
-        for i in range(1, len(yticks)-1):
-            yticks[i].set_visible(False)
-        hist_ax.set_xlim(self.event_window)
-        scatter_ax.set_xlim(self.event_window)
-        if show:
-            plt.show()
-        yield cluster, 1
 
     def clusterQuality(self, cluster, fet=1):
         """

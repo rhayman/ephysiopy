@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 from ephysiopy.dacq2py.dacq2py_util import AxonaTrial
 
@@ -65,5 +66,15 @@ def test_mean_waveforms(path_to_axona_data):
     # waveforms = T.TETRODE[1].waveforms
     S = SpikeCalcsGeneric(spk_ts)
     S.getClusterWaveforms(1, 1)
-    S.waveforms = 1
+    S.waveforms = T.TETRODE[1].waveforms
+    S.spk_clusters = T.TETRODE[1].cut
+    S.getMeanWaveform(1, 1)
+    with pytest.raises(IndexError):
+        S.getMeanWaveform(9999, 1)
     S.getClusterWaveforms(1, 1)
+    S.waveforms = 1
+    with pytest.raises(IndexError):
+        S.getMeanWaveform(9999, 1)
+    S.waveforms = None
+    S.spk_clusters = None
+    S.getMeanWaveform(1, 1)

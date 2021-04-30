@@ -1,18 +1,18 @@
-#!/usr/bin/python
 import os
 import argparse
-import numpy as np
+from ephysiopy.format_converters import OE_Axona
 
 
 def printNwbFiles(mydir):
-	list_of_dirs = []
-	for root, dirs, files in os.walk(mydir):
-		for file in files:
-			if 'nwb' in file:
-				list_of_dirs.append(root)
-	for nwbfile in list_of_dirs:
-		print(nwbfile)
-	return list_of_dirs
+    list_of_dirs = []
+    for root, dirs, files in os.walk(mydir):
+        for file in files:
+            if 'nwb' in file:
+                list_of_dirs.append(root)
+    for nwbfile in list_of_dirs:
+        print(nwbfile)
+    return list_of_dirs
+
 
 parser = argparse.ArgumentParser(description='Process some data.')
 parser.add_argument('-d', '--directory', type=str, default='.', help='the directory to look in')
@@ -29,34 +29,26 @@ args = parser.parse_args()
 
 dirs2use = printNwbFiles(args.directory)
 
-from ephysiopy.format_converters import OE_Axona
-
-
 for idx in dirs2use:
-	file_name = os.path.join(idx, 'experiment_1.nwb')
-	oe = OE_Axona.OE2Axona(file_name)
-	oe.tetrodes = args.ntetrodes
+    file_name = os.path.join(idx, 'experiment_1.nwb')
+    oe = OE_Axona.OE2Axona(file_name)
+    oe.tetrodes = args.ntetrodes
 
-	oe.getOEData(file_name)
+    oe.getOEData(file_name)
 
-	ppm = args.ppm
+    ppm = args.ppm
 
-	if args.all:
-		oe.exportPos(ppm=ppm)
-		oe.exportSpikes()
-		oe.exportLFP(args.channel, args.lfp, args.gain)
-		oe.makeSetData(args.channel) # can take **kwargs
+    if args.all:
+        oe.exportPos(ppm=ppm)
+        oe.exportSpikes()
+        oe.exportLFP(args.channel, args.lfp, args.gain)
+        oe.makeSetData(args.channel) # can take **kwargs
 
-	if args.pos:
-		oe.exportPos(ppm=ppm)
-	if args.tetrodes:
-		oe.exportSpikes()
-	if args.lfp:
-		oe.exportLFP(args.channel, args.lfp, args.gain)
-	if args.set:
-		oe.makeSetData(args.channel)
-
-
-
-
-
+    if args.pos:
+        oe.exportPos(ppm=ppm)
+    if args.tetrodes:
+        oe.exportSpikes()
+    if args.lfp:
+        oe.exportLFP(args.channel, args.lfp, args.gain)
+    if args.set:
+        oe.makeSetData(args.channel)
