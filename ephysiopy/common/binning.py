@@ -218,9 +218,6 @@ class RateMap(object):
 
         binned_pos = self.__binData__(sample, self.binsize, self.pos_weights)
 
-        # if len(binned_pos[1]) == 3:
-        #     binned_pos_edges = binned_pos[1:]
-        # else:
         binned_pos_edges = binned_pos[1]
         binned_pos = binned_pos[0]
         nanIdx = binned_pos == 0
@@ -251,23 +248,13 @@ class RateMap(object):
             if 'dir' in varType:
                 binned_pos = self.__circPadSmooth(binned_pos, self.smooth_sz)
                 binned_spk = self.__circPadSmooth(binned_spk, self.smooth_sz)
-                # if spkWeights.ndim == 1:
                 rmap = binned_spk / binned_pos
-                # elif spkWeights.ndim == 2:
-                #     rmap = np.zeros([spkWeights.shape[0], binned_pos.shape[0]])
-                #     for i in range(spkWeights.shape[0]):
-                #         rmap[i, :] = binned_spk[i] / binned_pos
             else:
                 binned_pos = blurImage(
                     binned_pos, self.smooth_sz, ftype=self.smoothingType)
                 if binned_spk.ndim == 2:
                     pass
                 elif binned_spk.ndim == 1:
-                    # if binned_spk.ndim == 3:
-                    #     binned_spk_tmp = np.zeros(
-                    #         [binned_spk.shape[0], binned_spk[0].shape[0],
-                    #             binned_spk[0].shape[1]])
-                    # if binned_spk.ndim == 1:
                     binned_spk_tmp = np.zeros(
                         [binned_spk.shape[0],
                             binned_spk.shape[0], 1])
