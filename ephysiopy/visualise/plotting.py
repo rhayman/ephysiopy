@@ -214,8 +214,8 @@ class FigureMaker(object):
         spd_bins = np.arange(0, 30, 1)
         h = np.histogram2d(
             self.dir, self.speed, [dir_bins, spd_bins], weights=w)
-        b = self.RateMapMaker
-        im = b.blurImage(h[0], 5, ftype='gaussian')
+        from ephysiopy.common.utils import blurImage
+        im = blurImage(h[0], 5, ftype='gaussian')
         im = np.ma.MaskedArray(im)
         # mask low rates...
         im = np.ma.masked_where(im <= 1, im)
@@ -309,9 +309,6 @@ class FigureMaker(object):
             the raster plot will consist of either the counts of spikes in
             ms_per_bin or the mean rate in ms_per_bin
         """
-        if getattr(self, 'ttl_timestamps', None) is None:
-            print("Need some event timestamps")
-            return
         x1 = spk_times * 1000.  # get into ms
         x1.sort()
         on_good = getattr(self, 'ttl_timestamps')
@@ -329,7 +326,7 @@ class FigureMaker(object):
             axScatter = fig.add_subplot(111)
         else:
             axScatter = ax
-        axScatter.scatter(x, y, marker='.', s=2, rasterized=False, **kwargs)
+        axScatter.scatter(x, y, marker='.', s=2, rasterized=False)
         divider = make_axes_locatable(axScatter)
         axScatter.set_xticks((dt[0], 0, dt[1]))
         axScatter.set_xticklabels((str(dt[0]), '0', str(dt[1])))
@@ -393,6 +390,7 @@ class FigureMaker(object):
         axScatter.set_xlim(dt)
         return axScatter
 
+    '''
     def getRasterHist(
             self, spike_ts: np.array,
             sample_rate: int,
@@ -435,6 +433,7 @@ class FigureMaker(object):
             return np.histogram(
                 x, bins=np.arange(
                     dt[0], dt[1]+1, 1), range=dt)[0]
+    '''
 
     @stripAxes
     def show_SAC(self, A, inDict, ax=None, **kwargs):

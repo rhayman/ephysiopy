@@ -2,7 +2,7 @@ import numpy as np
 from scipy.stats import norm
 from scipy import signal, ndimage, optimize
 from ephysiopy.common.utils import bwperim
-from ephysiopy.common.rhythmicity import LFPOscialltions
+from ephysiopy.common.rhythmicity import LFPOscillations
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.common.binning import RateMap
 import matplotlib.pyplot as plt
@@ -109,7 +109,7 @@ class phasePrecession2D(object):
 
         # Process the EEG data a bit...
         self.eeg = lfp_sig
-        L = LFPOscialltions(lfp_sig, lfp_fs)
+        L = LFPOscillations(lfp_sig, lfp_fs)
         filt_sig, phase, amplitude, amplitude_filtered = L.getFreqPhase(
             lfp_sig, [6, 12], 2)
         self.filteredEEG = filt_sig
@@ -178,7 +178,9 @@ class phasePrecession2D(object):
             runD['runDurationInPosBins'])
 
         # Do the regressions
-        self._ppRegress(spkD, plot=True)
+        regress_dict = self._ppRegress(spkD, plot=True)
+
+        self.plotPPRegression(regress_dict)
 
     def partitionFields(
             self, ftype='g', plot=False, **kwargs):
@@ -214,9 +216,8 @@ class phasePrecession2D(object):
         rmap[nan_idx] = 0
         # start image processing:
         # get some markers
-        from ephysiopy.common.ephys_generic import FieldCalcs
-        F = FieldCalcs()
-        markers = F.local_threshold(rmap)
+        from ephysiopy.common import fieldcalcs
+        markers = fieldcalcs.local_threshold(rmap)
         # clear the edges / any invalid positions again
         markers[nan_idx] = 0
         # label these markers so each blob has a unique id
@@ -253,8 +254,8 @@ class phasePrecession2D(object):
         # peaksXY = peakCoords - np.min(xy, 1)
 
         # if ~np.isnan(self.area_threshold):
-        #     # TODO: this needs fixing so sensible values are used and that the
-        #     # modified bool array is propagated to the relevant arrays ie makes
+        #     # TODO: this needs fixing so sensible values are used and the
+        #     # modified bool array is propagated correctly ie makes
         #     # sense to have a function that applies a bool array to whatever
         #     # arrays are used as output and call it in a couple of places
         #     # areaInBins = self.area_threshold * self.binsPerCm
@@ -442,7 +443,7 @@ class phasePrecession2D(object):
 
         # calculate mean and std direction for each run
         runComplexMnDir = np.squeeze(np.zeros_like(
-            runStartIdx, dtype=np.complex))
+            runStartIdx))
         np.add.at(runComplexMnDir, runLabel[isRun]-1, np.exp(1j * (
             xydir[isRun] * (np.pi/180))))
         meanDir = np.angle(runComplexMnDir)  # circ mean
@@ -511,11 +512,11 @@ class phasePrecession2D(object):
         timeInRun = time / self.pos_sample_rate
 
         fieldNum = fieldLabel[runStartIdx]
-        mnSpd = np.squeeze(np.zeros_like(fieldNum, dtype=np.float))
+        mnSpd = np.squeeze(np.zeros_like(fieldNum))
         np.add.at(mnSpd, runLabel[isRun]-1, spd[isRun])
         nPts = np.bincount(runLabel[isRun]-1, minlength=len(mnSpd))
         mnSpd = mnSpd / nPts
-        centralPeripheral = np.squeeze(np.zeros_like(fieldNum, dtype=np.float))
+        centralPeripheral = np.squeeze(np.zeros_like(fieldNum))
         np.add.at(centralPeripheral, runLabel[isRun]-1, xy_new[1, isRun])
         centralPeripheral = centralPeripheral / nPts
         if plot:
@@ -538,7 +539,7 @@ class phasePrecession2D(object):
             ax.set_aspect('equal')
             angleCMInd = np.round(perimAngleFromPeak / np.pi * 180) + 180
             angleCMInd[angleCMInd == 0] = 360
-            im = np.zeros_like(fieldPerimMask, dtype=np.float)
+            im = np.zeros_like(fieldPerimMask)
             im[fieldPerimMask] = angleCMInd
             imM = np.ma.MaskedArray(im, mask=~fieldPerimMask, copy=True)
             #############################################
@@ -550,7 +551,7 @@ class phasePrecession2D(object):
             bounds = np.linspace(0, 1.0, 100)
             norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N)
             # add the runs through the fields
-            runVals = np.zeros_like(im, dtype=np.float)
+            runVals = np.zeros_like(im)
             runVals[yBins[isRun]-1, xBins[isRun]-1] = r[isRun]
             runVals = runVals
             ax = fig.add_subplot(223)
@@ -816,10 +817,9 @@ class phasePrecession2D(object):
         t = self.getLFPPhaseValsForSpikeTS()
         idx = np.array(self.spike_ts * self.pos_sample_rate, dtype=int)
         x = self.RateMap.xy[0, idx]
-        from ephysiopy.common.ephys_generic import FieldCalcs
-        F = FieldCalcs()
+        from ephysiopy.common import fieldcalcs
         rmap, (xe, ye) = self.RateMap.getMap(self.spk_weights)
-        label = F.getFieldLims(rmap)
+        label = fieldcalcs.getFieldLims(rmap)
         xInField = xe[label.nonzero()[1]]
         mask = np.logical_and(x > np.min(xInField), x < np.max(xInField))
         x = x[mask]
@@ -932,53 +932,6 @@ class phasePrecession2D(object):
         L[np.logical_not(x)] = 0
         return L
 
-    def _toBinUnits2(self, nd_data, binsizes, **kwargs):
-        if ~(np.min(nd_data, 1) == 0).all():
-            nd_data = nd_data - np.min(nd_data, 1)[:, np.newaxis]
-        nBins = np.max(np.ceil(np.max(nd_data, 1) / binsizes)).astype(int)
-        nd_binned, ye, xe = np.histogram2d(
-            nd_data[0], nd_data[1], bins=(nBins, nBins))
-        return nd_data, nd_binned, ye, xe
-
-    def _toBinUnits(self, nd_data, nd_data_ranges, binsizes, **kwargs):
-        """
-        data should be in cms (nd_data) so raw data should be divided by ppm
-        and multiplied by 100 to get into cm
-        """
-        ndims, npoints = np.shape(nd_data)
-        if np.logical_or(
-            np.logical_or(
-                nd_data_ranges.shape[0] > 2, nd_data_ranges.shape[0] < 1),
-                nd_data_ranges.shape[0] != nd_data.ndim):
-            print('Ranges array must have 1 or 2 rows & the same number of \
-                columns as the nd_data array.')
-            return
-        if np.logical_or(binsizes.ndim != 1, binsizes.size != nd_data.ndim):
-            print('Binsizes array must have 1 row & the same number of \
-                columns as the nd_data array.')
-            return
-        # if nd_data_ranges has 2 rows the first is the minima and should be
-        # subtracted from the data
-        if nd_data_ranges.shape[0] == 2:
-            nd_data = (nd_data.T - nd_data_ranges[0, :]).T
-            maxBinUnits = np.diff(nd_data_ranges, axis=0) / binsizes
-        else:
-            maxBinUnits = nd_data_ranges / binsizes
-        # remove low points...
-        binUnits = nd_data / binsizes[:, np.newaxis]
-        badLowPts = binUnits < np.spacing(1)
-        binUnits[badLowPts] = np.spacing(1)
-        # ... and high points
-        badHighPts = binUnits > maxBinUnits.T
-        binUnits[0, badHighPts[0, :]] = maxBinUnits[0][0]
-        binUnits[1, badHighPts[1, :]] = maxBinUnits[0][1]
-
-        if (np.sum(badLowPts) + np.sum(badHighPts)) / (npoints * ndims) > 0.1:
-            print('More than a tenth of data points outside range')
-            return
-
-        return binUnits
-
     def _getPhaseOfMinSpiking(self, spkPhase):
         kernelLen = 180
         kernelSig = kernelLen / 4
@@ -1006,14 +959,14 @@ class phasePrecession2D(object):
         Calculates correlation between two random circular variables
         """
         n = len(t)
-        A = np.sum(np.cos(t) * np.cos(p), dtype=np.float)
-        B = np.sum(np.sin(t) * np.sin(p), dtype=np.float)
-        C = np.sum(np.cos(t) * np.sin(p), dtype=np.float)
-        D = np.sum(np.sin(t) * np.cos(p), dtype=np.float)
-        E = np.sum(np.cos(2 * t), dtype=np.float)
-        F = np.sum(np.sin(2 * t), dtype=np.float)
-        G = np.sum(np.cos(2 * p), dtype=np.float)
-        H = np.sum(np.sin(2 * p), dtype=np.float)
+        A = np.sum(np.cos(t) * np.cos(p))
+        B = np.sum(np.sin(t) * np.sin(p))
+        C = np.sum(np.cos(t) * np.sin(p))
+        D = np.sum(np.sin(t) * np.cos(p))
+        E = np.sum(np.cos(2 * t))
+        F = np.sum(np.sin(2 * t))
+        G = np.sum(np.cos(2 * p))
+        H = np.sum(np.sin(2 * p))
         rho = 4 * (A*B - C*D) / np.sqrt((n**2 - E**2 - F**2)
                                         * (n**2 - G**2 - H**2))
         return rho
@@ -1025,21 +978,21 @@ class phasePrecession2D(object):
         """
         n = len(t) - 1
         A = np.cos(t) * np.cos(p)
-        A = np.sum(A, dtype=np.float) - A
+        A = np.sum(A) - A
         B = np.sin(t) * np.sin(p)
-        B = np.sum(B, dtype=np.float) - B
+        B = np.sum(B) - B
         C = np.cos(t) * np.sin(p)
-        C = np.sum(C, dtype=np.float) - C
+        C = np.sum(C) - C
         D = np.sin(t) * np.cos(p)
-        D = np.sum(D, dtype=np.float) - D
+        D = np.sum(D) - D
         E = np.cos(2 * t)
-        E = np.sum(E, dtype=np.float) - E
+        E = np.sum(E) - E
         F = np.sin(2 * t)
-        F = np.sum(F, dtype=np.float) - F
+        F = np.sum(F) - F
         G = np.cos(2 * p)
-        G = np.sum(G, dtype=np.float) - G
+        G = np.sum(G) - G
         H = np.sin(2 * p)
-        H = np.sum(H, dtype=np.float) - H
+        H = np.sum(H) - H
         rho = 4 * (A*B - C*D) / np.sqrt((n**2 - E**2 - F**2)
                                         * (n**2 - G**2 - H**2))
         return rho
@@ -1138,7 +1091,7 @@ class phasePrecession2D(object):
         n = len(theta)
         idx = np.zeros((n, k))
         for i in range(k):
-            idx[:, i] = np.random.permutation(np.arange(n, dtype=np.int))
+            idx[:, i] = np.random.permutation(np.arange(n))
 
         thetaPerms = theta[idx.astype(int)]
 
@@ -1146,21 +1099,21 @@ class phasePrecession2D(object):
         B = np.dot(np.sin(phi), np.sin(thetaPerms))
         C = np.dot(np.sin(phi), np.cos(thetaPerms))
         D = np.dot(np.cos(phi), np.sin(thetaPerms))
-        E = np.sum(np.cos(2 * theta), dtype=np.float)
-        F = np.sum(np.sin(2 * theta), dtype=np.float)
-        G = np.sum(np.cos(2 * phi), dtype=np.float)
-        H = np.sum(np.sin(2 * phi), dtype=np.float)
+        E = np.sum(np.cos(2 * theta))
+        F = np.sum(np.sin(2 * theta))
+        G = np.sum(np.cos(2 * phi))
+        H = np.sum(np.sin(2 * phi))
 
         rho_sim = 4 * (A*B - C*D) / np.sqrt((n**2 - E**2 - F**2) * (
             n**2 - G**2 - H**2))
 
         if hyp == 1:
-            p_shuff = np.sum(rho_sim >= rho, dtype=np.float) / float(k)
+            p_shuff = np.sum(rho_sim >= rho) / float(k)
         elif hyp == -1:
-            p_shuff = np.sum(rho_sim <= rho, dtype=np.float) / float(k)
+            p_shuff = np.sum(rho_sim <= rho) / float(k)
         elif hyp == 0:
             p_shuff = np.sum(np.fabs(rho_sim) > np.fabs(
-                rho), dtype=np.float) / float(k)
+                rho)) / float(k)
         else:
             p_shuff = np.nan
 
@@ -1175,7 +1128,7 @@ class phasePrecession2D(object):
         neither can contain NaNs, must be paired (of equal length).
         '''
         # transform the linear co-variate to the range -1 to 1
-        mnx = np.mean(x, dtype=np.float)
+        mnx = np.mean(x)
         xn = x - mnx
         mxx = np.max(np.fabs(xn))
         xn = xn / mxx

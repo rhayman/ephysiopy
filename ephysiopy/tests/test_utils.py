@@ -19,6 +19,18 @@ def test_smooth():
     assert(isinstance(y, np.ndarray))
 
 
+def test_blur_image(basic_ratemap):
+    filt = ['box', 'gaussian']
+    rmap1D = basic_ratemap[0, :]
+    rmap2D = basic_ratemap
+    rmap3D = np.atleast_3d(rmap2D)
+    rmaps = [rmap1D, rmap2D, rmap3D]
+    for f in filt:
+        for rmap in rmaps:
+            b = utils.blurImage(rmap, 3, ftype=f)
+            assert(isinstance(b, np.ndarray))
+
+
 def test_count_to():
     n = [0, 0, 3, 0, 0, 2, 0, 2, 1]
     n = np.array(n)

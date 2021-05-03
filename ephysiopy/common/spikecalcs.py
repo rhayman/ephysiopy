@@ -3,9 +3,6 @@ import numpy as np
 from scipy import signal
 from scipy import stats
 import matplotlib.pylab as plt
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-import matplotlib.transforms as transforms
-from matplotlib.patches import Rectangle
 
 
 class SpikeCalcsGeneric(object):
@@ -512,9 +509,8 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
                 speed_filt, sm_spk_rate, bins=[
                     sp_bin_edges, spk_binning_edges])
             # blur the binned rate a bit to make it look nicer
-            from ephysiopy.common.binning import RateMap
-            R = RateMap()
-            sm_binned_rate = R.blurImage(binned_rate, 5)
+            from ephysiopy.common.utils import blurImage
+            sm_binned_rate = blurImage(binned_rate, 5)
             fig = plt.figure()
             ax = fig.add_subplot(111)
             from matplotlib.colors import LogNorm
@@ -568,7 +564,7 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
     Replaces SpikeCalcs from ephysiopy.dacq2py.spikecalcs
     """
     @staticmethod
-    def getParam(self, waveforms, param='Amp', t=200, fet=1):
+    def getParam(waveforms, param='Amp', t=200, fet=1):
         """
         Returns the requested parameter from a spike train as a numpy array
 
@@ -640,7 +636,7 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
                             out[:, rng[0, i]:rng[1, i]] = A
                 return out
 
-    def half_amp_dur(self, cluster):
+    def half_amp_dur(self, waveforms):
         """
         Half amplitude duration of a spike
 
@@ -655,9 +651,8 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
             The half-amplitude duration for the channel (electrode) that has
             the strongest (highest amplitude) signal. Units are ms
         """
-        from scipy import interpolate, optimize
+        from scipy import optimize
 
-        waveforms = self.waveforms[self.cut == cluster, :, :]
         best_chan = np.argmax(np.max(np.mean(waveforms, 0), 1))
         mn_wvs = np.mean(waveforms, 0)
         wvs = mn_wvs[best_chan, :]
@@ -665,8 +660,9 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         half_amp = np.zeros_like(wvs) + half_amp
         t = np.linspace(0, 1/1000., 50)
         # create functions from the data using PiecewisePolynomial
-        p1 = interpolate.PiecewisePolynomial(t, wvs[:, np.newaxis])
-        p2 = interpolate.PiecewisePolynomial(t, half_amp[:, np.newaxis])
+        from scipy.interpolate import BPoly
+        p1 = BPoly.from_derivatives(t, wvs[:, np.newaxis])
+        p2 = BPoly.from_derivatives(t, half_amp[:, np.newaxis])
         xs = np.r_[t, t]
         xs.sort()
         x_min = xs.min()
@@ -685,7 +681,7 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
             r = np.nan
         return r
 
-    def p2t_time(self, cluster):
+    def p2t_time(self, waveforms):
         """
         The peak to trough time of a spike in ms
 
@@ -700,7 +696,6 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
             The mean peak-to-trough time for the channel (electrode) that has
             the strongest (highest amplitude) signal. Units are ms
         """
-        waveforms = self.waveforms[self.cut == cluster, :, :]
         best_chan = np.argmax(np.max(np.mean(waveforms, 0), 1))
         tP = self.getParam(waveforms, param='tP')
         tT = self.getParam(waveforms, param='tT')
@@ -710,23 +705,22 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         return p2t * 1000
 
     def plotClusterSpace(
-            self, clusters=None, param='Amp', clusts=None, bins=256, **kwargs):
+            self, waveforms, param='Amp', clusts=None, bins=256, **kwargs):
         """
         TODO: aspect of plot boxes in ImageGrid not right as scaled by range of
         values now
         """
-        import tintColours as tcols
+        from ephysiopy.dacq2py.tintcolours import colours as tcols
         import matplotlib.colors as colors
         from itertools import combinations
         from mpl_toolkits.axes_grid1 import ImageGrid
 
-        if isinstance(clusters, int):
-            clusters = [clusters]
+        self.scaling = np.full(4, 15)
 
-        amps = self.getParam(param=param)
+        amps = self.getParam(waveforms, param=param)
         bad_electrodes = np.setdiff1d(
             np.array(range(4)), np.array(np.sum(amps, 0).nonzero())[0])
-        cmap = np.tile(tcols.colours[0], (bins, 1))
+        cmap = np.tile(tcols[0], (bins, 1))
         cmap[0] = (1, 1, 1)
         cmap = colors.ListedColormap(cmap)
         cmap._init()
@@ -734,21 +728,17 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         alpha_vals[0] = 0
         cmap._lut[:, -1] = alpha_vals
         cmb = combinations(range(4), 2)
-        if 'fig' in kwargs.keys():
+        if 'fig' in kwargs:
             fig = kwargs['fig']
         else:
             fig = plt.figure(figsize=(8, 6))
-        if 'rect' in kwargs.keys():
-            rect = kwargs['rect']
-        else:
-            rect = 111
         grid = ImageGrid(
-            fig, rect, nrows_ncols=(2, 3), axes_pad=0.1, aspect=False)
+            fig, 111, nrows_ncols=(2, 3), axes_pad=0.1, aspect=False)
         if 'Amp' in param:
             myRange = np.vstack((self.scaling*0, self.scaling*2))
         else:
             myRange = None
-        clustCMap0 = np.tile(tcols.colours[0], (bins, 1))
+        clustCMap0 = np.tile(tcols[0], (bins, 1))
         clustCMap0[0] = (1, 1, 1)
         clustCMap0 = colors.ListedColormap(clustCMap0)
         clustCMap0._init()
@@ -760,20 +750,17 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
                     range=myRange[:, c].T, bins=bins)
                 x, y = np.meshgrid(xe[0:-1], ye[0:-1])
                 grid[i].pcolormesh(x, y, h, cmap=clustCMap0, edgecolors='face')
-                if clusters is not None:
-                    for thisclust in clusters:
-                        clustidx = self.cut == thisclust
-                        h, ye, xe = np.histogram2d(
-                            amps[clustidx, c[0]], amps[clustidx, c[1]],
-                            range=myRange[:, c].T, bins=bins)
-                        clustCMap = np.tile(
-                            tcols.colours[thisclust], (bins, 1))
-                        clustCMap[0] = (1, 1, 1)
-                        clustCMap = colors.ListedColormap(clustCMap)
-                        clustCMap._init()
-                        clustCMap._lut[:, -1] = alpha_vals
-                        grid[i].pcolormesh(
-                            x, y, h, cmap=clustCMap, edgecolors='face')
+                h, ye, xe = np.histogram2d(
+                    amps[:, c[0]], amps[:, c[1]],
+                    range=myRange[:, c].T, bins=bins)
+                clustCMap = np.tile(
+                    tcols[1], (bins, 1))
+                clustCMap[0] = (1, 1, 1)
+                clustCMap = colors.ListedColormap(clustCMap)
+                clustCMap._init()
+                clustCMap._lut[:, -1] = alpha_vals
+                grid[i].pcolormesh(
+                    x, y, h, cmap=clustCMap, edgecolors='face')
             s = str(c[0]+1) + ' v ' + str(c[1]+1)
             grid[i].text(
                 0.05, 0.95, s, va='top', ha='left', size='small',
@@ -785,9 +772,11 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         return fig
 
 
+'''
 class SpikeCalcsProbe(SpikeCalcsGeneric):
     """
     Encapsulates methods specific to probe-based recordings
     """
     def __init__(self):
         pass
+'''

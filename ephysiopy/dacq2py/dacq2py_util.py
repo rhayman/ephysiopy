@@ -302,6 +302,7 @@ class AxonaTrial(FigureMaker):
         ax = self.makePowerSpectrum(
             power_res[0], power_res[1], power_res[2],
             power_res[3], power_res[4],
+            **kwargs
         )
         plot = True
         if 'plot' in kwargs:
@@ -323,7 +324,7 @@ class AxonaTrial(FigureMaker):
     def plotRaster(self, tetrode, cluster, **kwargs):
         ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
         self.ttl_timestamps = self.STM['on']
-        ax = self.makeRaster(ts)
+        ax = self.makeRaster(ts, **kwargs)
         return ax
 
     '''

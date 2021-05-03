@@ -232,6 +232,7 @@ class CosineDirectionalTuning(object):
             if np.any(run_mask):
                 print("got one")
 
+    '''
     def testing(self, cluster: int):
         ts = self.getClusterSpikeTimes(cluster)
         pos_idx = self.getClusterPosIndices(cluster)
@@ -294,9 +295,7 @@ class CosineDirectionalTuning(object):
             axs[i].spines['left'].set_visible(False)
         plt.show()
         return pts
-
-    def plotSpeedHisto(self):
-        pass
+    '''
 
     def intrinsic_freq_autoCorr(self, spkTimes=None, posMask=None, maxFreq=25,
                                 acBinSize=0.002, acWindow=0.5, plot=True,
@@ -452,7 +451,7 @@ class CosineDirectionalTuning(object):
         return out_dict
 
 
-class LFPOscialltions(object):
+class LFPOscillations(object):
     '''
     Does stuff with the LFP such as looking at nested oscillations
     (theta/ gamma coupling), the modulation index of such phenomena,
@@ -483,7 +482,7 @@ class LFPOscialltions(object):
         band2filter = np.array(band2filter, dtype=float)
 
         b, a = signal.butter(
-            ford, band2filter / (self.fs / 2), btype='band')
+            ford, band2filter / (self.fs / 2), btype='bandpass')
 
         filt_sig = signal.filtfilt(b, a, sig, padtype='odd')
         phase = np.angle(signal.hilbert(filt_sig))
@@ -521,9 +520,9 @@ class LFPOscialltions(object):
         if np.ma.is_masked(sig):
             sig = np.ma.compressed(sig)
         _, lowphase, _, _ = self.getFreqPhase(
-            sig, forder, thetaband)
+            sig, thetaband, forder)
         _, _, highamp, _ = self.getFreqPhase(
-            sig, forder, gammaband)
+            sig, gammaband, forder)
         inc = 2*np.pi/nbins
         a = np.arange(-np.pi+inc/2, np.pi, inc)
         dt = np.array([-inc/2, inc/2])
@@ -544,7 +543,6 @@ class LFPOscialltions(object):
             w = np.pi / (nbins/2)
             ax.bar(pbins[:, 1], amp, width=w)
             ax.set_title("Modulation index={0:.5f}".format(mi))
-            fig.canvas.set_window_title(self.fname)
         return mi
 
     def plv(self, sig=None, forder=2, thetaband=[4, 8], gammaband=[30, 80],
@@ -582,9 +580,9 @@ class LFPOscialltions(object):
             sig = np.ma.compressed(sig)
 
         _, lowphase, _, _ = self.getFreqPhase(
-            sig, forder, thetaband)
+            sig, thetaband, forder)
         _, _, _, highamp_f = self.getFreqPhase(
-            sig, forder, gammaband)
+            sig, gammaband, forder)
 
         highampphase = np.angle(signal.hilbert(highamp_f))
         phasedf = highampphase - lowphase

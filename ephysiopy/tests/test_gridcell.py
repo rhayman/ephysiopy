@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+import matplotlib.pylab as plt
 from ephysiopy.common.gridcell import SAC
 
 
@@ -37,5 +38,6 @@ def test_get_measures_and_show(basic_ratemap):
     sac = S.autoCorr2D(basic_ratemap, nodwell)
     measures = S.getMeasures(sac)
     assert(isinstance(measures, dict))
-    fig = S.show(sac, measures)
+    S.show(sac, measures)
+    fig = plt.gcf()
     return fig

@@ -1,5 +1,4 @@
 import pytest
-
 from ephysiopy.common.binning import RateMap
 import numpy as np
 
@@ -27,18 +26,6 @@ def test_calc_bin_size(standard_Ratemap):
     assert(isinstance(bs, np.ndarray))
 
 
-def test_blur_image(basic_ratemap, standard_Ratemap):
-    filt = ['box', 'gaussian']
-    rmap1D = basic_ratemap[0, :]
-    rmap2D = basic_ratemap
-    rmap3D = np.atleast_3d(rmap2D)
-    rmaps = [rmap1D, rmap2D, rmap3D]
-    for f in filt:
-        for rmap in rmaps:
-            b = standard_Ratemap.blurImage(rmap, 3, ftype=f)
-            assert(isinstance(b, np.ndarray))
-
-
 def test_bin_data(standard_Ratemap):
     R = standard_Ratemap
     xy = getattr(R, 'xy')
@@ -49,9 +36,19 @@ def test_bin_data(standard_Ratemap):
     hd_bins = np.arange(0, 360+R.cmsPerBin, R.cmsPerBin)
     samples = [xy, hd]
     bins = [xy_bins, hd_bins]
-    for sample in zip(samples, bins):
-        ret = R.__binData__(sample[0], sample[1], R.pos_weights)
+    pw2d = np.zeros(shape=[2, len(hd)])
+    pw2d[0, :] = R.pos_weights
+    pw2d[1, :] = R.pos_weights
+    pw = [R.pos_weights, pw2d]
+    for sample in zip(samples, bins, pw):
+        ret = R.__binData__(sample[0], sample[1], sample[2])
         assert(isinstance(ret, np.ndarray))
+    R.__binData__(xy, xy_bins, None)
+    R.pos_weights = np.random.randn(100)
+    R.smoothingType = "gaussian"
+    R.pixelsPerBin
+    R.inCms = False
+    R.pixelsPerBin
 
 
 def test_get_map(standard_Ratemap):
@@ -114,6 +111,9 @@ def test_cross_corr_2D(basic_ratemap, standard_Ratemap):
     B_dwell = ~np.isfinite(B)
     cc = standard_Ratemap.crossCorr2D(A, B, A_dwell, B_dwell)
     assert(isinstance(cc, np.ndarray))
+    with pytest.raises(ValueError):
+        standard_Ratemap.crossCorr2D(
+            np.atleast_3d(A), B, A_dwell, B_dwell)
 
 
 def test_t_win_SAC(basic_xy, standard_Ratemap):

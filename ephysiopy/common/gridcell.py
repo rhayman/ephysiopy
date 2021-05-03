@@ -1,5 +1,5 @@
 from ephysiopy.common.binning import RateMap
-from ephysiopy.common.ephys_generic import FieldCalcs
+from ephysiopy.common import fieldcalcs
 
 
 class SAC(object):
@@ -128,7 +128,7 @@ class SAC(object):
             boxcar, Pthresh, downsampfreq, plot)
 
     def getMeasures(
-            self, A, maxima='centroid', field_extent_method=2,
+            self, A, maxima='centroid',
             allProps=True, **kwargs):
         """
         Extracts various measures from a spatial autocorrelogram
@@ -173,9 +173,8 @@ class SAC(object):
         ephysiopy.common.ephys_generic.FieldCalcs.getGridFieldMeasures()
 
         """
-        F = FieldCalcs()
-        return F.getGridFieldMeasures(
-            A, maxima, field_extent_method, allProps, **kwargs)
+        return fieldcalcs.getGridFieldMeasures(
+            A, maxima, allProps, **kwargs)
 
     def show(self, A, inDict, ax=None, **kwargs):
         """

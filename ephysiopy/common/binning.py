@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import signal
 from astropy import convolution  # deals with nans unlike other convs
+from ephysiopy.common.utils import blurImage
 
 # Suppress warnings generated from doing the ffts for the spatial
 # autocorrelogram
@@ -94,10 +95,7 @@ class RateMap(object):
     def binsize(self):
         # Returns binsize calculated in __calcBinSize__ and based on cmsPerBin
         if self.__binsize__ is None:
-            try:
-                self.__binsize__ = self.__calcBinSize__(self.cmsPerBin)
-            except AttributeError:
-                self.__binsize__ = None
+            self.__binsize__ = self.__calcBinSize__(self.cmsPerBin)
         return self.__binsize__
 
     @binsize.setter
@@ -220,10 +218,10 @@ class RateMap(object):
 
         binned_pos = self.__binData__(sample, self.binsize, self.pos_weights)
 
-        if len(binned_pos[1]) == 3:
-            binned_pos_edges = binned_pos[1:]
-        else:
-            binned_pos_edges = binned_pos[1]
+        # if len(binned_pos[1]) == 3:
+        #     binned_pos_edges = binned_pos[1:]
+        # else:
+        binned_pos_edges = binned_pos[1]
         binned_pos = binned_pos[0]
         nanIdx = binned_pos == 0
 
@@ -233,7 +231,7 @@ class RateMap(object):
                     binned_pos = self.__circPadSmooth(
                         binned_pos, n=self.smooth_sz)
                 else:
-                    binned_pos = self.blurImage(
+                    binned_pos = blurImage(
                         binned_pos, self.smooth_sz, ftype=self.smoothingType)
             return binned_pos, binned_pos_edges
 
@@ -245,7 +243,7 @@ class RateMap(object):
             if 'dir' in varType:
                 rmap = self.__circPadSmooth(rmap, self.smooth_sz)
             else:
-                rmap = self.blurImage(
+                rmap = blurImage(
                     rmap, self.smooth_sz, ftype=self.smoothingType)
         else:  # default case
             if not smoothing:
@@ -253,90 +251,37 @@ class RateMap(object):
             if 'dir' in varType:
                 binned_pos = self.__circPadSmooth(binned_pos, self.smooth_sz)
                 binned_spk = self.__circPadSmooth(binned_spk, self.smooth_sz)
-                if spkWeights.ndim == 1:
-                    rmap = binned_spk / binned_pos
-                elif spkWeights.ndim == 2:
-                    rmap = np.zeros([spkWeights.shape[0], binned_pos.shape[0]])
-                    for i in range(spkWeights.shape[0]):
-                        rmap[i, :] = binned_spk[i] / binned_pos
+                # if spkWeights.ndim == 1:
+                rmap = binned_spk / binned_pos
+                # elif spkWeights.ndim == 2:
+                #     rmap = np.zeros([spkWeights.shape[0], binned_pos.shape[0]])
+                #     for i in range(spkWeights.shape[0]):
+                #         rmap[i, :] = binned_spk[i] / binned_pos
             else:
-                binned_pos = self.blurImage(
+                binned_pos = blurImage(
                     binned_pos, self.smooth_sz, ftype=self.smoothingType)
                 if binned_spk.ndim == 2:
                     pass
-                elif (binned_spk.ndim == 3 or binned_spk.ndim == 1):
-                    if binned_spk.ndim == 3:
-                        binned_spk_tmp = np.zeros(
-                            [binned_spk.shape[0], binned_spk[0].shape[0],
-                                binned_spk[0].shape[1]])
-                    if binned_spk.ndim == 1:
-                        binned_spk_tmp = np.zeros(
-                            [binned_spk.shape[0],
-                                binned_spk.shape[0], 1])
+                elif binned_spk.ndim == 1:
+                    # if binned_spk.ndim == 3:
+                    #     binned_spk_tmp = np.zeros(
+                    #         [binned_spk.shape[0], binned_spk[0].shape[0],
+                    #             binned_spk[0].shape[1]])
+                    # if binned_spk.ndim == 1:
+                    binned_spk_tmp = np.zeros(
+                        [binned_spk.shape[0],
+                            binned_spk.shape[0], 1])
                     for i in range(binned_spk.shape[0]):
                         binned_spk_tmp[i, :, :] = binned_spk[i]
                     binned_spk = binned_spk_tmp
-                binned_spk = self.blurImage(
+                binned_spk = blurImage(
                     np.squeeze(binned_spk),
                     self.smooth_sz, ftype=self.smoothingType)
                 rmap = binned_spk / binned_pos
                 if rmap.ndim <= 2:
                     rmap[nanIdx] = np.nan
-                elif rmap.ndim == 3:
-                    rmap[:, nanIdx] = np.nan
 
         return rmap, binned_pos_edges
-
-    def blurImage(self, im, n, ny=None, ftype='boxcar'):
-        """
-        Smooths a 2D image by convolving with a filter
-
-        Parameters
-        ----------
-        im : array_like
-            The array to smooth
-        n, ny : int
-            The size of the smoothing kernel
-        ftype : str
-            The type of smoothing kernel. Either 'boxcar' or 'gaussian'
-
-        Returns
-        -------
-        res: array_like
-            The smoothed vector with shape the same as im
-        """
-        n = int(n)
-        if not ny:
-            ny = n
-        else:
-            ny = int(ny)
-        #  keep track of nans
-        nan_idx = np.isnan(im)
-        im[nan_idx] = 0
-        g = signal.boxcar(n) / float(n)
-        if 'box' in ftype:
-            if im.ndim == 1:
-                g = signal.boxcar(n) / float(n)
-            elif im.ndim == 2:
-                g = signal.boxcar(n) / float(n)
-                g = np.tile(g, (1, ny, 1))
-                g = g / g.sum()
-                g = np.squeeze(g)  # extra dim introduced in np.tile above
-            elif im.ndim == 3:  # mutlidimensional binning
-                g = signal.boxcar(n) / float(n)
-                g = np.tile(g, (1, ny, 1))
-                g = g / g.sum()
-        elif 'gaussian' in ftype:
-            x, y = np.mgrid[-n:n+1, 0-ny:ny+1]
-            g = np.exp(-(x**2/float(n) + y**2/float(ny)))
-            g = g / g.sum()
-            if np.ndim(im) == 1:
-                g = g[n, :]
-            if np.ndim(im) == 3:
-                g = np.tile(g, (1, ny, 1))
-        improc = signal.convolve(im, g, mode='same')
-        improc[nan_idx] = np.nan
-        return improc
 
     def __binData__(self, var, bin_edges, weights):
         """
@@ -390,7 +335,6 @@ class RateMap(object):
         if weights is None:
             weights = np.ones_like(var)
         dims = weights.ndim
-        orig_dims = weights.ndim
         if (dims == 1 and var.ndim == 1):
             var = var[np.newaxis, :]
             bin_edges = bin_edges[np.newaxis, :]
@@ -401,21 +345,7 @@ class RateMap(object):
             var = np.flipud(var)
         ndhist = np.apply_along_axis(lambda x: np.histogramdd(
             var.T, weights=x, bins=bin_edges), 0, weights.T)
-        if ndhist.ndim == 1:
-            if var.ndim == 2:  # 1-dimenstional spike weights and xy
-                return ndhist
-        if ndhist.ndim == 2:
-            # a single map has been asked for, pos, single map or dir
-            return ndhist[0], ndhist[-1][0]
-        elif ndhist.ndim == 1:
-            if orig_dims == 1:  # directional binning
-                return ndhist
-            # multi-dimensional binning
-            result = np.zeros(
-                (len(ndhist[0]), ndhist[0][0].shape[0], ndhist[0][0].shape[1]))
-            for i in range(len(ndhist)):
-                result[i, :, :] = ndhist[0][i]
-            return result, ndhist[::-1]
+        return ndhist
 
     def __circPadSmooth(self, var, n=3, ny=None):
         """
@@ -535,13 +465,8 @@ class RateMap(object):
         visited[pos_binned > 0] = 1
         # array to check which bins have made it
         binCheck = np.isnan(pos_binned)
-        maxR = np.max(pos_binned.shape)
         r = 1
         while np.any(~binCheck):
-            if r > (maxR / 2):
-                smthdPos[~binCheck] = np.nan
-                smthdSpk[~binCheck] = np.nan
-                break
             # create the filter kernel
             h = self.__circularStructure(r)
             h[h >= np.max(h) / 3.0] = 1
@@ -597,15 +522,11 @@ class RateMap(object):
 
         """
 
-        if np.ndim(A) == 2:
-            m, n = np.shape(A)
-            o = 1
-            x = np.reshape(A, (m, n, o))
-            nodwell = np.reshape(nodwell, (m, n, o))
-        elif np.ndim(A) == 3:
-            m, n, o = np.shape(A)
-            x = A.copy()
-
+        assert(np.ndim(A) == 2)
+        m, n = np.shape(A)
+        o = 1
+        x = np.reshape(A, (m, n, o))
+        nodwell = np.reshape(nodwell, (m, n, o))
         x[nodwell] = 0
         # [Step 1] Obtain FFTs of x, the sum of squares and bins visited
         Fx = np.fft.fft(np.fft.fft(x, 2*m-1, axis=0), 2*n-1, axis=1)
@@ -668,13 +589,10 @@ class RateMap(object):
         """
         if np.ndim(A) != np.ndim(B):
             raise ValueError('Both arrays must have the same dimensionality')
-        if np.ndim(A) == 2:
-            ma, na = np.shape(A)
-            mb, nb = np.shape(B)
-            oa = ob = 1
-        elif np.ndim(A) == 3:
-            [ma, na, oa] = np.shape(A)
-            [mb, nb, ob] = np.shape(B)
+        assert(np.ndim(A) == 2)
+        ma, na = np.shape(A)
+        mb, nb = np.shape(B)
+        oa = ob = 1
         A = np.reshape(A, (ma, na, oa))
         B = np.reshape(B, (mb, nb, ob))
         A_nodwell = np.reshape(A_nodwell, (ma, na, oa))
@@ -843,11 +761,8 @@ class RateMap(object):
         Hp = np.swapaxes(Hp, 1, 0)
         Hs = np.swapaxes(Hs, 1, 0)
 
-        from ephysiopy.common.binning import RateMap
-        R = RateMap()
-
-        fHp = R.blurImage(Hp, boxcar)
-        fHs = R.blurImage(Hs, boxcar)
+        fHp = blurImage(Hp, boxcar)
+        fHs = blurImage(Hs, boxcar)
 
         H = fHs / fHp
         H[Hp < Pthresh] = np.nan

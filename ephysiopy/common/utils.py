@@ -72,6 +72,59 @@ def smooth(x, window_len=9, window='hanning'):
     return y
 
 
+def blurImage(im, n, ny=None, ftype='boxcar'):
+    """
+    Smooths a 2D image by convolving with a filter
+
+    Parameters
+    ----------
+    im : array_like
+        The array to smooth
+    n, ny : int
+        The size of the smoothing kernel
+    ftype : str
+        The type of smoothing kernel. Either 'boxcar' or 'gaussian'
+
+    Returns
+    -------
+    res: array_like
+        The smoothed vector with shape the same as im
+    """
+    from scipy import signal
+    n = int(n)
+    if not ny:
+        ny = n
+    else:
+        ny = int(ny)
+    #  keep track of nans
+    nan_idx = np.isnan(im)
+    im[nan_idx] = 0
+    g = signal.boxcar(n) / float(n)
+    if 'box' in ftype:
+        if im.ndim == 1:
+            g = signal.boxcar(n) / float(n)
+        elif im.ndim == 2:
+            g = signal.boxcar(n) / float(n)
+            g = np.tile(g, (1, ny, 1))
+            g = g / g.sum()
+            g = np.squeeze(g)  # extra dim introduced in np.tile above
+        elif im.ndim == 3:  # mutlidimensional binning
+            g = signal.boxcar(n) / float(n)
+            g = np.tile(g, (1, ny, 1))
+            g = g / g.sum()
+    elif 'gaussian' in ftype:
+        x, y = np.mgrid[-n:n+1, 0-ny:ny+1]
+        g = np.exp(-(x**2/float(n) + y**2/float(ny)))
+        g = g / g.sum()
+        if np.ndim(im) == 1:
+            g = g[n, :]
+        if np.ndim(im) == 3:
+            g = np.tile(g, (1, ny, 1))
+    improc = signal.convolve(im, g, mode='same')
+    improc[nan_idx] = np.nan
+    return improc
+
+
 def count_to(n):
     """By example:
 
@@ -132,6 +185,26 @@ def rect(r, w, deg=False):
     if deg:
         w = np.pi * w / 180.0
     return r * np.cos(w), r * np.sin(w)
+
+
+def polar(x, y, deg=0): 
+    """
+    Converts from rectangular coordinates to polar ones
+    Parameters
+    ----------
+    x, y : array_like, list_like
+        The x and y coordinates
+    deg : int
+        radian if deg=0; degree if deg=1
+    Returns
+    -------
+    p : array_like
+        The polar version of x and y	
+    """
+    if deg:
+        return np.hypot(x, y), 180.0 * np.arctan2(y, x) / np.pi
+    else:
+        return np.hypot(x, y), np.arctan2(y, x)
 
 
 def bwperim(bw, n=4):
