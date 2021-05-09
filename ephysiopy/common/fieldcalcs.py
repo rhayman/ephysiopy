@@ -5,7 +5,7 @@ from scipy import spatial
 from scipy import stats
 import skimage
 import warnings
-from skimage.morphology import watershed
+from skimage.segmentation import watershed
 from ephysiopy.common.utils import blurImage, bwperim
 
 """
@@ -338,6 +338,7 @@ def getBorderScore(
     return np.max(borderScore)
 
 
+'''
 def get_field_props(
         A, min_dist=5, neighbours=2, prc=50,
         plot=False, ax=None, tri=False, verbose=True, **kwargs):
@@ -446,6 +447,13 @@ def get_field_props(
         ellipse_ratio = np.nan
     else:
         contour_coords = find_contours(central_field, 0.5)
+        from skimage.measure import EllipseModel
+        E = EllipseModel()
+        if E.estimate(contour_coords):
+            im_centre = E.params[0:2]
+            ellipse_axes = E.params[2:4]
+            ellipse_angle = E.params[-1]
+            ellipseXY = E.predict_xy(np.linspace(0, 2*np.pi, 50), E.params)
         a = _fit_ellipse(
             contour_coords[0][:, 0], contour_coords[0][:, 1])
         ellipse_axes = _ellipse_axis_length(a)
@@ -487,6 +495,7 @@ def get_field_props(
         print('Mean inter-peak distance between \
             fields: {:.4} cm'.format(mean_field_distance))
     return props
+'''
 
 
 def calc_angs(points):
@@ -527,10 +536,7 @@ def corr_maps(map1, map2, maptype='normal'):
         valid_map2 = ~np.isnan(map2)
     valid = np.logical_and(valid_map1, valid_map2)
     r = np.corrcoef(map1[valid], map2[valid])
-    if r.any():
-        return r[1][0]
-    else:
-        return np.nan
+    return r[1][0]
 
 
 def coherence(smthd_rate, unsmthd_rate):
@@ -757,148 +763,135 @@ def getGridFieldMeasures(
     else:
         min_distance = np.ceil(np.min(A_sz / 2) / 8.).astype(int)
     import skimage.feature
-    peak_idx = skimage.feature.peak_local_max(
+    peak_coords = skimage.feature.peak_local_max(
         A_tmp, min_distance=min_distance,
         exclude_border=False)
     peaksMask = np.zeros_like(A, dtype=bool)
-    peaksMask[tuple(peak_idx.T)] = True
+    peaksMask[tuple(peak_coords.T)] = True
     import skimage
-    peaksLabel = skimage.measure.label(peaksMask, connectivity=2)
-    if maxima == 'centroid':
-        S = skimage.measure.regionprops(peaksLabel)
-        xyCoordPeaks = np.fliplr(
-            np.array([(x['Centroid'][1], x['Centroid'][0]) for x in S]))
-    elif maxima == 'single':
-        xyCoordPeaks = np.fliplr(np.rot90(
-            np.array(np.nonzero(
-                peaksLabel))))  # flipped so xy instead of yx
-    # Convert so the origin is at the centre of the SAC
-    centralPoint = np.ceil(A_sz/2).astype(int)
-    xyCoordPeaksCentral = xyCoordPeaks - centralPoint
-    # calculate distance of peaks from centre and find 7 closest
-    # NB one is central peak - dealt with later
-    peaksDistToCentre = np.hypot(
-        xyCoordPeaksCentral[:, 1], xyCoordPeaksCentral[:, 0])
-    orderOfClose = np.argsort(peaksDistToCentre)
-    # Get id and coordinates of closest peaks1
-    # NB closest peak at index 0 will be centre
-    closestPeaks = orderOfClose[0:np.min((7, len(orderOfClose)))]
-    closestPeaksCoord = xyCoordPeaks[closestPeaks, :]
-    closestPeaksCoord = np.floor(closestPeaksCoord).astype(int)
-    # [Stage 2] Expand peak pixels into the surrounding half-height region
-    # 2a find the inverse drainage bin for each peak
+    from scipy import ndimage
+    peaksLabel, nLbls = ndimage.label(peaksMask)
+    
+    # --------------------------------- REFACTOR BEGIN ------------------------
+    from skimage.segmentation import watershed
     fieldsLabel = watershed(image=-A_tmp, markers=peaksLabel)
-    # 2b. Work out what threshold to use in each drainage-basin
-    nZones = np.max(fieldsLabel.ravel())
-    fieldIDs = fieldsLabel[
-        closestPeaksCoord[:, 0], closestPeaksCoord[:, 1]]
-    thresholds = np.ones((nZones, 1)) * np.inf
-    # set thresholds for each sub-field at half-maximum
-    thresholds[fieldIDs - 1, 0] = A[
-        closestPeaksCoord[:, 0], closestPeaksCoord[:, 1]] / 2
-    fieldsMask = np.zeros((A.shape[0], A.shape[1], nZones))
-    for field in fieldIDs:
-        sub = fieldsLabel == field
-        fieldsMask[:, :, field-1] = np.logical_and(
-            sub, A > thresholds[field-1])
-        # TODO: the above step can fragment a sub-field in
-        # poorly formed SACs
-        # need to deal with this...perhaps by only retaining
-        # the largest  sub-sub-field
-        labelled_sub_field = skimage.measure.label(
-            fieldsMask[:, :, field-1], connectivity=2)
-        sub_props = skimage.measure.regionprops(labelled_sub_field)
-        if len(sub_props) > 1:
-            distFromCentre = []
-            for s in range(len(sub_props)):
-                centroid = sub_props[s]['Centroid']
-                distFromCentre.append(
-                    np.hypot(centroid[0]-A_sz[1], centroid[1]-A_sz[0]))
-            idx = np.argmin(distFromCentre)
-            tmp = np.zeros_like(A)
-            tmp[
-                sub_props[idx]['Coordinates'][:, 0],
-                sub_props[idx]['Coordinates'][:, 1]] = 1
-            fieldsMask[:, :, field-1] = tmp.astype(bool)
-    fieldsMask = np.max(fieldsMask, 2).astype(bool)
-    fieldsLabel[~fieldsMask] = 0
-    fieldPerim = bwperim(fieldsMask)
-    fieldsLabel = fieldsLabel.astype(int)
-    # [Stage 3] Calculate a couple of metrics based on the closest peaks
-    # Find the (mean) autoCorr value at the closest peak pixels
-    nPixelsInLabel = np.bincount(fieldsLabel.ravel())
-    sumRInLabel = np.bincount(fieldsLabel.ravel(), weights=A.ravel())
-    meanRInLabel = sumRInLabel[closestPeaks+1] / nPixelsInLabel[
-        closestPeaks+1]
-    # get scale of grid
-    closestPeakDistFromCentre = peaksDistToCentre[closestPeaks[1:]]
-    scale = np.median(closestPeakDistFromCentre.ravel())
-    # get orientation
+    # a fcn for the labeled_comprehension function that returns
+    # linear indices in A where the values in A for each label are
+    # greater than half the max in that labeled region
+
+    def fn(val, pos):
+        return pos[val > (np.max(val)/2)]
+    indices = ndimage.labeled_comprehension(
+        A, fieldsLabel, np.arange(0, nLbls), fn, np.ndarray, 0, True)
+    # turn linear indices into coordinates
+    coords = [np.unravel_index(i, np.shape(A)) for i in indices]
+    half_peak_labels = np.zeros_like(A)
+    for peak_id, coord in enumerate(coords):
+        xc, yc = coord
+        half_peak_labels[xc, yc] = peak_id
+
+    # Get some statistics about the labeled regions
+    fieldPerim = bwperim(half_peak_labels)
+    lbl_range = np.arange(0, nLbls)
+    meanRInLabel = ndimage.mean(A, half_peak_labels, lbl_range)
+    nPixelsInLabel = np.bincount(np.ravel(half_peak_labels.astype(int)))
+    sumRInLabel = ndimage.sum_labels(A, half_peak_labels, lbl_range)
+    maxRInLabel = ndimage.maximum(A, half_peak_labels, lbl_range)
+    peak_coords = ndimage.maximum_position(
+        A, half_peak_labels, lbl_range)
+
+    # Get some distance and morphology measures
+    centre = np.floor(np.array(np.shape(A))/2)
+    centred_peak_coords = peak_coords - centre
+    peak_dist_to_centre = np.hypot(
+        centred_peak_coords.T[0],
+        centred_peak_coords.T[1]
+        )
+    closest_peak_idx = np.argsort(peak_dist_to_centre)
+    central_peak_label = closest_peak_idx[0]
+    closest_peak_idx = closest_peak_idx[1:np.min((7, len(closest_peak_idx)-1))]
+    # closest_peak_idx should now the indices of the labeled 6 peaks
+    # surrounding the central peak at the image centre
+    scale = np.median(peak_dist_to_centre[closest_peak_idx])
     try:
         orientation = getGridOrientation(
-            xyCoordPeaksCentral, closestPeaks)
+            centred_peak_coords, closest_peak_idx)
     except Exception:
         orientation = np.nan
-    # calculate gridness
-    # THIS STEP MASKS THE MIDDLE AND OUTER PARTS OF THE SAC
-    #
-    # crop to the central region of the image and remove central peak
-    x = np.linspace(-centralPoint[0], centralPoint[0], A_sz[0])
-    y = np.linspace(-centralPoint[1], centralPoint[1], A_sz[1])
-    xx, yy = np.meshgrid(x, y, indexing='ij')
-    dist2Centre = np.hypot(xx, yy)
-    maxDistFromCentre = np.nan
-    if len(closestPeaks) >= 7:
-        maxDistFromCentre = np.max(dist2Centre[fieldsMask])
-    if np.logical_or(
-        np.isnan(
-            maxDistFromCentre), maxDistFromCentre >
-            np.min(np.floor(A_sz/2))):
-        maxDistFromCentre = np.min(np.floor(A_sz/2))
-    gridnessMaskAll = dist2Centre <= maxDistFromCentre
-    centreMask = fieldsLabel == fieldsLabel[
-        centralPoint[0], centralPoint[1]]
-    gridnessMask = np.logical_and(gridnessMaskAll, ~centreMask)
-    W = np.ceil(maxDistFromCentre).astype(int)
-    autoCorrMiddle = A.copy()
-    autoCorrMiddle[~gridnessMask] = np.nan
-    autoCorrMiddle = autoCorrMiddle[
-        -W + centralPoint[0]:W + centralPoint[0],
-        -W+centralPoint[1]:W+centralPoint[1]]
-    # crop the edges of the middle if there are rows/ columns of nans
-    if np.any(np.all(np.isnan(autoCorrMiddle), 1)):
-        autoCorrMiddle = np.delete(
-            autoCorrMiddle, np.nonzero((np.all(
-                np.isnan(autoCorrMiddle), 1)))[0][0], 0)
-    if np.any(np.all(np.isnan(autoCorrMiddle), 0)):
-        autoCorrMiddle = np.delete(
-            autoCorrMiddle, np.nonzero((np.all(
-                np.isnan(autoCorrMiddle), 0)))[0][0], 1)
+
+    central_pt = peak_coords[central_peak_label]
+    x = np.linspace(-central_pt[0], central_pt[0], A_sz[0])
+    y = np.linspace(-central_pt[1], central_pt[1], A_sz[1])
+    xv, yv = np.meshgrid(x, y, indexing='ij')
+    dist_to_centre = np.hypot(xv, yv)
+    # get the max distance of the half-peak width labeled fields
+    # from the centre of the image
+    max_dist_from_centre = 0
+    for peak_id, _coords in enumerate(coords):
+        if peak_id in closest_peak_idx:
+            xc, yc = _coords
+            if np.any(xc) and np.any(yc):
+                xc = xc - np.floor(A_sz[0]/2)
+                yc = yc - np.floor(A_sz[1]/2)
+                d = np.max(np.hypot(xc, yc))
+                if d > max_dist_from_centre:
+                    max_dist_from_centre = d
+    
+    # Set the outer bits and the central region of the SAC to nans
+    # getting ready for the correlation procedure
+    dist_to_centre[np.abs(dist_to_centre) > max_dist_from_centre] = 0
+    dist_to_centre[half_peak_labels == central_peak_label] = 0
+    dist_to_centre[dist_to_centre != 0] = 1
+    dist_to_centre = dist_to_centre.astype(bool)
+    sac_middle = A.copy()
+    sac_middle[dist_to_centre == False] = np.nan
+
     if 'step' in kwargs.keys():
         step = kwargs.pop('step')
     else:
         step = 30
-    try:  # HWPD
+    try:
         gridness, rotationCorrVals, rotationArr = getGridness(
-            autoCorrMiddle, step=step)
-    except Exception:  # HWPD
+            sac_middle, step=step)
+    except Exception:
         gridness, rotationCorrVals, rotationArr = np.nan, np.nan, np.nan
-    # attempt to fit an ellipse to the closest peaks
+    # attempt to fit an ellipse around the outer edges of the nearest peaks
+    # to the centre of the SAC. First find the outer edges for the closest
+    # peaks using a ndimages labeled_comprehension
+
+    def fn2(val, pos):
+        xc, yc = np.unravel_index(pos, A_sz)
+        xc = xc - np.floor(A_sz[0]/2)
+        yc = yc - np.floor(A_sz[1]/2)
+        idx = np.argmax(np.hypot(xc, yc))
+        return xc[idx], yc[idx]
+    coords_for_ellipse = ndimage.labeled_comprehension(
+        A, half_peak_labels, closest_peak_idx, fn2, tuple, 0, True)
+    ellipse_fit_coords = np.array([(x, y) for x, y in coords_for_ellipse])
+
     if allProps:
         try:
-            a = _fit_ellipse(
-                closestPeaksCoord[1:, 0], closestPeaksCoord[1:, 1])
-            im_centre = _ellipse_center(a)
-            ellipse_axes = _ellipse_axis_length(a)
-            ellipse_angle = _ellipse_angle_of_rotation(a)
-#            ang =  ang + np.pi
-            ellipseXY = _getellipseXY(
-                ellipse_axes[0], ellipse_axes[1], ellipse_angle, im_centre)
-            # get the min containing circle given the eliipse minor axis
-            circleXY = _getcircleXY(
-                im_centre, np.min(ellipse_axes))
+            from skimage.measure import EllipseModel
+            E = EllipseModel()
+            if E.estimate(ellipse_fit_coords):
+                im_centre = E.params[0:2]
+                ellipse_axes = E.params[2:4]
+                ellipse_angle = E.params[-1]
+                ellipseXY = E.predict_xy(np.linspace(0, 2*np.pi, 50), E.params)
+            
+                # get the min containing circle given the eliipse minor axis
+                from skimage.measure import CircleModel
+                circleXY = CircleModel().predict_xy(
+                    np.linspace(0, 2*np.pi, 50), im_centre,
+                    np.min(ellipse_axes))
+            else:
+                im_centre = central_pt
+                ellipse_angle = None
+                ellipse_axes = (None, None)
+                ellipseXY = None
+                circleXY = None
         except Exception:
-            im_centre = centralPoint
+            im_centre = central_pt
             ellipse_angle = None
             ellipse_axes = (None, None)
             ellipseXY = None
@@ -908,7 +901,7 @@ def getGridFieldMeasures(
         circleXY = None
         ellipse_axes = None
         ellipse_angle = None
-        im_centre = centralPoint
+        im_centre = central_pt
     # collect all the following keywords into a dict for output
     dictKeys = (
         'gridness', 'scale', 'orientation', 'closestPeaksCoord',
@@ -950,7 +943,7 @@ def getGridOrientation(peakCoords, closestPeakIdx):
         from ephysiopy.common.utils import polar
         # Assume that the first entry in peakCoords is
         # the central peak of the SAC
-        peaks = peakCoords[closestPeakIdx[1::]]
+        peaks = peakCoords[closestPeakIdx]
         peaks = peaks - peakCoords[closestPeakIdx[0]]
         theta = polar(
             peaks[:, 1],
@@ -1092,175 +1085,3 @@ def deformSAC(A, circleXY=None, ellipseXY=None):
         AA / np.nanmax(AA.flatten()), inverse_map=tform.inverse, cval=0)
     return skimage.exposure.rescale_intensity(
         deformedSAC, out_range=(SACmin, SACmax))
-
-
-def _findPeakExtent(A, peakID, peakCoord):
-    """
-    Finds extent of field that belongs to each peak.
-
-    The extent is defined as the area that falls under the half-height.
-
-    Parameters
-    ----------
-    A : array_like
-        The SAC
-    peakID : array_like
-        I think this is a list of the peak identities i.e. [1, 2, 3 etc]
-    peakCoord : array_like
-        xy coordinates into A that contain the full peaks
-
-    Returns
-    -------
-    out : 2-tuple
-        Consisting of the labelled peaks and their labelled perimeters
-    """
-    peakLabel = np.zeros((A.shape[0], A.shape[1]))
-    perimeterLabel = np.zeros_like(peakLabel)
-
-    # define threshold to use - currently this is half-height
-    halfHeight = A[peakCoord[1], peakCoord[0]] * .5
-    aboveHalfHeightLabel = ndimage.label(
-        A > halfHeight, structure=np.ones((3, 3)))[0]
-    peakIDTmp = aboveHalfHeightLabel[peakCoord[1], peakCoord[0]]
-    peakLabel[aboveHalfHeightLabel == peakIDTmp] = peakID
-    perimeterLabel[bwperim(aboveHalfHeightLabel == peakIDTmp)] = peakID
-    return peakLabel, perimeterLabel
-
-
-def _getcircleXY(centre, radius):
-    """
-    Calculates xy coordinate pairs that define a circle
-
-    Parameters
-    ----------
-    centre : array_like
-        The xy coordinate of the centre of the circle
-    radius : int
-        The radius of the circle
-
-    Returns
-    -------
-    circ : array_like
-        100 xy coordinate pairs that describe the circle
-    """
-    npts = 100
-    t = np.linspace(0+(np.pi/4), (2*np.pi)+(np.pi/4), npts)
-    r = np.repeat(radius, npts)
-    x = r * np.cos(t) + centre[1]
-    y = r * np.sin(t) + centre[0]
-    return np.array((x, y))
-
-
-def _getellipseXY(a, b, ang, im_centre):
-    """
-    Calculates xy coordinate pairs that define an ellipse
-
-    Parameters
-    ----------
-    a, b : float
-        The major and minor axes of the ellipse respectively
-    ang : float
-        The angle of orientation of the ellipse
-    im_centre : array_like
-        The xy coordinate of the centre of the ellipse
-
-    Returns
-    -------
-    ellipse : array_like
-        100 xy coordinate pairs that describe the ellipse
-    """
-    pts = 100
-    cos_a, sin_a = np.cos(ang), np.sin(ang)
-    theta = np.linspace(0, 2*np.pi, pts)
-    X = a*np.cos(theta)*cos_a - sin_a*b*np.sin(theta) + im_centre[1]
-    Y = a*np.cos(theta)*sin_a + cos_a*b*np.sin(theta) + im_centre[0]
-    return np.array((X, Y))
-
-
-def _fit_ellipse(x, y):
-    """
-    Does a best fits of an ellipse to the x/y coordinates provided
-
-    Parameters
-    ----------
-    x, y : array_like
-        The x and y coordinates
-
-    Returns
-    -------
-    a : array_like
-        The xy coordinate pairs that fit
-    """
-    x = x[:, np.newaxis]
-    y = y[:, np.newaxis]
-    D = np.hstack((x*x, x*y, y*y, x, y, np.ones_like(x)))
-    S = np.dot(D.T, D)
-    C = np.zeros([6, 6])
-    C[0, 2] = C[2, 0] = 2
-    C[1, 1] = -1
-    E, V = np.linalg.eig(np.dot(np.linalg.inv(S), C))
-    n = np.argmax(np.abs(E))
-    a = V[:, n]
-    return a
-
-
-def _ellipse_center(a):
-    """
-    Finds the centre of an ellipse
-
-    Parameters
-    ----------
-    a : array_like
-        The values that describe the ellipse; major, minor axes etc
-
-    Returns
-    -------
-    xy_centre : array_like
-        The xy coordinates of the centre of the ellipse
-    """
-    b, c, d, f, _, a = a[1]/2, a[2], a[3]/2, a[4]/2, a[5], a[0]
-    num = b*b-a*c
-    x0 = (c*d-b*f)/num
-    y0 = (a*f-b*d)/num
-    return np.array([x0, y0])
-
-
-def _ellipse_angle_of_rotation(a):
-    """
-    Finds the angle of rotation of an ellipse
-
-    Parameters
-    ----------
-    a : array_like
-        The values that describe the ellipse; major, minor axes etc
-
-    Returns
-    -------
-    angle : array_like
-        The angle of rotation of the ellipse
-    """
-    b, c, _, _, _, a = a[1]/2, a[2], a[3]/2, a[4]/2, a[5], a[0]
-    return 0.5*np.arctan(2*b/(a-c))
-
-
-def _ellipse_axis_length(a):
-    """
-    Finds the axis length of an ellipse
-
-    Parameters
-    ----------
-    a : array_like
-        The values that describe the ellipse; major, minor axes etc
-
-    Returns
-    -------
-    axes_length : array_like
-        The length of the major and minor axes (I think)
-    """
-    b, c, d, f, g, a = a[1]/2, a[2], a[3]/2, a[4]/2, a[5], a[0]
-    _up = 2*(a*f*f+c*d*d+g*b*b-2*b*d*f-a*c*g)
-    down1 = (b*b-a*c)*((c-a)*np.sqrt(1+4*b*b/((a-c)*(a-c)))-(c+a))
-    down2 = (b*b-a*c)*((a-c)*np.sqrt(1+4*b*b/((a-c)*(a-c)))-(c+a))
-    res1 = np.sqrt(_up/np.abs(down1))
-    res2 = np.sqrt(_up/np.abs(down2))
-    return np.array([res1, res2])
