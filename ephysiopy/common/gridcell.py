@@ -166,14 +166,14 @@ class SAC(object):
         Notes
         -----
         In order to maintain backward comaptibility this is a wrapper for
-        ephysiopy.common.ephys_generic.FieldCalcs.getGridFieldMeasures()
+        ephysiopy.common.ephys_generic.FieldCalcs.grid_field_props()
 
         See Also
         --------
-        ephysiopy.common.ephys_generic.FieldCalcs.getGridFieldMeasures()
+        ephysiopy.common.ephys_generic.FieldCalcs.grid_field_props()
 
         """
-        return fieldcalcs.getGridFieldMeasures(
+        return fieldcalcs.grid_field_props(
             A, maxima, allProps, **kwargs)
 
     def show(self, A, inDict, ax=None, **kwargs):

@@ -467,7 +467,7 @@ class FigureMaker(object):
             fig = plt.figure()
             ax = fig.add_subplot(111)
         Am = A.copy()
-        Am[~inDict['gridnessMaskAll']] = np.nan
+        Am[~inDict['dist_to_centre']] = np.nan
         Am = np.ma.masked_invalid(np.atleast_2d(Am))
         ax.imshow(
             A, cmap=plt.cm.get_cmap("gray_r"), interpolation='nearest')
@@ -477,24 +477,24 @@ class FigureMaker(object):
         ax.pcolormesh(Am, cmap=cmap, edgecolors='face')
         # horizontal green line at 3 o'clock
         ax.plot(
-            (inDict['closestPeaksCoord'][0, 1], np.max(
-                inDict['closestPeaksCoord'][:, 1])),
-            (inDict['closestPeaksCoord'][0, 0],
-                inDict['closestPeaksCoord'][0, 0]), '-g', **kwargs)
+            (inDict['closest_peak_coords'][0, 1], np.max(
+                inDict['closest_peak_coords'][:, 1])),
+            (inDict['closest_peak_coords'][0, 0],
+                inDict['closest_peak_coords'][0, 0]), '-g', **kwargs)
         mag = inDict['scale'] * 0.5
         th = np.linspace(0, inDict['orientation'], 50)
         from ephysiopy.common.utils import rect
         [x, y] = rect(mag, th, deg=1)
         # angle subtended by orientation
         ax.plot(
-            x + (inDict['gridnessMask'].shape[1] / 2),
-                (inDict['gridnessMask'].shape[0] / 2) - y, 'r', **kwargs)
+            x + (inDict['dist_to_centre'].shape[1] / 2),
+                (inDict['dist_to_centre'].shape[0] / 2) - y, 'r', **kwargs)
         # plot lines from centre to peaks above middle
-        for p in inDict['closestPeaksCoord']:
-            if p[0] <= inDict['gridnessMask'].shape[0] / 2:
+        for p in inDict['closest_peak_coords']:
+            if p[0] <= inDict['dist_to_centre'].shape[0] / 2:
                 ax.plot(
-                    (inDict['gridnessMask'].shape[1]/2, p[1]),
-                    (inDict['gridnessMask'].shape[0] / 2, p[0]), 'k', **kwargs)
+                    (inDict['dist_to_centre'].shape[1]/2, p[1]),
+                    (inDict['dist_to_centre'].shape[0] / 2, p[0]), 'k', **kwargs)
         all_ax = ax.axes
         x_ax = all_ax.get_xaxis()
         x_ax.set_tick_params(which='both', bottom=False, labelbottom=False,
@@ -503,8 +503,8 @@ class FigureMaker(object):
         y_ax.set_tick_params(which='both', left=False, labelleft=False,
                              right=False)
         all_ax.set_aspect('equal')
-        all_ax.set_xlim((0.5, inDict['gridnessMask'].shape[1]-1.5))
-        all_ax.set_ylim((inDict['gridnessMask'].shape[0]-.5, -.5))
+        all_ax.set_xlim((0.5, inDict['dist_to_centre'].shape[1]-1.5))
+        all_ax.set_ylim((inDict['dist_to_centre'].shape[0]-.5, -.5))
         return ax
     '''
     def plotDirFilteredRmaps(self, tetrode, cluster, maptype='rmap', **kwargs):

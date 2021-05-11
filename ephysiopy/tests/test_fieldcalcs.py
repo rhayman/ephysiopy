@@ -23,22 +23,22 @@ def test_local_threshold(basic_ratemap):
 
 
 def test_get_border_score(basic_ratemap):
-    fieldcalcs.getBorderScore(basic_ratemap)
-    fieldcalcs.getBorderScore(basic_ratemap, shape='circle')
+    fieldcalcs.border_score(basic_ratemap)
+    fieldcalcs.border_score(basic_ratemap, shape='circle')
     rmap_copy = basic_ratemap.copy()
     rmap_copy[1::, :] = np.nan
     rmap_copy[:, 2::] = np.nan
-    fieldcalcs.getBorderScore(rmap_copy)
+    fieldcalcs.border_score(rmap_copy)
     rmap_copy = basic_ratemap.copy()
     rmap_copy[1:-1, 1:-1] = 0
-    fieldcalcs.getBorderScore(rmap_copy)
-    fieldcalcs.getBorderScore(rmap_copy, minArea=1)
+    fieldcalcs.border_score(rmap_copy)
+    fieldcalcs.border_score(rmap_copy, minArea=1)
 
 
-def test_get_field_props(basic_ratemap):
-    fp = fieldcalcs.get_field_props(basic_ratemap)
+def test_field_props(basic_ratemap):
+    fp = fieldcalcs.field_props(basic_ratemap)
     assert(isinstance(fp, dict))
-    fieldcalcs.get_field_props(
+    fieldcalcs.field_props(
         basic_ratemap, clear_border=True,
         neighbours=100,
         calc_angs=True)
@@ -52,7 +52,7 @@ def test_get_field_props(basic_ratemap):
     from ephysiopy.common.utils import blurImage
     im = blurImage(image, 15)
     im[im < 0.1] = 0
-    fieldcalcs.get_field_props(im)
+    fieldcalcs.field_props(im)
 
 
 def test_corr_maps(basic_ratemap):
@@ -101,25 +101,33 @@ def test_skaggs_info(basic_ratemap):
         basic_ratemap.shape[0], basic_ratemap.shape[1])
     dwell_times = dwell_times / np.sum(dwell_times)
     dwell_times = dwell_times * 10
-    skaggs = fieldcalcs.skaggsInfo(basic_ratemap, dwell_times)
+    skaggs = fieldcalcs.skaggs_info(basic_ratemap, dwell_times)
     assert(isinstance(skaggs, float))
-    fieldcalcs.skaggsInfo(basic_ratemap, dwell_times, sample_rate=30)
+    fieldcalcs.skaggs_info(basic_ratemap, dwell_times, sample_rate=30)
     basic_ratemap[:, :] = 0
-    fieldcalcs.skaggsInfo(basic_ratemap, dwell_times)
+    fieldcalcs.skaggs_info(basic_ratemap, dwell_times)
 
 
 def test_grid_field_measures(basic_ratemap):
     # Set allProps to True to try the ellipse fitting stuff
-    measures = fieldcalcs.getGridFieldMeasures(basic_ratemap, allProps=True)
+    measures = fieldcalcs.grid_field_props(basic_ratemap, allProps=True)
     assert(isinstance(measures, dict))
-    fieldcalcs.getGridFieldMeasures(
+    fieldcalcs.grid_field_props(
         basic_ratemap, min_distance=10,
         maxima='single',
         step=15)
 
 
 def test_deform_SAC(basic_ratemap):
-    deformed_SAC = fieldcalcs.deformSAC(basic_ratemap)
+    from ephysiopy.common.binning import RateMap
+    R = RateMap()
+    sac = R.autoCorr2D(
+        basic_ratemap, ~np.isfinite(basic_ratemap))
+    from skimage import transform
+    A = transform.AffineTransform(
+        scale=[1, 1.15], translation=[0, -15])
+    sac = transform.warp(sac, A.inverse)
+    deformed_SAC = fieldcalcs.deform_SAC(sac)
     assert(isinstance(deformed_SAC, np.ndarray))
 
 
@@ -128,6 +136,6 @@ def test_get_grid_orientation(basic_ratemap):
     S = SAC()
     nodwell = ~np.isfinite(basic_ratemap)
     sac = S.autoCorr2D(basic_ratemap, nodwell)
-    measures = fieldcalcs.getGridFieldMeasures(sac, allProps=True)
-    peak_coords = measures['closestPeaksCoord']
-    fieldcalcs.getGridOrientation(peak_coords, np.arange(len(peak_coords)))
+    measures = fieldcalcs.grid_field_props(sac, allProps=True)
+    peak_coords = measures['closest_peak_coords']
+    fieldcalcs.grid_orientation(peak_coords, np.arange(len(peak_coords)))

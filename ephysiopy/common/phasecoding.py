@@ -819,7 +819,7 @@ class phasePrecession2D(object):
         x = self.RateMap.xy[0, idx]
         from ephysiopy.common import fieldcalcs
         rmap, (xe, ye) = self.RateMap.getMap(self.spk_weights)
-        label = fieldcalcs.getFieldLims(rmap)
+        label = fieldcalcs.field_lims(rmap)
         xInField = xe[label.nonzero()[1]]
         mask = np.logical_and(x > np.min(xInField), x < np.max(xInField))
         x = x[mask]

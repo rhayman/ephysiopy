@@ -418,7 +418,7 @@ class RateMap(object):
         Positions with high rates mean proportionately less error than those
         with low rates, so this tries to even the playing field. This type
         of binning should be used for calculations of spatial info
-        as with the skaggsInfo method in the fieldcalcs class (see below)
+        as with the skaggs_info method in the fieldcalcs class (see below)
         alpha is a scaling parameter that might need tweaking for different
         data sets.
         From the paper:

@@ -733,7 +733,7 @@ class MapCalcsGeneric(object):
                 m = S.getMeasures(sac)
                 r, th = self.getHDtuning(cl)
                 spC, spM = self.getSpeedTuning(cl)
-                gridness.append(m['gridness'])
+                gridness.append(m['gridscore'])
                 scale.append(m['scale'])
                 orientation.append(m['orientation'])
                 HDtuning.append(r)

@@ -16,7 +16,7 @@ deals with spatial rate maps of place and grid cells.
 """
 
 
-def getFieldLims(A):
+def field_lims(A):
     """
     Returns a labelled matrix of the ratemap A.
     Uses anything >
@@ -178,7 +178,7 @@ def local_threshold(A, prc=50, min_dist=5):
     return A_out
 
 
-def getBorderScore(
+def border_score(
         A, B=None, shape='square', fieldThresh=0.3, smthKernSig=3,
         circumPrc=0.2, binSize=3.0, minArea=200, debug=False):
     """
@@ -338,8 +338,46 @@ def getBorderScore(
     return np.max(borderScore)
 
 
-'''
-def get_field_props(
+def _get_field_labels(A: np.ndarray, **kwargs) -> tuple:
+    '''
+    Returns a labeled version of A after finding the peaks
+    in A and finding the watershed basins from the markers
+    found from those peaks. Used in field_props() and
+    grid_field_props()
+
+    Parameters
+    -----------------
+    A : np.ndarray
+    Valid kwargs:
+    min_distance : float
+        The distance in bins between fields to separate the regions
+        of the image
+    clear_border : bool
+        Input to skimage.feature.peak_local_max. The number of
+        pixels to ignore at the edge of the image
+    '''
+    clear_border = True
+    if 'clear_border' in kwargs:
+        clear_border = kwargs.pop('clear_border')
+        
+    min_distance = 1
+    if 'min_distance' in kwargs:
+        min_distance = kwargs.pop('min_distance')
+
+    A[~np.isfinite(A)] = -1
+    A[A < 0] = -1
+
+    peak_coords = skimage.feature.peak_local_max(
+        A, min_distance=min_distance,
+        exclude_border=clear_border)
+    peaksMask = np.zeros_like(A, dtype=bool)
+    peaksMask[tuple(peak_coords.T)] = True
+    peaksLabel, nLbls = ndimage.label(peaksMask)
+    ws = watershed(image=-A, markers=peaksLabel)
+    return peak_coords, ws
+
+
+def field_props(
         A, min_dist=5, neighbours=2, prc=50,
         plot=False, ax=None, tri=False, verbose=True, **kwargs):
     """
@@ -389,25 +427,15 @@ def get_field_props(
     g = np.exp(-(x**2/float(n) + y**2/float(ny)))
     g = g / g.sum()
     Ac = signal.convolve(Ac, g, mode='same')
-    if 'clear_border' in kwargs.keys():
-        clear_border = True
-    else:
-        clear_border = False
-    peak_idx = skimage.feature.peak_local_max(
-        Ac, min_distance=min_dist,
-        exclude_border=clear_border)
-    if neighbours > len(peak_idx):
-        print('neighbours value of {0} > the {1} peaks found'.format(
-            neighbours, len(peak_idx)))
-        print('Reducing neighbours to number of peaks found')
-        neighbours = len(peak_idx)
-    peak_mask = skimage.feature.peak_local_max(
-        Ac, min_distance=min_dist, exclude_border=clear_border)
-    peak_labels = np.zeros_like(Ac, dtype=bool)
-    peak_labels[tuple(peak_mask.T)] = True
-    field_labels = watershed(
-        image=-Ac, markers=peak_labels)
+
+    peak_idx, field_labels = _get_field_labels(Ac, **kwargs)
+
     nFields = np.max(field_labels)
+    if neighbours > nFields:
+        print('neighbours value of {0} > the {1} peaks found'.format(
+            neighbours, nFields))
+        print('Reducing neighbours to number of peaks found')
+        neighbours = nFields
     sub_field_mask = np.zeros((nFields, Ac.shape[0], Ac.shape[1]))
     sub_field_props = skimage.measure.regionprops(
         field_labels, intensity_image=Ac)
@@ -449,15 +477,13 @@ def get_field_props(
         contour_coords = find_contours(central_field, 0.5)
         from skimage.measure import EllipseModel
         E = EllipseModel()
-        if E.estimate(contour_coords):
-            im_centre = E.params[0:2]
+        try:
+            E.estimate(contour_coords[0])
             ellipse_axes = E.params[2:4]
-            ellipse_angle = E.params[-1]
-            ellipseXY = E.predict_xy(np.linspace(0, 2*np.pi, 50), E.params)
-        a = _fit_ellipse(
-            contour_coords[0][:, 0], contour_coords[0][:, 1])
-        ellipse_axes = _ellipse_axis_length(a)
-        ellipse_ratio = np.min(ellipse_axes) / np.max(ellipse_axes)
+            ellipse_ratio = np.min(ellipse_axes) / np.max(ellipse_axes)
+        except Exception:
+            ellipse_ratio = None
+
     """ using the peak_idx values calculate the angles of the triangles that
     make up a delaunay tesselation of the space if the calc_angles arg is
     in kwargs
@@ -495,7 +521,6 @@ def get_field_props(
         print('Mean inter-peak distance between \
             fields: {:.4} cm'.format(mean_field_distance))
     return props
-'''
 
 
 def calc_angs(points):
@@ -660,7 +685,7 @@ def kldiv(X, pvect1, pvect2, variant=None):
     return KL
 
 
-def skaggsInfo(ratemap, dwelltimes, **kwargs):
+def skaggs_info(ratemap, dwelltimes, **kwargs):
     """
     Calculates Skaggs information measure
 
@@ -712,7 +737,7 @@ def skaggsInfo(ratemap, dwelltimes, **kwargs):
     return bits_per_spike
 
 
-def getGridFieldMeasures(
+def grid_field_props(
         A, maxima='centroid',  allProps=True,
         **kwargs):
     """
@@ -758,31 +783,22 @@ def getGridFieldMeasures(
     A_tmp[A_tmp <= 0] = -1
     A_sz = np.array(np.shape(A))
     # [STAGE 1] find peaks & identify 7 closest to centre
-    if 'min_distance' in kwargs.keys():
+    if 'min_distance' in kwargs:
         min_distance = kwargs.pop('min_distance')
     else:
         min_distance = np.ceil(np.min(A_sz / 2) / 8.).astype(int)
-    import skimage.feature
-    peak_coords = skimage.feature.peak_local_max(
-        A_tmp, min_distance=min_distance,
-        exclude_border=False)
-    peaksMask = np.zeros_like(A, dtype=bool)
-    peaksMask[tuple(peak_coords.T)] = True
-    import skimage
-    from scipy import ndimage
-    peaksLabel, nLbls = ndimage.label(peaksMask)
     
-    # --------------------------------- REFACTOR BEGIN ------------------------
-    from skimage.segmentation import watershed
-    fieldsLabel = watershed(image=-A_tmp, markers=peaksLabel)
+    peak_idx, field_labels = _get_field_labels(
+        A_tmp, neighbours=7, **kwargs)
     # a fcn for the labeled_comprehension function that returns
     # linear indices in A where the values in A for each label are
     # greater than half the max in that labeled region
 
     def fn(val, pos):
         return pos[val > (np.max(val)/2)]
+    nLbls = np.max(field_labels)
     indices = ndimage.labeled_comprehension(
-        A, fieldsLabel, np.arange(0, nLbls), fn, np.ndarray, 0, True)
+        A, field_labels, np.arange(0, nLbls), fn, np.ndarray, 0, True)
     # turn linear indices into coordinates
     coords = [np.unravel_index(i, np.shape(A)) for i in indices]
     half_peak_labels = np.zeros_like(A)
@@ -814,7 +830,7 @@ def getGridFieldMeasures(
     # surrounding the central peak at the image centre
     scale = np.median(peak_dist_to_centre[closest_peak_idx])
     try:
-        orientation = getGridOrientation(
+        orientation = grid_orientation(
             centred_peak_coords, closest_peak_idx)
     except Exception:
         orientation = np.nan
@@ -844,33 +860,33 @@ def getGridFieldMeasures(
     dist_to_centre[dist_to_centre != 0] = 1
     dist_to_centre = dist_to_centre.astype(bool)
     sac_middle = A.copy()
-    sac_middle[dist_to_centre == False] = np.nan
+    sac_middle[~dist_to_centre] = np.nan
 
     if 'step' in kwargs.keys():
         step = kwargs.pop('step')
     else:
         step = 30
     try:
-        gridness, rotationCorrVals, rotationArr = getGridness(
+        gridscore, rotationCorrVals, rotationArr = gridness(
             sac_middle, step=step)
     except Exception:
-        gridness, rotationCorrVals, rotationArr = np.nan, np.nan, np.nan
-    # attempt to fit an ellipse around the outer edges of the nearest peaks
-    # to the centre of the SAC. First find the outer edges for the closest
-    # peaks using a ndimages labeled_comprehension
-
-    def fn2(val, pos):
-        xc, yc = np.unravel_index(pos, A_sz)
-        xc = xc - np.floor(A_sz[0]/2)
-        yc = yc - np.floor(A_sz[1]/2)
-        idx = np.argmax(np.hypot(xc, yc))
-        return xc[idx], yc[idx]
-    coords_for_ellipse = ndimage.labeled_comprehension(
-        A, half_peak_labels, closest_peak_idx, fn2, tuple, 0, True)
-    ellipse_fit_coords = np.array([(x, y) for x, y in coords_for_ellipse])
+        gridscore, rotationCorrVals, rotationArr = np.nan, np.nan, np.nan
 
     if allProps:
         try:
+            # attempt to fit an ellipse around the outer edges of the nearest
+            # peaks to the centre of the SAC. First find the outer edges for
+            # the closest peaks using a ndimages labeled_comprehension
+
+            def fn2(val, pos):
+                xc, yc = np.unravel_index(pos, A_sz)
+                xc = xc - np.floor(A_sz[0]/2)
+                yc = yc - np.floor(A_sz[1]/2)
+                idx = np.argmax(np.hypot(xc, yc))
+                return xc[idx], yc[idx]
+            ellipse_coords = ndimage.labeled_comprehension(
+                A, half_peak_labels, closest_peak_idx, fn2, tuple, 0, True)
+            ellipse_fit_coords = np.array([(x, y) for x, y in ellipse_coords])
             from skimage.measure import EllipseModel
             E = EllipseModel()
             if E.estimate(ellipse_fit_coords):
@@ -903,9 +919,10 @@ def getGridFieldMeasures(
         ellipse_angle = None
         im_centre = central_pt
     # collect all the following keywords into a dict for output
+    closest_peak_coords = np.array(peak_coords)[closest_peak_idx]
     dictKeys = (
-        'gridness', 'scale', 'orientation', 'closestPeaksCoord',
-        'gridnessMaskAll', 'gridnessMask', 'ellipse_axes',
+        'gridscore', 'scale', 'orientation', 'closest_peak_coords',
+        'dist_to_centre', 'ellipse_axes',
         'ellipse_angle', 'ellipseXY', 'circleXY', 'im_centre',
         'rotationArr', 'rotationCorrVals')
     outDict = dict.fromkeys(dictKeys, np.nan)
@@ -915,7 +932,7 @@ def getGridFieldMeasures(
     return outDict
 
 
-def getGridOrientation(peakCoords, closestPeakIdx):
+def grid_orientation(peakCoords, closestPeakIdx):
     """
     Calculates the orientation angle of a grid field.
 
@@ -951,7 +968,7 @@ def getGridOrientation(peakCoords, closestPeakIdx):
         return np.sort(theta.compress(theta > 0))[0]
 
 
-def getGridness(image, step=30):
+def gridness(image, step=30):
     """
     Calculates the gridness score in a grid cell SAC.
 
@@ -1023,7 +1040,7 @@ def getGridness(image, step=30):
     return gridscore, rotationalCorrVals, rotationArr
 
 
-def deformSAC(A, circleXY=None, ellipseXY=None):
+def deform_SAC(A, circleXY=None, ellipseXY=None):
     """
     Deforms a SAC that is non-circular to be more circular
 
@@ -1046,13 +1063,13 @@ def deformSAC(A, circleXY=None, ellipseXY=None):
 
     See Also
     --------
-    ephysiopy.common.ephys_generic.FieldCalcs.getGridFieldMeasures
+    ephysiopy.common.ephys_generic.FieldCalcs.grid_field_props
     skimage.transform.AffineTransform
     skimage.transform.warp
     skimage.exposure.rescale_intensity
     """
     if circleXY is None or ellipseXY is None:
-        SAC_stats = getGridFieldMeasures(A)
+        SAC_stats = grid_field_props(A)
         circleXY = SAC_stats['circleXY']
         ellipseXY = SAC_stats['ellipseXY']
         # The ellipse detection stuff might have failed, if so
@@ -1060,17 +1077,12 @@ def deformSAC(A, circleXY=None, ellipseXY=None):
         if circleXY is None:
             return A
 
-    if circleXY.shape[0] == 2:
-        circleXY = circleXY.T
-    if ellipseXY.shape[0] == 2:
-        ellipseXY = ellipseXY.T
-
     tform = skimage.transform.AffineTransform()
     try:
         tform.estimate(ellipseXY, circleXY)
     except np.linalg.LinAlgError:  # failed to converge
-        print("Failed to estimate ellipse. Returning original SAC")
-        return A
+        raise np.linalg.LinAlgError(
+            "Failed to estimate ellipse. Returning original SAC")
 
     """
     the transformation algorithms used here crop values < 0 to 0. Need to
