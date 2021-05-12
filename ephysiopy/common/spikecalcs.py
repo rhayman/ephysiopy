@@ -22,6 +22,80 @@ class SpikeCalcsGeneric(object):
     Units for time are provided as per the sample rate but converted
     internally to milliseconds
     """
+
+    @staticmethod
+    def getParam(waveforms, param='Amp', t=200, fet=1):
+        """
+        Returns the requested parameter from a spike train as a numpy array
+
+        Parameters
+        -------------------
+
+        waveforms - numpy array
+            Shape of array can be an nSpikes x nSamples
+            OR
+            a nSpikes x nElectrodes x nSamples
+
+        param - str
+            Valid values are:
+                'Amp' - peak-to-trough amplitude (default)
+                'P' - height of peak
+                'T' - depth of trough
+                'Vt' height at time t
+                'tP' - time of peak (in seconds)
+                'tT' - time of trough (in seconds)
+                'PCA' - first n fet principal components (defaults to 1)
+
+        t - int
+            The time used for Vt
+
+        fet - int
+            The number of principal components (used with param 'PCA')
+        """
+        from scipy import interpolate
+        from sklearn.decomposition import PCA
+
+        if param == 'Amp':
+            return np.ptp(waveforms, axis=-1)
+        elif param == 'P':
+            return np.max(waveforms, axis=-1)
+        elif param == 'T':
+            return np.min(waveforms, axis=-1)
+        elif param == 'Vt':
+            times = np.arange(0, 1000, 20)
+            f = interpolate.interp1d(times, range(50), 'nearest')
+            if waveforms.ndim == 2:
+                return waveforms[:, int(f(t))]
+            elif waveforms.ndim == 3:
+                return waveforms[:, :, int(f(t))]
+        elif param == 'tP':
+            idx = np.argmax(waveforms, axis=-1)
+            m = interpolate.interp1d([0, waveforms.shape[-1]-1], [0, 1/1000.])
+            return m(idx)
+        elif param == 'tT':
+            idx = np.argmin(waveforms, axis=-1)
+            m = interpolate.interp1d([0, waveforms.shape[-1]-1], [0, 1/1000.])
+            return m(idx)
+        elif param == 'PCA':
+            pca = PCA(n_components=fet)
+            if waveforms.ndim == 2:
+                return pca.fit(waveforms).transform(waveforms).squeeze()
+            elif waveforms.ndim == 3:
+                out = np.zeros((waveforms.shape[0], waveforms.shape[1] * fet))
+                st = np.arange(0, waveforms.shape[1] * fet, fet)
+                en = np.arange(fet, fet + (waveforms.shape[1] * fet), fet)
+                rng = np.vstack((st, en))
+                for i in range(waveforms.shape[1]):
+                    if ~np.any(np.isnan(waveforms[:, i, :])):
+                        A = np.squeeze(
+                            pca.fit(waveforms[:, i, :].squeeze()).transform(
+                                waveforms[:, i, :].squeeze()))
+                        if A.ndim < 2:
+                            out[:, rng[0, i]:rng[1, i]] = np.atleast_2d(A).T
+                        else:
+                            out[:, rng[0, i]:rng[1, i]] = A
+                return out
+
     def __init__(self, spike_times, waveforms=None, **kwargs):
         self.spike_times = spike_times  # IN SECONDS
         self.waveforms = waveforms
@@ -291,8 +365,10 @@ class SpikeCalcsGeneric(object):
         wvs = wvs[:, ~zeroIdx, :]
         normdWaves = (wvs.T / E.T).T
         PCA_m = self.getParam(normdWaves, 'PCA', fet=fet)
+        badIdx = np.sum(PCA_m, axis=0) == 0
+        PCA_m = PCA_m[:, ~badIdx]
         # get mahalanobis distance
-        idx = self.cut == cluster
+        idx = self.spk_clusters == cluster
         nClustSpikes = np.count_nonzero(idx)
         try:
             d = self._mahal(PCA_m, PCA_m[idx, :])
@@ -563,78 +639,7 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
     """
     Replaces SpikeCalcs from ephysiopy.dacq2py.spikecalcs
     """
-    @staticmethod
-    def getParam(waveforms, param='Amp', t=200, fet=1):
-        """
-        Returns the requested parameter from a spike train as a numpy array
-
-        Parameters
-        -------------------
-
-        waveforms - numpy array
-            Shape of array can be an nSpikes x nSamples
-            OR
-            a nSpikes x nElectrodes x nSamples
-
-        param - str
-            Valid values are:
-                'Amp' - peak-to-trough amplitude (default)
-                'P' - height of peak
-                'T' - depth of trough
-                'Vt' height at time t
-                'tP' - time of peak (in seconds)
-                'tT' - time of trough (in seconds)
-                'PCA' - first n fet principal components (defaults to 1)
-
-        t - int
-            The time used for Vt
-
-        fet - int
-            The number of principal components (used with param 'PCA')
-        """
-        from scipy import interpolate
-        from sklearn.decomposition import PCA
-
-        if param == 'Amp':
-            return np.ptp(waveforms, axis=-1)
-        elif param == 'P':
-            return np.max(waveforms, axis=-1)
-        elif param == 'T':
-            return np.min(waveforms, axis=-1)
-        elif param == 'Vt':
-            times = np.arange(0, 1000, 20)
-            f = interpolate.interp1d(times, range(50), 'nearest')
-            if waveforms.ndim == 2:
-                return waveforms[:, int(f(t))]
-            elif waveforms.ndim == 3:
-                return waveforms[:, :, int(f(t))]
-        elif param == 'tP':
-            idx = np.argmax(waveforms, axis=-1)
-            m = interpolate.interp1d([0, waveforms.shape[-1]-1], [0, 1/1000.])
-            return m(idx)
-        elif param == 'tT':
-            idx = np.argmin(waveforms, axis=-1)
-            m = interpolate.interp1d([0, waveforms.shape[-1]-1], [0, 1/1000.])
-            return m(idx)
-        elif param == 'PCA':
-            pca = PCA(n_components=fet)
-            if waveforms.ndim == 2:
-                return pca.fit(waveforms).transform(waveforms).squeeze()
-            elif waveforms.ndim == 3:
-                out = np.zeros((waveforms.shape[0], waveforms.shape[1] * fet))
-                st = np.arange(0, waveforms.shape[1] * fet, fet)
-                en = np.arange(fet, fet + (waveforms.shape[1] * fet), fet)
-                rng = np.vstack((st, en))
-                for i in range(waveforms.shape[1]):
-                    if ~np.any(np.isnan(waveforms[:, i, :])):
-                        A = np.squeeze(
-                            pca.fit(waveforms[:, i, :].squeeze()).transform(
-                                waveforms[:, i, :].squeeze()))
-                        if A.ndim < 2:
-                            out[:, rng[0, i]:rng[1, i]] = np.atleast_2d(A).T
-                        else:
-                            out[:, rng[0, i]:rng[1, i]] = A
-                return out
+    
 
     def half_amp_dur(self, waveforms):
         """

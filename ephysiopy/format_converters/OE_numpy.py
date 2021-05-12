@@ -95,7 +95,7 @@ class OE2Numpy(object):
         if self.settings.fpga_nodeId is None:
             self.settings.parse()
         if self.settings.fpga_sample_rate is None:
-            self.settings.parseChannels()
+            self.settings.parseProcessor()
         output_name = os.path.join(self.dirname, "lfp.npy")
         output_ts_name = os.path.join(self.dirname, "lfp_timestamps.npy")
         if len(channels) == 1:

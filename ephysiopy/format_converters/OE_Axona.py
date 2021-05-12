@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import numpy as np
 import os
 from ephysiopy.dacq2py import axonaIO
@@ -146,38 +147,16 @@ class OE2Axona(object):
         axona_pos_data = axona_pos_data[
             0:int(self.last_pos_ts - self.first_pos_ts)*50]
         # Create an empty header for the pos data
-        pos_header = self.AxonaData.getEmptyHeader("pos")
-        for key in pos_header.keys():
-            if 'min_x' in key:
-                pos_header[key] = str(
-                    self.settings.tracker_params['LeftBorder'])
-            if 'min_y' in key:
-                pos_header[key] = str(
-                    self.settings.tracker_params['TopBorder'])
-            if 'max_x' in key:
-                pos_header[key] = str(
-                    self.settings.tracker_params['RightBorder'])
-            if 'max_y' in key:
-                pos_header[key] = str(
-                    self.settings.tracker_params['BottomBorder'])
-        pos_header['duration'] = str(int(self.last_pos_ts - self.first_pos_ts))
-        # Rest of this stuff probably won't change so should be defaulted
-        # in the loaded file (see axonaIO.py)
-        pos_header['num_colours'] = '4'
-        pos_header['sw_version'] = '1.2.2.1'
-        pos_header['timebase'] = '50 hz'
-        pos_header['sample_rate'] = '50.0 hz'
-        pos_header['pos_format'] = 't,x1,y1,x2,y2,numpix1,numpix2'
-        pos_header['bytes_per_coord'] = '2'
-        pos_header['EEG_samples_per_position'] = '5'
-        pos_header['bytes_per_timestamp'] = '4'
-        pos_header['pixels_per_metre'] = str(ppm)
-        pos_header['num_pos_samples'] = str(len(axona_pos_data))
-        pos_header['bearing_colour_1'] = '210'
-        pos_header['bearing_colour_2'] = '30'
-        pos_header['bearing_colour_3'] = '0'
-        pos_header['bearing_colour_4'] = '0'
-        pos_header['pixels_per_metre'] = str(ppm)
+        from ephysiopy.dacq2py.axonaIO import PosHeader
+        pos_header = PosHeader()
+        pos_header.min_x = str(self.settings.tracker_params['LeftBorder'])
+        pos_header.min_y = str(self.settings.tracker_params['TopBorder'])
+        pos_header.max_x = str(self.settings.tracker_params['RightBorder'])
+        pos_header.max_y = str(self.settings.tracker_params['BottomBorder'])
+        pos_header.duration = str(int(self.last_pos_ts - self.first_pos_ts))
+        pos_header.pixels_per_metre = str(ppm)
+        pos_header.num_pos_samples = str(len(axona_pos_data))
+        pos_header.pixels_per_metre = str(ppm)
 
         self.writePos2AxonaFormat(pos_header, axona_pos_data)
         print("Exported position data to Axona format")
@@ -259,16 +238,9 @@ class OE2Axona(object):
         dt = self.AxonaData.axona_files['.1']
         # ... and a basic header for the tetrode file that use for each
         # tetrode file, changing only the num_spikes value
-        header = self.AxonaData.getEmptyHeader("tetrode")
-        header['duration'] = str(int(self.last_pos_ts-self.first_pos_ts))
-        header['sw_version'] = '1.1.0'
-        header['num_chans'] = '4'
-        header['timebase'] = '96000 hz'
-        header['bytes_per_timestamp'] = '4'
-        header['samples_per_spike'] = '50'
-        header['sample_rate'] = '48000 hz'
-        header['bytes_per_sample'] = '1'
-        header['spike_format'] = 't,ch1,t,ch2,t,ch3,t,ch4'
+        from ephysiopy.dacq2py.axonaIO import TetrodeHeader
+        header = TetrodeHeader()
+        header.duration = str(int(self.last_pos_ts-self.first_pos_ts))
 
         for key in hdf5_tetrode_data.keys():
             spiking_data = np.array(hdf5_tetrode_data[key].get('data'))
@@ -309,7 +281,7 @@ class OE2Axona(object):
             new_tetrode_data['ts'] = new_timestamps * 96000
             new_tetrode_data['waveform'] = new_spiking_data
             # change the header num_spikes field
-            header['num_spikes'] = str(num_spikes)
+            header.num_spikes = str(num_spikes)
             i_tetnum = key.split('electrode')[1]
             print("Exporting tetrode {}".format(i_tetnum))
             self.writeTetrodeData(i_tetnum, header, new_tetrode_data)
@@ -327,26 +299,24 @@ class OE2Axona(object):
         ----------
         hdf5_continuous_data - np.array with dtype as np.int16
         """
+        from ephysiopy.dacq2py.axonaIO import EEGHeader
+        header = EEGHeader()
         if eeg_type == 'eeg':
-            header = self.AxonaData.getEmptyHeader("eeg")
-            header['EEG_samples_per_position'] = '5'
-            header['sample_rate'] = '250.0 hz'
-            header['bytes_per_sample'] = '1'
+            header.EEG_samples_per_position = '5'
+            header.sample_rate = '250.0 hz'
+            header.bytes_per_sample = '1'
             dst_rate = 250
-            sample_key = 'num_EEG_samples'
         elif eeg_type == 'egf':
-            header = self.AxonaData.getEmptyHeader("egf")
-            header['sample_rate'] = '4800 hz'
-            header['bytes_per_sample'] = '2'
+            header.sample_rate = '4800 hz'
+            header.bytes_per_sample = '2'
             dst_rate = 4800
-            sample_key = 'num_EGF_samples'
-        header['duration'] = str(int(self.last_pos_ts-self.first_pos_ts))
-        header['sw_version'] = '1.1.0'
-        header['num_chans'] = '1'
+        header.duration = str(int(self.last_pos_ts-self.first_pos_ts))
+        header.sw_version = '1.1.0'
+        header.num_chans = '1'
 
         lfp_data = self.resample(hdf5_continuous_data, 30000, dst_rate, -1)
         # make sure data is same length as sample_rate * duration
-        nsamples = int(dst_rate * int(header['duration']))
+        nsamples = int(dst_rate * int(header.duration))
         lfp_data = lfp_data[0:nsamples]
         lfp_data = self.__filterLFP__(lfp_data, dst_rate)
         # convert the data format
@@ -368,7 +338,7 @@ class OE2Axona(object):
             # lfp_data = lfp_data / 256.
             lfp_data = lfp_data.astype(np.int16)
 
-        header[sample_key] = str(len(lfp_data))
+        header.n_samples = str(len(lfp_data))
         self.writeLFP2AxonaFormat(header, lfp_data, eeg_type)
 
     def makeSetData(self, lfp_channel=1, **kwargs):
@@ -442,17 +412,17 @@ class OE2Axona(object):
         return y
 
     def writeLFP2AxonaFormat(
-            self, header: dict, data: np.array, eeg_type='eeg'):
+            self, header: dataclass, data: np.array, eeg_type='eeg'):
         self.AxonaData.setHeader(self.axona_root_name + "." + eeg_type, header)
         self.AxonaData.setData(self.axona_root_name + "." + eeg_type, data)
 
-    def writePos2AxonaFormat(self, header:  dict, data: np.array):
+    def writePos2AxonaFormat(self, header:  dataclass, data: np.array):
         self.AxonaData.setHeader(self.axona_root_name + ".pos", header)
         self.AxonaData.setData(self.axona_root_name + ".pos", data)
 
-    def writeTetrodeData(self, tetnum: str, header: dict, data: np.array):
+    def writeTetrodeData(self, tetnum: str, header: dataclass, data: np.array):
         self.AxonaData.setHeader(self.axona_root_name + "." + tetnum, header)
         self.AxonaData.setData(self.axona_root_name + "." + tetnum, data)
 
-    def writeSetData(self, header: dict):
+    def writeSetData(self, header: dataclass):
         self.AxonaData.setHeader(self.axona_root_name + ".set", header)

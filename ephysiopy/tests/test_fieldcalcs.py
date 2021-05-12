@@ -41,7 +41,8 @@ def test_field_props(basic_ratemap):
     fieldcalcs.field_props(
         basic_ratemap, clear_border=True,
         neighbours=100,
-        calc_angs=True)
+        calc_angs=True,
+        min_distance=5)
     # test something that should fail as it's poorly formed
     x, y = np.indices((80, 80))
     x1, y1, x2, y2 = 28, 28, 44, 52

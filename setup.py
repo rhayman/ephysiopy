@@ -20,7 +20,7 @@ setuptools.setup(
         "numpy",
         "scipy",
         "matplotlib",
-        "scikit-learn<0.21",
+        "scikit-learn",
         "astropy",
         "scikit-image",
         "pandas",

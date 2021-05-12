@@ -470,19 +470,18 @@ def field_props(
     """
     get some stats about the field ellipticity
     """
+    ellipse_ratio = np.nan
     _, central_field, _ = limit_to_one(A, prc=50)
-    if central_field is None:
-        ellipse_ratio = np.nan
-    else:
-        contour_coords = find_contours(central_field, 0.5)
-        from skimage.measure import EllipseModel
-        E = EllipseModel()
-        try:
-            E.estimate(contour_coords[0])
-            ellipse_axes = E.params[2:4]
-            ellipse_ratio = np.min(ellipse_axes) / np.max(ellipse_axes)
-        except Exception:
-            ellipse_ratio = None
+    
+    contour_coords = find_contours(central_field, 0.5)
+    from skimage.measure import EllipseModel
+    E = EllipseModel()
+    try:
+        E.estimate(contour_coords[0])
+        ellipse_axes = E.params[2:4]
+        ellipse_ratio = np.min(ellipse_axes) / np.max(ellipse_axes)
+    except Exception:
+        print("Failed to fit ellipse")
 
     """ using the peak_idx values calculate the angles of the triangles that
     make up a delaunay tesselation of the space if the calc_angles arg is
@@ -829,11 +828,9 @@ def grid_field_props(
     # closest_peak_idx should now the indices of the labeled 6 peaks
     # surrounding the central peak at the image centre
     scale = np.median(peak_dist_to_centre[closest_peak_idx])
-    try:
-        orientation = grid_orientation(
-            centred_peak_coords, closest_peak_idx)
-    except Exception:
-        orientation = np.nan
+    orientation = np.nan
+    orientation = grid_orientation(
+        centred_peak_coords, closest_peak_idx)
 
     central_pt = peak_coords[central_peak_label]
     x = np.linspace(-central_pt[0], central_pt[0], A_sz[0])
@@ -872,6 +869,12 @@ def grid_field_props(
     except Exception:
         gridscore, rotationCorrVals, rotationArr = np.nan, np.nan, np.nan
 
+    ellipseXY = None
+    circleXY = None
+    ellipse_axes = (None, None)
+    ellipse_angle = None
+    im_centre = central_pt
+
     if allProps:
         try:
             # attempt to fit an ellipse around the outer edges of the nearest
@@ -897,27 +900,15 @@ def grid_field_props(
             
                 # get the min containing circle given the eliipse minor axis
                 from skimage.measure import CircleModel
+                _params = im_centre
+                _params.append(np.min(ellipse_axes))
                 circleXY = CircleModel().predict_xy(
-                    np.linspace(0, 2*np.pi, 50), im_centre,
-                    np.min(ellipse_axes))
+                    np.linspace(0, 2*np.pi, 50), params=_params)
             else:
-                im_centre = central_pt
-                ellipse_angle = None
-                ellipse_axes = (None, None)
-                ellipseXY = None
-                circleXY = None
+                raise Exception("Failed to find ellipse coords")
         except Exception:
-            im_centre = central_pt
-            ellipse_angle = None
-            ellipse_axes = (None, None)
-            ellipseXY = None
-            circleXY = None
-    else:
-        ellipseXY = None
-        circleXY = None
-        ellipse_axes = None
-        ellipse_angle = None
-        im_centre = central_pt
+            print("Failed to fit ellipse")
+        
     # collect all the following keywords into a dict for output
     closest_peak_coords = np.array(peak_coords)[closest_peak_idx]
     dictKeys = (

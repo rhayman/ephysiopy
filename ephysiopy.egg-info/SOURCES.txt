@@ -13,6 +13,7 @@ ephysiopy.egg-info/top_level.txt
 ephysiopy/common/__init__.py
 ephysiopy/common/binning.py
 ephysiopy/common/ephys_generic.py
+ephysiopy/common/fieldcalcs.py
 ephysiopy/common/gridcell.py
 ephysiopy/common/mle_von_mises_vals.py
 ephysiopy/common/phasecoding.py
@@ -41,6 +42,7 @@ ephysiopy/tests/conftest.py
 ephysiopy/tests/test_binning.py
 ephysiopy/tests/test_dacq2py.py
 ephysiopy/tests/test_ephys_generic.py
+ephysiopy/tests/test_fieldcalcs.py
 ephysiopy/tests/test_gridcell.py
 ephysiopy/tests/test_phasecoding.py
 ephysiopy/tests/test_rhythmicity.py

@@ -707,7 +707,7 @@ class OpenEphysNWB(OpenEphysBase):
                     series'][self.recording_name]['\
                         continuous'][fpgaNode]['data']
                 print("Referenced the raw data! Yay!\nParsing channels...")
-                self.settings.parseChannels()  # get the neural data channels
+                self.settings.parseProcessor()  # get the neural data channels
                 print("Channels parsed\nAccessing accelerometer data...")
                 self.accelerometerData = self.rawData[:, 64:]
                 print("Accessed the accelerometer data\
