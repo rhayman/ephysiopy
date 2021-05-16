@@ -1,14 +1,8 @@
-import scipy
-import scipy.interpolate
-import scipy.stats
-import scipy.ndimage
-import scipy.signal
 import numpy as np
 import math
 import os
 import pickle
 import fnmatch
-from dataclasses import dataclass
 from ephysiopy.common.utils import smooth
 
 MAXSPEED = 4.0  # pos data speed filter in m/s
@@ -22,122 +16,6 @@ empty_headers = {
     "egf": os.path.join(os.path.dirname(__file__), "egf_header.pkl")
 }
 
-
-@dataclass
-class PosHeader(object):
-    '''
-    Empty .pos header class for Axona
-    '''
-    trial_date: str
-    trial_time: str
-    experimenter: str
-    comments: str
-    duration: str
-    min_x: str
-    max_x: str
-    min_y: str
-    max_y: str
-    window_min_x: str
-    window_max_x: str
-    window_min_y: str
-    window_max_y: str
-    sample_rate: str
-    pixels_per_metre: str
-    num_pos_samples: str
-    sw_version: str = '1.2.2.1'
-    num_colours: str = '4'
-    timebase: str = '50.0 hz'
-    bytes_per_timestamp: str = '4'
-    EEG_samples_per_position: str = '5'
-    bearing_colour_1: str = '210'
-    bearing_colour_2: str = '30'
-    bearing_colour_3: str = '0'
-    bearing_colour_4: str = '0'
-    pos_format: str = 't,x1,y1,x2,y2,numpix1,numpix2'
-    bytes_per_coord: str = '2'
-
-
-@dataclass
-class EEGHeader(object):
-    trial_date: str
-    trial_time: str
-    experimenter: str
-    comments: str
-    duration: str
-    sw_version: str
-    num_chans: str
-    sample_rate: str
-    EEG_samples_per_position: str
-    bytes_per_sample: str
-    num_EEG_samples: str
-    num_EGF_samples: str
-    n_samples: str
-
-    @property
-    def n_samples(self):
-        if '4800' in self.sample_rate:
-            return self.num_EGF_samples
-        else:
-            return self.num_EEG_samples
-    
-    @n_samples.getter
-    def n_samples(self, value):
-        if '4800' in self.sample_rate:
-            self.num_EGF_samples = value
-        else:
-            self.num_EEG_samples = value
-
-
-@dataclass
-class TetrodeHeader(object):
-    trial_date: str
-    trial_time: str
-    experimenter: str
-    comments: str
-    duration: str
-    num_spikes: str
-    sw_version: str = '1.1.0'
-    num_chans: str = '4'
-    timebase: str = '96000'
-    bytes_per_timestamp: str = '4'
-    samples_per_spike: str = '50'
-    sample_rate: str = '48000 Hz'
-    bytes_per_sample: str = '1'
-    spike_format: str = 't,ch1,t,ch2,t,ch3,t,ch4'
-
-
-settings_entries = ['gain_ch_',
-    'filter_ch_',
-    'a_in_ch_',
-    'b_in_ch_',
-    'mode_ch_',
-    'filtresp_ch_',
-    'filtkind_ch_',
-    'filtfreq1_ch_',
-    'filtfreq2_ch_',
-    'filtripple_ch_',
-    'filtdcblock_ch_',
-    'dispmode_ch_',
-    'channame_ch_']
-
-@dataclass
-class SetHeader(object):
-    trial_date: str = None
-    trial_time: str = None
-    experimenter: str = None
-    comments: str = None
-    duration: str = None
-    sw_version: str = None
-    ADC_fullscale_mv: str = None
-    tracker_version: str = None
-    stim_version: str = None
-    audio_version: str = None
-
-    def __post_init__(self):
-        [object.__setattr__(self,
-            f"{s}{n}", str) for n in range(64) for s in settings_entries]
-
-    
 
 class IO(object):
     """
