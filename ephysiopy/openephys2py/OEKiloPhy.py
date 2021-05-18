@@ -419,6 +419,7 @@ class OpenEphysNPX(OpenEphysBase):
         LFPdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].1')
         sync_message_file = None
         self.recording_start_time = None
+        ap_sample_rate = getattr(self, 'ap_sample_rate', 30000)
 
         if pname_root is None:
             pname_root = self.pname_root
@@ -440,17 +441,18 @@ class OpenEphysNPX(OpenEphysBase):
         if self.path2PosData is not None:
             pos_data = np.load(os.path.join(
                 self.path2PosData, 'data_array.npy'))
+            pos_ts = np.load(os.path.join(self.path2PosData, 'timestamps.npy'))
+            sample_rate = np.floor(1/np.mean(np.diff(pos_ts)/ap_sample_rate))
+            self.xyTS = pos_ts / ap_sample_rate
+            self.pos_sample_rate = sample_rate
+
             P = PosCalcsGeneric(
                 pos_data[:, 0], pos_data[:, 1], cm=True, ppm=self.ppm)
-            xy, hdir = P.postprocesspos()
+            xy, hdir = P.postprocesspos({'SampleRate': sample_rate})
             self.xy = xy
             self.dir = hdir
             self.speed = P.speed
-            pos_ts = np.load(os.path.join(self.path2PosData, 'timestamps.npy'))
-            self.xyTS = pos_ts / 30.0 / 1000.0
-            self.pos_sample_rate = 30
 
-        ap_sample_rate = getattr(self, 'ap_sample_rate', 30000)
         n_channels = getattr(self, 'n_channels', 384)
         trial_length = 0  # make sure a trial_length has a value
         if self.path2APdata is not None:
@@ -469,7 +471,7 @@ class OpenEphysNPX(OpenEphysBase):
                     start_val = line[idx + len('start time: '):-1]
                     tmp = start_val.split('@')
                     recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
-            self.xyTS = self.xyTS - recording_start_time
+            # self.xyTS = self.xyTS - recording_start_time
         else:
             recording_start_time = self.xyTS[0]
         self.recording_start_time = recording_start_time
