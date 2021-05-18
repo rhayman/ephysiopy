@@ -25,6 +25,7 @@ class ChannelInfo(object):
     lowcut: int = 0
     highcut: int = 0
 
+
 @dataclass
 class BandpassFilter(object):
     """
@@ -188,10 +189,10 @@ class Settings(object):
         self.stimcontrol_params = dict(
             [k, int(v)] for k, v in self.stimcontrol_params.items())
 
-    def parseProcessor(self, proc_type: str ='Sources/Rhythm FPGA'):
+    def parseProcessor(self, proc_type: str = 'Sources/Rhythm FPGA'):
         """
         Parses data attached to each processor
-        
+
         Parameters
         ----------
         proc_type: str

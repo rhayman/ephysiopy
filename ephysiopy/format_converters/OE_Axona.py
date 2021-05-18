@@ -299,20 +299,15 @@ class OE2Axona(object):
         ----------
         hdf5_continuous_data - np.array with dtype as np.int16
         """
-        from ephysiopy.dacq2py.axonaIO import EEGHeader
-        header = EEGHeader()
         if eeg_type == 'eeg':
-            header.EEG_samples_per_position = '5'
-            header.sample_rate = '250.0 hz'
-            header.bytes_per_sample = '1'
+            from ephysiopy.dacq2py.axonaIO import EEGHeader
+            header = EEGHeader()
             dst_rate = 250
         elif eeg_type == 'egf':
-            header.sample_rate = '4800 hz'
-            header.bytes_per_sample = '2'
+            from ephysiopy.dacq2py.axonaIO import EGFHeader
+            header = EGFHeader()
             dst_rate = 4800
         header.duration = str(int(self.last_pos_ts-self.first_pos_ts))
-        header.sw_version = '1.1.0'
-        header.num_chans = '1'
 
         lfp_data = self.resample(hdf5_continuous_data, 30000, dst_rate, -1)
         # make sure data is same length as sample_rate * duration
