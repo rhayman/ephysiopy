@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(file_loc), '.'))
 
 # -- Project information -----------------------------------------------------
 import ephysiopy
+import ephysiopy.__about__
 project = ephysiopy.__about__.__project__
 author = ephysiopy.__about__.__author__
 from datetime import date
