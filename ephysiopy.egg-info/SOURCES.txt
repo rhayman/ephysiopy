@@ -23,13 +23,9 @@ ephysiopy/common/statscalcs.py
 ephysiopy/common/utils.py
 ephysiopy/dacq2py/__init__.py
 ephysiopy/dacq2py/axonaIO.py
+ephysiopy/dacq2py/axona_headers.py
 ephysiopy/dacq2py/dacq2py_util.py
-ephysiopy/dacq2py/eeg_header.pkl
-ephysiopy/dacq2py/egf_header.pkl
-ephysiopy/dacq2py/pos_header.pkl
-ephysiopy/dacq2py/set_header.pkl
 ephysiopy/dacq2py/tetrode_dict.py
-ephysiopy/dacq2py/tetrode_header.pkl
 ephysiopy/dacq2py/tintcolours.py
 ephysiopy/format_converters/OE_Axona.py
 ephysiopy/format_converters/OE_numpy.py
@@ -39,6 +35,8 @@ ephysiopy/openephys2py/OESettings.py
 ephysiopy/openephys2py/__init__.py
 ephysiopy/tests/__init__.py
 ephysiopy/tests/conftest.py
+ephysiopy/tests/test_axona_headers.py
+ephysiopy/tests/test_axona_io.py
 ephysiopy/tests/test_binning.py
 ephysiopy/tests/test_dacq2py.py
 ephysiopy/tests/test_ephys_generic.py
