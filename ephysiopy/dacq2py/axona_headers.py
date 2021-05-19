@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field, fields
 from abc import ABC
-from collections import defaultdict
 
 common_entries = [
     ('trial_date', None), ('trial_time', None),
@@ -34,6 +33,7 @@ class AxonaHeader(ABC):
                 else:
                     print(f"{f.name}")
 
+# --------------------- pos headers --------------------
 
 pos_entries = [
         ('min_x', None), ('max_x', None), ('min_y', None),
@@ -63,6 +63,7 @@ class PosHeader(AxonaHeader):
     '''
     pos: dict = field(default_factory=make_pos_entries)
 
+# --------------------- eeg/ egf headers --------------------
 
 lfp_entries = [
     ('sw_version', '1.1.0'),
@@ -79,18 +80,18 @@ class LFPHeader(AxonaHeader):
 
     @property
     def n_samples(self):
-        if self.sample_rate is not None:
-            if '4800' in self.sample_rate:
-                return self.num_EGF_samples
+        if self.lfp_entries['sample_rate'] is not None:
+            if '4800' in self.lfp_entries['sample_rate']:
+                return self.lfp_entries['num_EGF_samples']
             else:
-                return self.num_EEG_samples
+                return self.lfp_entries['num_EEG_samples']
 
     @n_samples.setter
     def n_samples(self, value):
-        if '4800' in self.sample_rate:
-            self.num_EGF_samples = value
+        if '4800' in self.lfp_entries['sample_rate']:
+            self.lfp_entries['num_EGF_samples'] = value
         else:
-            self.num_EEG_samples = value
+            self.lfp_entries['num_EEG_samples'] = value
 
 
 eeg_entries = [
@@ -114,7 +115,7 @@ class EEGHeader(LFPHeader):
 egf_entries = [
     ('sample_rate', "4800 hz"),
     ('num_EGF_samples', None),
-    ('bytes_per_sample' '2')
+    ('bytes_per_sample', '2')
 ]
 
 
@@ -124,9 +125,11 @@ def make_egf_entries():
 
 @dataclass
 class EGFHeader(LFPHeader):
-    lfp_entries: defaultdict(list) = field(
+    lfp_entries: dict = field(
         default_factory=make_egf_entries)
 
+
+# --------------------- tetrode headers --------------------
 
 tetrode_entries = [
     ('num_spikes', None),
@@ -142,7 +145,7 @@ tetrode_entries = [
 
 
 def make_tetrode_entries():
-    return [c for c in tetrode_entries]
+    return dict(tetrode_entries)
 
 
 @dataclass

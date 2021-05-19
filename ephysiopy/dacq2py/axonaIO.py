@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+from contextlib import redirect_stdout
 import numpy as np
 import math
 import os
@@ -44,13 +46,6 @@ class IO(object):
 
     def __init__(self, filename_root=''):
         self.filename_root = filename_root
-
-    @staticmethod
-    def getEmptyHeader(ftype: str) -> dict:
-        pname = empty_headers.get(ftype, '')
-        if os.path.isfile(pname):
-            with open(pname, 'rb') as f:
-                return pickle.load(f)
 
     def getData(self, filename_root):
         """
@@ -142,7 +137,7 @@ class IO(object):
                 a.append(int(i))
         return a
 
-    def setHeader(self, filename_root: str, header: dict):
+    def setHeader(self, filename_root: str, header: dataclass):
         """
         Writes out the header to the specified file
 
@@ -152,18 +147,12 @@ class IO(object):
             A fully qualified path to a file with the relevant suffix at
             the end (e.g. ".set", ".pos" or whatever)
 
-        header : dict
-            An empty version of which can be loaded using getEmptyHeader()
-            above
+        header : dataclass
+            See ephysiopy.dacq2py.axona_headers
         """
         with open(filename_root, 'w') as f:
-            for key, val in header.items():
-                f.write(key)
-                f.write(" ")
-                if val is None:
-                    val = ""
-                f.write(val)
-                f.write('\r\n')
+            with redirect_stdout(f):
+                header.print()
             f.write('data_start')
             f.write('\r\n')
             f.write('data_end')

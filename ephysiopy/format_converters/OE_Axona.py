@@ -147,16 +147,16 @@ class OE2Axona(object):
         axona_pos_data = axona_pos_data[
             0:int(self.last_pos_ts - self.first_pos_ts)*50]
         # Create an empty header for the pos data
-        from ephysiopy.dacq2py.axonaIO import PosHeader
+        from ephysiopy.dacq2py.axona_headers import PosHeader
         pos_header = PosHeader()
-        pos_header.min_x = str(self.settings.tracker_params['LeftBorder'])
-        pos_header.min_y = str(self.settings.tracker_params['TopBorder'])
-        pos_header.max_x = str(self.settings.tracker_params['RightBorder'])
-        pos_header.max_y = str(self.settings.tracker_params['BottomBorder'])
-        pos_header.duration = str(int(self.last_pos_ts - self.first_pos_ts))
-        pos_header.pixels_per_metre = str(ppm)
-        pos_header.num_pos_samples = str(len(axona_pos_data))
-        pos_header.pixels_per_metre = str(ppm)
+        pos_header.pos['min_x'] = str(self.settings.tracker_params['LeftBorder'])
+        pos_header.pos['.min_y'] = str(self.settings.tracker_params['TopBorder'])
+        pos_header.pos['.max_x'] = str(self.settings.tracker_params['RightBorder'])
+        pos_header.pos['.max_y'] = str(self.settings.tracker_params['BottomBorder'])
+        pos_header.common['duration'] = str(int(self.last_pos_ts - self.first_pos_ts))
+        pos_header.pos['pixels_per_metre'] = str(ppm)
+        pos_header.pos['num_pos_samples'] = str(len(axona_pos_data))
+        pos_header.pos['pixels_per_metre'] = str(ppm)
 
         self.writePos2AxonaFormat(pos_header, axona_pos_data)
         print("Exported position data to Axona format")
@@ -238,9 +238,9 @@ class OE2Axona(object):
         dt = self.AxonaData.axona_files['.1']
         # ... and a basic header for the tetrode file that use for each
         # tetrode file, changing only the num_spikes value
-        from ephysiopy.dacq2py.axonaIO import TetrodeHeader
+        from ephysiopy.dacq2py.axona_headers import TetrodeHeader
         header = TetrodeHeader()
-        header.duration = str(int(self.last_pos_ts-self.first_pos_ts))
+        header.common['duration'] = str(int(self.last_pos_ts-self.first_pos_ts))
 
         for key in hdf5_tetrode_data.keys():
             spiking_data = np.array(hdf5_tetrode_data[key].get('data'))
@@ -281,7 +281,7 @@ class OE2Axona(object):
             new_tetrode_data['ts'] = new_timestamps * 96000
             new_tetrode_data['waveform'] = new_spiking_data
             # change the header num_spikes field
-            header.num_spikes = str(num_spikes)
+            header.tetrode_entries['num_spikes'] = str(num_spikes)
             i_tetnum = key.split('electrode')[1]
             print("Exporting tetrode {}".format(i_tetnum))
             self.writeTetrodeData(i_tetnum, header, new_tetrode_data)
@@ -300,18 +300,18 @@ class OE2Axona(object):
         hdf5_continuous_data - np.array with dtype as np.int16
         """
         if eeg_type == 'eeg':
-            from ephysiopy.dacq2py.axonaIO import EEGHeader
+            from ephysiopy.dacq2py.axona_headers import EEGHeader
             header = EEGHeader()
             dst_rate = 250
         elif eeg_type == 'egf':
-            from ephysiopy.dacq2py.axonaIO import EGFHeader
+            from ephysiopy.dacq2py.axona_headers import EGFHeader
             header = EGFHeader()
             dst_rate = 4800
-        header.duration = str(int(self.last_pos_ts-self.first_pos_ts))
+        header.common['duration'] = str(int(self.last_pos_ts-self.first_pos_ts))
 
         lfp_data = self.resample(hdf5_continuous_data, 30000, dst_rate, -1)
         # make sure data is same length as sample_rate * duration
-        nsamples = int(dst_rate * int(header.duration))
+        nsamples = int(dst_rate * int(header.common['duration']))
         lfp_data = lfp_data[0:nsamples]
         lfp_data = self.__filterLFP__(lfp_data, dst_rate)
         # convert the data format
@@ -340,28 +340,29 @@ class OE2Axona(object):
         if self.OE_data is None:
             # to get the timestamps for duration key
             self.getOEData(self.filename_root)
-        header = self.AxonaData.getEmptyHeader("set")
+        from ephysiopy.dacq2py.axona_headers import SetHeader
+        header = SetHeader()
         # set some reasonable default values
         from ephysiopy import __version__
-        header['sw_version'] = __version__
-        header['ADC_fullscale_mv'] = '0.195'
-        header['tracker_version'] = '1.1.0'
+        header.sw_version = __version__
+        header.ADC_fullscale_mv = '0.195'
+        header.tracker_version = '1.1.0'
 
-        for k, v in header.items():
+        for k, v in header.set_entries.items():
             if 'gain' in k:
-                header[k] = str(self.hp_gain)
+                header.set_entries[k] = str(self.hp_gain)
             if 'collectMask' in k:
-                header[k] = '0'
+                header.set_entries[k] = '0'
             if 'EEG_ch_1' in k:
                 if lfp_channel is not None:
-                    header[k] = str(lfp_channel)
+                    header.set_entries[k] = str(lfp_channel)
             if 'mode_ch_' in k:
-                header[k] = '0'
+                header.set_entries[k] = '0'
         # iterate again to make sure lfp gain set correctly
-        for k, v in header.items():
+        for k, v in header.set_entries.items():
             if lfp_channel is not None:
                 if k == 'gain_ch_' + str(lfp_channel):
-                    header[k] = str(self.lp_gain)
+                    header.set_entries[k] = str(self.lp_gain)
 
         # Based on the data in the electrodes dict of the OESettings
         # instance (self.settings - see __init__)
@@ -370,17 +371,17 @@ class OE2Axona(object):
         self.settings.parseSpikeSorter()
         if self.settings.electrodes:
             for k, v in self.settings.electrodes.items():
-                header['collectMask_' + str(k)] = '1'
+                header.set_entries['collectMask_' + str(k)] = '1'
         if self.lfp_channel is not None:
             for chan in self.tetrodes:
                 key = 'collectMask_' + str(chan)
-                header[key] = '1'
-        header['colactive_1'] = '1'
-        header['colactive_2'] = '0'
-        header['colactive_3'] = '0'
-        header['colactive_4'] = '0'
-        header['colmap_algorithm'] = '1'
-        header['duration'] = str(int(self.last_pos_ts-self.first_pos_ts))
+                header.set_entries[key] = '1'
+        header.set_entries['colactive_1'] = '1'
+        header.set_entries['colactive_2'] = '0'
+        header.set_entries['colactive_3'] = '0'
+        header.set_entries['colactive_4'] = '0'
+        header.set_entries['colmap_algorithm'] = '1'
+        header.set_entries['duration'] = str(int(self.last_pos_ts-self.first_pos_ts))
         self.writeSetData(header)
 
     def __filterLFP__(self, data: np.array, sample_rate: int):
