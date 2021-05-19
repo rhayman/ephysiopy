@@ -10,14 +10,6 @@ from ephysiopy.common.utils import smooth
 MAXSPEED = 4.0  # pos data speed filter in m/s
 BOXCAR = 20  # this gives a 400ms smoothing window for pos averaging
 
-empty_headers = {
-    "tetrode": os.path.join(os.path.dirname(__file__), "tetrode_header.pkl"),
-    "pos": os.path.join(os.path.dirname(__file__), "pos_header.pkl"),
-    "set": os.path.join(os.path.dirname(__file__), "set_header.pkl"),
-    "eeg": os.path.join(os.path.dirname(__file__), "eeg_header.pkl"),
-    "egf": os.path.join(os.path.dirname(__file__), "egf_header.pkl")
-}
-
 
 class IO(object):
     """
@@ -65,29 +57,26 @@ class IO(object):
         n_samps = -1
         fType = os.path.splitext(filename_root)[1]
         if fType in self.axona_files:
-            try:
-                header = self.getHeader(filename_root)
-                for key in header.keys():
-                    if len(fType) > 2:
-                        if fnmatch.fnmatch(key, 'num_*_samples'):
-                            n_samps = int(header[key])
-                    else:
-                        if key.startswith('num_spikes'):
-                            n_samps = int(header[key]) * 4
-            except IOError:
-                print('File type not recognised')
+            header = self.getHeader(filename_root)
+            for key in header.keys():
+                if len(fType) > 2:
+                    if fnmatch.fnmatch(key, 'num_*_samples'):
+                        n_samps = int(header[key])
+                else:
+                    if key.startswith('num_spikes'):
+                        n_samps = int(header[key]) * 4
             f = open(filename_root, 'rb')
             data = f.read()
             st = data.find(b'data_start') + len('data_start')
             f.seek(st)
-            if fType == '.log':
-                f.seek(0)
             dt = np.dtype(self.axona_files[fType])
             a = np.fromfile(f, dtype=dt, count=n_samps)
             f.close()
+        else:
+            raise IOError("File not in list of recognised Axona files")
         return a
 
-    def getCluCut(self, tet):
+    def getCluCut(self, tet: int):
         """
         Load a clu file and return as an array of integers
 
@@ -102,11 +91,14 @@ class IO(object):
             Data read from the clu file
         """
         filename_root = self.filename_root + '.' + 'clu.' + str(tet)
-        dt = np.dtype([('data', '<i')])
-        clu_data = np.loadtxt(filename_root, dtype=dt)
-        return clu_data['data'][1::]  # first entry is number of clusters found
+        if os.path.exists(filename_root):
+            dt = np.dtype([('data', '<i')])
+            clu_data = np.loadtxt(filename_root, dtype=dt)
+            return clu_data['data'][1::]  # first entry is number of clusters found
+        else:
+            return None
 
-    def getCut(self, tet):
+    def getCut(self, tet: int):
         """
         Returns the cut file as a list of integers
 
@@ -124,7 +116,10 @@ class IO(object):
         filename_root = self.filename_root + '_' + str(tet) + '.cut'
         if not os.path.exists(filename_root):
             cut = self.getCluCut(tet)
-            return cut - 1
+            if cut is not None:
+                return cut - 1
+            else:
+                return None
         with open(filename_root, 'r') as f:
             cut_data = f.read()
             f.close()
@@ -298,240 +293,12 @@ class Pos(IO):
     @property
     def ppm(self):
         if self._ppm is None:
-            try:
-                self._ppm = self.getHeaderVal(self.header, 'pixels_per_metre')
-            except IOError:
-                self._ppm = None
+            self._ppm = self.getHeaderVal(self.header, 'pixels_per_metre')
         return self._ppm
 
     @ppm.setter
     def ppm(self, value):
         self._ppm = value
-        self.posProcessed = False
-        self.postprocesspos()
-
-    def __getitem__(self, key):
-        try:
-            val = self.__dict__[key]
-            return val
-        except Exception:
-            pass
-
-    def postprocesspos(self):
-        """
-        Post processes position data
-
-        Calls a few of the other methods in this class that deal with
-        led swaps, impossibly fast points etc
-        """
-
-        if self.posProcessed is True:
-            return
-        elif self.posProcessed is False:
-            led_pos = self.led_pos
-            led_pix = self.led_pix
-            # as with AJ's implementation in mtint, calculate weights for a
-            # weighted mean
-            # of the front and back leds for when trials have poorly tracked
-            #  trials
-            # NB could probably do this straight from the number of leds
-            #  tracked which
-            # is available in the raw data
-            # need to mask all values of the array using logical
-            #  or to replicate
-            # mtints way of filling in missing values
-            nLED_idx = self.nLEDs * 2
-            led_pos[0:nLED_idx].__setmask__(
-                led_pos[0:nLED_idx].mask.any(axis=0))
-            weights = np.zeros(2)
-            weights[0] = float(np.sum(np.nonzero(
-                led_pos[0:2]), axis=1)[0]) / self.npos
-            try:
-                weights[1] = float(np.sum(np.nonzero(
-                    led_pos[2:4]), axis=1)[0]) / self.npos
-            except IndexError:
-                pass
-            # need to deal with improperly tracked positions where the values
-            # are plainly ridiculous
-            # values less than 0 are masked
-            led_pos[led_pos < 0] = np.ma.masked
-            # deal with values outside the range of the tracked window
-            led_pos[0, (led_pos[0] > int(self.header['max_x']))] = np.ma.masked
-            led_pos[1, (led_pos[1] > int(self.header['max_y']))] = np.ma.masked
-            # try and deal with other led if present
-            try:
-                led_pos[2, (led_pos[2] > int(
-                    self.header['max_x']))] = np.ma.masked
-                led_pos[3, (led_pos[3] > int(
-                    self.header['max_y']))] = np.ma.masked
-            except IndexError:
-                pass
-            if np.logical_and(np.any(np.nonzero(led_pix)), self.nLEDs == 2):
-                swap_list = self.ledswapFilter(led_pos, led_pix)
-                tmp = led_pos[0:2, swap_list]
-                led_pos[0:2, swap_list] = led_pos[2:4, swap_list]
-                led_pos[2:4, swap_list] = tmp
-                tmp = led_pix[0, swap_list]
-                led_pix[0, swap_list] = led_pix[1, swap_list]
-                led_pix[1, swap_list] = tmp
-            ppm = self.ppm
-            max_ppm_per_sample = MAXSPEED * ppm / self.pos_sample_rate
-            led_pos = self.ledspeedFilter(led_pos, max_ppm_per_sample)
-            led_pos = self.interpNans(led_pos)
-            # get distances and angles of LEDs from rat
-            pos1 = np.arange(0, self.npos)
-            pos2 = np.arange(0, self.npos-1)
-            if self.nLEDs == 1:
-                self.xy[0:2, pos1] = led_pos[0:2, pos1]
-                self.xy[0, :] = smooth(self.xy[0, :], BOXCAR, 'flat')
-                self.xy[1, :] = smooth(self.xy[1, :], BOXCAR, 'flat')
-                self.dir[pos2] = np.mod(((180/math.pi) * (np.arctan2(
-                    -self.xy[1, pos2+1] + self.xy[1, pos2], +self.xy[0, pos2+1]
-                    - self.xy[0, pos2]))), 360)
-                self.dir[-1] = self.dir[-2]
-                self.dir_disp = self.dir
-            elif self.nLEDs == 2:
-                lightBearings = np.zeros([2, 1])
-                lightBearings[0] = self.getHeaderVal(
-                    self.setheader, 'lightBearing_1')
-                lightBearings[1] = self.getHeaderVal(
-                    self.setheader, 'lightBearing_2')
-                front_back_xy_sm = np.zeros([4, self.npos])
-                for i in range(len(front_back_xy_sm)):
-                    front_back_xy_sm[i, pos1] = smooth(
-                        led_pos[i, pos1], BOXCAR, 'flat')
-                correction = lightBearings[0]
-                self.dir[pos1] = np.mod((180/math.pi) * (np.arctan2(
-                    -front_back_xy_sm[1, pos1]+front_back_xy_sm[3, pos1],
-                    +front_back_xy_sm[0, pos1]-front_back_xy_sm[2, pos1]) -
-                    correction), 360)
-                # get xy from smoothed individual lights weighting
-                # for reliability
-                self.xy[0, pos1] = (weights[0]*front_back_xy_sm[0, pos1]
-                                    + weights[1]*front_back_xy_sm[2, pos1]) / \
-                    np.sum(weights)
-                self.xy[1, pos1] = (weights[0]*front_back_xy_sm[1, pos1]
-                                    + weights[1]*front_back_xy_sm[3, pos1]) / \
-                    np.sum(weights)
-                self.dir_disp[pos2] = np.mod(((180/math.pi) * (np.arctan2(
-                    -self.xy[1, pos2+1] + self.xy[1, pos2], +self.xy[0, pos2+1]
-                    - self.xy[0, pos2]))), 360)
-                self.dir_disp[-1] = self.dir_disp[-2]
-
-            if self.cm:
-                self.xy = self.xy / ppm * 100  # xy now in cm
-            # calculate speed based on distance
-            self.speed[pos2] = np.sqrt(np.sum(
-                np.power(np.diff(self.xy), 2), 0))
-            self.speed[self.npos-1] = self.speed[-1]
-            # Get speed into cm/s
-            self.speed = self.speed * (100 * self.pos_sample_rate / ppm)
-            if np.isnan(self.speed[-1]):
-                self.speed[-1] = 0
-
-            self.posProcessed = True
-
-    def ledspeedFilter(self, led_pos, max_ppm_per_sample):
-        """
-        Filters for impossibly fast tracked points
-
-        Parameters
-        ----------
-        led_pos : np.ma.MaskedArray
-            Masked led_pos array [x1,y1,x2,y2]
-        max_ppm_per_sample : int
-            The maximum distance (in pixels) that points are allowed to jump
-
-        Returns
-        -------
-        led_pos : np.ma.MaskedArray
-            The filtered data
-        """
-        max_ppms_sqd = max_ppm_per_sample ** 2
-        for i in range(0, len(led_pos), 2):
-            ok_pos = led_pos[i, :]
-            prev_pos = ok_pos[0:-1]
-            cur_pos = ok_pos[1:]
-            pix_per_sample_sqd = (np.power((np.subtract(
-                led_pos[i, cur_pos], led_pos[i, prev_pos])), 2) + np.power(
-                    (np.subtract(led_pos[i+1, cur_pos], led_pos[
-                        i+1, prev_pos])), 2)) / np.power(np.subtract(
-                            cur_pos, prev_pos), 2)
-            pix_per_sample_sqd = np.insert(pix_per_sample_sqd, -1, 0)
-            led_pos[i:i+2, pix_per_sample_sqd > max_ppms_sqd] = np.ma.masked
-        return led_pos
-
-    def ledswapFilter(self, led_pos, led_pix):
-        """
-        Checks for led swapping in 2-spot mode
-
-        Parameters
-        ----------
-        led_pos : np.ma.MaskedArray
-            Masked array of dims [4 x nPosSamples]
-        led_pix : np.ma.MaskedArray
-            The number of pixels tracked for each LED.
-            Has dimensions [2 x nPosSamples]
-
-        Returns
-        -------
-        swap_list : ndarray
-            Array of swapped positions
-        """
-        thresh = 5
-        mean_npix = led_pix.mean(axis=1).data
-        std_npix = led_pix.std(axis=1).data
-        pos = np.arange(1, led_pix.shape[1])
-        # Calculate distances
-        dist12 = np.sqrt(np.nansum(((np.squeeze(
-            led_pos[0:2, pos])-np.squeeze(
-            led_pos[2:4, pos-1]))**2), axis=0))
-        dist11 = np.sqrt(np.nansum(((np.squeeze(
-            led_pos[0:2, pos])-np.squeeze(
-            led_pos[0:2, pos-1]))**2), axis=0))
-        dist21 = np.sqrt(np.nansum(((np.squeeze(
-            led_pos[2:4, pos])-np.squeeze(
-            led_pos[0:2, pos-1]))**2), axis=0))
-        dist22 = np.sqrt(np.nansum(((np.squeeze(
-            led_pos[2:4, pos])-np.squeeze(
-            led_pos[2:4, pos-1]))**2), axis=0))
-        switched = np.logical_or(np.logical_and(
-            (dist12 < dist11 - thresh).data, led_pos[
-                2, pos].mask), (dist21 < dist22-thresh).data)
-        z11 = (mean_npix[0] - led_pix[0, pos]) / std_npix[0]
-        z12 = (led_pix[0, pos] - mean_npix[1]) / std_npix[1]
-        shrunk = z11 > z12
-        swap_list = np.nonzero(np.logical_and(switched, shrunk.data))[0] + 1
-        return swap_list
-
-    def interpNans(self, led_pos):
-        """
-        Interpolates over missing values
-
-        Parameters
-        ----------
-        led_pos : np.ma.MaskedArray
-            The LED positions
-
-        Returns
-        -------
-        output : np.ma.MaskedArray
-            The smoothed, unmasked array
-        """
-        for i in range(0, len(led_pos), 2):
-            missing = led_pos[i:i+2].mask.any(axis=0)
-            ok = np.logical_not(missing)
-            ok_idx = ok.ravel().nonzero()[0]
-            missing_idx = missing.ravel().nonzero()[0]
-            good_data = led_pos.data[i, ok_idx]
-            good_data1 = led_pos.data[i+1, ok_idx]
-            led_pos.data[i, missing_idx] = np.interp(
-                missing_idx, ok_idx, good_data)
-            led_pos.data[i+1, missing_idx] = np.interp(
-                missing_idx, ok_idx, good_data1)
-        # unmask the array
-        led_pos.mask = 0
-        return led_pos
 
 
 class Tetrode(IO):
@@ -583,13 +350,8 @@ class Tetrode(IO):
             self.cut = cut
             self.clusters = np.unique(self.cut)
         except IOError:
-            try:
-                cut = self.getCluCut(self.tetrode)
-                cut = np.array(cut) - 1
-                self.cut = cut
-                self.clusters = np.unique(self.cut)
-            except IOError:
-                self.cut = None
+            self.cut = None
+            self.clusters = None
         self.pos_samples = None
 
     def getSpkTS(self):
@@ -598,7 +360,7 @@ class Tetrode(IO):
         """
         return np.ma.compressed(self.spk_ts)
 
-    def getClustTS(self, cluster=None):
+    def getClustTS(self, cluster: int=None):
         """
         Returns the timestamps for a cluster on the tetrode
 
@@ -640,7 +402,7 @@ class Tetrode(IO):
                 self.timebase) * self.posSampleRate).astype(int)
         return np.ma.compressed(self.pos_samples)
 
-    def getClustSpks(self, cluster):
+    def getClustSpks(self, cluster: int):
         """
         Returns the waveforms of `cluster`
 
@@ -798,11 +560,8 @@ class Stim(dict, IO):
             self[k] = d[k]
 
     def __getitem__(self, key):
-        try:
-            val = dict.__getitem__(self, key)
-            return val
-        except KeyError:
-            print('KeyError')
+        val = dict.__getitem__(self, key)
+        return val
 
     def __setitem__(self, key, val):
         dict.__setitem__(self, key, val)
@@ -817,19 +576,19 @@ class Stim(dict, IO):
         """
         Gets the position indices of the on events
         """
-        scale = self.timebase / float(self['posSampRate'])
+        scale = self.timebase / getattr(self, 'posSampRate', 50)
         return self['on'] / scale
 
     def getEEGIdx(self):
         """
         Gets the EEG indices of the on events
         """
-        scale = self.timebase / float(self['eegSampRate'])
+        scale = self.timebase / getattr(self, 'eegSampRate', 250)
         return (self['on'] / scale).astype(int)
 
     def getEGFIdx(self):
         """
         Gets the EGF indices of the on events
         """
-        scale = self.timebase / float(self['egfSampRate'])
+        scale = self.timebase / getattr(self, 'egfSampRate', 4800)
         return (self['on'] / scale).astype(int)
