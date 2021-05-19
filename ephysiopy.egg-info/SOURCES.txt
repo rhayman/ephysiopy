@@ -47,3 +47,5 @@ ephysiopy/tests/test_rhythmicity.py
 ephysiopy/tests/test_spikecalcs.py
 ephysiopy/tests/test_statscalcs.py
 ephysiopy/tests/test_utils.py
+ephysiopy/visualise/__init__.py
+ephysiopy/visualise/plotting.py
