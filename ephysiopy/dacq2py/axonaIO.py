@@ -470,21 +470,24 @@ class EEG(IO):
     ---------
     filename_root : str
         The fully qualified filename without the suffix
-    eeg_file, egf : int
+    egf: int
         Whether to read the 'eeg' file or the 'egf' file. 0 is False, 1 is True
+    eeg_file: int
+        If more than one eeg channel was recorded from then they are numbered
+        from 1 onwards i.e. trial.eeg, trial.eeg1, trial.eeg2 etc
+        This number specifies that
+        
     """
 
     def __init__(self, filename_root, eeg_file=1, egf=0):
         self.showfigs = 0
         self.filename_root = filename_root
         if egf == 0:
-            denom = 128.0  # used below to normalise data
             if eeg_file == 1:
                 eeg_suffix = '.eeg'
             else:
                 eeg_suffix = '.eeg' + str(eeg_file)
         elif egf == 1:
-            denom = 128.0  # used below to normalise data
             if eeg_file == 1:
                 eeg_suffix = '.egf'
             else:
@@ -503,8 +506,6 @@ class EEG(IO):
         self.sample_rate = int(self.getHeaderVal(self.header, 'sample_rate'))
         set_header = self.getHeader(self.filename_root + '.set')
         eeg_ch = int(set_header['EEG_ch_1']) - 1
-        if eeg_ch < 0:
-            eeg_ch = 0
         eeg_gain = int(set_header['gain_ch_' + str(eeg_ch)])
         # EEG polarity is determined by the "mode_ch_n" key in the setfile
         # where n is the channel # for the eeg. The possibles values to these
@@ -527,6 +528,7 @@ class EEG(IO):
         self.scaling = scaling
         self.gain = eeg_gain
         self.polarity = polarity
+        denom = 128.0
         self.sig = (self.eeg / denom) * scaling * polarity  # eeg in microvolts
         self.EEGphase = None
         # x1 / x2 are the lower and upper limits of the eeg filter
@@ -555,9 +557,8 @@ class Stim(dict, IO):
         self.timebase = tb
 
     def update(self, *args, **kwargs):
-        d = dict(*args, **kwargs)
-        for k in d.keys():
-            self[k] = d[k]
+        for k, v in dict(*args, **kwargs).items():
+            self[k] = v
 
     def __getitem__(self, key):
         val = dict.__getitem__(self, key)

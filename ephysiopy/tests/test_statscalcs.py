@@ -22,7 +22,7 @@ def test_mean_resultant_vector():
 
 
 def test_V_test():
-    t = np.linspace(0, 2*np.pi, 100)
+    t = np.linspace(-np.pi, 4*np.pi, 100)
     y = np.cos(t)
     S = StatsCalcs()
     v = S.V_test(y, 3.0)

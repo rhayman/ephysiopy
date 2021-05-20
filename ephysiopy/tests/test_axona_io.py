@@ -24,6 +24,9 @@ def test_get_cut(path_to_axona_data):
     assert(isinstance(data, list))
     data = io.getCluCut(1)
     assert(isinstance(data, np.ndarray))
+    # a file that doesn't exist
+    nothing = io.getCluCut(100)
+    assert(nothing is None)
 
 
 def test_save_data(tmp_path):
@@ -51,7 +54,7 @@ def test_tetrode_io(path_to_axona_data):
     fname_root = os.path.splitext(path_to_axona_data)[0]
     # tetrode 1 has a cut and clu file, tetrode 2
     # only has a clu file and tetrode 3 has neither
-    tets = [1, 2, 3]
+    tets = [1, 2]
     for t in tets:
         tetrode = Tetrode(fname_root, t)
         spk_ts = tetrode.getSpkTS()
@@ -79,6 +82,7 @@ def test_stim_io(path_to_axona_data):
     from ephysiopy.dacq2py.axonaIO import Stim
     fname_root = os.path.splitext(path_to_axona_data)[0]
     stim = Stim(fname_root)
+    stim.update(foo=2)
     ts = stim.getTS()
     assert(isinstance(ts, np.ndarray))
     pos_idx = stim.getPosIdx()

@@ -1,9 +1,6 @@
 import numpy as np
 import pytest
 from ephysiopy.common import fieldcalcs
-# -----------------------------------------------------------------------
-# ------------ FieldCalcs testing --------------------------------
-# -----------------------------------------------------------------------
 
 
 def test_limit_to_one(basic_ratemap):
@@ -130,6 +127,13 @@ def test_deform_SAC(basic_ratemap):
     sac = transform.warp(sac, A.inverse)
     deformed_SAC = fieldcalcs.deform_SAC(sac)
     assert(isinstance(deformed_SAC, np.ndarray))
+    A = np.zeros_like(basic_ratemap)
+    A[3:10, 3:8] = 10
+    nodwell = ~np.isfinite(A)
+    sac = R.autoCorr2D(A, nodwell)
+    fieldcalcs.deform_SAC(sac)
+    fieldcalcs.deform_SAC(
+        sac, np.array([[3,9],[10,2]]), np.array([[1,9],[10,2]]))
 
 
 def test_get_grid_orientation(basic_ratemap):
@@ -137,6 +141,13 @@ def test_get_grid_orientation(basic_ratemap):
     S = SAC()
     nodwell = ~np.isfinite(basic_ratemap)
     sac = S.autoCorr2D(basic_ratemap, nodwell)
+    measures = fieldcalcs.grid_field_props(sac, allProps=True)
+    peak_coords = measures['closest_peak_coords']
+    fieldcalcs.grid_orientation(peak_coords, np.arange(len(peak_coords)))
+    A = np.zeros_like(basic_ratemap)
+    A[3:10, 3:8] = 10
+    nodwell = ~np.isfinite(A)
+    sac = S.autoCorr2D(A, nodwell)
     measures = fieldcalcs.grid_field_props(sac, allProps=True)
     peak_coords = measures['closest_peak_coords']
     fieldcalcs.grid_orientation(peak_coords, np.arange(len(peak_coords)))

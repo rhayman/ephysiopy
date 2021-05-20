@@ -25,6 +25,7 @@ def test_blur_image(basic_ratemap):
     rmap2D = basic_ratemap
     rmap3D = np.atleast_3d(rmap2D)
     rmaps = [rmap1D, rmap2D, rmap3D]
+    b = utils.blurImage(rmap2D, 3, 4)
     for f in filt:
         for rmap in rmaps:
             b = utils.blurImage(rmap, 3, ftype=f)
@@ -55,10 +56,19 @@ def test_rect():
     x = rng.vonmises(0, 0.1, 100)
     y = rng.vonmises(0, 0.1, 100)
     utils.rect(x, y)
-    r, w = utils.rect(
+    r, _ = utils.rect(
         np.rad2deg(x),
         np.rad2deg(y),
         deg=True)
+    assert(isinstance(r, np.ndarray))
+
+
+def test_polar():
+    x = np.random.randint(0, 10, 20)
+    y = np.random.randint(0, 10, 20)
+    r, _ = utils.polar(x, y)
+    assert(isinstance(r, np.ndarray))
+    r, _ = utils.polar(x, y, deg=True)
     assert(isinstance(r, np.ndarray))
 
 

@@ -476,12 +476,9 @@ def field_props(
     contour_coords = find_contours(central_field, 0.5)
     from skimage.measure import EllipseModel
     E = EllipseModel()
-    try:
-        E.estimate(contour_coords[0])
-        ellipse_axes = E.params[2:4]
-        ellipse_ratio = np.min(ellipse_axes) / np.max(ellipse_axes)
-    except Exception:
-        print("Failed to fit ellipse")
+    E.estimate(contour_coords[0])
+    ellipse_axes = E.params[2:4]
+    ellipse_ratio = np.min(ellipse_axes) / np.max(ellipse_axes)
 
     """ using the peak_idx values calculate the angles of the triangles that
     make up a delaunay tesselation of the space if the calc_angles arg is
@@ -869,18 +866,13 @@ def grid_field_props(
     except Exception:
         gridscore, rotationCorrVals, rotationArr = np.nan, np.nan, np.nan
 
-    ellipseXY = None
-    circleXY = None
-    ellipse_axes = (None, None)
-    ellipse_angle = None
     im_centre = central_pt
 
     if allProps:
+        # attempt to fit an ellipse around the outer edges of the nearest
+        # peaks to the centre of the SAC. First find the outer edges for
+        # the closest peaks using a ndimages labeled_comprehension
         try:
-            # attempt to fit an ellipse around the outer edges of the nearest
-            # peaks to the centre of the SAC. First find the outer edges for
-            # the closest peaks using a ndimages labeled_comprehension
-
             def fn2(val, pos):
                 xc, yc = np.unravel_index(pos, A_sz)
                 xc = xc - np.floor(A_sz[0]/2)
@@ -889,25 +881,27 @@ def grid_field_props(
                 return xc[idx], yc[idx]
             ellipse_coords = ndimage.labeled_comprehension(
                 A, half_peak_labels, closest_peak_idx, fn2, tuple, 0, True)
+        
             ellipse_fit_coords = np.array([(x, y) for x, y in ellipse_coords])
             from skimage.measure import EllipseModel
             E = EllipseModel()
-            if E.estimate(ellipse_fit_coords):
-                im_centre = E.params[0:2]
-                ellipse_axes = E.params[2:4]
-                ellipse_angle = E.params[-1]
-                ellipseXY = E.predict_xy(np.linspace(0, 2*np.pi, 50), E.params)
-            
-                # get the min containing circle given the eliipse minor axis
-                from skimage.measure import CircleModel
-                _params = im_centre
-                _params.append(np.min(ellipse_axes))
-                circleXY = CircleModel().predict_xy(
-                    np.linspace(0, 2*np.pi, 50), params=_params)
-            else:
-                raise Exception("Failed to find ellipse coords")
-        except Exception:
-            print("Failed to fit ellipse")
+            E.estimate(ellipse_fit_coords)
+            im_centre = E.params[0:2]
+            ellipse_axes = E.params[2:4]
+            ellipse_angle = E.params[-1]
+            ellipseXY = E.predict_xy(np.linspace(0, 2*np.pi, 50), E.params)
+        
+            # get the min containing circle given the eliipse minor axis
+            from skimage.measure import CircleModel
+            _params = im_centre
+            _params.append(np.min(ellipse_axes))
+            circleXY = CircleModel().predict_xy(
+                np.linspace(0, 2*np.pi, 50), params=_params)
+        except (TypeError, ValueError): #  non-iterable x and y i.e. ellipse coords fail
+            ellipse_axes = None
+            ellipse_angle = (None, None)
+            ellipseXY = None
+            circleXY = None
         
     # collect all the following keywords into a dict for output
     closest_peak_coords = np.array(peak_coords)[closest_peak_idx]
@@ -945,7 +939,7 @@ def grid_orientation(peakCoords, closestPeakIdx):
         working counter-clockwise from a line extending from the
         middle of the SAC to 3 o'clock.
     """
-    if len(closestPeakIdx) == 1:
+    if len(peakCoords) < 3 or closestPeakIdx.size == 0:
         return np.nan
     else:
         from ephysiopy.common.utils import polar
@@ -1069,11 +1063,7 @@ def deform_SAC(A, circleXY=None, ellipseXY=None):
             return A
 
     tform = skimage.transform.AffineTransform()
-    try:
-        tform.estimate(ellipseXY, circleXY)
-    except np.linalg.LinAlgError:  # failed to converge
-        raise np.linalg.LinAlgError(
-            "Failed to estimate ellipse. Returning original SAC")
+    tform.estimate(ellipseXY, circleXY)
 
     """
     the transformation algorithms used here crop values < 0 to 0. Need to
