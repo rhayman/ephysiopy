@@ -717,7 +717,6 @@ class MapCalcsGeneric(object):
             cell IDs to summarise (these will be recorded in the dataframe)
         """
 
-        import pandas as pd
         try:
             iter(cluster)
         except Exception:
@@ -753,8 +752,7 @@ class MapCalcsGeneric(object):
             'id': cluster, 'gridness': gridness, 'scale': scale,
             'orientation': orientation, 'HDtuning': HDtuning,
             'HDangle': HDangle, 'speedCorr': speedCorr, 'speedMod': speedMod}
-        self.spatialStats = pd.DataFrame(d)
-        return self.spatialStats
+        return d
 
     def getHDtuning(self, cluster):
         # HWPD 20200527
