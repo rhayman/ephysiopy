@@ -135,6 +135,6 @@ def test_axona_properties(path_to_axona_data):
     spike_times = T.TETRODE.get_spike_ts(1, 1)
     assert(isinstance(spike_times, np.ndarray))
     with pytest.raises(KeyError):
-        T.TETRODE[99]
+        T.TETRODE[16]
     with pytest.raises(Exception):
         T.TETRODE.get_spike_ts(99, 99)
