@@ -447,7 +447,7 @@ class OpenEphysNPX(OpenEphysBase):
             self.pos_sample_rate = sample_rate
 
             P = PosCalcsGeneric(
-                pos_data[:, 0], pos_data[:, 1], cm=True, ppm=self.ppm)
+                pos_data[:, 0], pos_data[:, 1], cm=True, ppm=self.ppm, jumpmax=self.jumpmax)
             xy, hdir = P.postprocesspos({'SampleRate': sample_rate})
             self.xy = xy
             self.dir = hdir

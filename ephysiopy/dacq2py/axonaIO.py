@@ -39,7 +39,7 @@ class IO(object):
     def __init__(self, filename_root=''):
         self.filename_root = filename_root
 
-    def getData(self, filename_root):
+    def getData(self, filename_root: str) -> np.ndarray:
         """
         Returns the data part of an Axona data file i.e. from "data_start" to
         "data_end"
@@ -76,7 +76,7 @@ class IO(object):
             raise IOError("File not in list of recognised Axona files")
         return a
 
-    def getCluCut(self, tet: int):
+    def getCluCut(self, tet: int) -> np.ndarray:
         """
         Load a clu file and return as an array of integers
 
@@ -98,7 +98,7 @@ class IO(object):
         else:
             return None
 
-    def getCut(self, tet: int):
+    def getCut(self, tet: int) -> list:
         """
         Returns the cut file as a list of integers
 
@@ -117,9 +117,8 @@ class IO(object):
         if not os.path.exists(filename_root):
             cut = self.getCluCut(tet)
             if cut is not None:
-                return cut - 1
-            else:
-                return None
+                return cut - 1 #  clusters 1 indexed in clu
+            return cut
         with open(filename_root, 'r') as f:
             cut_data = f.read()
             f.close()
@@ -179,7 +178,7 @@ class IO(object):
             f.write('\r\n')
             f.close()
 
-    def getHeader(self, filename_root):
+    def getHeader(self, filename_root: str) -> dict:
         """
         Reads and returns the header of a specified data file as a dictionary
 
@@ -212,7 +211,7 @@ class IO(object):
                 headerDict[line[0]] = ''
         return headerDict
 
-    def getHeaderVal(self, header, key):
+    def getHeaderVal(self, header: dict, key: str) -> int:
         """
         Get a value from the header as an int
 
@@ -255,10 +254,7 @@ class Pos(IO):
         self.filename_root = filename_root
         self.header = self.getHeader(filename_root + '.pos')
         self.setheader = None
-        try:
-            self.setheader = self.getHeader(filename_root + '.set')
-        except Exception:
-            pass
+        self.setheader = self.getHeader(filename_root + '.set')
         self.posProcessed = False
         posData = self.getData(filename_root + '.pos')
         self.nLEDs = 1
@@ -345,13 +341,9 @@ class Tetrode(IO):
             self.gains = gains
             self.waveforms = (self.waveforms / 128.) * scaling[:, np.newaxis]
         self.timebase = self.getHeaderVal(self.header, 'timebase')
-        try:
-            cut = np.array(self.getCut(self.tetrode), dtype=int)
-            self.cut = cut
-            self.clusters = np.unique(self.cut)
-        except IOError:
-            self.cut = None
-            self.clusters = None
+        cut = np.array(self.getCut(self.tetrode), dtype=int)
+        self.cut = cut
+        self.clusters = np.unique(self.cut)
         self.pos_samples = None
 
     def getSpkTS(self):
@@ -379,18 +371,15 @@ class Tetrode(IO):
         If None is supplied as input then all timestamps for all clusters
         is returned i.e. getSpkTS() is called
         """
+        clustTS = None
         if cluster is None:
             clustTS = self.getSpkTS()
         else:
             if self.cut is None:
-                try:
-                    cut = np.array(self.getCut(self.tetrode), dtype=int)
-                except IOError:
-                    cut = self.getCluCut(self.tetrode)
-                    cut = np.array(cut) - 1
+                cut = np.array(self.getCut(self.tetrode), dtype=int)
                 self.cut = cut
-            self.getSpkTS()
-            clustTS = np.ma.compressed(self.spk_ts[self.cut == cluster])
+            if self.cut is not None:
+                clustTS = np.ma.compressed(self.spk_ts[self.cut == cluster])
         return clustTS
 
     def getPosSamples(self):
@@ -421,7 +410,7 @@ class Tetrode(IO):
             self.getClustTS(cluster)
         return self.waveforms[self.cut == cluster, :, :]
 
-    def getClustIdx(self, cluster):
+    def getClustIdx(self, cluster: int):
         """
         Get the indices of the position samples corresponding to the cluster
 
@@ -436,30 +425,23 @@ class Tetrode(IO):
             The indices of the position samples, dtype is int
         """
         if self.cut is None:
-            try:
-                cut = np.array(self.getCut(self.tetrode), dtype=int)
-            except IOError:
-                cut = self.getCluCut(self.tetrode)
-                cut = np.array(cut) - 1
+            cut = np.array(self.getCut(self.tetrode), dtype=int)
             self.cut = cut
         if self.pos_samples is None:
-            self.getPosSamples()
-        return self.pos_samples[self.cut == cluster].astype(int)
+            self.getPosSamples() #  sets self.pos_samples
+        if self.cut is not None:
+            return self.pos_samples[self.cut == cluster].astype(int)
+        else:
+            return None
 
     def getUniqueClusters(self):
         """
         Returns the unique clusters
         """
         if self.cut is None:
-            try:
-                cut = np.array(self.getCut(self.tetrode), dtype=int)
-            except IOError:
-                cut = self.getCluCut(self.tetrode)
-                cut = np.array(cut) - 1
+            cut = np.array(self.getCut(self.tetrode), dtype=int)
             self.cut = cut
-        else:
-            cut = self.cut
-        return np.unique(cut)
+        return np.unique(self.cut)
 
 
 class EEG(IO):

@@ -25,7 +25,7 @@ def test_get_cut(path_to_axona_data):
     data = io.getCluCut(1)
     assert(isinstance(data, np.ndarray))
     # a file that doesn't exist
-    nothing = io.getCluCut(100)
+    nothing = io.getCut(100)
     assert(nothing is None)
 
 
@@ -69,6 +69,17 @@ def test_tetrode_io(path_to_axona_data):
         assert(isinstance(clust_idx, np.ndarray))
         unique_clusts = tetrode.getUniqueClusters()
         assert(isinstance(unique_clusts, np.ndarray))
+    tetrode.getClustTS()
+    tetrode.cut = None
+    tetrode.getClustTS(1)
+    tetrode.getClustTS(2)
+    tetrode.cut = None
+    tetrode.getClustSpks(1)
+    tetrode.cut = None
+    tetrode.pos_samples = None
+    tetrode.getClustIdx(1)
+    tetrode.cut = None
+    tetrode.getUniqueClusters()
 
 
 def test_eeg_io(path_to_axona_data):

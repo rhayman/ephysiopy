@@ -407,7 +407,7 @@ class PosCalcsGeneric(object):
 
         return xy, hdir
 
-    def speedfilter(self, xy):
+    def speedfilter(self, xy: np.ma.MaskedArray):
         """
         Filters speed
 
@@ -422,13 +422,21 @@ class PosCalcsGeneric(object):
             The xy data with speeds > self.jumpmax masked
         """
 
-        disp = np.hypot(xy[0, :], xy[1, :])
+        disp = np.hypot(xy[0], xy[1])
         disp = np.diff(disp, axis=0)
         disp = np.insert(disp, -1, 0)
-        xy[:, np.abs(disp) > self.jumpmax] = np.ma.masked
+        jumps = np.abs(disp) > self.jumpmax
+        x = xy[0]
+        y = xy[1]
+        x = np.ma.masked_where(jumps, x)
+        y = np.ma.masked_where(jumps, y)
+        if getattr(self, 'mask_min_values', True):
+            x = np.ma.masked_equal(x, np.min(x))
+            y = np.ma.masked_equal(y, np.min(y))
+        xy = np.ma.array([x, y])
         return xy
 
-    def interpnans(self, xy):
+    def interpnans(self, xy: np.ma.MaskedArray):
         for i in range(0, np.shape(xy)[0], 2):
             missing = xy.mask.any(axis=0)
             ok = np.logical_not(missing)
@@ -449,7 +457,7 @@ class PosCalcsGeneric(object):
             len(missing_idx)))
         return xy
 
-    def smoothPos(self, xy):
+    def smoothPos(self, xy: np.ma.MaskedArray):
         """
         Smooths position data
 
@@ -473,7 +481,7 @@ class PosCalcsGeneric(object):
         sm_y = smooth(y, window_len=11, window='flat')
         return np.ma.masked_array([sm_x, sm_y])
 
-    def calcSpeed(self, xy):
+    def calcSpeed(self, xy: np.ma.MaskedArray):
         """
         Calculates speed
 
@@ -494,7 +502,7 @@ class PosCalcsGeneric(object):
         else:
             self.speed = speed
 
-    def upsamplePos(self, xy, upsample_rate=50):
+    def upsamplePos(self, xy: np.ma.MaskedArray, upsample_rate: int=50):
         """
         Upsamples position data from 30 to upsample_rate
 
