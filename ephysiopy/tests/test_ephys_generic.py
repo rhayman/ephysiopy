@@ -294,8 +294,7 @@ def test_interp_spike_pos_times(basic_MapCalcs):
 
 def test_get_spatial_stats(basic_MapCalcs):
     val = basic_MapCalcs.getSpatialStats(1)
-    import pandas as pd
-    assert(isinstance(val, pd.DataFrame))
+    assert(isinstance(val, dict))
     val = basic_MapCalcs.getSpatialStats([1])
 
 
