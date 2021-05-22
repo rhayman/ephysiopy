@@ -1,4 +1,4 @@
-
+https://github.com/rhayman/ephysiopy/actions/workflows/python-package.yml/badge.svg
 
 Synopsis
 ========
