@@ -22,7 +22,7 @@ def test_pixels_per_bin(standard_Ratemap):
 
 
 def test_calc_bin_size(standard_Ratemap):
-    bs = standard_Ratemap.__calcBinSize__()
+    bs = standard_Ratemap._calcBinSize()
     assert(isinstance(bs, np.ndarray))
 
 
@@ -41,9 +41,9 @@ def test_bin_data(standard_Ratemap):
     pw2d[1, :] = R.pos_weights
     pw = [R.pos_weights, pw2d]
     for sample in zip(samples, bins, pw):
-        ret = R.__binData__(sample[0], sample[1], sample[2])
+        ret = R._binData(sample[0], sample[1], sample[2])
         assert(isinstance(ret, np.ndarray))
-    R.__binData__(xy, xy_bins, None)
+    R._binData(xy, xy_bins, None)
     R.pos_weights = np.random.randn(100)
     R.smoothingType = "gaussian"
     R.pixelsPerBin
@@ -93,7 +93,7 @@ def test_get_adaptive_map(standard_Ratemap):
     pos_binned, _ = standard_Ratemap.getMap(
         spk_weights, mapType='pos')
     pos_binned[~np.isfinite(pos_binned)] = 0
-    smthdRate, smthdSpk, smthdPos = standard_Ratemap.getAdaptiveMap(
+    smthdRate, _, _ = standard_Ratemap.getAdaptiveMap(
         rmap[0], pos_binned)
     assert(isinstance(smthdRate, np.ndarray))
 

@@ -63,44 +63,44 @@ class RateMap(object):
         self.xy = xy
         self.dir = hdir
         self.speed = speed
-        self.__pos_weights = pos_weights
-        self.__ppm = ppm  # pixels per metre
-        self.__cmsPerBin = cmsPerBin
-        self.__inCms = xyInCms
-        self.__binsize__ = None  # has setter and getter - see below
-        self.__smooth_sz = smooth_sz
-        self.__smoothingType = 'gaussian'  # 'boxcar' or 'gaussian'
+        self._pos_weights = pos_weights
+        self._ppm = ppm  # pixels per metre
+        self._cmsPerBin = cmsPerBin
+        self._inCms = xyInCms
+        self._binsize = None  # has setter and getter - see below
+        self._smooth_sz = smooth_sz
+        self._smoothingType = 'gaussian'  # 'boxcar' or 'gaussian'
         self.whenToSmooth = 'before'  # or 'after'
 
     @property
     def inCms(self):
         # Whether the units are in cms or not
-        return self.__inCms
+        return self._inCms
 
     @inCms.setter
     def inCms(self, value):
-        self.__inCms = value
+        self._inCms = value
 
     @property
     def ppm(self):
         # Get the current pixels per metre (ppm)
-        return self.__ppm
+        return self._ppm
 
     @ppm.setter
     def ppm(self, value):
-        self.__ppm = value
-        self.__binsize__ = self.__calcBinSize__(self.cmsPerBin)
+        self._ppm = value
+        self._binsize = self._calcBinSize(self.cmsPerBin)
 
     @property
     def binsize(self):
-        # Returns binsize calculated in __calcBinSize__ and based on cmsPerBin
-        if self.__binsize__ is None:
-            self.__binsize__ = self.__calcBinSize__(self.cmsPerBin)
-        return self.__binsize__
+        # Returns binsize calculated in _calcBinSize and based on cmsPerBin
+        if self._binsize is None:
+            self._binsize = self._calcBinSize(self.cmsPerBin)
+        return self._binsize
 
     @binsize.setter
     def binsize(self, value):
-        self.__binsize__ = value
+        self._binsize = value
 
     @property
     def pos_weights(self):
@@ -111,41 +111,41 @@ class RateMap(object):
         data, but usefully can be adjusted when masking data in the trial
         by
         """
-        if self.__pos_weights is None:
-            self.__pos_weights = np.ones(self.xy.shape[1])
-        return self.__pos_weights
+        if self._pos_weights is None:
+            self._pos_weights = np.ones(self.xy.shape[1])
+        return self._pos_weights
 
     @pos_weights.setter
     def pos_weights(self, value):
-        self.__pos_weights = value
+        self._pos_weights = value
 
     @property
     def cmsPerBin(self):
         # The number of cms per bin of the binned up map
-        return self.__cmsPerBin
+        return self._cmsPerBin
 
     @cmsPerBin.setter
     def cmsPerBin(self, value):
-        self.__cmsPerBin = value
-        self.__binsize__ = self.__calcBinSize__(self.cmsPerBin)
+        self._cmsPerBin = value
+        self._binsize = self._calcBinSize(self.cmsPerBin)
 
     @property
     def smooth_sz(self):
         # The size of the smoothing window applied to the binned data
-        return self.__smooth_sz
+        return self._smooth_sz
 
     @smooth_sz.setter
     def smooth_sz(self, value):
-        self.__smooth_sz = value
+        self._smooth_sz = value
 
     @property
     def smoothingType(self):
         # The type of smoothing to do - legal values are 'boxcar' or 'gaussian'
-        return self.__smoothingType
+        return self._smoothingType
 
     @smoothingType.setter
     def smoothingType(self, value):
-        self.__smoothingType = value
+        self._smoothingType = value
 
     @property
     def pixelsPerBin(self):
@@ -155,7 +155,7 @@ class RateMap(object):
         else:
             return (getattr(self, 'ppm') / 100.) * getattr(self, 'cmsPerBin')
 
-    def __calcBinSize__(self, cmsPerBin=3):
+    def _calcBinSize(self, cmsPerBin=3):
         """
         Aims to get the right number of bins for x and y dims given the ppm
         in the set header and the x and y extent
@@ -210,13 +210,13 @@ class RateMap(object):
         # might happen if head direction not supplied for example
 
         if 'xy' in varType:
-            self.binsize = self.__calcBinSize__(self.cmsPerBin)
+            self.binsize = self._calcBinSize(self.cmsPerBin)
         elif 'dir' in varType:
             self.binsize = np.arange(0, 360+self.cmsPerBin, self.cmsPerBin)
         elif 'speed' in varType:
             self.binsize = np.arange(0, 50, 1)
 
-        binned_pos = self.__binData__(sample, self.binsize, self.pos_weights)
+        binned_pos = self._binData(sample, self.binsize, self.pos_weights)
 
         binned_pos_edges = binned_pos[1]
         binned_pos = binned_pos[0]
@@ -225,20 +225,20 @@ class RateMap(object):
         if 'pos' in mapType:  # return just binned up position
             if smoothing:
                 if 'dir' in varType:
-                    binned_pos = self.__circPadSmooth(
+                    binned_pos = self._circPadSmooth(
                         binned_pos, n=self.smooth_sz)
                 else:
                     binned_pos = blurImage(
                         binned_pos, self.smooth_sz, ftype=self.smoothingType)
             return binned_pos, binned_pos_edges
 
-        binned_spk = self.__binData__(sample, self.binsize, spkWeights)[0]
+        binned_spk = self._binData(sample, self.binsize, spkWeights)[0]
         # binned_spk is returned as a tuple of the binned data and the bin
         # edges
         if 'after' in self.whenToSmooth:
             rmap = binned_spk / binned_pos
             if 'dir' in varType:
-                rmap = self.__circPadSmooth(rmap, self.smooth_sz)
+                rmap = self._circPadSmooth(rmap, self.smooth_sz)
             else:
                 rmap = blurImage(
                     rmap, self.smooth_sz, ftype=self.smoothingType)
@@ -246,8 +246,8 @@ class RateMap(object):
             if not smoothing:
                 return binned_spk / binned_pos, binned_pos_edges
             if 'dir' in varType:
-                binned_pos = self.__circPadSmooth(binned_pos, self.smooth_sz)
-                binned_spk = self.__circPadSmooth(binned_spk, self.smooth_sz)
+                binned_pos = self._circPadSmooth(binned_pos, self.smooth_sz)
+                binned_spk = self._circPadSmooth(binned_spk, self.smooth_sz)
                 rmap = binned_spk / binned_pos
             else:
                 binned_pos = blurImage(
@@ -270,7 +270,7 @@ class RateMap(object):
 
         return rmap, binned_pos_edges
 
-    def __binData__(self, var, bin_edges, weights):
+    def _binData(self, var, bin_edges, weights):
         """
         Bins data taking account of possible multi-dimensionality
 
@@ -311,7 +311,7 @@ class RateMap(object):
 
         >>> rng = np.array((np.ma.min(
             trial.POS.xy, 1).data, np.ma.max(rial.POS.xy, 1).data))
-        >>> h = __binData__(
+        >>> h = _binData(
             var=trial.POS.xy, bin_edges=np.array([64, 64]),
             weights=spk_W, rng=rng)
 
@@ -334,7 +334,7 @@ class RateMap(object):
             var.T, weights=x, bins=bin_edges), 0, weights.T)
         return ndhist
 
-    def __circPadSmooth(self, var, n=3, ny=None):
+    def _circPadSmooth(self, var, n=3, ny=None):
         """
         Smooths a vector by convolving with a gaussian
         Mirror reflects the start and end of the vector to
@@ -367,7 +367,7 @@ class RateMap(object):
         improc = improc[tn-t2:tn-t2+tn]
         return improc
 
-    def __circularStructure(self, radius):
+    def _circularStructure(self, radius):
         """
         Generates a circular binary structure for use with morphological
         operations such as ndimage.binary_dilation etc
@@ -455,7 +455,7 @@ class RateMap(object):
         r = 1
         while np.any(~binCheck):
             # create the filter kernel
-            h = self.__circularStructure(r)
+            h = self._circularStructure(r)
             h[h >= np.max(h) / 3.0] = 1
             h[h != 1] = 0
             if h.shape >= pos_binned.shape:
