@@ -7,8 +7,27 @@ try:
 except ImportError:
     import xml.etree.ElementTree as ET
 from collections import OrderedDict, defaultdict
+from abc import ABC
 from dataclasses import dataclass
 from typing import List
+
+
+@dataclass
+class OEPlugin(ABC):
+    """
+    Documents an OE plugin
+    """
+    name: str = None
+    insertionPoint: int = None
+    pluginName: str = None
+    pluginType: int = None
+    pluginIndex: int = None
+    libraryName: str = None
+    libraryVersion: int = None
+    isSource: bool = False
+    isSink: bool = False
+    NodeId: int = None
+    Type: str = None
 
 
 @dataclass
@@ -27,14 +46,44 @@ class ChannelInfo(object):
 
 
 @dataclass
-class BandpassFilter(object):
+class BandpassFilter(OEPlugin):
     """
     Documents the Bandpass Filter plugin
     """
-    nodeId: int
-    channels: List[int]
-    lowcuts: List[int]
-    highcuts: List[int]
+    name = "Filters/Bandpass Filter"
+    pluginName = "Bandpass Filter"
+    pluginType = 1
+    libraryName = "Bandpass Filter"
+    isSource = False
+    isSink = False
+
+    channels: List[int] = None
+    lowcuts: List[int] = None
+    highcuts: List[int] = None
+
+
+@dataclass
+class PosTracker(OEPlugin):
+    """
+    Documents the PosTracker plugin
+    """
+    name = "Source/Pos Tracker"
+    pluginName = "Pos Tracker"
+    pluginType = 1
+    libraryName = "Pos Tracker"
+    isSource = True
+    isSink = False
+    Type = "PosTracker"
+
+    Brightness: int = None
+    Contrast: int = None
+    Exposure: int = None
+    LeftBorder: int = None
+    RightBorder: int = None
+    TopBorder: int = None
+    BottomBorder: int = None
+    AutoExposure: bool = False
+    OverlayPath: bool = False
 
 
 @dataclass

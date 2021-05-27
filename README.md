@@ -1,4 +1,4 @@
-
+[![Python package](https://github.com/rhayman/ephysiopy/actions/workflows/python-package.yml/badge.svg)](https://github.com/rhayman/ephysiopy/actions/workflows/python-package.yml)
 
 Synopsis
 ========
