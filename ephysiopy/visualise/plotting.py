@@ -146,7 +146,8 @@ class FigureMaker(object):
             angles = self.dir[spk_times_in_pos_samples]
             r, th = S.mean_resultant_vector(np.deg2rad(angles))
             ax.plot([th, th], [0, r*np.max(rmap[0])], 'r')
-        ax.set_thetagrids([0, 90, 180, 270])
+        if 'polar' in ax.name:
+            ax.set_thetagrids([0, 90, 180, 270])
         return ax
 
     @stripAxes
