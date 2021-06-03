@@ -11,6 +11,19 @@ def fileExists(pname, fname) -> bool:
     return os.path.exists(os.path.join(pname, fname))
 
 
+def fileContainsString(pname: str, searchStr: str) -> bool:
+    if os.path.exists(pname):
+        with open(pname, 'r') as f:
+            strs = f.read()
+        lines = strs.split('\n')
+        for line in lines:
+            if searchStr in line:
+                return True
+            else:
+                return False
+    else:
+        return False
+
 class KiloSortSession(object):
     """
     Loads and processes data from a Kilosort session.
@@ -393,6 +406,7 @@ class OpenEphysNPX(OpenEphysBase):
         self.path2PosData = None
         self.path2APdata = None
         self.path2LFPdata = None
+        self.path2syncmessages = None
 
     def load(
             self, pname_root=None, experiment_name='experiment1',
@@ -417,6 +431,7 @@ class OpenEphysNPX(OpenEphysBase):
         import re
         APdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].0')
         LFPdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].1')
+        PosTracker_match = re.compile('Pos_Tracker-[0-9][0-9][0-9].[0-9]/BINARY_group_[0-9]')
         sync_message_file = None
         self.recording_start_time = None
         ap_sample_rate = getattr(self, 'ap_sample_rate', 30000)
@@ -428,15 +443,18 @@ class OpenEphysNPX(OpenEphysBase):
             for ff in f:
                 if '.' not in c:  # ignore hidden directories
                     if 'data_array.npy' in ff:
-                        self.path2PosData = os.path.join(d)
+                        if PosTracker_match.search(d):
+                            self.path2PosData = os.path.join(d)
                     if 'continuous.dat' in ff:
                         if APdata_match.search(d):
                             self.path2APdata = os.path.join(d)
                         if LFPdata_match.search(d):
                             self.path2LFPdata = os.path.join(d)
                     if 'sync_messages.txt' in ff:
-                        sync_message_file = os.path.join(
+                        sync_file = os.path.join(
                             d, 'sync_messages.txt')
+                        if fileContainsString(sync_file, 'Processor'):
+                            sync_message_file = sync_file
 
         if self.path2PosData is not None:
             pos_data = np.load(os.path.join(
@@ -471,7 +489,6 @@ class OpenEphysNPX(OpenEphysBase):
                     start_val = line[idx + len('start time: '):-1]
                     tmp = start_val.split('@')
                     recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
-            # self.xyTS = self.xyTS - recording_start_time
         else:
             recording_start_time = self.xyTS[0]
         self.recording_start_time = recording_start_time
