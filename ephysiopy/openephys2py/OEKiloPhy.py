@@ -288,6 +288,12 @@ class OpenEphysBase(FigureMaker):
         spk_times = (self.kilodata.spk_times.T / 3e4)
         return spk_times[self.kilodata.spk_clusters == cluster]
 
+    def plotSummary(self, cluster: int, **kwargs):
+        ts = self.getClusterSpikeTimes(cluster)
+        fig = self.makeSummaryPlot(ts, **kwargs)
+        plt.show()
+        return fig
+
     def plotSpikesOnPath(self, cluster: int = None, **kwargs):
         ts = None
         if cluster is not None:

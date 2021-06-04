@@ -50,13 +50,26 @@ class FigureMaker(object):
         self.RateMapMaker = RateMap(
             xy=xy, hdir=hdir, speed=speed, pos_weights=pos_weights, ppm=ppm,
             xyInCms=False)
-
         self.data_loaded = True
+
+    def makeSummaryPlot(self, spk_times: np.array):
+        fig = plt.figure()
+        ax = plt.subplot(221)
+        self.makeSpikePathPlot(spk_times, ax=ax, markersize=2)
+        ax = plt.subplot(222)
+        self.makeRateMap(spk_times, ax=ax)
+        ax = plt.subplot(223, projection='polar')
+        self.makeHDPlot(spk_times, ax=ax)
+        ax = plt.subplot(224)
+        try:
+            self.makeSAC(spk_times, ax=ax)
+        except IndexError:
+            pass
+        return fig
 
     @stripAxes
     def makeRateMap(self, spk_times: np.array, ax=None):
-        if not self.data_loaded:
-            self.initialise()
+        self.initialise()
         pos_sample_rate = getattr(self, 'pos_sample_rate')
         spk_times_in_pos_samples = np.array(
             spk_times * pos_sample_rate, dtype=int)
@@ -78,8 +91,7 @@ class FigureMaker(object):
 
     @stripAxes
     def makeSpikePathPlot(self, spk_times: np.array = None, ax=None, **kwargs):
-        if not self.data_loaded:
-            self.initialise()
+        self.initialise()
         if 'mec' or 'c' not in kwargs:
             kwargs['c'] = tcols.colours[1]
             kwargs['mec'] = tcols.colours[1]
@@ -98,8 +110,7 @@ class FigureMaker(object):
 
     @stripAxes
     def makeSAC(self, spk_times: np.array = None, ax=None, **kwargs):
-        if not self.data_loaded:
-            self.initialise()
+        self.initialise()
         pos_sample_rate = getattr(self, 'pos_sample_rate')
         spk_times_in_pos_samples = np.array(
             spk_times * pos_sample_rate, dtype=int)
@@ -119,8 +130,7 @@ class FigureMaker(object):
 
     @stripAxes
     def makeHDPlot(self, spk_times: np.array = None, ax=None, **kwargs):
-        if not self.data_loaded:
-            self.initialise()
+        self.initialise()
         pos_sample_rate = getattr(self, 'pos_sample_rate')
         spk_times_in_pos_samples = np.array(
             spk_times * pos_sample_rate, dtype=int)
@@ -160,8 +170,7 @@ class FigureMaker(object):
         Pearsons correlation and the depth of modulation (dom) - see below for
         details
         """
-        if not self.data_loaded:
-            self.initialise()
+        self.initialise()
         pos_sample_rate = getattr(self, 'pos_sample_rate')
         spk_times_in_pos_samples = np.array(
             spk_times * pos_sample_rate, dtype=int)
@@ -205,8 +214,7 @@ class FigureMaker(object):
     @stripAxes
     def makeSpeedVsHeadDirectionPlot(
             self, spk_times: np.array, ax=None, **kwargs):
-        if not self.data_loaded:
-            self.initialise()
+        self.initialise()
         pos_sample_rate = getattr(self, 'pos_sample_rate')
         spk_times_in_pos_samples = spk_times * pos_sample_rate
         idx = np.array(spk_times_in_pos_samples, dtype=int)
