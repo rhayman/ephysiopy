@@ -138,3 +138,10 @@ def test_axona_properties(path_to_axona_data):
         T.TETRODE[16]
     with pytest.raises(Exception):
         T.TETRODE.get_spike_ts(99, 99)
+
+
+def test_plot_summary(path_to_axona_data):
+    T = AxonaTrial(path_to_axona_data)
+    T.load()
+    spike_times = T.TETRODE.get_spike_ts(1, 1)
+    T.makeSummaryPlot(spike_times)
