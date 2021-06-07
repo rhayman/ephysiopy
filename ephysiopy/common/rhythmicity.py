@@ -534,9 +534,8 @@ class LFPOscillations(object):
                 lowphase < pbins[i, 1]) * phaselen)
             amp[i] = np.mean(highamp[pts])
         amp = amp / np.sum(amp)
-        from ephysiopy.common.statscalcs import StatsCalcs
-        calcs = StatsCalcs()
-        mi = calcs.circ_r(pbins[:, 1], amp)
+        from ephysiopy.common.statscalcs import circ_r
+        mi = circ_r(pbins[:, 1], amp)
         if plot:
             fig = plt.figure()
             ax = fig.add_subplot(111, polar=True)
@@ -588,9 +587,8 @@ class LFPOscillations(object):
         phasedf = highampphase - lowphase
         phasedf = np.exp(1j * phasedf)
         phasedf = np.angle(phasedf)
-        from ephysiopy.common.statscalcs import StatsCalcs
-        calcs = StatsCalcs()
-        plv = calcs.circ_r(phasedf)
+        from ephysiopy.common.statscalcs import circ_r
+        plv = circ_r(phasedf)
         th = np.linspace(0.0, 2*np.pi, 20, endpoint=False)
         h, _ = np.histogram(phasedf, bins=20)
         h = h / float(len(phasedf))

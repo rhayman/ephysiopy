@@ -759,10 +759,9 @@ class MapCalcsGeneric(object):
         """
         Uses RH's head direction tuning function, just returns metric
         """
-        from ephysiopy.common import statscalcs
-        S = statscalcs.StatsCalcs()
+        from ephysiopy.common.statscalcs import mean_resultant_vector
         angles = self.hdir[self.spk_pos_idx[self.spk_clusters == cluster]]
-        r, th = S.mean_resultant_vector(np.deg2rad(angles))
+        r, th = mean_resultant_vector(np.deg2rad(angles))
         return r, th
 
     def getSpeedTuning(self, cluster, minSpeed=0.0, maxSpeed=40.0, sigma=3.0):

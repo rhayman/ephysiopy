@@ -427,12 +427,11 @@ class Tetrode(IO):
         if self.cut is None:
             cut = np.array(self.getCut(self.tetrode), dtype=int)
             self.cut = cut
+            if self.cut is None:
+                return None
         if self.pos_samples is None:
             self.getPosSamples() #  sets self.pos_samples
-        if self.cut is not None:
-            return self.pos_samples[self.cut == cluster].astype(int)
-        else:
-            return None
+        return self.pos_samples[self.cut == cluster].astype(int)
 
     def getUniqueClusters(self):
         """

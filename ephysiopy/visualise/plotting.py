@@ -151,10 +151,9 @@ class FigureMaker(object):
 
         # See if we should add the mean resultant vector (mrv)
         if 'add_mrv' in kwargs:
-            from ephysiopy.common import statscalcs
-            S = statscalcs.StatsCalcs()
+            from ephysiopy.common.statscalcs import mean_resultant_vector
             angles = self.dir[spk_times_in_pos_samples]
-            r, th = S.mean_resultant_vector(np.deg2rad(angles))
+            r, th = mean_resultant_vector(np.deg2rad(angles))
             ax.plot([th, th], [0, r*np.max(rmap[0])], 'r')
         if 'polar' in ax.name:
             ax.set_thetagrids([0, 90, 180, 270])

@@ -1057,7 +1057,7 @@ class phasePrecession2D(object):
             p = np.nan
 
         # estimtate ci's for correlation
-        if n >= conf:
+        if n >= 25 and conf:
             # obtain jackknife estimates of rho and its ci's
             rho_jack = self._ccc_jack(theta, phi)
             rho_jack = n * rho - (n - 1) * rho_jack
@@ -1067,16 +1067,21 @@ class phasePrecession2D(object):
                   alpha/2, (0, 1))[0], rho_boot + (1 / np.sqrt(
                       n)) * rho_jack_std * norm.ppf(alpha/2, (0, 1))[0])
         elif conf and k and n < 25 and n > 4:
+            from sklearn.utils import resample
             # set up the bootstrapping parameters
-            idx = random.choices(theta, k=k)
-            rho_boot = []
-            for i in idx:
-                rho_boot.append(self._ccc(theta[i], phi[i]))
-            rho_boot = np.mean(rho_boot)
-            import scipy.stats as stats
-            ci = stats.t.interval(
-                alpha=alpha, n_samples=k, loc=np.mean(theta),
-                scale=stats.sem(theta))
+            boot_samples = []
+            for i in range(k):
+                theta_sample = resample(theta, replace=True)
+                phi_sample = resample(phi, replace=True)
+                boot_samples.append(self._ccc(theta_sample, phi_sample))
+            rho_boot = np.mean(boot_samples)
+            # confidence intervals
+            p = ((1.0-alpha)/2.0) * 100
+            lower = max(0.0, np.percentile(boot_samples, p))
+            p = (alpha+((1.0-alpha)/2.0)) * 100
+            upper = min(1.0, np.percentile(boot_samples, p))
+
+            ci = (lower, upper)
         else:
             rho_boot = np.nan
             ci = np.nan
