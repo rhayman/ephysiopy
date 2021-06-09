@@ -452,7 +452,7 @@ class PosCalcsGeneric(object):
                         missing_idx, ok_idx, good_data1)
                 except ValueError:
                     raise ValueError("interpnans failed")
-        xy.mask = 0
+        # xy.mask = 0
         print("{} bad positions were interpolated over".format(
             len(missing_idx)))
         return xy

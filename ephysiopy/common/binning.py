@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.lib.nanfunctions import nanmax
 from scipy import signal
 from astropy import convolution  # deals with nans unlike other convs
 from ephysiopy.common.utils import blurImage
@@ -165,15 +166,18 @@ class RateMap(object):
         cmsPerBin : int, optional, default = 3
             The number of cms per bin OR degrees for directional binning
         """
-        x_lims = (np.min(self.xy[0]), np.max(self.xy[0]))
-        y_lims = (np.min(self.xy[1]), np.max(self.xy[1]))
+        x_lims = (np.nanmin(self.xy[0]), np.nanmax(self.xy[0]))
+        y_lims = (np.nanmin(self.xy[1]), np.nanmax(self.xy[1]))
         ppb = getattr(self, 'pixelsPerBin')
-        self.binsize = np.array(
-            (np.ceil(
-                np.ptp(y_lims) / ppb)-1,
-                np.ceil(
-                    np.ptp(x_lims) / ppb)-1), dtype=int)
-        return self.binsize
+        # self.binsize = np.array(
+        #     (np.ceil(
+        #         np.ma.ptp(y_lims) / ppb)-1,
+        #         np.ceil(
+        #             np.ma.ptp(x_lims) / ppb)-1), dtype=int)
+        _x = np.arange(x_lims[0], x_lims[1], ppb)
+        _y = np.arange(y_lims[0], y_lims[1], ppb)
+
+        return _x, _y
 
     def getMap(self, spkWeights, varType='xy', mapType='rate', smoothing=True):
         """
