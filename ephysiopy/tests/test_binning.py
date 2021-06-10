@@ -1,3 +1,4 @@
+from typing import Sequence
 import pytest
 from ephysiopy.common.binning import RateMap
 import numpy as np
@@ -23,7 +24,7 @@ def test_pixels_per_bin(standard_Ratemap):
 
 def test_calc_bin_size(standard_Ratemap):
     bs = standard_Ratemap._calcBinSize()
-    assert(isinstance(bs, np.ndarray))
+    assert(isinstance(bs, (np.ndarray, list, Sequence)))
 
 
 def test_bin_data(standard_Ratemap):

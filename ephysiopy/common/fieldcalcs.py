@@ -794,7 +794,7 @@ def grid_field_props(
         return pos[val > (np.max(val)/2)]
     nLbls = np.max(field_labels)
     indices = ndimage.labeled_comprehension(
-        A, field_labels, np.arange(0, nLbls), fn, np.ndarray, 0, True)
+        A_tmp, field_labels, np.arange(0, nLbls), fn, np.ndarray, 0, True)
     # turn linear indices into coordinates
     coords = [np.unravel_index(i, np.shape(A)) for i in indices]
     half_peak_labels = np.zeros_like(A)
@@ -950,7 +950,10 @@ def grid_orientation(peakCoords, closestPeakIdx):
         theta = polar(
             peaks[:, 1],
             -peaks[:, 0], deg=1)[1]
-        return np.sort(theta.compress(theta > 0))[0]
+        if len(theta) > 0:
+            return np.sort(theta.compress(theta >= 0))[0]
+        else:
+            return np.nan
 
 
 def gridness(image, step=30):

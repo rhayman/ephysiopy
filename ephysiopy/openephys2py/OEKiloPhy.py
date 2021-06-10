@@ -498,6 +498,10 @@ class OpenEphysNPX(OpenEphysBase):
         else:
             recording_start_time = self.xyTS[0]
         self.recording_start_time = recording_start_time
+        # this way of creating timestamps will be fine for single probes
+        # but will need to be modified if using multiple probes and/ or 
+        # different timestamp syncing method
+        # OE's 'synchronised_timestamps.npy' should now take care of this
         self.ts = np.arange(
             recording_start_time, trial_length+recording_start_time,
             1.0 / ap_sample_rate)

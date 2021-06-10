@@ -188,8 +188,6 @@ class FigureMaker(object):
         S = SpikeCalcsGeneric(x1)
         spk_sm = S.smoothSpikePosCount(x1, self.xyTS.shape[0], sigma, None)
         spk_sm = np.ma.MaskedArray(spk_sm, mask=np.ma.getmask(speed_filt))
-        from scipy import stats
-        stats.mstats.pearsonr(spk_sm, speed_filt)
         spd_dig = np.digitize(speed_filt, spd_bins, right=True)
         mn_rate = np.array([np.ma.mean(
             spk_sm[spd_dig == i]) for i in range(0, len(spd_bins))])

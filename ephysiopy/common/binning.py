@@ -69,6 +69,8 @@ class RateMap(object):
         self._cmsPerBin = cmsPerBin
         self._inCms = xyInCms
         self._binsize = None  # has setter and getter - see below
+        self._x_lims = None
+        self._y_lims = None
         self._smooth_sz = smooth_sz
         self._smoothingType = 'gaussian'  # 'boxcar' or 'gaussian'
         self.whenToSmooth = 'before'  # or 'after'
@@ -102,6 +104,22 @@ class RateMap(object):
     @binsize.setter
     def binsize(self, value):
         self._binsize = value
+
+    @property
+    def x_lims(self):
+        return self._x_lims
+    
+    @x_lims.setter
+    def x_lims(self, value):
+        self._x_lims = value
+
+    @property
+    def y_lims(self):
+        return self._y_lims
+    
+    @y_lims.setter
+    def y_lims(self, value):
+        self._y_lims = value
 
     @property
     def pos_weights(self):
@@ -166,8 +184,12 @@ class RateMap(object):
         cmsPerBin : int, optional, default = 3
             The number of cms per bin OR degrees for directional binning
         """
-        x_lims = (np.nanmin(self.xy[0]), np.nanmax(self.xy[0]))
-        y_lims = (np.nanmin(self.xy[1]), np.nanmax(self.xy[1]))
+        x_lims = getattr(self, 'x_lims', None)
+        y_lims = getattr(self, 'y_lims', None)
+        if x_lims is None:
+            x_lims = (np.nanmin(self.xy[0]), np.nanmax(self.xy[0]))
+        if y_lims is None:
+            y_lims = (np.nanmin(self.xy[1]), np.nanmax(self.xy[1]))
         ppb = getattr(self, 'pixelsPerBin')
         # self.binsize = np.array(
         #     (np.ceil(
@@ -177,7 +199,7 @@ class RateMap(object):
         _x = np.arange(x_lims[0], x_lims[1], ppb)
         _y = np.arange(y_lims[0], y_lims[1], ppb)
 
-        return _x, _y
+        return _y, _x
 
     def getMap(self, spkWeights, varType='xy', mapType='rate', smoothing=True):
         """

@@ -230,6 +230,16 @@ class AxonaTrial(FigureMaker):
     def STM(self, value):
         self.__STM = value
 
+    def plotSummary(self, tetrode: int, cluster: int, **kwargs):
+        ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
+        ax = self.makeSummaryPlot(ts, **kwargs)
+        plot = True
+        if 'plot' in kwargs:
+            plot = kwargs.pop('plot')
+        if plot:
+            plt.show()
+        return ax
+
     def plotSpikesOnPath(self, tetrode=None, cluster=None, **kwargs):
         ts = None
         if tetrode is not None:
