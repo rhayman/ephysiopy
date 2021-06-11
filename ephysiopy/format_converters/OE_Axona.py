@@ -128,7 +128,7 @@ class OE2Axona(object):
         # Grab the settings of the pos tracker and do some post-processing
         # on the position
         # data (discard jumpy data, do some smoothing etc)
-        self.settings.parsePos()
+        self.settings.parse()
         posProcessor = PosCalcsGeneric(
             self.OE_data.xy[:, 0], self.OE_data.xy[:, 1], ppm, True, jumpmax)
         print("Post-processing position data...")
