@@ -20,6 +20,8 @@ def standard_Ratemap(basic_PosCalcs):
 def test_pixels_per_bin(standard_Ratemap):
     ppb = standard_Ratemap.pixelsPerBin
     assert(isinstance(ppb, (int, float)))
+    standard_Ratemap.x_lims = (0, 10)
+    standard_Ratemap.y_lims = (0, 10)
 
 
 def test_calc_bin_size(standard_Ratemap):

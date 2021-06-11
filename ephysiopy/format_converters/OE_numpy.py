@@ -92,10 +92,11 @@ class OE2Numpy(object):
     def exportLFP(self, channels: list, output_freq: int):
         print("Beginning conversion and exporting of LFP data...")
         channels = [int(c) for c in channels]
-        if self.settings.fpga_nodeId is None:
+        if not self.settings.processors:
             self.settings.parse()
         if self.settings.fpga_sample_rate is None:
             self.settings.parseProcessor()
+        fpga_sample_rate = None
         output_name = os.path.join(self.dirname, "lfp.npy")
         output_ts_name = os.path.join(self.dirname, "lfp_timestamps.npy")
         if len(channels) == 1:

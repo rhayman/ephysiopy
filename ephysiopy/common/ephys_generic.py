@@ -347,7 +347,7 @@ class PosCalcsGeneric(object):
         Parameters
         ----------
         tracker_params : dict
-            Same dict as created in OEKiloPhy.Settings.parsePos
+            Same dict as created in OEKiloPhy.Settings.parse
             (from module openephys2py)
 
         Returns

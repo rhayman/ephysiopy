@@ -179,10 +179,10 @@ class OE2Axona(object):
         gain - int. Multiplier for the lfp data
         """
         print("Beginning conversion and exporting of LFP data...")
-        if self.settings.fpga_nodeId is None:
+        if not self.settings.processors:
             self.settings.parse()
-        fpgaNode = 'processor' + str(
-            self.settings.fpga_nodeId) + '_' + str(self.settings.fpga_nodeId)
+        fpga_id  = self.settings.processors['Sources/Rhythm FPGA'].NodeId)
+        fpgaNode = 'processor' + fpga_id + '_' + fpga_id
         data = self.OE_data.nwbData['acquisition']['\
             timeseries'][self.recording_name]['\
                 continuous'][fpgaNode]['data'][:, channel]

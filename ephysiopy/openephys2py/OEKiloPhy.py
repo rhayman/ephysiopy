@@ -2,8 +2,9 @@ import numpy as np
 import matplotlib.pylab as plt
 import warnings
 import os
+from pathlib import Path
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
-from ephysiopy.openephys2py.OESettings import Settings
+from ephysiopy.openephys2py.OESettings import Settings, OEStructure
 from ephysiopy.visualise.plotting import FigureMaker
 
 
@@ -234,7 +235,6 @@ class OpenEphysBase(FigureMaker):
             # correct location of settings.xml
             settings = Settings(self.pname_root)
             settings.parse()
-            settings.parsePos()
             self.settings = settings
 
     def __loaddata__(self, **kwargs):
@@ -413,6 +413,8 @@ class OpenEphysNPX(OpenEphysBase):
         self.path2APdata = None
         self.path2LFPdata = None
         self.path2syncmessages = None
+        self.path2APOEBin = None
+        self.path2PosOEBin = None
 
     def load(
             self, pname_root=None, experiment_name='experiment1',
@@ -451,9 +453,11 @@ class OpenEphysNPX(OpenEphysBase):
                     if 'data_array.npy' in ff:
                         if PosTracker_match.search(d):
                             self.path2PosData = os.path.join(d)
+                            self.path2PosOEBin = Path(d).parents[1]
                     if 'continuous.dat' in ff:
                         if APdata_match.search(d):
                             self.path2APdata = os.path.join(d)
+                            self.path2APOEBin = Path(d).parents[1]
                         if LFPdata_match.search(d):
                             self.path2LFPdata = os.path.join(d)
                     if 'sync_messages.txt' in ff:
@@ -725,7 +729,7 @@ class OpenEphysNWB(OpenEphysBase):
         # ...everything else
         try:
             self.__loadSettings__()
-            fpgaId = self.settings.fpga_nodeId
+            fpgaId = self.settings.processors['Sources/Rhythm FPGA'].NodeId
             fpgaNode = 'processor' + str(fpgaId) + '_' + str(fpgaId)
             self.ts = np.array(
                 self.nwbData['acquisition']['timeseries']

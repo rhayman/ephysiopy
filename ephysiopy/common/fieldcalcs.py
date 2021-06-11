@@ -950,10 +950,7 @@ def grid_orientation(peakCoords, closestPeakIdx):
         theta = polar(
             peaks[:, 1],
             -peaks[:, 0], deg=1)[1]
-        if len(theta) > 0:
-            return np.sort(theta.compress(theta >= 0))[0]
-        else:
-            return np.nan
+        return np.sort(theta.compress(theta >= 0))[0]
 
 
 def gridness(image, step=30):

@@ -23,7 +23,7 @@ class CosineDirectionalTuning(object):
         spk_clusters - 1d np.array
         x and y - 1d np.array
         tracker_params - dict - from the PosTracker as created in
-            OEKiloPhy.Settings.parsePos
+            OEKiloPhy.Settings.parse
 
         NB All timestamps should be given in sub-millisecond accurate
              seconds and pos_xy in cms

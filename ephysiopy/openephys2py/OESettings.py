@@ -8,8 +8,23 @@ except ImportError:
     import xml.etree.ElementTree as ET
 from collections import OrderedDict, defaultdict
 from abc import ABC
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List
+
+
+@dataclass
+class Channel(object):
+    """
+    Documents the information attached to each channel
+    """
+    name: str = field(default_factory=str)
+    number: int = field(default_factory=int)
+    gain: float = field(default_factory=float)
+    param: bool = field(default_factory=bool)
+    record: bool = field(default=False)
+    audio: bool = field(default=False)
+    lowcut: int = field(default=None)
+    highcut: int = field(default=None)
 
 
 @dataclass
@@ -17,32 +32,36 @@ class OEPlugin(ABC):
     """
     Documents an OE plugin
     """
-    name: str = None
-    insertionPoint: int = None
-    pluginName: str = None
-    pluginType: int = None
-    pluginIndex: int = None
-    libraryName: str = None
-    libraryVersion: int = None
-    isSource: bool = False
-    isSink: bool = False
-    NodeId: int = None
-    Type: str = None
+    name: str = field(default=None)
+    insertionPoint: int = field(default=None)
+    pluginName: str = field(default=None)
+    pluginType: int = field(default=None)
+    pluginIndex: int = field(default=None)
+    libraryName: str = field(default=None)
+    libraryVersion: int = field(default=None)
+    NodeId: int = field(default=None)
+    Type: str = field(default=None)
+    isSource: bool = field(default=True)
+    isSink: bool = field(default=False)
 
 
 @dataclass
-class ChannelInfo(object):
+class RhythmFPGA(OEPlugin):
     """
-    Documents the information attached to each channel
+    Documents the Rhythm FPGA plugin
     """
-    name: str = None
-    number: int = -1
-    gain: float = 0
-    param: bool = False
-    record: bool = False
-    audio: bool = False
-    lowcut: int = 0
-    highcut: int = 0
+    channel_info: List[Channel] = field(default=list)
+    sample_rate: int = field(default=None)
+        
+
+# Identical to the RhythmFPGA class above for now
+@dataclass
+class NeuropixPXI(OEPlugin):
+    """
+    Documents the Neuropixels-PXI plugin
+    """
+    channel_info: List[Channel] = field(default=list)
+    sample_rate: int = field(default=None)
 
 
 @dataclass
@@ -57,9 +76,9 @@ class BandpassFilter(OEPlugin):
     isSource = False
     isSink = False
 
-    channels: List[int] = None
-    lowcuts: List[int] = None
-    highcuts: List[int] = None
+    channels: List[int] = field(default_factory=List)
+    lowcuts: List[int] = field(default_factory=List)
+    highcuts: List[int] = field(default_factory=List)
 
 
 @dataclass
@@ -67,23 +86,16 @@ class PosTracker(OEPlugin):
     """
     Documents the PosTracker plugin
     """
-    name = "Source/Pos Tracker"
-    pluginName = "Pos Tracker"
-    pluginType = 1
-    libraryName = "Pos Tracker"
-    isSource = True
-    isSink = False
-    Type = "PosTracker"
 
-    Brightness: int = None
-    Contrast: int = None
-    Exposure: int = None
-    LeftBorder: int = None
-    RightBorder: int = None
-    TopBorder: int = None
-    BottomBorder: int = None
-    AutoExposure: bool = False
-    OverlayPath: bool = False
+    Brightness: int = field(default=20)
+    Contrast: int = field(default=20)
+    Exposure: int = field(default=20)
+    LeftBorder: int = field(default=0)
+    RightBorder: int = field(default=800)
+    TopBorder: int = field(default=0)
+    BottomBorder: int = field(default=600)
+    AutoExposure: bool = field(default=False)
+    OverlayPath: bool = field(default=False)
 
 
 @dataclass
@@ -91,14 +103,35 @@ class Electrode(object):
     """
     Documents the ELECTRODE entries in the settings.xml file
     """
-    nChannels: int
-    id: int
-    subChannels: List[int]
-    subChannelsThresh: List[int]
-    subChannelsActive: List[int]
-    prePeakSamples: int = 8
-    postPeakSamples: int = 32
+    nChannels: int = field(default_factory=int)
+    id: int = field(default_factory=int)
+    subChannels: List[int] = field(default_factory=List)
+    subChannelsThresh: List[int] = field(default_factory=List)
+    subChannelsActive: List[int] = field(default_factory=List)
+    prePeakSamples: int = field(default=8)
+    postPeakSamples: int = field(default=32)
 
+
+class OEStructure(object):
+    """
+    Loads up the structure.oebin file for openephys flat binary
+    format recordings
+    
+    self.data is a dict
+    """
+    def __init__(self, pname: str):
+        self.filename = None
+        self.data = None
+        import os
+        for d, _, f in os.walk(pname):
+            for ff in f:
+                if 'structure.oebin' in ff:
+                    self.filename = os.path.join(d, "structure.oebin")
+        if self.filename is not None:
+            import json
+            with open(self.filename, 'r') as f:
+                self.data = json.load(f)
+        
 
 class Settings(object):
     """
@@ -119,12 +152,11 @@ class Settings(object):
                 if 'settings.xml' in ff:
                     self.filename = os.path.join(d, "settings.xml")
         self.tree = None
-        self.fpga_nodeId = None
         """
         It's not uncommon to have > 1 of the same type of processor, i.e.
         2 x bandpass filter to look at LFP and APs. This deals with that...
         """
-        self.processors = defaultdict()
+        self.processors = OrderedDict()
         self.electrodes = OrderedDict()
         self.tracker_params = {}
         self.stimcontrol_params = {}
@@ -135,55 +167,43 @@ class Settings(object):
         Creates a handle to the basic xml document
         """
         if self.filename is not None:
-            self.tree = ET.ElementTree(file=self.filename)
+            self.tree = ET.parse(self.filename).getroot()
 
     def parse(self):
         """
-        Parses the basic information attached to the FPGA module
+        Parses the basic information about the processors in the 
+        open-ephys signal chain and as described in the settings.xml
+        file(s)
         """
         if self.tree is None:
             self.load()
         # quick hack to deal with flat binary format that has no settings.xml
         if self.tree is not None:
-            for elem in self.tree.iter(tag='PROCESSOR'):
-                self.processors[elem.attrib['name']] = elem
-        # Check if FPGA present - value needed for navigating .nwb file
-        if 'Sources/Rhythm FPGA' in self.processors:
-            children = self.processors['Sources/Rhythm FPGA'][0].iter()
-            for child in children:
-                if 'PROCESSOR' in child.tag:
-                    self.fpga_nodeId = child.attrib['NodeId']
-        else:
-            self.fpga_nodeId = None
-
-    def parsePos(self):
-        """
-        Parses the information attached to the PosTracker plugin I wrote
-        """
-        if len(self.processors) == 0:
-            self.parse()
-
-        if len(self.processors) > 0:  # hack for no settings.xml file
-            if self.processors['Sources/Pos Tracker']:
-                children = self.processors['Sources/Pos Tracker'][0].iter()
-                for child in children:
-                    if 'Parameters' in child.tag:
-                        self.tracker_params = child.attrib
-                # convert string values to ints
-                self.tracker_params = dict(
-                    [k, int(v)] for k, v in self.tracker_params.items())
-            else:
-                self.tracker_params = {
-                    'Brightness': 20, 'Contrast': 20, 'Exposure': 20,
-                    'AutoExposure': 0, 'OverlayPath': 1,
-                    'LeftBorder': 0, 'RightBorder': 800, 'TopBorder': 0,
-                    'BottomBorder': 600}
-        else:
-            self.tracker_params = {
-                    'Brightness': 20, 'Contrast': 20, 'Exposure': 20,
-                    'AutoExposure': 0, 'OverlayPath': 1,
-                    'LeftBorder': 0, 'RightBorder': 800, 'TopBorder': 0,
-                    'BottomBorder': 600}
+            for elem in self.tree.iter('PROCESSOR'):
+                this_proc = elem.get('name')
+                if this_proc == 'Sources/Pos Tracker':
+                    pos_tracker = PosTracker()
+                    for child in elem.attrib.items():
+                        if hasattr(pos_tracker, child[0]):
+                            setattr(pos_tracker, child[0], child[1])
+                    for params in elem.iter('Parameters'):
+                        for param in params.items():
+                            if hasattr(pos_tracker, param[0]):
+                                setattr(pos_tracker, param[0], param[1])
+                    self.processors[this_proc] = pos_tracker
+                if this_proc == 'Sources/Rhythm FPGA':
+                    fpga = RhythmFPGA()
+                    for child in elem.attrib.items():
+                        if hasattr(fpga, child[0]):
+                            setattr(fpga, child[0], child[1])
+                    self.processors[this_proc] = fpga
+                if this_proc == 'Sources/Neuropix-PXI':
+                    npx = NeuropixPXI()
+                    for child in elem.attrib.items():
+                        if hasattr(npx, child[0]):
+                            setattr(npx, child[0], child[1])
+                    self.processors[this_proc] = npx
+                
 
     def parseSpikeSorter(self):
         """
