@@ -9,8 +9,8 @@ except ImportError:
 from collections import OrderedDict, defaultdict
 from abc import ABC
 from dataclasses import dataclass, field
-from typing import List
-
+from typing import Callable, List
+import xml
 
 @dataclass
 class Channel(object):
@@ -99,6 +99,11 @@ class PosTracker(OEPlugin):
 
 
 @dataclass
+class SpikeSorter(OEPlugin):
+    pass
+
+
+@dataclass
 class Electrode(object):
     """
     Documents the ELECTRODE entries in the settings.xml file
@@ -111,6 +116,24 @@ class Electrode(object):
     prePeakSamples: int = field(default=8)
     postPeakSamples: int = field(default=32)
 
+
+def recurseNode(node: xml.etree.ElementTree.Element, func: Callable, cls: dataclass):
+    '''
+    Recursive function that applies func to each node
+    '''
+    if node != None:
+        func(node, cls)
+        for item in node:
+            recurseNode(item, func, cls)
+    else:
+        return
+
+
+def addValuesToDataClass(node: xml.etree.ElementTree.Element, cls: dataclass):
+    for i in node.items():
+        if hasattr(cls, i[0]):
+            setattr(cls, i[0], i[1])
+                
 
 class OEStructure(object):
     """
@@ -183,26 +206,19 @@ class Settings(object):
                 this_proc = elem.get('name')
                 if this_proc == 'Sources/Pos Tracker':
                     pos_tracker = PosTracker()
-                    for child in elem.attrib.items():
-                        if hasattr(pos_tracker, child[0]):
-                            setattr(pos_tracker, child[0], child[1])
-                    for params in elem.iter('Parameters'):
-                        for param in params.items():
-                            if hasattr(pos_tracker, param[0]):
-                                setattr(pos_tracker, param[0], param[1])
+                    recurseNode(elem, addValuesToDataClass, pos_tracker)
                     self.processors[this_proc] = pos_tracker
                 if this_proc == 'Sources/Rhythm FPGA':
                     fpga = RhythmFPGA()
-                    for child in elem.attrib.items():
-                        if hasattr(fpga, child[0]):
-                            setattr(fpga, child[0], child[1])
+                    recurseNode(elem, addValuesToDataClass, fpga)
                     self.processors[this_proc] = fpga
                 if this_proc == 'Sources/Neuropix-PXI':
                     npx = NeuropixPXI()
-                    for child in elem.attrib.items():
-                        if hasattr(npx, child[0]):
-                            setattr(npx, child[0], child[1])
+                    recurseNode(elem, addValuesToDataClass, npx)
                     self.processors[this_proc] = npx
+                if this_proc == 'Filters/Spike Sorter':
+                    spike_sorter = SpikeSorter()
+                    recurseNode(elem, addValuesToDataClass, spike_sorter)
                 
 
     def parseSpikeSorter(self):
