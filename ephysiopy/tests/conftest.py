@@ -33,6 +33,13 @@ def path_to_OE_settings():
 
 
 @pytest.fixture
+def path_to_OE_spikeSorter_settings():
+    path = Path(__file__).parents[0] / 'data/spike_sorter_settings_file'
+    settings_path = Path(path)
+    return os.path.join(settings_path)
+
+
+@pytest.fixture
 def basic_eeg():
     # Lifted this from the scipy.signal.periodogram page
     # Generate a test signal, a 2 Vrms sine wave at 8.5 Hz
