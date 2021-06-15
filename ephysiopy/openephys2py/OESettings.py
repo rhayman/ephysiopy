@@ -345,66 +345,30 @@ class Settings(object):
         self.stimcontrol_params = dict(
             [k, int(v)] for k, v in self.stimcontrol_params.items())
 
-    def parseProcessor(self, proc_type: str = 'Sources/Rhythm FPGA'):
-        """
-        Parses data attached to each processor
+    
 
-        Parameters
-        ----------
-        proc_type: str
-            Legal values are anything in self.processors
-            Examples: 'Sources/Rhythm FPGA', 'Sources/Neuropix-PXI',
-            'Sinks/Probe Viewer', 'Sources/Pos Tracker'
-
-        """
-        if len(self.processors) == 0:
-            self.parse()
-        channel_info = OrderedDict()
-        channel = OrderedDict()
-        if self.processors[proc_type]:
-            for chan_info in self.processors[proc_type].iter():
-                if 'CHANNEL_INFO' in chan_info.tag:
-                    for this_chan in chan_info.iter('CHANNEL'):
-                        info_obj = ChannelInfo()
-                        info_obj.number = this_chan.get('number')
-                        info_obj.name = this_chan.get('name')
-                        info_obj.gain = this_chan.get('gain')
-                        channel_info[info_obj.number] = info_obj
-                if 'CHANNEL' in chan_info.tag:
-                    for chan_state in chan_info.iter('CHANNEL'):
-                        info_obj = ChannelInfo()
-                        info_obj.number = chan_state.get('number')
-                        info_obj.name = chan_state.get('name')
-                        for state in chan_state.iter('SELECTIONSTATE'):
-                            info_obj.param = state.get('param')
-                            info_obj.record = state.get('record')
-                            info_obj.audio = state.get('audio')
-                        channel[info_obj.number] = info_obj
-        self.channel_info = channel_info
-        self.channel = channel
-
-    def parseBandpassFilters(self):
-        """
-        Parse the bandpass filter information
-        """
-        if len(self.processors) == 0:
-            self.parse()
-        bandpass_info = OrderedDict()
-        for bpf in self.processors['Filters/Bandpass Filter']:
-            if 'PROCESSOR' in bpf.tag:
-                this_bpf = BandpassFilter()
-                this_bpf.nodeId = bpf.get('NodeId')
-                channels = []
-                for child in bpf.iter('CHANNEL'):
-                    this_chan = ChannelInfo()
-                    this_chan.number = child.get('number')
-                    this_chan.name = child.get('name')
-                    for state in child.iter('SELECTIONSTATE'):
-                        this_chan.param = state.get('param')
-                        this_chan.record = state.get('record')
-                    for params in child.iter('PARAMETERS'):
-                        this_chan.lowcut = params.get('lowcut')
-                        this_chan.highcut = params.get('highcut')
-                    channels.append(this_chan)
-                    bandpass_info[this_bpf.nodeId] = channels
-        self.bandpass_params = bandpass_info
+    # def parseBandpassFilters(self):
+    #     """
+    #     Parse the bandpass filter information
+    #     """
+    #     if len(self.processors) == 0:
+    #         self.parse()
+    #     bandpass_info = OrderedDict()
+    #     for bpf in self.processors['Filters/Bandpass Filter']:
+    #         if 'PROCESSOR' in bpf.tag:
+    #             this_bpf = BandpassFilter()
+    #             this_bpf.nodeId = bpf.get('NodeId')
+    #             channels = []
+    #             for child in bpf.iter('CHANNEL'):
+    #                 this_chan = ChannelInfo()
+    #                 this_chan.number = child.get('number')
+    #                 this_chan.name = child.get('name')
+    #                 for state in child.iter('SELECTIONSTATE'):
+    #                     this_chan.param = state.get('param')
+    #                     this_chan.record = state.get('record')
+    #                 for params in child.iter('PARAMETERS'):
+    #                     this_chan.lowcut = params.get('lowcut')
+    #                     this_chan.highcut = params.get('highcut')
+    #                 channels.append(this_chan)
+    #                 bandpass_info[this_bpf.nodeId] = channels
+    #     self.bandpass_params = bandpass_info
