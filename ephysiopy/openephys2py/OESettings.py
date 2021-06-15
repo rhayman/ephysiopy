@@ -18,13 +18,78 @@ class Channel(object):
     Documents the information attached to each channel
     """
     name: str = field(default_factory=str)
-    number: int = field(default_factory=int)
-    gain: float = field(default_factory=float)
-    param: bool = field(default_factory=bool)
-    record: bool = field(default=False)
-    audio: bool = field(default=False)
-    lowcut: int = field(default=None)
-    highcut: int = field(default=None)
+    _number: int = field(default_factory=int)
+    _gain: float = field(default_factory=float)
+    _param: bool = field(default_factory=bool)
+    _record: bool = field(default=False)
+    _audio: bool = field(default=False)
+    _lowcut: int = field(default=None)
+    _highcut: int = field(default=None)
+
+    @property
+    def number(self) -> int:
+        return self._number
+
+    @number.setter
+    def number(self, value: str) -> None:
+        self._number = int(value)
+
+    @property
+    def gain(self) -> int:
+        return self._gain
+
+    @gain.setter
+    def gain(self, value: str) -> None:
+        self._gain = float(value)
+
+    @property
+    def param(self) -> bool:
+        return self._param
+
+    @param.setter
+    def param(self, value: str) -> None:
+        if value == '1':
+            self._param = True
+        else:
+            self._param = False
+
+    @property
+    def record(self) -> bool:
+        return self._record
+
+    @record.setter
+    def record(self, value: str) -> None:
+        if value == '1':
+            self._record = True
+        else:
+            self._record = False
+
+    @property
+    def audio(self) -> bool:
+        return self._audio
+
+    @audio.setter
+    def audio(self, value: str) -> None:
+        if value == '1':
+            self._audio = True
+        else:
+            self._audio = False
+
+    @property
+    def lowcut(self) -> int:
+        return self._lowcut
+
+    @lowcut.setter
+    def lowcut(self, value: str) -> None:
+        self._lowcut = int(value)
+
+    @property
+    def highcut(self) -> int:
+        return self._highcut
+
+    @highcut.setter
+    def highcut(self, value: str) -> None:
+        self._highcut = int(value)
 
 
 @dataclass
@@ -50,7 +115,7 @@ class RhythmFPGA(OEPlugin):
     """
     Documents the Rhythm FPGA plugin
     """
-    channel_info: List[Channel] = field(default=list)
+    channel_info: List[Channel] = field(default=None)
     sample_rate: int = field(default=None)
         
 
@@ -60,7 +125,7 @@ class NeuropixPXI(OEPlugin):
     """
     Documents the Neuropixels-PXI plugin
     """
-    channel_info: List[Channel] = field(default=list)
+    channel_info: List[Channel] = field(default=None)
     sample_rate: int = field(default=None)
 
 
@@ -133,8 +198,14 @@ def addValuesToDataClass(node: xml.etree.ElementTree.Element, cls: dataclass):
     for i in node.items():
         if hasattr(cls, i[0]):
             setattr(cls, i[0], i[1])
-                
+    if hasattr(cls, 'channel_info') and node.tag == 'CHANNEL':
+        if cls.channel_info is None:
+            cls.channel_info = list()
+        chan = Channel()
+        recurseNode(node, addValuesToDataClass, chan)
+        cls.channel_info.append(chan)
 
+                
 class OEStructure(object):
     """
     Loads up the structure.oebin file for openephys flat binary
