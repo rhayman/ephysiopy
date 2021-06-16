@@ -292,44 +292,44 @@ class Settings(object):
                     recurseNode(elem, addValuesToDataClass, spike_sorter)
                 
 
-    def parseSpikeSorter(self):
-        """
-        Parses data attached to each ELECTRODE object in the xml tree
-        """
-        if len(self.processors) == 0:
-            self.parse()
-        electrode_info = OrderedDict()
-        for child in self.processors['Filters/Spike Sorter'][0].iter():
-            if 'SpikeSorter' in child.tag:
-                for grandchild in child.iter():
-                    if 'ELECTRODE' == grandchild.tag:
-                        for this_electrode in grandchild.iter('ELECTRODE'):
-                            info_obj = Electrode()
-                            info_obj.name = this_electrode.get('name')
-                            info_obj.nChannels = this_electrode.get(
-                                'numChannels')
-                            info_obj.prePeakSamples = this_electrode.get(
-                                'prePeakSamples')
-                            info_obj.postPeakSamples = this_electrode.get
-                            ('postPeakSamples')
-                            info_obj.id = this_electrode.get('electrodeID')
-                            subchan = []
-                            subchanThresh = []
-                            subchanActive = []
-                            for ggrandkid in grandchild.iter():
-                                if 'SUBCHANNEL' == ggrandkid.tag:
-                                    for schan in ggrandkid.iter('SUBCHANNEL'):
-                                        subchan.append(schan.get('ch'))
-                                        subchanThresh.append(
-                                            schan.get('thresh'))
-                                        subchanActive.append(
-                                            schan.get('isActive'))
+    # def parseSpikeSorter(self):
+    #     """
+    #     Parses data attached to each ELECTRODE object in the xml tree
+    #     """
+    #     if len(self.processors) == 0:
+    #         self.parse()
+    #     electrode_info = OrderedDict()
+    #     for child in self.processors['Filters/Spike Sorter'][0].iter():
+    #         if 'SpikeSorter' in child.tag:
+    #             for grandchild in child.iter():
+    #                 if 'ELECTRODE' == grandchild.tag:
+    #                     for this_electrode in grandchild.iter('ELECTRODE'):
+    #                         info_obj = Electrode()
+    #                         info_obj.name = this_electrode.get('name')
+    #                         info_obj.nChannels = this_electrode.get(
+    #                             'numChannels')
+    #                         info_obj.prePeakSamples = this_electrode.get(
+    #                             'prePeakSamples')
+    #                         info_obj.postPeakSamples = this_electrode.get
+    #                         ('postPeakSamples')
+    #                         info_obj.id = this_electrode.get('electrodeID')
+    #                         subchan = []
+    #                         subchanThresh = []
+    #                         subchanActive = []
+    #                         for ggrandkid in grandchild.iter():
+    #                             if 'SUBCHANNEL' == ggrandkid.tag:
+    #                                 for schan in ggrandkid.iter('SUBCHANNEL'):
+    #                                     subchan.append(schan.get('ch'))
+    #                                     subchanThresh.append(
+    #                                         schan.get('thresh'))
+    #                                     subchanActive.append(
+    #                                         schan.get('isActive'))
 
-                            info_obj.subChannels = subchan
-                            info_obj.subChannelsThresh = subchanThresh
-                            info_obj.subChannelsActive = subchanActive
-                            electrode_info[info_obj.id] = info_obj
-        self.electrodes = electrode_info
+    #                         info_obj.subChannels = subchan
+    #                         info_obj.subChannelsThresh = subchanThresh
+    #                         info_obj.subChannelsActive = subchanActive
+    #                         electrode_info[info_obj.id] = info_obj
+    #     self.electrodes = electrode_info
 
     def parseStimControl(self):
         """
