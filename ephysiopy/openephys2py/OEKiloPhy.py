@@ -407,7 +407,7 @@ class OpenEphysNPX(OpenEphysBase):
     The main class for dealing with data recorded using Neuropixels probes
     under openephys.
     """
-    def __init__(self, pname_root):
+    def __init__(self, pname_root: str):
         super().__init__(pname_root)
         self.path2PosData = None
         self.path2APdata = None
@@ -452,7 +452,8 @@ class OpenEphysNPX(OpenEphysBase):
                 if '.' not in c:  # ignore hidden directories
                     if 'data_array.npy' in ff:
                         if PosTracker_match.search(d):
-                            self.path2PosData = os.path.join(d)
+                            if self.path2PosData is None:
+                                self.path2PosData = os.path.join(d)
                             self.path2PosOEBin = Path(d).parents[1]
                     if 'continuous.dat' in ff:
                         if APdata_match.search(d):
