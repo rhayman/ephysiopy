@@ -285,8 +285,8 @@ class OpenEphysBase(FigureMaker):
         '''
         Returns the spike times in seconds of the given cluster
         '''
-        spk_times = (self.kilodata.spk_times.T / 3e4)
-        return spk_times[self.kilodata.spk_clusters == cluster]
+        spk_times = self.kilodata.spk_times.T
+        return spk_times[self.kilodata.spk_clusters == cluster].astype(np.int64)
 
     def plotSummary(self, cluster: int, **kwargs):
         ts = self.getClusterSpikeTimes(cluster)
@@ -297,37 +297,37 @@ class OpenEphysBase(FigureMaker):
     def plotSpikesOnPath(self, cluster: int = None, **kwargs):
         ts = None
         if cluster is not None:
-            ts = self.getClusterSpikeTimes(cluster)  # in seconds
+            ts = self.getClusterSpikeTimes(cluster)  # in samples
         ax = self.makeSpikePathPlot(ts, **kwargs)
         plt.show()
         return ax
 
     def plotRateMap(self, cluster: int, **kwargs):
-        ts = self.getClusterSpikeTimes(cluster)  # in seconds
+        ts = self.getClusterSpikeTimes(cluster)  # in samples
         ax = self.makeRateMap(ts)
         plt.show()
         return ax
 
     def plotHDMap(self, cluster: int, **kwargs):
-        ts = self.getClusterSpikeTimes(cluster)  # in seconds
+        ts = self.getClusterSpikeTimes(cluster)  # in samples
         ax = self.makeHDPlot(ts, **kwargs)
         plt.show()
         return ax
 
     def plotSAC(self, cluster: int, **kwargs):
-        ts = self.getClusterSpikeTimes(cluster)  # in seconds
+        ts = self.getClusterSpikeTimes(cluster)  # in samples
         ax = self.makeSAC(ts, **kwargs)
         plt.show()
         return ax
 
     def plotSpeedVsRate(self, cluster: int, **kwargs):
-        ts = self.getClusterSpikeTimes(cluster)  # in seconds
+        ts = self.getClusterSpikeTimes(cluster)  # in samples
         ax = self.makeSpeedVsRatePlot(ts, **kwargs)
         plt.show()
         return ax
 
     def plotSpeedVsHeadDirection(self, cluster: int, **kwargs):
-        ts = self.getClusterSpikeTimes(cluster)  # in seconds
+        ts = self.getClusterSpikeTimes(cluster)  # in samples
         ax = self.makeSpeedVsHeadDirectionPlot(ts, **kwargs)
         plt.show()
         return ax
@@ -471,8 +471,9 @@ class OpenEphysNPX(OpenEphysBase):
             pos_data = np.load(os.path.join(
                 self.path2PosData, 'data_array.npy'))
             pos_ts = np.load(os.path.join(self.path2PosData, 'timestamps.npy'))
+            pos_ts = np.ravel(pos_ts)
             sample_rate = np.floor(1/np.mean(np.diff(pos_ts)/ap_sample_rate))
-            self.xyTS = pos_ts / ap_sample_rate
+            self.xyTS = pos_ts# / ap_sample_rate
             self.pos_sample_rate = sample_rate
 
             P = PosCalcsGeneric(

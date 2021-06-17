@@ -28,13 +28,13 @@ class TetrodeDict(dict):
                 else:
                     raise KeyError(f"Tetrode {key} not available")
 
-    def get_spike_ts(self, tetrode, cluster):
+    def get_spike_samples(self, tetrode, cluster):
         '''
-        Returns spike times in seconds for given cluster from given
+        Returns spike times in pos samples for given cluster from given
         tetrode
         '''
         try:
             this_tet = self[tetrode]
-            return this_tet.getClustTS(cluster) / this_tet.timebase
+            return this_tet.getClustIdx(cluster)# / this_tet.timebase
         except Exception:
             raise Exception(f'Could not get timestamps for cluster: {cluster}')

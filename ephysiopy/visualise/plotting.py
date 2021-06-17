@@ -52,6 +52,12 @@ class FigureMaker(object):
             xyInCms=False)
         self.data_loaded = True
 
+    def getSpikePosIndices(self, spk_times: np.array):
+        pos_times = getattr(self, 'xyTS')
+        idx = np.searchsorted(pos_times, spk_times)
+        idx[idx==len(pos_times)] = idx[idx==len(pos_times)] - 1
+        return idx
+
     def makeSummaryPlot(self, spk_times: np.array):
         fig = plt.figure()
         ax = plt.subplot(221)
@@ -70,9 +76,7 @@ class FigureMaker(object):
     @stripAxes
     def makeRateMap(self, spk_times: np.array, ax=None):
         self.initialise()
-        pos_sample_rate = getattr(self, 'pos_sample_rate')
-        spk_times_in_pos_samples = np.array(
-            spk_times * pos_sample_rate, dtype=int)
+        spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         spk_weights = np.bincount(
             spk_times_in_pos_samples, minlength=self.npos)
         rmap = self.RateMapMaker.getMap(spk_weights)
@@ -102,18 +106,14 @@ class FigureMaker(object):
         ax.set_aspect('equal')
         ax.invert_yaxis()
         if spk_times is not None:
-            pos_sample_rate = getattr(self, 'pos_sample_rate')
-            spk_times_in_pos_samples = spk_times * pos_sample_rate
-            idx = spk_times_in_pos_samples.astype(int)
+            idx = self.getSpikePosIndices(spk_times)
             ax.plot(self.xy[0, idx], self.xy[1, idx], 's', **kwargs)
         return ax
 
     @stripAxes
     def makeSAC(self, spk_times: np.array = None, ax=None, **kwargs):
         self.initialise()
-        pos_sample_rate = getattr(self, 'pos_sample_rate')
-        spk_times_in_pos_samples = np.array(
-            spk_times * pos_sample_rate, dtype=int)
+        spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         spk_weights = np.bincount(
             spk_times_in_pos_samples, minlength=self.npos)
         rmap = self.RateMapMaker.getMap(spk_weights)
@@ -131,23 +131,26 @@ class FigureMaker(object):
     @stripAxes
     def makeHDPlot(self, spk_times: np.array = None, ax=None, **kwargs):
         self.initialise()
-        pos_sample_rate = getattr(self, 'pos_sample_rate')
-        spk_times_in_pos_samples = np.array(
-            spk_times * pos_sample_rate, dtype=int)
+        spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         spk_weights = np.bincount(
             spk_times_in_pos_samples, minlength=self.npos)
         rmap = self.RateMapMaker.getMap(spk_weights, 'dir')
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='polar')
+        # need to deal with the case where the axis is supplied but
+        # is not polar. deal with polar first
         theta = np.deg2rad(rmap[1][0])
         ax.clear()
         r = rmap[0]
         r = np.insert(r, -1, r[0])
-        ax.plot(theta, r)
-        if 'fill' in kwargs:
-            ax.fill(theta, r, alpha=0.5)
-        ax.set_aspect('equal')
+        if 'polar' in ax.name:
+            ax.plot(theta, r)
+            if 'fill' in kwargs:
+                ax.fill(theta, r, alpha=0.5)
+            ax.set_aspect('equal')
+        else:
+            pass
 
         # See if we should add the mean resultant vector (mrv)
         if 'add_mrv' in kwargs:
@@ -170,10 +173,8 @@ class FigureMaker(object):
         details
         """
         self.initialise()
-        pos_sample_rate = getattr(self, 'pos_sample_rate')
-        spk_times_in_pos_samples = np.array(
-            spk_times * pos_sample_rate, dtype=int)
-
+        spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
+        
         speed = np.ravel(self.speed)
         if np.nanmax(speed) < maxSpeed:
             maxSpeed = np.nanmax(speed)
@@ -212,8 +213,7 @@ class FigureMaker(object):
     def makeSpeedVsHeadDirectionPlot(
             self, spk_times: np.array, ax=None, **kwargs):
         self.initialise()
-        pos_sample_rate = getattr(self, 'pos_sample_rate')
-        spk_times_in_pos_samples = spk_times * pos_sample_rate
+        spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         idx = np.array(spk_times_in_pos_samples, dtype=int)
         w = np.bincount(idx, minlength=self.speed.shape[0])
         dir_bins = np.arange(0, 360, 6)
@@ -227,9 +227,12 @@ class FigureMaker(object):
         im = np.ma.masked_where(im <= 1, im)
         # ... and where less than 0.5% of data is accounted for
         x, y = np.meshgrid(dir_bins, spd_bins)
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.pcolormesh(x, y, im.T)
+        vmax = np.max(np.ravel(im))
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+        ax.pcolormesh(x, y, im.T, cmap=plt.cm.get_cmap("jet"), edgecolors='face',
+            vmax=vmax, shading='auto')
         plt.xticks([90, 180, 270], fontweight='normal', size=6)
         plt.yticks([10, 20], fontweight='normal', size=6)
         return ax
@@ -266,9 +269,9 @@ class FigureMaker(object):
         return ax
 
     def makeXCorr(self, spk_times: np.array, ax=None, **kwargs):
-        # spk_times in seconds provided in seconds but convert to
+        # spk_times in samples provided in seconds but convert to
         # ms for a more display friendly scale
-        spk_times = spk_times * 1000.
+        spk_times = spk_times / 3e4 * 1000.
         S = SpikeCalcsGeneric(spk_times)
         y = S.xcorr(spk_times)
         if ax is None:
@@ -299,7 +302,7 @@ class FigureMaker(object):
         Parameters
         ----------
         spk_times: np.array
-            The spike times in seconds
+            The spike times in samples
         dt : 2-tuple
             the window of time in ms to examine zeroed on the event of interest
             i.e. the first value will probably be negative as in the  example
@@ -315,7 +318,7 @@ class FigureMaker(object):
             the raster plot will consist of either the counts of spikes in
             ms_per_bin or the mean rate in ms_per_bin
         """
-        x1 = spk_times * 1000.  # get into ms
+        x1 = spk_times / 3e4 * 1000.  # get into ms
         x1.sort()
         on_good = getattr(self, 'ttl_timestamps')
         dt = np.array(dt)

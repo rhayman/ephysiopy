@@ -67,8 +67,6 @@ class AxonaTrial(FigureMaker):
                 self.speed = P.speed
                 self.pos_sample_rate = AxonaPos.getHeaderVal(
                     AxonaPos.header, 'sample_rate')
-                # get timestamps into seconds
-                self.xyTS = self.xyTS / self.pos_sample_rate
 
                 print('Loaded .pos file')
             except IOError:
@@ -231,7 +229,7 @@ class AxonaTrial(FigureMaker):
         self.__STM = value
 
     def plotSummary(self, tetrode: int, cluster: int, **kwargs):
-        ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
+        ts = self.TETRODE.get_spike_samples(tetrode, cluster)  # in seconds
         ax = self.makeSummaryPlot(ts, **kwargs)
         plot = True
         if 'plot' in kwargs:
@@ -243,7 +241,7 @@ class AxonaTrial(FigureMaker):
     def plotSpikesOnPath(self, tetrode=None, cluster=None, **kwargs):
         ts = None
         if tetrode is not None:
-            ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
+            ts = self.TETRODE.get_spike_samples(tetrode, cluster)  # in seconds
         plot = True
         if 'plot' in kwargs:
             plot = kwargs.pop('plot')
@@ -253,7 +251,7 @@ class AxonaTrial(FigureMaker):
         return ax
 
     def plotRateMap(self, tetrode, cluster, **kwargs):
-        ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
+        ts = self.TETRODE.get_spike_samples(tetrode, cluster)  # in seconds
         ax = self.makeRateMap(ts)
         plot = True
         if 'plot' in kwargs:
@@ -263,7 +261,7 @@ class AxonaTrial(FigureMaker):
         return ax
 
     def plotHDMap(self, tetrode, cluster, **kwargs):
-        ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
+        ts = self.TETRODE.get_spike_samples(tetrode, cluster)  # in seconds
         ax = self.makeHDPlot(ts, ax=None, **kwargs)
         plot = True
         if 'plot' in kwargs:
@@ -273,7 +271,7 @@ class AxonaTrial(FigureMaker):
         return ax
 
     def plotSAC(self, tetrode, cluster, **kwargs):
-        ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
+        ts = self.TETRODE.get_spike_samples(tetrode, cluster)  # in seconds
         ax = self.makeSAC(ts, ax=None, **kwargs)
         plot = True
         if 'plot' in kwargs:
@@ -283,7 +281,7 @@ class AxonaTrial(FigureMaker):
         return ax
 
     def plotSpeedVsRate(self, tetrode, cluster, **kwargs):
-        ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
+        ts = self.TETRODE.get_spike_samples(tetrode, cluster)  # in seconds
         ax = self.makeSpeedVsRatePlot(ts, ax=None, **kwargs)
         plot = True
         if 'plot' in kwargs:
@@ -293,7 +291,7 @@ class AxonaTrial(FigureMaker):
         return ax
 
     def plotSpeedVsHeadDirection(self, tetrode, cluster, **kwargs):
-        ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
+        ts = self.TETRODE.get_spike_samples(tetrode, cluster)  # in seconds
         ax = self.makeSpeedVsHeadDirectionPlot(ts, ax=None, **kwargs)
         plot = True
         if 'plot' in kwargs:
@@ -322,7 +320,7 @@ class AxonaTrial(FigureMaker):
         return ax
 
     def plotXCorr(self, tetrode, cluster, **kwargs):
-        ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
+        ts = self.TETRODE.get_spike_samples(tetrode, cluster)  # in seconds
         ax = self.makeXCorr(ts)
         plot = True
         if 'plot' in kwargs:
@@ -332,7 +330,7 @@ class AxonaTrial(FigureMaker):
         return ax
 
     def plotRaster(self, tetrode, cluster, **kwargs):
-        ts = self.TETRODE.get_spike_ts(tetrode, cluster)  # in seconds
+        ts = self.TETRODE.get_spike_samples(tetrode, cluster)  # in seconds
         self.ttl_timestamps = self.STM['on']
         ax = self.makeRaster(ts, **kwargs)
         return ax
