@@ -497,10 +497,9 @@ class PosCalcsGeneric(object):
         speed = np.sqrt(np.sum(np.power(np.diff(xy), 2), 0))
         speed = np.append(speed, speed[-1])
         if self.cm:
-            self.speed = speed * (100 * self.sample_rate / self.ppm)
-            # in cm/s now
-        else:
-            self.speed = speed
+            speed = speed * (100 * self.sample_rate / self.ppm)
+        self.speed = np.ma.MaskedArray(speed)
+        
 
     def upsamplePos(self, xy: np.ma.MaskedArray, upsample_rate: int=50):
         """
@@ -610,7 +609,11 @@ class PosCalcsGeneric(object):
                 bool_arr = ~bool_arr
             else:
                 raise KeyError("Unrecognised key")
-        return np.expand_dims(np.any(~bool_arr, axis=0), 0)
+        mask = np.expand_dims(np.any(~bool_arr, axis=0), 0)
+        self.xy.mask = mask
+        self.dir.mask = mask
+        self.speed.mask = mask
+        return mask
 
 
 class MapCalcsGeneric(object):

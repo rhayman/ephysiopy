@@ -282,7 +282,16 @@ class OpenEphysBase(FigureMaker):
             np.savetxt(out_fname, data, delimiter='\t')
 
     def filterPosition(self, filter_dict: dict = {}):
-        pass
+        xy = getattr(self, 'xy')
+        ppm = getattr(self, 'ppm')
+        jumpmax = getattr(self, 'jumpmax')
+        P = PosCalcsGeneric(xy[0], xy[1], ppm=ppm, cm=True, jumpmax=jumpmax)
+        sample_rate = getattr(self, 'pos_sample_rate')
+        P.postprocesspos({'SampleRate': sample_rate})
+        P.filterPos(filter_dict)
+        setattr(self, 'xy', P.xy)
+        setattr(self, 'dir', P.dir)
+        setattr(self, 'speed', P.speed)
 
     def getClusterSpikeTimes(self, cluster: int):
         '''
