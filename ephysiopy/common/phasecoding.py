@@ -67,7 +67,9 @@ class phasePrecession2D(object):
     xy: np.array
         The position data as 2 x num_position_samples
     spike_ts: np.array
-        The times in seconds at which the cell fired
+        The times in samples at which the cell fired
+    spike_ts: np.array
+        The times in samples at which position was captured
     pp_config: dict
         Contains parameters for running the analysis.
         See phase_precession_config dict in ephysiopy.common.eegcalcs
@@ -76,6 +78,7 @@ class phasePrecession2D(object):
     def __init__(self, lfp_sig: np.array, lfp_fs: int,
                  xy: np.array,
                  spike_ts: np.array,
+                 pos_ts: np.array,
                  pp_config: dict = phase_precession_config):
 
         [setattr(self, k, pp_config[k]) for k in pp_config.keys()]
@@ -110,7 +113,7 @@ class phasePrecession2D(object):
         # Process the EEG data a bit...
         self.eeg = lfp_sig
         L = LFPOscillations(lfp_sig, lfp_fs)
-        filt_sig, phase, amplitude, amplitude_filtered = L.getFreqPhase(
+        filt_sig, phase, _, _ = L.getFreqPhase(
             lfp_sig, [6, 12], 2)
         self.filteredEEG = filt_sig
         self.phase = phase
@@ -119,20 +122,27 @@ class phasePrecession2D(object):
         # ... and the position data
         P = PosCalcsGeneric(xy[0, :], xy[1, :], ppm=self.ppm, cm=True)
         xy, hdir = P.postprocesspos()
+        self.pos_ts = pos_ts
 
         # ... do the ratemap creation here once
         R = RateMap(xy, hdir, P.speed)
         R.cmsPerBin = self.cms_per_bin
         R.smooth_sz = self.field_smoothing_kernel_len
         R.ppm = self.ppm
-        spike_times_in_pos_samples = np.array(
-            spike_ts * self.pos_sample_rate, dtype=int)
+        spk_times_in_pos_samples = self.getSpikePosIndices(spike_ts)
         spk_weights = np.bincount(
-            spike_times_in_pos_samples, minlength=len(hdir))
+            spk_times_in_pos_samples, minlength=len(self.pos_ts))
+        self.spk_times_in_pos_samples = spk_times_in_pos_samples
         self.spk_weights = spk_weights
         self.RateMap = R  # this will be used a fair bit below
 
         self.spike_ts = spike_ts
+
+    def getSpikePosIndices(self, spk_times: np.array):
+        pos_times = getattr(self, 'pos_ts')
+        idx = np.searchsorted(pos_times, spk_times)
+        idx[idx==len(pos_times)] = idx[idx==len(pos_times)] - 1
+        return idx
 
     def performRegression(
             self, laserEvents=None, **kwargs):
@@ -815,8 +825,7 @@ class phasePrecession2D(object):
             self, regressorDict, regressor2plot='pos_d_cum', ax=None):
 
         t = self.getLFPPhaseValsForSpikeTS()
-        idx = np.array(self.spike_ts * self.pos_sample_rate, dtype=int)
-        x = self.RateMap.xy[0, idx]
+        x = self.RateMap.xy[0, self.spk_times_in_pos_samples]
         from ephysiopy.common import fieldcalcs
         rmap, (xe, ye) = self.RateMap.getMap(self.spk_weights)
         label = fieldcalcs.field_lims(rmap)
@@ -852,7 +861,7 @@ class phasePrecession2D(object):
                 'rho_boot': rho_boot, 'p_shuff': p_shuff, 'ci': ci}
 
     def getLFPPhaseValsForSpikeTS(self):
-        ts = self.spike_ts * self.lfp_sample_rate
+        ts = self.spk_times_in_pos_samples * (self.lfp_sample_rate / self.pos_sample_rate)
         ts_idx = np.array(np.floor(ts), dtype=int)
         return self.phase[ts_idx]
 

@@ -9,14 +9,14 @@ def test_phase_precession_2d_setup(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     T.load()
     spike_ts = T.TETRODE.get_spike_samples(1, 1)
-    phasePrecession2D(T.EEG.sig, 250., T.xy, spike_ts, ppc)
+    phasePrecession2D(T.EEG.sig, 250., T.xy, spike_ts, T.xyTS, ppc)
 
 
 def test_perform_regression(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     T.load()
     spike_ts = T.TETRODE.get_spike_samples(1, 1)
-    pp2d = phasePrecession2D(T.EEG.sig, 250., T.xy, spike_ts, ppc)
+    pp2d = phasePrecession2D(T.EEG.sig, 250., T.xy, spike_ts, T.xyTS, ppc)
     pp2d.performRegression()
 
 
@@ -24,7 +24,7 @@ def test_pos_props_with_events(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     T.load()
     spike_ts = T.TETRODE.get_spike_samples(1, 1)
-    pp2d = phasePrecession2D(T.EEG.sig, 250., T.xy, spike_ts, ppc)
+    pp2d = phasePrecession2D(T.EEG.sig, 250., T.xy, spike_ts, T.xyTS, ppc)
     laser_events = np.array(
         np.ceil(T.STM['on'] / T.STM.timebase * T.pos_sample_rate)).astype(int)
     peaksXY, _, labels, _ = pp2d.partitionFields()
@@ -36,7 +36,7 @@ def test_circ_circ_corr(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     T.load()
     spike_ts = T.TETRODE.get_spike_samples(1, 1)
-    pp2d = phasePrecession2D(T.EEG.sig, 250., T.xy, spike_ts, ppc)
+    pp2d = phasePrecession2D(T.EEG.sig, 250., T.xy, spike_ts, T.xyTS, ppc)
     pp2d._circCircCorrTLinear(
         theta=T.dir[0:10].data, phi=np.random.vonmises(0, 4, 10), k=10, conf=True)
 
