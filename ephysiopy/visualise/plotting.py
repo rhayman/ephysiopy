@@ -507,10 +507,11 @@ class FigureMaker(object):
                 ax.plot(
                     (inDict['dist_to_centre'].shape[1]/2, p[1]),
                     (inDict['dist_to_centre'].shape[0] / 2, p[0]), 'k', **kwargs)
-        all_ax = ax.axes
-        all_ax.set_aspect('equal')
-        all_ax.set_xlim((0.5, inDict['dist_to_centre'].shape[1]-1.5))
-        all_ax.set_ylim((inDict['dist_to_centre'].shape[0]-.5, -.5))
+        ax.invert_yaxis()
+        # all_ax = ax.axes
+        # all_ax.set_aspect('equal')
+        # all_ax.set_xlim((0.5, inDict['dist_to_centre'].shape[1]-1.5))
+        # all_ax.set_ylim((inDict['dist_to_centre'].shape[0]-.5, -.5))
         return ax
     '''
     def plotDirFilteredRmaps(self, tetrode, cluster, maptype='rmap', **kwargs):

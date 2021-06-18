@@ -281,6 +281,9 @@ class OpenEphysBase(FigureMaker):
                 data = data.T
             np.savetxt(out_fname, data, delimiter='\t')
 
+    def filterPosition(self, filter_dict: dict = {}):
+        pass
+
     def getClusterSpikeTimes(self, cluster: int):
         '''
         Returns the spike times in seconds of the given cluster
