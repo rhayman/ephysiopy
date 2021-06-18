@@ -82,7 +82,7 @@ class FigureMaker(object):
         rmap = self.RateMapMaker.getMap(spk_weights)
         ratemap = np.ma.MaskedArray(rmap[0], np.isnan(rmap[0]), copy=True)
         x, y = np.meshgrid(rmap[1][1][0:-1], rmap[1][0][0:-1][::-1])
-        vmax = np.max(np.ravel(ratemap))
+        vmax = np.nanmax(np.ravel(ratemap))
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
@@ -478,18 +478,21 @@ class FigureMaker(object):
         Am = A.copy()
         Am[~inDict['dist_to_centre']] = np.nan
         Am = np.ma.masked_invalid(np.atleast_2d(Am))
-        ax.imshow(
-            A, cmap=plt.cm.get_cmap("gray_r"), interpolation='nearest')
+        x, y = np.meshgrid(
+            np.arange(0, np.shape(A)[0]),
+            np.arange(0, np.shape(A)[1]))
+        vmax = np.nanmax(np.ravel(A))
+        ax.pcolormesh(
+            x, y, A, cmap=plt.cm.get_cmap("gray_r"),
+            edgecolors='face', vmax=vmax, shading='auto')
         import copy
         cmap = copy.copy(plt.cm.get_cmap("jet"))
         cmap.set_bad('w', 0)
-        ax.pcolormesh(Am, cmap=cmap, edgecolors='face')
+        ax.pcolormesh(
+            x, y, Am, cmap=cmap,
+            edgecolors='face', vmax=vmax, shading='auto')
         # horizontal green line at 3 o'clock
-        ax.plot(
-            (inDict['closest_peak_coords'][0, 1], np.max(
-                inDict['closest_peak_coords'][:, 1])),
-            (inDict['closest_peak_coords'][0, 0],
-                inDict['closest_peak_coords'][0, 0]), '-g', **kwargs)
+        ax.axhline(y=np.shape(A)[0]/2, c='g')
         mag = inDict['scale'] * 0.5
         th = np.linspace(0, inDict['orientation'], 50)
         from ephysiopy.common.utils import rect
@@ -505,12 +508,6 @@ class FigureMaker(object):
                     (inDict['dist_to_centre'].shape[1]/2, p[1]),
                     (inDict['dist_to_centre'].shape[0] / 2, p[0]), 'k', **kwargs)
         all_ax = ax.axes
-        x_ax = all_ax.get_xaxis()
-        x_ax.set_tick_params(which='both', bottom=False, labelbottom=False,
-                             top=False)
-        y_ax = all_ax.get_yaxis()
-        y_ax.set_tick_params(which='both', left=False, labelleft=False,
-                             right=False)
         all_ax.set_aspect('equal')
         all_ax.set_xlim((0.5, inDict['dist_to_centre'].shape[1]-1.5))
         all_ax.set_ylim((inDict['dist_to_centre'].shape[0]-.5, -.5))

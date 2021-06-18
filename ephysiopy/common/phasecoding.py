@@ -827,7 +827,7 @@ class phasePrecession2D(object):
         t = self.getLFPPhaseValsForSpikeTS()
         x = self.RateMap.xy[0, self.spk_times_in_pos_samples]
         from ephysiopy.common import fieldcalcs
-        rmap, (xe, ye) = self.RateMap.getMap(self.spk_weights)
+        rmap, (xe, _) = self.RateMap.getMap(self.spk_weights)
         label = fieldcalcs.field_lims(rmap)
         xInField = xe[label.nonzero()[1]]
         mask = np.logical_and(x > np.min(xInField), x < np.max(xInField))
