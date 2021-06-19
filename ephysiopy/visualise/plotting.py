@@ -46,6 +46,7 @@ class FigureMaker(object):
         if xy is not None:
             pos_weights = np.ones_like(getattr(self, 'xyTS'))
         ppm = getattr(self, 'ppm', 300)
+        
 
         self.RateMapMaker = RateMap(
             xy=xy, hdir=hdir, speed=speed, pos_weights=pos_weights, ppm=ppm,
