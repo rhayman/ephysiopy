@@ -46,11 +46,11 @@ class FigureMaker(object):
         if xy is not None:
             pos_weights = np.ones_like(getattr(self, 'xyTS'))
         ppm = getattr(self, 'ppm', 300)
-        
+        cmsPerBin = getattr(self, 'cmsPerBin', 3)
 
         self.RateMapMaker = RateMap(
             xy=xy, hdir=hdir, speed=speed, pos_weights=pos_weights, ppm=ppm,
-            xyInCms=False)
+            xyInCms=False, cmsPerBin=cmsPerBin)
         self.data_loaded = True
 
     def getSpikePosIndices(self, spk_times: np.array):
