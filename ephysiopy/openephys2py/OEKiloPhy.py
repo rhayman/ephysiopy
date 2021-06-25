@@ -282,10 +282,11 @@ class OpenEphysBase(FigureMaker):
             np.savetxt(out_fname, data, delimiter='\t')
 
     def filterPosition(self, filter_dict: dict = {}):
-        xy = getattr(self, 'xy')
+        x = getattr(self, 'orig_x')
+        y = getattr(self, 'orig_y')
         ppm = getattr(self, 'ppm')
         jumpmax = getattr(self, 'jumpmax')
-        P = PosCalcsGeneric(xy[0], xy[1], ppm=ppm, cm=True, jumpmax=jumpmax)
+        P = PosCalcsGeneric(x, y, ppm=ppm, cm=True, jumpmax=jumpmax)
         sample_rate = getattr(self, 'pos_sample_rate')
         P.postprocesspos({'SampleRate': sample_rate})
         P.filterPos(filter_dict)
@@ -487,6 +488,8 @@ class OpenEphysNPX(OpenEphysBase):
             sample_rate = np.floor(1/np.mean(np.diff(pos_ts)/ap_sample_rate))
             self.xyTS = pos_ts# / ap_sample_rate
             self.pos_sample_rate = sample_rate
+            self.orig_x = pos_data[:, 0]
+            self.orig_y = pos_data[:, 1]
 
             P = PosCalcsGeneric(
                 pos_data[:, 0], pos_data[:, 1], cm=True, ppm=self.ppm, jumpmax=self.jumpmax)

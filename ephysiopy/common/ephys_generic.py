@@ -387,6 +387,9 @@ class PosCalcsGeneric(object):
             self.sample_rate = int(tracker_params['SampleRate'])
         else:
             self.sample_rate = 30
+        
+        if self.cm:
+            xy = xy / (100 * self.sample_rate / self.ppm)
 
         # xy = xy.T
         xy = self.speedfilter(xy)
@@ -404,7 +407,8 @@ class PosCalcsGeneric(object):
         self.dir[-1] = self.dir[-2]
 
         hdir = self.dir
-
+        self.xy = xy
+        self.dir = hdir
         return xy, hdir
 
     def speedfilter(self, xy: np.ma.MaskedArray):
@@ -494,11 +498,7 @@ class PosCalcsGeneric(object):
         -------
         Nothing. Sets self.speed
         """
-        speed = np.sqrt(np.sum(np.power(np.diff(xy), 2), 0))
-        speed = np.append(speed, speed[-1])
-        if self.cm:
-            speed = speed * (100 * self.sample_rate / self.ppm)
-        self.speed = np.ma.MaskedArray(speed)
+        self.speed = np.hypot(xy[0], xy[1])
         
 
     def upsamplePos(self, xy: np.ma.MaskedArray, upsample_rate: int=50):

@@ -43,14 +43,17 @@ class FigureMaker(object):
         hdir = getattr(self, 'dir', None)
         speed = getattr(self, 'speed', None)
         pos_weights = None
-        if xy is not None:
-            pos_weights = np.ones_like(getattr(self, 'xyTS'))
+        if hdir is not None:
+            if np.ma.is_masked(hdir):
+                pos_weights = np.array(~hdir.mask).astype(int)
+            else:
+                pos_weights = np.ones_like(hdir)
         ppm = getattr(self, 'ppm', 300)
         cmsPerBin = getattr(self, 'cmsPerBin', 3)
 
         self.RateMapMaker = RateMap(
             xy=xy, hdir=hdir, speed=speed, pos_weights=pos_weights, ppm=ppm,
-            xyInCms=False, cmsPerBin=cmsPerBin)
+            xyInCms=True, cmsPerBin=cmsPerBin)
         self.data_loaded = True
 
     def getSpikePosIndices(self, spk_times: np.array):
@@ -97,9 +100,10 @@ class FigureMaker(object):
     @stripAxes
     def makeSpikePathPlot(self, spk_times: np.array = None, ax=None, **kwargs):
         self.initialise()
-        if 'mec' or 'c' not in kwargs:
-            kwargs['c'] = tcols.colours[1]
-            kwargs['mec'] = tcols.colours[1]
+        if 'c' in kwargs:
+            col = kwargs.pop('c')
+        else:
+            col = tcols.colours[1]
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
@@ -108,7 +112,8 @@ class FigureMaker(object):
         ax.invert_yaxis()
         if spk_times is not None:
             idx = self.getSpikePosIndices(spk_times)
-            ax.plot(self.xy[0, idx], self.xy[1, idx], 's', **kwargs)
+            ax.plot(
+                self.xy[0, idx], self.xy[1, idx], 's', c=col, **kwargs)
         return ax
 
     @stripAxes
