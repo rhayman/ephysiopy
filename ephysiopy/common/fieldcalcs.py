@@ -803,12 +803,12 @@ def grid_field_props(
         half_peak_labels[xc, yc] = peak_id
 
     # Get some statistics about the labeled regions
-    fieldPerim = bwperim(half_peak_labels)
+    # fieldPerim = bwperim(half_peak_labels)
     lbl_range = np.arange(0, nLbls)
-    meanRInLabel = ndimage.mean(A, half_peak_labels, lbl_range)
-    nPixelsInLabel = np.bincount(np.ravel(half_peak_labels.astype(int)))
-    sumRInLabel = ndimage.sum_labels(A, half_peak_labels, lbl_range)
-    maxRInLabel = ndimage.maximum(A, half_peak_labels, lbl_range)
+    # meanRInLabel = ndimage.mean(A, half_peak_labels, lbl_range)
+    # nPixelsInLabel = np.bincount(np.ravel(half_peak_labels.astype(int)))
+    # sumRInLabel = ndimage.sum_labels(A, half_peak_labels, lbl_range)
+    # maxRInLabel = ndimage.maximum(A, half_peak_labels, lbl_range)
     peak_coords = ndimage.maximum_position(
         A, half_peak_labels, lbl_range)
 

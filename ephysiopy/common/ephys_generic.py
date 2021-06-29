@@ -330,7 +330,6 @@ class PosCalcsGeneric(object):
     def __init__(self, x, y, ppm, cm=True, jumpmax=100):
         assert np.shape(x) == np.shape(y)
         self.orig_xy = np.ma.MaskedArray([x, y])
-        self.xy = np.ma.MaskedArray([x, y])
         self.dir = np.ma.MaskedArray(np.zeros_like(x))
         self.speed = None
         self.ppm = ppm
@@ -366,7 +365,6 @@ class PosCalcsGeneric(object):
 
         """
         xy = self.orig_xy
-        xy = np.ma.MaskedArray(xy, dtype=np.int32)
         x_zero = xy[0, :] < 0
         y_zero = xy[1, :] < 0
         xy[:, np.logical_or(x_zero, y_zero)] = np.ma.masked
@@ -390,7 +388,7 @@ class PosCalcsGeneric(object):
             self.sample_rate = 30
         
         if self.cm:
-            xy = xy / (100 * self.sample_rate / self.ppm)
+            xy = xy / ( self.ppm / 100. )
 
         # xy = xy.T
         xy = self.speedfilter(xy)

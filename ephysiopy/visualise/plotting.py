@@ -96,7 +96,7 @@ class FigureMaker(object):
         ax.pcolormesh(
             x, y, ratemap, cmap=plt.cm.get_cmap("jet"), edgecolors='face',
             vmax=vmax, shading='auto')
-        ax.axis([x.min(), x.max(), y.min(), y.max()])
+        # ax.axis([x.min(), x.max(), y.min(), y.max()])
         ax.set_aspect('equal')
         return ax
 
@@ -495,10 +495,8 @@ class FigureMaker(object):
         Am[~inDict['dist_to_centre']] = np.nan
         Am = np.ma.masked_invalid(np.atleast_2d(Am))
         x, y = np.meshgrid(
-            np.arange(0, np.shape(A)[0]),
-            np.arange(0, np.shape(A)[1]))
-        x = x.T
-        y = y.T
+            np.arange(0, np.shape(A)[1]),
+            np.arange(0, np.shape(A)[0]))
         vmax = np.nanmax(np.ravel(A))
         ax.pcolormesh(
             x, y, A, cmap=plt.cm.get_cmap("gray_r"),
@@ -510,7 +508,9 @@ class FigureMaker(object):
             x, y, Am, cmap=cmap,
             edgecolors='face', vmax=vmax, shading='auto')
         # horizontal green line at 3 o'clock
-        ax.axhline(y=np.shape(A)[0]/2, c='g')
+        _y = (np.shape(A)[0]/2, np.shape(A)[0]/2)
+        _x = (np.shape(A)[1]/2, np.shape(A)[0])
+        ax.plot(_x, _y, c='g')
         mag = inDict['scale'] * 0.5
         th = np.linspace(0, inDict['orientation'], 50)
         from ephysiopy.common.utils import rect
