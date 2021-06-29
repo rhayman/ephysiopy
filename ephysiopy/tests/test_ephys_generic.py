@@ -3,27 +3,7 @@ import numpy as np
 from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 from ephysiopy.common.spikecalcs import SpikeCalcsTetrode
-from ephysiopy.common.ephys_generic import MapCalcsGeneric
 from ephysiopy.common.ephys_generic import EventsGeneric
-
-
-# Fixtures setting up/ returning instances of the various classes to be tested
-@pytest.fixture
-def basic_MapCalcs(basic_PosCalcs, basic_SpikeCalcs):
-    # MapCalcs needs xy, hdir, speed and pos and spike timestamps (in secs)
-    P = basic_PosCalcs
-    xy, hdir = P.postprocesspos()
-    # only have 10 seconds of spiking data so limit the pos stuff to that too
-    P.xy = P.xy[:, 0:10*P.sample_rate]
-    P.dir = P.dir[0:10*P.sample_rate]
-    P.speed = P.speed[0:10*P.sample_rate]
-    P.npos = 10*P.sample_rate
-    spk_ts = basic_SpikeCalcs.spike_times
-    spk_ts = spk_ts / 3e4  # only have 10 secs worth
-    pos_ts = np.arange(0, P.npos) / 30.  # have about 167 seconds worth
-    M = MapCalcsGeneric(P.xy, P.dir, P.speed, pos_ts, spk_ts, ppm=300)
-    M.spk_clusters = basic_SpikeCalcs.spk_clusters
-    return M
 
 
 @pytest.fixture
@@ -78,9 +58,6 @@ def test_interpnans(basic_PosCalcs, basic_xy):
     new_xy = basic_PosCalcs.interpnans(xy)
     assert(new_xy.ndim == 2)
     assert(xy.shape == new_xy.shape)
-    all_masked = np.ma.masked_all(np.shape(xy))
-    with pytest.raises(ValueError):
-        basic_PosCalcs.interpnans(all_masked)
 
 
 def test_smoothPos(basic_PosCalcs, basic_xy):
@@ -257,58 +234,6 @@ def test_plot_ifr_sp_corr(basic_SpikeCalcsTetrode, basic_xy):
     c1_pos_idx = np.floor(c1_times / 3e4 * 30).astype(int)
     fig = basic_SpikeCalcsTetrode.ifr_sp_corr(c1_pos_idx, speed, plot=True)
     return fig
-
-
-# -----------------------------------------------------------------------
-# ------------ MapCalcsGeneric testing ----------------------
-# -----------------------------------------------------------------------
-def test_map_calcs_init(basic_MapCalcs):
-    xy = basic_MapCalcs.xy
-    hdir = basic_MapCalcs.hdir
-    speed = basic_MapCalcs.speed
-    pos_ts = basic_MapCalcs.pos_ts
-    spk_ts = basic_MapCalcs.spk_ts
-    MapCalcsGeneric(
-        xy, hdir, speed, pos_ts, spk_ts,
-        plot_type="map",
-        ppm=300,
-        pos_sample_rate=30
-        )
-    M = MapCalcsGeneric(
-        xy, hdir, speed, pos_ts, spk_ts,
-        plot_type=["map"],
-        pos_sample_rate=30
-        )
-    M.good_clusters
-    M.good_clusters = [1, 2]
-    M.spk_clusters
-    M.spk_clusters = [1, 2]
-    M.ppm
-    M.ppm = 300
-
-
-def test_interp_spike_pos_times(basic_MapCalcs):
-    idx = basic_MapCalcs.__interpSpkPosTimes__()
-    assert(isinstance(idx, np.ndarray))
-
-
-def test_get_spatial_stats(basic_MapCalcs):
-    val = basic_MapCalcs.getSpatialStats(1)
-    assert(isinstance(val, dict))
-    val = basic_MapCalcs.getSpatialStats([1])
-
-
-def test_get_hd_tuning(basic_MapCalcs):
-    r, th = basic_MapCalcs.getHDtuning(1)
-    assert(isinstance(r, float))
-    assert(isinstance(th, float))
-
-
-def test_get_speed_tuning(basic_MapCalcs):
-    speed_corr, speed_mod = basic_MapCalcs.getSpeedTuning(1)
-    assert(isinstance(speed_corr, float))
-    assert(isinstance(speed_mod, float))
-    basic_MapCalcs.getSpeedTuning(1, maxSpeed=2000)
 
 
 # -----------------------------------------------------------------------

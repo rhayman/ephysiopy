@@ -59,8 +59,10 @@ class RateMap(object):
 
     """
     def __init__(
-            self, xy=None, hdir=None, speed=None, pos_weights=None,
-            ppm=430, xyInCms=False, cmsPerBin=3, smooth_sz=5):
+            self, xy: np.array=None, hdir: np.array=None,
+            speed: np.array=None, pos_weights: np.array=None,
+            ppm: int=430, xyInCms: bool=False, cmsPerBin: int=3,
+            smooth_sz: int=5):
         self.xy = xy
         self.dir = hdir
         self.speed = speed
@@ -166,15 +168,7 @@ class RateMap(object):
     def smoothingType(self, value):
         self._smoothingType = value
 
-    @property
-    def pixelsPerBin(self):
-        # Calculates the number of camera pixels per bin of the binned data
-        if getattr(self, 'inCms'):
-            return getattr(self, 'cmsPerBin')
-        else:
-            return (getattr(self, 'ppm') / 100.) * getattr(self, 'cmsPerBin')
-
-    def _calcBinSize(self, cmsPerBin=3):
+    def _calcBinSize(self, cmsPerBin: int=3) -> tuple:
         """
         Aims to get the right number of bins for x and y dims given the ppm
         in the set header and the x and y extent
@@ -183,6 +177,10 @@ class RateMap(object):
         ----------
         cmsPerBin : int, optional, default = 3
             The number of cms per bin OR degrees for directional binning
+
+        Returns
+        -------
+        2-tuple: each member an array of bin edges for x and y
         """
         x_lims = getattr(self, 'x_lims', None)
         y_lims = getattr(self, 'y_lims', None)
@@ -190,14 +188,11 @@ class RateMap(object):
             x_lims = (np.nanmin(self.xy[0]), np.nanmax(self.xy[0]))
         if y_lims is None:
             y_lims = (np.nanmin(self.xy[1]), np.nanmax(self.xy[1]))
-        ppb = getattr(self, 'pixelsPerBin')
-        # self.binsize = np.array(
-        #     (np.ceil(
-        #         np.ma.ptp(y_lims) / ppb)-1,
-        #         np.ceil(
-        #             np.ma.ptp(x_lims) / ppb)-1), dtype=int)
-        _x = np.arange(x_lims[0], x_lims[1], ppb)
-        _y = np.arange(y_lims[0], y_lims[1], ppb)
+            
+        n_x = np.ceil((x_lims[1] - x_lims[0])/ cmsPerBin)
+        n_y = np.ceil((y_lims[1] - y_lims[0])/ cmsPerBin)
+        _x = np.linspace(x_lims[0], x_lims[1], int(n_x))
+        _y = np.linspace(y_lims[0], y_lims[1], int(n_y))
 
         return _y, _x
 
@@ -241,9 +236,9 @@ class RateMap(object):
             self.binsize = np.arange(0, 360+self.cmsPerBin, self.cmsPerBin)
         elif 'speed' in varType:
             self.binsize = np.arange(0, 50, 1)
-
+ 
         binned_pos = self._binData(sample, self.binsize, self.pos_weights)
-
+        
         binned_pos_edges = binned_pos[1]
         binned_pos = binned_pos[0]
         nanIdx = binned_pos == 0

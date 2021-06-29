@@ -121,11 +121,12 @@ class phasePrecession2D(object):
 
         # ... and the position data
         P = PosCalcsGeneric(xy[0, :], xy[1, :], ppm=self.ppm, cm=True)
-        xy, hdir = P.postprocesspos()
+        hdir = P.calcHeadDirection(xy)
+        speed = P.calcSpeed(xy)
         self.pos_ts = pos_ts
 
         # ... do the ratemap creation here once
-        R = RateMap(xy, hdir, P.speed)
+        R = RateMap(xy, hdir, speed)
         R.cmsPerBin = self.cms_per_bin
         R.smooth_sz = self.field_smoothing_kernel_len
         R.ppm = self.ppm
@@ -279,7 +280,7 @@ class phasePrecession2D(object):
             fig = plt.figure()
             ax = fig.add_subplot(211)
             ax.pcolormesh(
-                xe, ye, rmap,
+                ye, xe, rmap,
                 cmap=plt.cm.get_cmap("jet"), edgecolors='face')
             ax.set_title('Smoothed ratemap + peaks')
             ax.xaxis.set_visible(False)

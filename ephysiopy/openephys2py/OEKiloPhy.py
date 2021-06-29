@@ -101,10 +101,10 @@ class KiloSortSession(object):
         Output some information to the user if self.cluster_id is still None
         it implies that data has not been sorted / curated
         """
-        if self.cluster_id is None:
-            print(f"Searching {os.path.join(self.fname_root)} and...")
-            warnings.warn("No cluster_groups.tsv or cluster_group.csv file was found.\
-                Have you manually curated the data (e.g with phy?")
+        # if self.cluster_id is None:
+        #     print(f"Searching {os.path.join(self.fname_root)} and...")
+        #     warnings.warn("No cluster_groups.tsv or cluster_group.csv file was found.\
+        #         Have you manually curated the data (e.g with phy?")
 
         # HWPD 20200527
         # load cluster_info file and add X co-ordinate to it
@@ -201,7 +201,23 @@ class OpenEphysBase(FigureMaker):
             self.jumpmax = kwargs['jumpmax']
         else:
             self.jumpmax = 100
-        self.ppm = getattr(self, 'ppm', 300)
+        self._ppm = getattr(self, 'ppm', 300)
+
+    @property
+    def ppm(self):
+        return self._ppm
+
+    @ppm.setter
+    def ppm(self, value):
+        if hasattr(self, 'PosCalcs'):
+            self._ppm = value
+            P = getattr(self, 'PosCalcs')
+            P.ppm = value
+            sample_rate = getattr(P, 'sample_rate')
+            P.postprocesspos({'SampleRate': sample_rate})
+            setattr(self, 'xy', P.xy)
+            setattr(self, 'dir', P.dir)
+            setattr(self, 'speed', P.speed)
 
     def load(self, *args, **kwargs):
         # Overridden by sub-classes
@@ -281,18 +297,15 @@ class OpenEphysBase(FigureMaker):
                 data = data.T
             np.savetxt(out_fname, data, delimiter='\t')
 
-    def filterPosition(self, filter_dict: dict = {}):
-        x = getattr(self, 'orig_x')
-        y = getattr(self, 'orig_y')
-        ppm = getattr(self, 'ppm')
-        jumpmax = getattr(self, 'jumpmax')
-        P = PosCalcsGeneric(x, y, ppm=ppm, cm=True, jumpmax=jumpmax)
-        sample_rate = getattr(self, 'pos_sample_rate')
-        P.postprocesspos({'SampleRate': sample_rate})
-        P.filterPos(filter_dict)
-        setattr(self, 'xy', P.xy)
-        setattr(self, 'dir', P.dir)
-        setattr(self, 'speed', P.speed)
+    
+    
+    def filterPosition(self, filter_dict: dict):
+        if hasattr(self, 'PosCalcs'):
+            P = getattr(self, 'PosCalcs')
+            P.filterPos(filter_dict)
+            setattr(self, 'xy', P.xy)
+            setattr(self, 'dir', P.dir)
+            setattr(self, 'speed', P.speed)
 
     def getClusterSpikeTimes(self, cluster: int):
         '''
@@ -494,6 +507,7 @@ class OpenEphysNPX(OpenEphysBase):
             P = PosCalcsGeneric(
                 pos_data[:, 0], pos_data[:, 1], cm=True, ppm=self.ppm, jumpmax=self.jumpmax)
             xy, hdir = P.postprocesspos({'SampleRate': sample_rate})
+            setattr(self, 'PosCalcs', P)
             self.xy = xy
             self.dir = hdir
             self.speed = P.speed

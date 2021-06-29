@@ -17,13 +17,6 @@ def standard_Ratemap(basic_PosCalcs):
     return RateMap(P.xy, P.dir, P.speed)
 
 
-def test_pixels_per_bin(standard_Ratemap):
-    ppb = standard_Ratemap.pixelsPerBin
-    assert(isinstance(ppb, (int, float)))
-    standard_Ratemap.x_lims = (0, 10)
-    standard_Ratemap.y_lims = (0, 10)
-
-
 def test_calc_bin_size(standard_Ratemap):
     bs = standard_Ratemap._calcBinSize()
     assert(isinstance(bs, (np.ndarray, list, Sequence)))
@@ -49,9 +42,6 @@ def test_bin_data(standard_Ratemap):
     R._binData(xy, xy_bins, None)
     R.pos_weights = np.random.randn(100)
     R.smoothingType = "gaussian"
-    R.pixelsPerBin
-    R.inCms = False
-    R.pixelsPerBin
 
 
 def test_get_map(standard_Ratemap):

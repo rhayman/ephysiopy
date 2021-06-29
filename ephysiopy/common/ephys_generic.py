@@ -5,7 +5,7 @@ things like spike timing autocorrelograms, power spectrum calculation and so on
 """
 import numpy as np
 from scipy import signal
-from ephysiopy.common import binning
+# from ephysiopy.common import binning
 
 
 class EventsGeneric(object):
@@ -329,6 +329,7 @@ class PosCalcsGeneric(object):
     """
     def __init__(self, x, y, ppm, cm=True, jumpmax=100):
         assert np.shape(x) == np.shape(y)
+        self.orig_xy = np.ma.MaskedArray([x, y])
         self.xy = np.ma.MaskedArray([x, y])
         self.dir = np.ma.MaskedArray(np.zeros_like(x))
         self.speed = None
@@ -364,7 +365,7 @@ class PosCalcsGeneric(object):
         is modified throughout this method.
 
         """
-        xy = self.xy
+        xy = self.orig_xy
         xy = np.ma.MaskedArray(xy, dtype=np.int32)
         x_zero = xy[0, :] < 0
         y_zero = xy[1, :] < 0
@@ -396,7 +397,12 @@ class PosCalcsGeneric(object):
         xy = self.interpnans(xy)  # ADJUST THIS SO NP.MASKED ARE INTERPOLATED
         xy = self.smoothPos(xy)
         self.calcSpeed(xy)
+        hdir = self.calcHeadDirection(xy)
+        self.xy = xy
+        self.dir = hdir
+        return xy, hdir
 
+    def calcHeadDirection(self, xy: np.ma.MaskedArray):
         import math
         pos2 = np.arange(0, self.npos-1)
         xy_f = xy.astype(float)
@@ -405,11 +411,7 @@ class PosCalcsGeneric(object):
                 -xy_f[1, pos2+1] + xy_f[1, pos2], +xy_f[0, pos2+1]-xy_f[
                     0, pos2]))), 360)
         self.dir[-1] = self.dir[-2]
-
-        hdir = self.dir
-        self.xy = xy
-        self.dir = hdir
-        return xy, hdir
+        return self.dir
 
     def speedfilter(self, xy: np.ma.MaskedArray):
         """
@@ -446,17 +448,13 @@ class PosCalcsGeneric(object):
             ok = np.logical_not(missing)
             ok_idx = np.ravel(np.nonzero(np.ravel(ok))[0])
             missing_idx = np.ravel(np.nonzero(np.ravel(missing))[0])
-            if len(missing_idx) > 0:
-                try:
-                    good_data = np.ravel(xy.data[i, ok_idx])
-                    good_data1 = np.ravel(xy.data[i+1, ok_idx])
-                    xy.data[i, missing_idx] = np.interp(
-                        missing_idx, ok_idx, good_data)
-                    xy.data[i+1, missing_idx] = np.interp(
-                        missing_idx, ok_idx, good_data1)
-                except ValueError:
-                    raise ValueError("interpnans failed")
-        # xy.mask = 0
+            if np.logical_and(len(missing_idx) > 0, len(ok_idx) > 0):
+                good_data = np.ma.ravel(xy.data[i, ok_idx])
+                good_data1 = np.ma.ravel(xy.data[i+1, ok_idx])
+                xy.data[i, missing_idx] = np.interp(
+                    missing_idx, ok_idx, good_data)
+                xy.data[i+1, missing_idx] = np.interp(
+                    missing_idx, ok_idx, good_data1)
         print("{} bad positions were interpolated over".format(
             len(missing_idx)))
         return xy
@@ -498,8 +496,11 @@ class PosCalcsGeneric(object):
         -------
         Nothing. Sets self.speed
         """
-        self.speed = np.hypot(xy[0], xy[1])
-        
+        speed = np.abs(np.ma.ediff1d(np.hypot(xy[0], xy[1])))
+        self.speed = np.append(speed, speed[-1])
+        if self.cm:
+            self.speed = self.speed * self.sample_rate
+        return self.speed
 
     def upsamplePos(self, xy: np.ma.MaskedArray, upsample_rate: int=50):
         """
@@ -560,7 +561,10 @@ class PosCalcsGeneric(object):
             The position indices that should be kept
         '''
         if filter_dict is None:
-            return
+            self.xy.mask = False
+            self.dir.mask = False
+            self.speed.mask = False
+            return False
         bool_arr = np.ones(shape=(len(filter_dict), self.npos), dtype=np.bool)
         for idx, key in enumerate(filter_dict):
             if isinstance(filter_dict[key], str):
@@ -614,183 +618,3 @@ class PosCalcsGeneric(object):
         self.dir.mask = mask
         self.speed.mask = mask
         return mask
-
-
-class MapCalcsGeneric(object):
-    """
-    Produces graphical output including but not limited to spatial
-    analysis of data.
-
-    Parameters
-    ----------
-    xy : array_like
-        The positional data usually as a 2D numpy array
-    hdir : array_like
-        The head direction data usually a 1D numpy array
-    speed : array like
-        The speed data, usually a 1D numpy array
-    pos_ts : array_like
-        1D array of timestamps in seconds
-    spk_ts : array_like
-        1D array of timestamps in seconds
-    plot_type : str or list
-        Determines the plots produced. Legal values:
-        ['map','path','hdir','sac', 'speed']
-
-    Notes
-    -----
-    Output possible:
-    * ratemaps (xy)
-    * polar plots (heading direction)
-    * grid cell spatial autocorrelograms
-    * speed vs rate plots
-
-    It is possible to iterate through instances of this class as it has a yield
-    method defined
-    """
-    def __init__(
-            self, xy, hdir, speed, pos_ts, spk_ts, plot_type='map', **kwargs):
-        assert(xy.shape[0] == 2)
-        assert(xy.ndim == 2)
-        assert(xy.shape[1] == hdir.shape[0] == speed.shape[0])
-        assert(spk_ts.ndim == 1)
-        self.xy = xy
-        self.hdir = hdir
-        self.speed = speed
-        self.pos_ts = pos_ts
-        self.spk_ts = spk_ts  # All spike times regardless of cluster id
-        if type(plot_type) is str:
-            self.plot_type = [plot_type]
-        else:
-            self.plot_type = list(plot_type)
-        self.spk_pos_idx = self.__interpSpkPosTimes__()
-        self.__good_clusters = None
-        self.__spk_clusters = None
-        if 'ppm' in kwargs:
-            self.__ppm = kwargs['ppm']
-        else:
-            self.__ppm = 400
-        if 'pos_sample_rate' in kwargs:
-            self.pos_sample_rate = kwargs['pos_sample_rate']
-        else:
-            self.pos_sample_rate = 30
-
-    @property
-    def good_clusters(self):
-        return self.__good_clusters
-
-    @good_clusters.setter
-    def good_clusters(self, value):
-        self.__good_clusters = value
-
-    @property
-    def spk_clusters(self):
-        return self.__spk_clusters
-
-    @spk_clusters.setter
-    def spk_clusters(self, value):
-        self.__spk_clusters = value
-
-    @property
-    def ppm(self):
-        return self.__ppm
-
-    @ppm.setter
-    def ppm(self, value):
-        self.__ppm = value
-
-    def __interpSpkPosTimes__(self):
-        """
-        Interpolates spike times into indices of position data
-        NB Assumes pos times have been zeroed correctly - see comments in
-        OEKiloPhy.OpenEphysNWB function __alignTimeStamps__()
-        """
-        idx = np.searchsorted(self.pos_ts, self.spk_ts)
-        idx[idx == len(self.pos_ts)] = len(self.pos_ts) - 1
-        return idx
-        
-    def getSpatialStats(self, cluster):
-        # HWPD 20200527
-        """
-        Adds summary of various spatial metrics in a dataframe
-
-        Parameters
-        ----------
-        cluster : list, numpy array
-            cell IDs to summarise (these will be recorded in the dataframe)
-        """
-
-        try:
-            iter(cluster)
-        except Exception:
-            cluster = [cluster]
-
-        from ephysiopy.common import gridcell
-        gridness, scale, orientation, HDtuning, HDangle, \
-            speedCorr, speedMod = [], [], [], [], [], [], []
-        for cl in cluster:
-            if cl in self.spk_clusters:
-                pos_w = np.ones_like(self.pos_ts)
-                mapMaker = binning.RateMap(
-                    self.xy, None, None, pos_w, ppm=self.ppm)
-                spk_w = np.bincount(
-                    self.spk_pos_idx, self.spk_clusters == cluster,
-                    minlength=self.pos_ts.shape[0])
-                rmap = mapMaker.getMap(spk_w)
-                S = gridcell.SAC()
-                nodwell = ~np.isfinite(rmap[0])
-                sac = S.autoCorr2D(rmap[0], nodwell)
-                m = S.getMeasures(sac)
-                r, th = self.getHDtuning(cl)
-                spC, spM = self.getSpeedTuning(cl)
-                gridness.append(m['gridscore'])
-                scale.append(m['scale'])
-                orientation.append(m['orientation'])
-                HDtuning.append(r)
-                HDangle.append(th)
-                speedCorr.append(spC)
-                speedMod.append(spM)
-
-        d = {
-            'id': cluster, 'gridness': gridness, 'scale': scale,
-            'orientation': orientation, 'HDtuning': HDtuning,
-            'HDangle': HDangle, 'speedCorr': speedCorr, 'speedMod': speedMod}
-        return d
-
-    def getHDtuning(self, cluster):
-        # HWPD 20200527
-        """
-        Uses RH's head direction tuning function, just returns metric
-        """
-        from ephysiopy.common.statscalcs import mean_resultant_vector
-        angles = self.hdir[self.spk_pos_idx[self.spk_clusters == cluster]]
-        r, th = mean_resultant_vector(np.deg2rad(angles))
-        return r, th
-
-    def getSpeedTuning(self, cluster, minSpeed=0.0, maxSpeed=40.0, sigma=3.0):
-        """
-        Uses RH's speed tuning function, just returns metric and doesn't plot
-        """
-        # HWPD 20200527
-        speed = np.ravel(self.speed)
-        if np.nanmax(speed) < maxSpeed:
-            maxSpeed = np.nanmax(speed)
-        spd_bins = np.arange(minSpeed, maxSpeed, 1.0)
-        # Construct the mask
-        speed_filt = np.ma.MaskedArray(speed)
-        speed_filt = np.ma.masked_where(speed_filt < minSpeed, speed_filt)
-        speed_filt = np.ma.masked_where(speed_filt > maxSpeed, speed_filt)
-        x1 = self.spk_pos_idx[self.spk_clusters == cluster]
-        from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
-        S = SpikeCalcsGeneric(x1)
-        spk_sm = S.smoothSpikePosCount(x1, self.pos_ts.shape[0], sigma, None)
-        spk_sm = np.ma.MaskedArray(spk_sm, mask=np.ma.getmask(speed_filt))
-        from scipy import stats
-        speedCorr = stats.mstats.pearsonr(spk_sm, speed_filt)
-        spd_dig = np.digitize(speed_filt, spd_bins, right=True)
-        mn_rate = np.array([np.ma.mean(
-            spk_sm[spd_dig == i]) for i in range(0, len(spd_bins))])
-        speedCorr = speedCorr[0]  # HWPD 20200527
-        speedCurve = mn_rate * self.pos_sample_rate
-        speedMod = np.max(speedCurve) - np.min(speedCurve)  # HWPD 20200527
-        return speedCorr, speedMod

@@ -1,4 +1,3 @@
-from os import path
 import numpy as np
 from ephysiopy.dacq2py.dacq2py_util import AxonaTrial
 from ephysiopy.common.phasecoding import phasePrecession2D

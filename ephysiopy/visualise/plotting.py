@@ -1,4 +1,5 @@
 import matplotlib.pylab as plt
+import matplotlib
 import numpy as np
 import functools
 from ephysiopy.common.binning import RateMap
@@ -50,10 +51,12 @@ class FigureMaker(object):
                 pos_weights = np.ones_like(hdir)
         ppm = getattr(self, 'ppm', 300)
         cmsPerBin = getattr(self, 'cmsPerBin', 3)
-
+        
         self.RateMapMaker = RateMap(
             xy=xy, hdir=hdir, speed=speed, pos_weights=pos_weights, ppm=ppm,
             xyInCms=True, cmsPerBin=cmsPerBin)
+        self.RateMapMaker.x_lims = getattr(self, 'x_lims', None) # 2-tuple
+        self.RateMapMaker.y_lims = getattr(self, 'y_lims', None)
         self.data_loaded = True
 
     def getSpikePosIndices(self, spk_times: np.array):
@@ -78,7 +81,7 @@ class FigureMaker(object):
         return fig
 
     @stripAxes
-    def makeRateMap(self, spk_times: np.array, ax=None):
+    def makeRateMap(self, spk_times: np.array, ax: matplotlib.axes=None) -> matplotlib.axes:
         self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         spk_weights = np.bincount(
@@ -98,7 +101,8 @@ class FigureMaker(object):
         return ax
 
     @stripAxes
-    def makeSpikePathPlot(self, spk_times: np.array = None, ax=None, **kwargs):
+    def makeSpikePathPlot(
+        self, spk_times: np.array = None, ax: matplotlib.axes=None, **kwargs) -> matplotlib.axes:
         self.initialise()
         if 'c' in kwargs:
             col = kwargs.pop('c')
@@ -117,7 +121,8 @@ class FigureMaker(object):
         return ax
 
     @stripAxes
-    def makeSAC(self, spk_times: np.array = None, ax=None, **kwargs):
+    def makeSAC(
+        self, spk_times: np.array = None, ax: matplotlib.axes=None, **kwargs) -> matplotlib.axes:
         self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         spk_weights = np.bincount(
@@ -135,7 +140,8 @@ class FigureMaker(object):
         return ax
 
     @stripAxes
-    def makeHDPlot(self, spk_times: np.array = None, ax=None, **kwargs):
+    def makeHDPlot(
+        self, spk_times: np.array = None, ax: matplotlib.axes=None, **kwargs) -> matplotlib.axes:
         self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         spk_weights = np.bincount(
@@ -170,8 +176,9 @@ class FigureMaker(object):
 
     @stripAxes
     def makeSpeedVsRatePlot(
-            self, spk_times: np.array, minSpeed=0.0,
-            maxSpeed=40.0, sigma=3.0, ax=None, **kwargs):
+            self, spk_times: np.array, minSpeed: float=0.0,
+            maxSpeed: float=40.0, sigma: float=3.0,
+            ax: matplotlib.axes=None, **kwargs) -> matplotlib.axes:
         """
         Plots the instantaneous firing rate of a cell against running speed
         Also outputs a couple of measures as with Kropff et al., 2015; the
@@ -217,7 +224,7 @@ class FigureMaker(object):
 
     @stripAxes
     def makeSpeedVsHeadDirectionPlot(
-            self, spk_times: np.array, ax=None, **kwargs):
+            self, spk_times: np.array, ax: matplotlib.axes=None, **kwargs) -> matplotlib.axes:
         self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         idx = np.array(spk_times_in_pos_samples, dtype=int)
@@ -244,10 +251,10 @@ class FigureMaker(object):
         return ax
 
     def makePowerSpectrum(
-            self, freqs, power, sm_power,
-            band_max_power, freq_at_band_max_power,
-            max_freq=50, theta_range=[6, 12],
-            ax=None, **kwargs):
+            self, freqs: np.array, power: np.array, sm_power: np.array,
+            band_max_power: float, freq_at_band_max_power: float,
+            max_freq: int=50, theta_range: tuple=[6, 12],
+            ax: matplotlib.axes=None, **kwargs) -> matplotlib.axes:
         # downsample frequencies and power
         freqs = freqs[0::50]
         power = power[0::50]
@@ -274,7 +281,8 @@ class FigureMaker(object):
         ax.add_patch(r)
         return ax
 
-    def makeXCorr(self, spk_times: np.array, ax=None, **kwargs):
+    def makeXCorr(
+        self, spk_times: np.array, ax: matplotlib.axes=None, **kwargs) -> matplotlib.axes:
         # spk_times in samples provided in seconds but convert to
         # ms for a more display friendly scale
         spk_times = spk_times / 3e4 * 1000.
@@ -300,8 +308,9 @@ class FigureMaker(object):
         return ax
 
     def makeRaster(
-            self, spk_times: np.array, dt=(-50, 100), prc_max=0.5,
-            ax=None, ms_per_bin=1, histtype='count', **kwargs):
+            self, spk_times: np.array, dt=(-50, 100), prc_max: float=0.5,
+            ax: matplotlib.axes=None, ms_per_bin: int=1,
+            histtype: str='count', **kwargs) -> matplotlib.axes:
         """
         Plots a raster plot for a specified tetrode/ cluster
 
@@ -315,7 +324,7 @@ class FigureMaker(object):
         prc_max : float
             the proportion of firing the cell has to 'lose' to count as
             silent; a float between 0 and 1
-        ax - matplotlib.Axes
+        ax - matplotlib.axes
             the axes to plot into. If not provided a new figure is created
         ms_per_bin : int
             The number of milliseconds in each bin of the raster plot
@@ -451,7 +460,8 @@ class FigureMaker(object):
     '''
 
     @stripAxes
-    def show_SAC(self, A, inDict, ax=None, **kwargs):
+    def show_SAC(
+        self, A: np.array, inDict: dict, ax: matplotlib.axes=None, **kwargs) -> matplotlib.axes:
         """
         Displays the result of performing a spatial autocorrelation (SAC)
         on a grid cell.
@@ -487,6 +497,8 @@ class FigureMaker(object):
         x, y = np.meshgrid(
             np.arange(0, np.shape(A)[0]),
             np.arange(0, np.shape(A)[1]))
+        x = x.T
+        y = y.T
         vmax = np.nanmax(np.ravel(A))
         ax.pcolormesh(
             x, y, A, cmap=plt.cm.get_cmap("gray_r"),
@@ -514,10 +526,10 @@ class FigureMaker(object):
                     (inDict['dist_to_centre'].shape[1]/2, p[1]),
                     (inDict['dist_to_centre'].shape[0] / 2, p[0]), 'k', **kwargs)
         ax.invert_yaxis()
-        # all_ax = ax.axes
-        # all_ax.set_aspect('equal')
-        # all_ax.set_xlim((0.5, inDict['dist_to_centre'].shape[1]-1.5))
-        # all_ax.set_ylim((inDict['dist_to_centre'].shape[0]-.5, -.5))
+        all_ax = ax.axes
+        all_ax.set_aspect('equal')
+        all_ax.set_xlim((0.5, inDict['dist_to_centre'].shape[1]-1.5))
+        all_ax.set_ylim((inDict['dist_to_centre'].shape[0]-.5, -.5))
         return ax
     '''
     def plotDirFilteredRmaps(self, tetrode, cluster, maptype='rmap', **kwargs):
