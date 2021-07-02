@@ -113,7 +113,7 @@ class FigureMaker(object):
             ax = fig.add_subplot(111)
         ax.plot(self.xy[0], self.xy[1], c=tcols.colours[0], zorder=1)
         ax.set_aspect('equal')
-        ax.invert_yaxis()
+        # ax.invert_yaxis()
         if spk_times is not None:
             idx = self.getSpikePosIndices(spk_times)
             ax.plot(
