@@ -88,7 +88,7 @@ class FigureMaker(object):
             spk_times_in_pos_samples, minlength=self.npos)
         rmap = self.RateMapMaker.getMap(spk_weights)
         ratemap = np.ma.MaskedArray(rmap[0], np.isnan(rmap[0]), copy=True)
-        x, y = np.meshgrid(rmap[1][1][0:-1], rmap[1][0][0:-1][::-1])
+        x, y = np.meshgrid(rmap[1][1][0:-1], rmap[1][0][0:-1])
         vmax = np.nanmax(np.ravel(ratemap))
         if ax is None:
             fig = plt.figure()
@@ -96,7 +96,6 @@ class FigureMaker(object):
         ax.pcolormesh(
             x, y, ratemap, cmap=plt.cm.get_cmap("jet"), edgecolors='face',
             vmax=vmax, shading='auto')
-        # ax.axis([x.min(), x.max(), y.min(), y.max()])
         ax.set_aspect('equal')
         return ax
 
@@ -111,13 +110,12 @@ class FigureMaker(object):
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-        ax.plot(self.xy[0], self.xy[1], c=tcols.colours[0], zorder=1)
+        ax.plot(self.xy[0], self.xy[1][::-1], c=tcols.colours[0], zorder=1)
         ax.set_aspect('equal')
-        # ax.invert_yaxis()
         if spk_times is not None:
             idx = self.getSpikePosIndices(spk_times)
             ax.plot(
-                self.xy[0, idx], self.xy[1, idx], 's', c=col, **kwargs)
+                self.xy[0, idx], self.xy[1, idx][::-1], 's', c=col, **kwargs)
         return ax
 
     @stripAxes
@@ -228,7 +226,11 @@ class FigureMaker(object):
         self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         idx = np.array(spk_times_in_pos_samples, dtype=int)
-        w = np.bincount(idx, minlength=self.speed.shape[0])
+        if np.ma.is_masked(self.speed):
+            w = self.speed.mask
+            w = np.array(~w, dtype=int)
+        else:
+            w = np.bincount(idx, minlength=self.speed.shape[0])
         dir_bins = np.arange(0, 360, 6)
         spd_bins = np.arange(0, 30, 1)
         h = np.histogram2d(

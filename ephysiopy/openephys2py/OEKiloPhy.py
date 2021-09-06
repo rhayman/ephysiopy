@@ -580,8 +580,9 @@ class OpenEphysNPX(OpenEphysBase):
             lfp_file, np.int16, 'r', 0, (nchannels, nsamples), order='F')
         # Load the channel map
         #  Assumes this is in the AP data location and that kilosort was run
-        channel_map = np.squeeze(np.load(os.path.join(
-            self.path2APdata, 'channel_map.npy')))
+        # channel_map = np.squeeze(np.load(os.path.join(
+        #     self.path2APdata, 'channel_map.npy')))
+        channel_map = np.arange(nchannels)
         lfp_sample_rate = 2500
         data = np.array(mmap[channel_map, 0:nseconds*lfp_sample_rate])
         from ephysiopy.common.ephys_generic import EEGCalcsGeneric
@@ -655,6 +656,8 @@ class OpenEphysNPX(OpenEphysBase):
 
         cols = iter(cm.nipy_spectral(np.linspace(0, 1, len(upper_freqs))))
         mn_power = np.mean(spec_data, 1)
+        print(f"spec_data shape = {np.shape(spec_data)}")
+        print(f"mn_power shape = {np.shape(mn_power)}")
         for freqs in zip(lower_freqs, upper_freqs):
             freq_mask = np.logical_and(
                 E.freqs[0::50] > freqs[0],

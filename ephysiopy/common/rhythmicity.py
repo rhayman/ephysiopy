@@ -463,7 +463,7 @@ class LFPOscillations(object):
         self.sig = sig
         self.fs = fs
 
-    def getFreqPhase(self, sig, band2filter: list, ford=5):
+    def getFreqPhase(self, sig, band2filter: list, ford=3):
         '''
         Uses the Hilbert transform to calculate the instantaneous phase and
         amplitude of the time series in sig
