@@ -606,7 +606,7 @@ class PosCalcsGeneric(object):
                 # such that only pos's between these ranges are KEPT
                 for i in filter_dict[key]:
                     bool_arr[
-                        idx, i[0]*self.sample_rate:i[1]*self.sample_rate] = False
+                        idx, i*self.sample_rate:i*self.sample_rate] = False
                 bool_arr = ~bool_arr
             else:
                 raise KeyError("Unrecognised key")
