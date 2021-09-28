@@ -34,7 +34,7 @@ def test_spikecalcs_init(path_to_axona_data):
     S.post_spike_samples = 30
     S.n_spikes
     S.duration
-    with pytest.raises(UserWarning):
+    with pytest.raises(IndexError):
         S.trial_mean_fr(1)
     S.duration = 50.
     fr = S.trial_mean_fr(1)
@@ -46,7 +46,7 @@ def test_mean_isi_range(path_to_axona_data):
     S = get_spikecalcs_instance(path_to_axona_data)
     r = S.mean_isi_range(1, 50)
     assert(isinstance(r, float))
-    with pytest.raises(UserWarning):
+    with pytest.raises(IndexError):
         S.mean_isi_range(999, 50)
 
 
@@ -61,7 +61,7 @@ def test_xcorr(path_to_axona_data):
 def test_mean_waveforms(path_to_axona_data):
     S = get_spikecalcs_instance(path_to_axona_data)
     S.getMeanWaveform(1, 1)
-    with pytest.raises(UserWarning):
+    with pytest.raises(IndexError):
         S.getMeanWaveform(9999, 1)
     S.getClusterWaveforms(1, 1)
     S.waveforms = 1

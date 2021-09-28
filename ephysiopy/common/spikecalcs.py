@@ -197,8 +197,7 @@ class SpikeCalcsGeneric(object):
     def trial_mean_fr(self, cluster: int) -> float:
         # Returns the trial mean firing rate for the cluster
         if self.duration is None:
-            warnings.warn("No duration provided, give me one!")
-            return
+            raise IndexError("No duration provided, give me one!")
         return self.n_spikes(cluster) / self.duration
 
     def mean_isi_range(self, cluster: int, n: int) -> float:
@@ -219,8 +218,7 @@ class SpikeCalcsGeneric(object):
             The mean of the autocorrelogram between 0 and n milliseconds
         """
         if cluster not in self.spk_clusters:
-            warnings.warn("Cluster not available")
-            return
+            raise IndexError("Cluster not available")
         bins = 201
         trange = np.array((-500, 500))
         t = self.spike_times[self.spk_clusters == cluster]
