@@ -592,7 +592,7 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
             from matplotlib.colors import LogNorm
             ax.pcolormesh(
                 speed_mesh, spk_mesh, sm_binned_rate,
-                norm=LogNorm(), alpha=0.5, shading='flat', edgecolors='None')
+                norm=LogNorm(), alpha=0.5, shading='nearest', edgecolors='None')
             # overlay the smoothed binned rate against speed
             ax.plot(sp_bin_edges, binned_spk_rate, 'r')
             # do the linear regression and plot the fit too

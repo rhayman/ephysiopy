@@ -498,8 +498,9 @@ class OpenEphysNPX(OpenEphysBase):
                 self.path2PosData, 'data_array.npy'))
             pos_ts = np.load(os.path.join(self.path2PosData, 'timestamps.npy'))
             pos_ts = np.ravel(pos_ts)
-            sample_rate = np.floor(1/np.mean(np.diff(pos_ts)/ap_sample_rate))
-            self.xyTS = pos_ts# / ap_sample_rate
+            default_pos_sample_rate = np.floor(1/np.mean(np.diff(pos_ts)/ap_sample_rate))
+            sample_rate = getattr(self, 'pos_sample_rate', default_pos_sample_rate)
+            self.xyTS = pos_ts
             self.pos_sample_rate = sample_rate
             self.orig_x = pos_data[:, 0]
             self.orig_y = pos_data[:, 1]
@@ -511,6 +512,9 @@ class OpenEphysNPX(OpenEphysBase):
             self.xy = xy
             self.dir = hdir
             self.speed = P.speed
+        else:
+            warnings.warn("Could not find the pos data. \
+                Make sure there is a pos_data folder with data_array.npy and timestamps.npy in")
 
         n_channels = getattr(self, 'n_channels', 384)
         trial_length = 0  # make sure a trial_length has a value
@@ -848,6 +852,7 @@ class OpenEphysBinary(OpenEphysBase):
         LFPdata_match = re.compile('Rhythm_FPGA-[0-9][0-9][0-9].1')
         sync_message_file = None
         self.recording_start_time = None
+        ap_sample_rate = getattr(self, 'ap_sample_rate', 30000)
 
         if pname_root is None:
             pname_root = self.pname_root
@@ -863,18 +868,33 @@ class OpenEphysBinary(OpenEphysBase):
                         if LFPdata_match.search(d):
                             self.path2LFPdata = os.path.join(d)
                     if 'sync_messages.txt' in ff:
-                        sync_message_file = os.path.join(
+                        sync_file = os.path.join(
                             d, 'sync_messages.txt')
+                        if fileContainsString(sync_file, 'Processor'):
+                            sync_message_file = sync_file
 
         if self.path2PosData is not None:
             pos_data = np.load(os.path.join(
                 self.path2PosData, 'data_array.npy'))
-            self.xy = pos_data[:, 0:2].T
             pos_ts = np.load(os.path.join(
                 self.path2PosData, 'timestamps.npy'))
-            self.xyTS = pos_ts / 30.0 / 1000.0
+            pos_ts = np.ravel(pos_ts)
+            sample_rate = np.floor(1/np.mean(np.diff(pos_ts)/ap_sample_rate))
+            self.xyTS = pos_ts
+            self.pos_sample_rate = sample_rate
+            self.orig_x = pos_data[:, 0]
+            self.orig_y = pos_data[:, 1]
 
-        ap_sample_rate = 30000
+            P = PosCalcsGeneric(
+                pos_data[:, 0], pos_data[:, 1], cm=True, ppm=self.ppm, jumpmax=self.jumpmax)
+            xy, hdir = P.postprocesspos({'SampleRate': sample_rate})
+            setattr(self, 'PosCalcs', P)
+            self.xy = xy
+            self.dir = hdir
+            self.speed = P.speed
+
+        n_channels = getattr(self, 'n_channels', 384)
+        trial_length = 0  # make sure a trial_length has a value
         if fileExists(self.path2APdata, 'continuous.dat'):
             trial_length = self.__calcTrialLengthFromBinarySize__(
                 os.path.join(self.path2APdata, 'continuous.dat'),
@@ -902,7 +922,6 @@ class OpenEphysBinary(OpenEphysBase):
                     start_val = line[idx + len('start time: '):-1]
                     tmp = start_val.split('@')
                     recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
-            self.xyTS = self.xyTS - recording_start_time  # zero pos timestamps
         else:
             recording_start_time = self.xyTS[0]
         self.recording_start_time = recording_start_time

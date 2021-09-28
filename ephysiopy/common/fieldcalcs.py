@@ -6,7 +6,7 @@ from scipy import stats
 import skimage
 import warnings
 from skimage.segmentation import watershed
-from ephysiopy.common.utils import blurImage, bwperim
+from ephysiopy.common.utils import blurImage
 
 """
 These methods differ from MapCalcsGeneric in that they are mostly
@@ -41,8 +41,8 @@ def field_lims(A):
         exclude_border=False,
         labels=sm_rmap > thresh)
     label = ndimage.label(mask)[0]
-    w = skimage.morphology.watershed(
-        -distance, label,
+    w = watershed(
+        image=-distance, markers=label,
         mask=sm_rmap > thresh)
     label = ndimage.label(w)[0]
     return label
@@ -69,7 +69,7 @@ def limit_to_one(A, prc=50, min_dist=5):
         Ac, min_distance=min_dist,
         exclude_border=False,
         indices=False)
-    peak_labels = skimage.measure.label(peak_mask, 8)
+    peak_labels = skimage.measure.label(peak_mask, connectivity=2)
     field_labels = watershed(
         image=-Ac, markers=peak_labels)
     nFields = np.max(field_labels)
@@ -129,7 +129,7 @@ def global_threshold(A, prc=50, min_dist=5):
         Ac, min_distance=min_dist,
         exclude_border=False,
         indices=False)
-    peak_labels = skimage.measure.label(peak_mask, 8)
+    peak_labels = skimage.measure.label(peak_mask, connectivity=2)
     field_labels = watershed(
         image=-Ac, markers=peak_labels)
     nFields = np.max(field_labels)
@@ -153,7 +153,7 @@ def local_threshold(A, prc=50, min_dist=5):
     peak_mask = skimage.feature.peak_local_max(
         Ac, min_distance=min_dist, exclude_border=False,
         indices=False)
-    peak_labels = skimage.measure.label(peak_mask, 8)
+    peak_labels = skimage.measure.label(peak_mask, connectivity=2)
     field_labels = watershed(
         image=-Ac, markers=peak_labels)
     nFields = np.max(field_labels)
