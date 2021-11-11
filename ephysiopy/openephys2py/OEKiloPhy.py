@@ -17,11 +17,11 @@ def fileContainsString(pname: str, searchStr: str) -> bool:
         with open(pname, 'r') as f:
             strs = f.read()
         lines = strs.split('\n')
+        found = False
         for line in lines:
             if searchStr in line:
-                return True
-            else:
-                return False
+                found = True
+        return found
     else:
         return False
 
@@ -480,18 +480,22 @@ class OpenEphysNPX(OpenEphysBase):
                         if PosTracker_match.search(d):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
+                                print(f"Found pos data at: {self.path2PosData}")
                             self.path2PosOEBin = Path(d).parents[1]
                     if 'continuous.dat' in ff:
                         if APdata_match.search(d):
                             self.path2APdata = os.path.join(d)
+                            print(f"Found continuous data at: {self.path2APdata}")
                             self.path2APOEBin = Path(d).parents[1]
                         if LFPdata_match.search(d):
                             self.path2LFPdata = os.path.join(d)
+                            print(f"Found continuous data at: {self.path2LFPdata}")
                     if 'sync_messages.txt' in ff:
                         sync_file = os.path.join(
                             d, 'sync_messages.txt')
                         if fileContainsString(sync_file, 'Processor'):
                             sync_message_file = sync_file
+                            print(f"Found syn_messages file at: {sync_file}")
 
         if self.path2PosData is not None:
             pos_data = np.load(os.path.join(
@@ -850,6 +854,7 @@ class OpenEphysBinary(OpenEphysBase):
         import re
         APdata_match = re.compile('Rhythm_FPGA-[0-9][0-9][0-9].0')
         LFPdata_match = re.compile('Rhythm_FPGA-[0-9][0-9][0-9].1')
+        PosTracker_match = re.compile('Pos_Tracker-[0-9][0-9][0-9].[0-9]/BINARY_group_[0-9]')
         sync_message_file = None
         self.recording_start_time = None
         ap_sample_rate = getattr(self, 'ap_sample_rate', 30000)
@@ -861,17 +866,25 @@ class OpenEphysBinary(OpenEphysBase):
             for ff in f:
                 if '.' not in c:  # ignore hidden directories
                     if 'data_array.npy' in ff:
-                        self.path2PosData = os.path.join(d)
+                        if PosTracker_match.search(d):
+                            if self.path2PosData is None:
+                                self.path2PosData = os.path.join(d)
+                                print(f"Found pos data at: {self.path2PosData}")
+                            self.path2PosOEBin = Path(d).parents[1]
                     if 'continuous.dat' in ff:
                         if APdata_match.search(d):
                             self.path2APdata = os.path.join(d)
+                            print(f"Found continuous data at: {self.path2APdata}")
+                            self.path2APOEBin = Path(d).parents[1]
                         if LFPdata_match.search(d):
                             self.path2LFPdata = os.path.join(d)
+                            print(f"Found continuous data at: {self.path2LFPdata}")
                     if 'sync_messages.txt' in ff:
                         sync_file = os.path.join(
                             d, 'sync_messages.txt')
                         if fileContainsString(sync_file, 'Processor'):
                             sync_message_file = sync_file
+                            print(f"Found sync_messages file at: {sync_file}")
 
         if self.path2PosData is not None:
             pos_data = np.load(os.path.join(
@@ -892,6 +905,9 @@ class OpenEphysBinary(OpenEphysBase):
             self.xy = xy
             self.dir = hdir
             self.speed = P.speed
+        else:
+            warnings.warn("Could not find the pos data. \
+                Make sure there is a pos_data folder with data_array.npy and timestamps.npy in")
 
         n_channels = getattr(self, 'n_channels', 384)
         trial_length = 0  # make sure a trial_length has a value
