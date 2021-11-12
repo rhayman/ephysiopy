@@ -477,7 +477,7 @@ class OpenEphysNPX(OpenEphysBase):
             for ff in f:
                 if '.' not in c:  # ignore hidden directories
                     if 'data_array.npy' in ff:
-                        if PosTracker_match.search(d):
+                        if PurePath(d).match('*Pos_Tracker*/BINARY_group*'):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
                                 print(f"Found pos data at: {self.path2PosData}")
@@ -866,10 +866,9 @@ class OpenEphysBinary(OpenEphysBase):
             for ff in f:
                 if '.' not in c:  # ignore hidden directories
                     if 'data_array.npy' in ff:
-                        if PosTracker_match.search(d):
-                            if self.path2PosData is None:
-                                self.path2PosData = os.path.join(d)
-                                print(f"Found pos data at: {self.path2PosData}")
+                        if PurePath(d).match('*Pos_Tracker*/BINARY_group*'):
+                            self.path2PosData = os.path.join(d)
+                            print(f"Found pos data at: {self.path2PosData}")
                             self.path2PosOEBin = Path(d).parents[1]
                     if 'continuous.dat' in ff:
                         if APdata_match.search(d):
