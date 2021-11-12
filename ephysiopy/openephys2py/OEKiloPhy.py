@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pylab as plt
 import warnings
 import os
-from pathlib import Path
+from pathlib import Path, PurePath
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.openephys2py.OESettings import Settings, OEStructure
 from ephysiopy.visualise.plotting import FigureMaker
