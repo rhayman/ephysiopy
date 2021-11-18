@@ -884,6 +884,18 @@ class OpenEphysBinary(OpenEphysBase):
                         if fileContainsString(sync_file, 'Processor'):
                             sync_message_file = sync_file
                             print(f"Found sync_messages file at: {sync_file}")
+        # Load the start time from the sync_messages file
+        recording_start_time = 0
+        if sync_message_file is not None:
+            with open(sync_message_file, 'r') as f:
+                sync_strs = f.read()
+            sync_lines = sync_strs.split('\n')
+            for line in sync_lines:
+                if 'subProcessor: 0' in line:
+                    idx = line.find('start time: ')
+                    start_val = line[idx + len('start time: '):-1]
+                    tmp = start_val.split('@')
+                    recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])          
 
         if self.path2PosData is not None:
             pos_data = np.load(os.path.join(
@@ -893,7 +905,9 @@ class OpenEphysBinary(OpenEphysBase):
             pos_ts = np.ravel(pos_ts)
             default_pos_sample_rate = np.floor(1/np.mean(np.diff(pos_ts)/ap_sample_rate))
             sample_rate = getattr(self, 'pos_sample_rate', default_pos_sample_rate)
-            self.xyTS = pos_ts
+            self.xyTS = pos_ts - recording_start_time
+            if sync_message_file is not None:
+                recording_start_time = self.xyTS[0]
             self.pos_sample_rate = sample_rate
             self.orig_x = pos_data[:, 0]
             self.orig_y = pos_data[:, 1]
@@ -908,6 +922,7 @@ class OpenEphysBinary(OpenEphysBase):
         else:
             warnings.warn("Could not find the pos data. \
                 Make sure there is a pos_data folder with data_array.npy and timestamps.npy in")
+        self.recording_start_time = recording_start_time
 
         n_channels = getattr(self, 'n_channels', 384)
         trial_length = 0  # make sure a trial_length has a value
@@ -925,23 +940,7 @@ class OpenEphysBinary(OpenEphysBase):
                     self.path2APdata, 'continuous.dat'),
                     np.int16, 'r', 0, (n_channels, n_samples), 'C')
                 self.rawData = np.array(mmap, dtype=np.float64)
-
-        # Load the start time from the sync_messages file
-        if sync_message_file is not None:
-            with open(sync_message_file, 'r') as f:
-                sync_strs = f.read()
-            sync_lines = sync_strs.split('\n')
-            for line in sync_lines:
-                if 'subProcessor: 0' in line:
-                    idx = line.find('start time: ')
-                    start_val = line[idx + len('start time: '):-1]
-                    tmp = start_val.split('@')
-                    recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
-                    if (self.xyTS):
-                        self.xyTS = self.xyTS - recording_start_time
-        else:
-            recording_start_time = self.xyTS[0]
-        self.recording_start_time = recording_start_time
+        
         # this way of creating timestamps will be fine for single probes
         # but will need to be modified if using multiple probes and/ or 
         # different timestamp syncing method
