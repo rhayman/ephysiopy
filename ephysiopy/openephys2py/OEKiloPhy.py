@@ -926,7 +926,7 @@ class OpenEphysBinary(OpenEphysBase):
                     np.int16, 'r', 0, (n_channels, n_samples), 'C')
                 self.rawData = np.array(mmap, dtype=np.float64)
 
-       # Load the start time from the sync_messages file
+        # Load the start time from the sync_messages file
         if sync_message_file is not None:
             with open(sync_message_file, 'r') as f:
                 sync_strs = f.read()
@@ -937,6 +937,8 @@ class OpenEphysBinary(OpenEphysBase):
                     start_val = line[idx + len('start time: '):-1]
                     tmp = start_val.split('@')
                     recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
+                    if (self.xyTS):
+                        self.xyTS = self.xyTS - recording_start_time
         else:
             recording_start_time = self.xyTS[0]
         self.recording_start_time = recording_start_time
