@@ -891,7 +891,8 @@ class OpenEphysBinary(OpenEphysBase):
             pos_ts = np.load(os.path.join(
                 self.path2PosData, 'timestamps.npy'))
             pos_ts = np.ravel(pos_ts)
-            sample_rate = np.floor(1/np.mean(np.diff(pos_ts)/ap_sample_rate))
+            default_pos_sample_rate = np.floor(1/np.mean(np.diff(pos_ts)/ap_sample_rate))
+            sample_rate = getattr(self, 'pos_sample_rate', default_pos_sample_rate)
             self.xyTS = pos_ts
             self.pos_sample_rate = sample_rate
             self.orig_x = pos_data[:, 0]
@@ -925,8 +926,7 @@ class OpenEphysBinary(OpenEphysBase):
                     np.int16, 'r', 0, (n_channels, n_samples), 'C')
                 self.rawData = np.array(mmap, dtype=np.float64)
 
-        # Load the start time from the sync_messages file
-        recording_start_time = 0
+       # Load the start time from the sync_messages file
         if sync_message_file is not None:
             with open(sync_message_file, 'r') as f:
                 sync_strs = f.read()
@@ -940,6 +940,10 @@ class OpenEphysBinary(OpenEphysBase):
         else:
             recording_start_time = self.xyTS[0]
         self.recording_start_time = recording_start_time
+        # this way of creating timestamps will be fine for single probes
+        # but will need to be modified if using multiple probes and/ or 
+        # different timestamp syncing method
+        # OE's 'synchronised_timestamps.npy' should now take care of this
         self.ts = np.arange(
             recording_start_time, trial_length+recording_start_time,
             1.0 / ap_sample_rate)
