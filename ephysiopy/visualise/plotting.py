@@ -110,12 +110,12 @@ class FigureMaker(object):
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-        ax.plot(self.xy[0], self.xy[1][::-1], c=tcols.colours[0], zorder=1)
+        ax.plot(self.xy[0, :], self.xy[1, :], c=tcols.colours[0], zorder=1)
         ax.set_aspect('equal')
         if spk_times is not None:
             idx = self.getSpikePosIndices(spk_times)
             ax.plot(
-                self.xy[0, idx], self.xy[1, idx][::-1], 's', c=col, **kwargs)
+                self.xy[0, idx], self.xy[1, idx], 's', c=col, **kwargs)
         return ax
 
     @stripAxes

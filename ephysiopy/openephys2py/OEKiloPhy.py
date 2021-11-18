@@ -465,7 +465,6 @@ class OpenEphysNPX(OpenEphysBase):
         import re
         APdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].0')
         LFPdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].1')
-        PosTracker_match = re.compile('Pos_Tracker-[0-9][0-9][0-9].[0-9]/BINARY_group_[0-9]')
         sync_message_file = None
         self.recording_start_time = None
         ap_sample_rate = getattr(self, 'ap_sample_rate', 30000)
@@ -497,14 +496,30 @@ class OpenEphysNPX(OpenEphysBase):
                             sync_message_file = sync_file
                             print(f"Found syn_messages file at: {sync_file}")
 
+        # Load the start time from the sync_messages file
+        recording_start_time = 0
+        if sync_message_file is not None:
+            with open(sync_message_file, 'r') as f:
+                sync_strs = f.read()
+            sync_lines = sync_strs.split('\n')
+            for line in sync_lines:
+                if 'subProcessor: 0' in line:
+                    idx = line.find('start time: ')
+                    start_val = line[idx + len('start time: '):-1]
+                    tmp = start_val.split('@')
+                    recording_start_time = float(tmp[0])
+
         if self.path2PosData is not None:
             pos_data = np.load(os.path.join(
                 self.path2PosData, 'data_array.npy'))
-            pos_ts = np.load(os.path.join(self.path2PosData, 'timestamps.npy'))
+            pos_ts = np.load(os.path.join(
+                self.path2PosData, 'timestamps.npy'))
             pos_ts = np.ravel(pos_ts)
             default_pos_sample_rate = np.floor(1/np.mean(np.diff(pos_ts)/ap_sample_rate))
             sample_rate = getattr(self, 'pos_sample_rate', default_pos_sample_rate)
-            self.xyTS = pos_ts
+            self.xyTS = pos_ts - recording_start_time
+            if sync_message_file is not None:
+                recording_start_time = self.xyTS[0]
             self.pos_sample_rate = sample_rate
             self.orig_x = pos_data[:, 0]
             self.orig_y = pos_data[:, 1]
@@ -519,6 +534,7 @@ class OpenEphysNPX(OpenEphysBase):
         else:
             warnings.warn("Could not find the pos data. \
                 Make sure there is a pos_data folder with data_array.npy and timestamps.npy in")
+        self.recording_start_time = recording_start_time
 
         n_channels = getattr(self, 'n_channels', 384)
         trial_length = 0  # make sure a trial_length has a value
@@ -527,20 +543,7 @@ class OpenEphysNPX(OpenEphysBase):
                 trial_length = self.__calcTrialLengthFromBinarySize__(
                     os.path.join(self.path2APdata, 'continuous.dat'),
                     n_channels, ap_sample_rate)
-        # Load the start time from the sync_messages file
-        if sync_message_file is not None:
-            with open(sync_message_file, 'r') as f:
-                sync_strs = f.read()
-            sync_lines = sync_strs.split('\n')
-            for line in sync_lines:
-                if 'subProcessor: 0' in line:
-                    idx = line.find('start time: ')
-                    start_val = line[idx + len('start time: '):-1]
-                    tmp = start_val.split('@')
-                    recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])
-        else:
-            recording_start_time = self.xyTS[0]
-        self.recording_start_time = recording_start_time
+       
         # this way of creating timestamps will be fine for single probes
         # but will need to be modified if using multiple probes and/ or 
         # different timestamp syncing method
@@ -895,7 +898,7 @@ class OpenEphysBinary(OpenEphysBase):
                     idx = line.find('start time: ')
                     start_val = line[idx + len('start time: '):-1]
                     tmp = start_val.split('@')
-                    recording_start_time = float(tmp[0]) / float(tmp[1][0:-1])          
+                    recording_start_time = float(tmp[0])
 
         if self.path2PosData is not None:
             pos_data = np.load(os.path.join(
