@@ -481,6 +481,10 @@ class OpenEphysNPX(OpenEphysBase):
                                 self.path2PosData = os.path.join(d)
                                 print(f"Found pos data at: {self.path2PosData}")
                             self.path2PosOEBin = Path(d).parents[1]
+                        if PurePath(d).match('*pos_data*'):
+                            if self.path2PosData is None:
+                                self.path2PosData = os.path.join(d)
+                                print(f"Found pos data at: {self.path2PosData}")
                     if 'continuous.dat' in ff:
                         if APdata_match.search(d):
                             self.path2APdata = os.path.join(d)
