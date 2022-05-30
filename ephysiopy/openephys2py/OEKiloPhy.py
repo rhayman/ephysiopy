@@ -187,6 +187,8 @@ class OpenEphysBase(FigureMaker):
         self.rawData = None
         self.xy = None
         self.xyTS = None
+        self.sync_message_file = None
+        self.ap_sample_rate = 30000
         self.recording_start_time = 0
         self.ts = None
         self.ttl_data = None
@@ -222,6 +224,48 @@ class OpenEphysBase(FigureMaker):
     def load(self, *args, **kwargs):
         # Overridden by sub-classes
         pass
+
+    def loadPos(self, *args, **kwargs):
+        # Only sub-class that doesn't use this is OpenEphysNWB which needs updating
+        # TODO: Update / overhaul OpenEphysNWB
+        # Load the start time from the sync_messages file
+        recording_start_time = 0
+        if self.sync_message_file is not None:
+            with open(self.sync_message_file, 'r') as f:
+                sync_strs = f.read()
+            sync_lines = sync_strs.split('\n')
+            for line in sync_lines:
+                if 'subProcessor: 0' in line:
+                    idx = line.find('start time: ')
+                    start_val = line[idx + len('start time: '):-1]
+                    tmp = start_val.split('@')
+                    recording_start_time = float(tmp[0])
+        if self.path2PosData is not None:
+            pos_data = np.load(os.path.join(
+                self.path2PosData, 'data_array.npy'))
+            pos_ts = np.load(os.path.join(
+                self.path2PosData, 'timestamps.npy'))
+            pos_ts = np.ravel(pos_ts)
+            default_pos_sample_rate = np.floor(1/np.mean(np.diff(pos_ts)/self.ap_sample_rate))
+            sample_rate = getattr(self, 'pos_sample_rate', default_pos_sample_rate)
+            self.xyTS = pos_ts - recording_start_time
+            if self.sync_message_file is not None:
+                recording_start_time = self.xyTS[0]
+            self.pos_sample_rate = sample_rate
+            self.orig_x = pos_data[:, 0]
+            self.orig_y = pos_data[:, 1]
+
+            P = PosCalcsGeneric(
+                pos_data[:, 0], pos_data[:, 1], cm=True, ppm=self.ppm, jumpmax=self.jumpmax)
+            xy, hdir = P.postprocesspos({'SampleRate': sample_rate})
+            setattr(self, 'PosCalcs', P)
+            self.xy = xy
+            self.dir = hdir
+            self.speed = P.speed
+        else:
+            warnings.warn("Could not find the pos data. \
+                Make sure there is a pos_data folder with data_array.npy and timestamps.npy in")
+        self.recording_start_time = recording_start_time
 
     def loadKilo(self, **kwargs):
         import os
@@ -465,7 +509,7 @@ class OpenEphysNPX(OpenEphysBase):
         import re
         APdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].0')
         LFPdata_match = re.compile('Neuropix-PXI-[0-9][0-9][0-9].1')
-        sync_message_file = None
+        self.sync_message_file = None
         self.recording_start_time = None
         ap_sample_rate = getattr(self, 'ap_sample_rate', 30000)
 
@@ -497,48 +541,10 @@ class OpenEphysNPX(OpenEphysBase):
                         sync_file = os.path.join(
                             d, 'sync_messages.txt')
                         if fileContainsString(sync_file, 'Processor'):
-                            sync_message_file = sync_file
-                            print(f"Found syn_messages file at: {sync_file}")
+                            self.sync_message_file = sync_file
+                            print(f"Found sync_messages file at: {sync_file}")
 
-        # Load the start time from the sync_messages file
-        recording_start_time = 0
-        if sync_message_file is not None:
-            with open(sync_message_file, 'r') as f:
-                sync_strs = f.read()
-            sync_lines = sync_strs.split('\n')
-            for line in sync_lines:
-                if 'subProcessor: 0' in line:
-                    idx = line.find('start time: ')
-                    start_val = line[idx + len('start time: '):-1]
-                    tmp = start_val.split('@')
-                    recording_start_time = float(tmp[0])
-
-        if self.path2PosData is not None:
-            pos_data = np.load(os.path.join(
-                self.path2PosData, 'data_array.npy'))
-            pos_ts = np.load(os.path.join(
-                self.path2PosData, 'timestamps.npy'))
-            pos_ts = np.ravel(pos_ts)
-            default_pos_sample_rate = np.floor(1/np.mean(np.diff(pos_ts)/ap_sample_rate))
-            sample_rate = getattr(self, 'pos_sample_rate', default_pos_sample_rate)
-            self.xyTS = pos_ts - recording_start_time
-            if sync_message_file is not None:
-                recording_start_time = self.xyTS[0]
-            self.pos_sample_rate = sample_rate
-            self.orig_x = pos_data[:, 0]
-            self.orig_y = pos_data[:, 1]
-
-            P = PosCalcsGeneric(
-                pos_data[:, 0], pos_data[:, 1], cm=True, ppm=self.ppm, jumpmax=self.jumpmax)
-            xy, hdir = P.postprocesspos({'SampleRate': sample_rate})
-            setattr(self, 'PosCalcs', P)
-            self.xy = xy
-            self.dir = hdir
-            self.speed = P.speed
-        else:
-            warnings.warn("Could not find the pos data. \
-                Make sure there is a pos_data folder with data_array.npy and timestamps.npy in")
-        self.recording_start_time = recording_start_time
+        self.loadPos()
 
         n_channels = getattr(self, 'n_channels', 384)
         trial_length = 0  # make sure a trial_length has a value
@@ -862,7 +868,7 @@ class OpenEphysBinary(OpenEphysBase):
         APdata_match = re.compile('Rhythm_FPGA-[0-9][0-9][0-9].0')
         LFPdata_match = re.compile('Rhythm_FPGA-[0-9][0-9][0-9].1')
         PosTracker_match = re.compile('Pos_Tracker-[0-9][0-9][0-9].[0-9]/BINARY_group_[0-9]')
-        sync_message_file = None
+        self.sync_message_file = None
         self.recording_start_time = None
         ap_sample_rate = getattr(self, 'ap_sample_rate', 30000)
 
@@ -889,47 +895,10 @@ class OpenEphysBinary(OpenEphysBase):
                         sync_file = os.path.join(
                             d, 'sync_messages.txt')
                         if fileContainsString(sync_file, 'Processor'):
-                            sync_message_file = sync_file
+                            self.sync_message_file = sync_file
                             print(f"Found sync_messages file at: {sync_file}")
-        # Load the start time from the sync_messages file
-        recording_start_time = 0
-        if sync_message_file is not None:
-            with open(sync_message_file, 'r') as f:
-                sync_strs = f.read()
-            sync_lines = sync_strs.split('\n')
-            for line in sync_lines:
-                if 'subProcessor: 0' in line:
-                    idx = line.find('start time: ')
-                    start_val = line[idx + len('start time: '):-1]
-                    tmp = start_val.split('@')
-                    recording_start_time = float(tmp[0])
-
-        if self.path2PosData is not None:
-            pos_data = np.load(os.path.join(
-                self.path2PosData, 'data_array.npy'))
-            pos_ts = np.load(os.path.join(
-                self.path2PosData, 'timestamps.npy'))
-            pos_ts = np.ravel(pos_ts)
-            default_pos_sample_rate = np.floor(1/np.mean(np.diff(pos_ts)/ap_sample_rate))
-            sample_rate = getattr(self, 'pos_sample_rate', default_pos_sample_rate)
-            self.xyTS = pos_ts - recording_start_time
-            if sync_message_file is not None:
-                recording_start_time = self.xyTS[0]
-            self.pos_sample_rate = sample_rate
-            self.orig_x = pos_data[:, 0]
-            self.orig_y = pos_data[:, 1]
-
-            P = PosCalcsGeneric(
-                pos_data[:, 0], pos_data[:, 1], cm=True, ppm=self.ppm, jumpmax=self.jumpmax)
-            xy, hdir = P.postprocesspos({'SampleRate': sample_rate})
-            setattr(self, 'PosCalcs', P)
-            self.xy = xy
-            self.dir = hdir
-            self.speed = P.speed
-        else:
-            warnings.warn("Could not find the pos data. \
-                Make sure there is a pos_data folder with data_array.npy and timestamps.npy in")
-        self.recording_start_time = recording_start_time
+        
+        self.loadPos()
 
         n_channels = getattr(self, 'n_channels', 384)
         trial_length = 0  # make sure a trial_length has a value
