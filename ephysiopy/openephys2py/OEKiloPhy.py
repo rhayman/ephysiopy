@@ -559,7 +559,7 @@ class OpenEphysNPX(OpenEphysBase):
         # different timestamp syncing method
         # OE's 'synchronised_timestamps.npy' should now take care of this
         self.ts = np.arange(
-            recording_start_time, trial_length+recording_start_time,
+            self.recording_start_time, trial_length+self.recording_start_time,
             1.0 / ap_sample_rate)
 
     def plotSpectrogramByDepth(
