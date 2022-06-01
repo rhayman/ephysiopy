@@ -38,10 +38,3 @@ jobs:
     - name: Test with pytest
       run: |
         pytest --cov ephysiopy --cov-report term-missing
-    - name: Install pypa/build
-      run: |
-        python setup.py sdist bdist_wheel
-    - name: Publishes to pypi
-      uses: pypa/gh-action-pypi-publish@master
-      with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
