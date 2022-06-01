@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-
+    name: build
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -27,7 +27,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest pytest-cov setuptools wheel twine
+        python -m pip install flake8 pytest pytest-cov
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Lint with flake8
       run: |
@@ -39,6 +39,7 @@ jobs:
       run: |
         pytest --cov ephysiopy --cov-report term-missing
   deploy:
+    name: deploy
     needs: build
     runs-on: ubuntu-latest
     steps:
