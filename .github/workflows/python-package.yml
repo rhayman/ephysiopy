@@ -55,3 +55,7 @@ jobs:
     - name: Build package
       run: |
         python setup.py sdist bdist_wheel
+    - name: Published to pypi
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
