@@ -55,12 +55,15 @@ class FigureMaker(object):
         self.RateMapMaker = RateMap(
             xy=xy, hdir=hdir, speed=speed, pos_weights=pos_weights, ppm=ppm,
             xyInCms=True, cmsPerBin=cmsPerBin)
-        self.RateMapMaker.x_lims = getattr(self, 'x_lims', None) # 2-tuple
+        self.RateMapMaker.x_lims = getattr(self, 'x_lims', None)  # 2-tuple
         self.RateMapMaker.y_lims = getattr(self, 'y_lims', None)
         self.data_loaded = True
 
     def getSpikePosIndices(self, spk_times: np.array):
         pos_times = getattr(self, 'xyTS')
+        print("pos_times")
+        for i in range(10):
+            print(f"{pos_times[i]}")
         idx = np.searchsorted(pos_times, spk_times)
         idx[idx==len(pos_times)] = idx[idx==len(pos_times)] - 1
         return idx

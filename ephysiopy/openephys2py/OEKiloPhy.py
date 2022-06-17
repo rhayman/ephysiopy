@@ -249,6 +249,8 @@ class OpenEphysBase(FigureMaker):
             default_pos_sample_rate = np.floor(1/np.mean(np.diff(pos_ts)/self.ap_sample_rate))
             sample_rate = getattr(self, 'pos_sample_rate', default_pos_sample_rate)
             self.xyTS = pos_ts - recording_start_time
+            pos_timebase = getattr(self, 'pos_timebase', 3e4)
+            self.xyTS = self.xyTS / pos_timebase  # convert to seconds
             if self.sync_message_file is not None:
                 recording_start_time = self.xyTS[0]
             self.pos_sample_rate = sample_rate
@@ -341,8 +343,6 @@ class OpenEphysBase(FigureMaker):
                 data = data.T
             np.savetxt(out_fname, data, delimiter='\t')
 
-    
-    
     def filterPosition(self, filter_dict: dict):
         if hasattr(self, 'PosCalcs'):
             P = getattr(self, 'PosCalcs')
