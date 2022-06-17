@@ -4,7 +4,7 @@ import warnings
 import os
 from pathlib import Path, PurePath
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
-from ephysiopy.openephys2py.OESettings import Settings, OEStructure
+from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.visualise.plotting import FigureMaker
 
 
@@ -24,6 +24,7 @@ def fileContainsString(pname: str, searchStr: str) -> bool:
         return found
     else:
         return False
+
 
 class KiloSortSession(object):
     """
@@ -103,7 +104,8 @@ class KiloSortSession(object):
         """
         # if self.cluster_id is None:
         #     print(f"Searching {os.path.join(self.fname_root)} and...")
-        #     warnings.warn("No cluster_groups.tsv or cluster_group.csv file was found.\
+        #     warnings.warn("No cluster_groups.tsv or cluster_group.csv file
+        # was found.\
         #         Have you manually curated the data (e.g with phy?")
 
         # HWPD 20200527
@@ -226,7 +228,8 @@ class OpenEphysBase(FigureMaker):
         pass
 
     def loadPos(self, *args, **kwargs):
-        # Only sub-class that doesn't use this is OpenEphysNWB which needs updating
+        # Only sub-class that doesn't use this is OpenEphysNWB
+        # which needs updating
         # TODO: Update / overhaul OpenEphysNWB
         # Load the start time from the sync_messages file
         recording_start_time = 0
@@ -246,8 +249,10 @@ class OpenEphysBase(FigureMaker):
             pos_ts = np.load(os.path.join(
                 self.path2PosData, 'timestamps.npy'))
             pos_ts = np.ravel(pos_ts)
-            default_pos_sample_rate = np.floor(1/np.mean(np.diff(pos_ts)/self.ap_sample_rate))
-            sample_rate = getattr(self, 'pos_sample_rate', default_pos_sample_rate)
+            default_pos_sample_rate = np.floor(1/np.mean(np.diff(pos_ts) /
+                                               self.ap_sample_rate))
+            sample_rate = getattr(self, 'pos_sample_rate',
+                                  default_pos_sample_rate)
             self.xyTS = pos_ts - recording_start_time
             pos_timebase = getattr(self, 'pos_timebase', 3e4)
             self.xyTS = self.xyTS / pos_timebase  # convert to seconds
@@ -258,7 +263,8 @@ class OpenEphysBase(FigureMaker):
             self.orig_y = pos_data[:, 1]
 
             P = PosCalcsGeneric(
-                pos_data[:, 0], pos_data[:, 1], cm=True, ppm=self.ppm, jumpmax=self.jumpmax)
+                pos_data[:, 0], pos_data[:, 1], cm=True, ppm=self.ppm,
+                jumpmax=self.jumpmax)
             xy, hdir = P.postprocesspos({'SampleRate': sample_rate})
             setattr(self, 'PosCalcs', P)
             self.xy = xy
@@ -266,7 +272,8 @@ class OpenEphysBase(FigureMaker):
             self.speed = P.speed
         else:
             warnings.warn("Could not find the pos data. \
-                Make sure there is a pos_data folder with data_array.npy and timestamps.npy in")
+                Make sure there is a pos_data folder with data_array.npy \
+                and timestamps.npy in")
         self.recording_start_time = recording_start_time
 
     def loadKilo(self, **kwargs):
@@ -355,8 +362,8 @@ class OpenEphysBase(FigureMaker):
         '''
         Returns the spike times in seconds of the given cluster
         '''
-        spk_times = self.kilodata.spk_times.T
-        return spk_times[self.kilodata.spk_clusters == cluster].astype(np.int64)
+        times = self.kilodata.spk_times.T
+        return times[self.kilodata.spk_clusters == cluster].astype(np.int64)
 
     def plotSummary(self, cluster: int, **kwargs):
         ts = self.getClusterSpikeTimes(cluster)
@@ -897,7 +904,7 @@ class OpenEphysBinary(OpenEphysBase):
                         if fileContainsString(sync_file, 'Processor'):
                             self.sync_message_file = sync_file
                             print(f"Found sync_messages file at: {sync_file}")
-        
+
         self.loadPos()
 
         n_channels = getattr(self, 'n_channels', 384)
@@ -916,7 +923,7 @@ class OpenEphysBinary(OpenEphysBase):
                     self.path2APdata, 'continuous.dat'),
                     np.int16, 'r', 0, (n_channels, n_samples), 'C')
                 self.rawData = np.array(mmap, dtype=np.float64)
-        
+
         # this way of creating timestamps will be fine for single probes
         # but will need to be modified if using multiple probes and/ or 
         # different timestamp syncing method

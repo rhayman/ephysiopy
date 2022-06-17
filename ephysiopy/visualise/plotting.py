@@ -51,7 +51,7 @@ class FigureMaker(object):
                 pos_weights = np.ones_like(hdir)
         ppm = getattr(self, 'ppm', 300)
         cmsPerBin = getattr(self, 'cmsPerBin', 3)
-        
+
         self.RateMapMaker = RateMap(
             xy=xy, hdir=hdir, speed=speed, pos_weights=pos_weights, ppm=ppm,
             xyInCms=True, cmsPerBin=cmsPerBin)
@@ -65,7 +65,7 @@ class FigureMaker(object):
         for i in range(10):
             print(f"{pos_times[i]}")
         idx = np.searchsorted(pos_times, spk_times)
-        idx[idx==len(pos_times)] = idx[idx==len(pos_times)] - 1
+        idx[idx == len(pos_times)] = idx[idx == len(pos_times)] - 1
         return idx
 
     def makeSummaryPlot(self, spk_times: np.array):
@@ -84,7 +84,8 @@ class FigureMaker(object):
         return fig
 
     @stripAxes
-    def makeRateMap(self, spk_times: np.array, ax: matplotlib.axes=None) -> matplotlib.axes:
+    def makeRateMap(self, spk_times: np.array,
+                    ax: matplotlib.axes = None) -> matplotlib.axes:
         self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         spk_weights = np.bincount(
@@ -103,8 +104,9 @@ class FigureMaker(object):
         return ax
 
     @stripAxes
-    def makeSpikePathPlot(
-        self, spk_times: np.array = None, ax: matplotlib.axes=None, **kwargs) -> matplotlib.axes:
+    def makeSpikePathPlot(self, spk_times: np.array = None,
+                          ax: matplotlib.axes = None,
+                          **kwargs) -> matplotlib.axes:
         self.initialise()
         if 'c' in kwargs:
             col = kwargs.pop('c')
@@ -122,8 +124,8 @@ class FigureMaker(object):
         return ax
 
     @stripAxes
-    def makeSAC(
-        self, spk_times: np.array = None, ax: matplotlib.axes=None, **kwargs) -> matplotlib.axes:
+    def makeSAC(self, spk_times: np.array = None,
+                ax: matplotlib.axes = None, **kwargs) -> matplotlib.axes:
         self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         spk_weights = np.bincount(
@@ -141,8 +143,8 @@ class FigureMaker(object):
         return ax
 
     @stripAxes
-    def makeHDPlot(
-        self, spk_times: np.array = None, ax: matplotlib.axes=None, **kwargs) -> matplotlib.axes:
+    def makeHDPlot(self, spk_times: np.array = None,
+                   ax: matplotlib.axes = None, **kwargs) -> matplotlib.axes:
         self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         spk_weights = np.bincount(
@@ -177,9 +179,9 @@ class FigureMaker(object):
 
     @stripAxes
     def makeSpeedVsRatePlot(
-            self, spk_times: np.array, minSpeed: float=0.0,
-            maxSpeed: float=40.0, sigma: float=3.0,
-            ax: matplotlib.axes=None, **kwargs) -> matplotlib.axes:
+            self, spk_times: np.array, minSpeed: float = 0.0,
+            maxSpeed: float = 40.0, sigma: float = 3.0,
+            ax: matplotlib.axes = None, **kwargs) -> matplotlib.axes:
         """
         Plots the instantaneous firing rate of a cell against running speed
         Also outputs a couple of measures as with Kropff et al., 2015; the
@@ -188,7 +190,7 @@ class FigureMaker(object):
         """
         self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
-        
+
         speed = np.ravel(self.speed)
         if np.nanmax(speed) < maxSpeed:
             maxSpeed = np.nanmax(speed)
@@ -224,8 +226,9 @@ class FigureMaker(object):
         return ax
 
     @stripAxes
-    def makeSpeedVsHeadDirectionPlot(
-            self, spk_times: np.array, ax: matplotlib.axes=None, **kwargs) -> matplotlib.axes:
+    def makeSpeedVsHeadDirectionPlot(self, spk_times: np.array,
+                                     ax: matplotlib.axes = None,
+                                     **kwargs) -> matplotlib.axes:
         self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         idx = np.array(spk_times_in_pos_samples, dtype=int)
@@ -249,8 +252,9 @@ class FigureMaker(object):
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-        ax.pcolormesh(x, y, im.T, cmap=plt.cm.get_cmap("jet"), edgecolors='face',
-            vmax=vmax, shading='auto')
+        ax.pcolormesh(x, y, im.T, cmap=plt.cm.get_cmap("jet"),
+                      edgecolors='face',
+                      vmax=vmax, shading='auto')
         plt.xticks([90, 180, 270], fontweight='normal', size=6)
         plt.yticks([10, 20], fontweight='normal', size=6)
         return ax
@@ -258,8 +262,8 @@ class FigureMaker(object):
     def makePowerSpectrum(
             self, freqs: np.array, power: np.array, sm_power: np.array,
             band_max_power: float, freq_at_band_max_power: float,
-            max_freq: int=50, theta_range: tuple=[6, 12],
-            ax: matplotlib.axes=None, **kwargs) -> matplotlib.axes:
+            max_freq: int = 50, theta_range: tuple = [6, 12],
+            ax: matplotlib.axes = None, **kwargs) -> matplotlib.axes:
         # downsample frequencies and power
         freqs = freqs[0::50]
         power = power[0::50]
@@ -286,8 +290,8 @@ class FigureMaker(object):
         ax.add_patch(r)
         return ax
 
-    def makeXCorr(
-        self, spk_times: np.array, ax: matplotlib.axes=None, **kwargs) -> matplotlib.axes:
+    def makeXCorr(self, spk_times: np.array, ax: matplotlib.axes = None,
+                  **kwargs) -> matplotlib.axes:
         # spk_times in samples provided in seconds but convert to
         # ms for a more display friendly scale
         spk_times = spk_times / 3e4 * 1000.
@@ -312,10 +316,10 @@ class FigureMaker(object):
         ax.xaxis.set_ticks_position('bottom')
         return ax
 
-    def makeRaster(
-            self, spk_times: np.array, dt=(-50, 100), prc_max: float=0.5,
-            ax: matplotlib.axes=None, ms_per_bin: int=1,
-            histtype: str='count', **kwargs) -> matplotlib.axes:
+    def makeRaster(self, spk_times: np.array, dt=(-50, 100),
+                   prc_max: float = 0.5, ax: matplotlib.axes = None,
+                   ms_per_bin: int = 1, histtype: str = 'count',
+                   **kwargs) -> matplotlib.axes:
         """
         Plots a raster plot for a specified tetrode/ cluster
 
@@ -426,7 +430,7 @@ class FigureMaker(object):
             dt=(-50, 100), hist=True):
         """
         MOVE TO SPIKECALCS
-        
+
         Calculates the histogram of the raster of spikes during a series of
         events
 
@@ -465,8 +469,8 @@ class FigureMaker(object):
     '''
 
     @stripAxes
-    def show_SAC(
-        self, A: np.array, inDict: dict, ax: matplotlib.axes=None, **kwargs) -> matplotlib.axes:
+    def show_SAC(self, A: np.array, inDict: dict,
+                 ax: matplotlib.axes = None, **kwargs) -> matplotlib.axes:
         """
         Displays the result of performing a spatial autocorrelation (SAC)
         on a grid cell.
