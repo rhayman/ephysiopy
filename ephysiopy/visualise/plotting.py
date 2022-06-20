@@ -61,9 +61,6 @@ class FigureMaker(object):
 
     def getSpikePosIndices(self, spk_times: np.array):
         pos_times = getattr(self, 'xyTS')
-        print("pos_times")
-        for i in range(10):
-            print(f"{pos_times[i]}")
         idx = np.searchsorted(pos_times, spk_times)
         idx[idx == len(pos_times)] = idx[idx == len(pos_times)] - 1
         return idx
