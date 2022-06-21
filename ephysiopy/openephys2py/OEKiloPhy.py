@@ -26,6 +26,22 @@ def fileContainsString(pname: str, searchStr: str) -> bool:
         return False
 
 
+def loadTrackingPluginData(pname: Path) -> np.array:
+    dt = np.dtype(
+        {'x': (np.single, 0),
+         'y': (np.single, 4),
+         'w': (np.single, 8),
+         'h': (np.single, 12)})
+    data_array = np.load(pname)
+    new_array = data_array.view(dtype=dt).copy()
+    w = new_array['w'][0]
+    h = new_array['h'][0]
+    x = new_array['x'] * w
+    y = new_array['y'] * h
+    pos_data = np.array([np.ravel(x), np.ravel(y)]).T
+    return pos_data
+
+
 class KiloSortSession(object):
     """
     Loads and processes data from a Kilosort session.
@@ -244,8 +260,13 @@ class OpenEphysBase(FigureMaker):
                     tmp = start_val.split('@')
                     recording_start_time = float(tmp[0])
         if self.path2PosData is not None:
-            pos_data = np.load(os.path.join(
-                self.path2PosData, 'data_array.npy'))
+            pos_data_type = getattr(self, 'pos_data_type', 'PosTracker')
+            if pos_data_type == 'PosTracker':
+                pos_data = np.load(os.path.join(
+                    self.path2PosData, 'data_array.npy'))
+            if pos_data_type == 'TrackingPlugin':
+                pos_data = loadTrackingPluginData(os.path.join(
+                    self.path2PosData, 'data_array.npy'))
             pos_ts = np.load(os.path.join(
                 self.path2PosData, 'timestamps.npy'))
             pos_ts = np.ravel(pos_ts)
