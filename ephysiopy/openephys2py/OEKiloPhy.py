@@ -536,6 +536,10 @@ class OpenEphysNPX(OpenEphysBase):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
                                 print(f"Found pos data at: {self.path2PosData}")
+                        if PurePath(d).match('*Trakcing_Port*/BINARY_group*'):
+                            if self.path2PosData is None:
+                                self.path2PosData = os.path.join(d)
+                                print(f"Found pos data at: {self.path2PosData}")
                     if 'continuous.dat' in ff:
                         if APdata_match.search(d):
                             self.path2APdata = os.path.join(d)
