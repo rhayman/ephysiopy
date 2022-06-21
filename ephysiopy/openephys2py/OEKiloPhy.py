@@ -536,7 +536,7 @@ class OpenEphysNPX(OpenEphysBase):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
                                 print(f"Found pos data at: {self.path2PosData}")
-                        if PurePath(d).match('*Trakcing_Port*/BINARY_group*'):
+                        if PurePath(d).match('*Tracking_Port*/BINARY_group*'):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
                                 print(f"Found pos data at: {self.path2PosData}")
