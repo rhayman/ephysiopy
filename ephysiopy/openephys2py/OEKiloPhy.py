@@ -262,9 +262,11 @@ class OpenEphysBase(FigureMaker):
         if self.path2PosData is not None:
             pos_data_type = getattr(self, 'pos_data_type', 'PosTracker')
             if pos_data_type == 'PosTracker':
+                print("Loading PosTracker data...")
                 pos_data = np.load(os.path.join(
                     self.path2PosData, 'data_array.npy'))
             if pos_data_type == 'TrackingPlugin':
+                print("Loading Tracking Plugin data...")
                 pos_data = loadTrackingPluginData(os.path.join(
                     self.path2PosData, 'data_array.npy'))
             pos_ts = np.load(os.path.join(
@@ -576,7 +578,7 @@ class OpenEphysNPX(OpenEphysBase):
                             self.sync_message_file = sync_file
                             print(f"Found sync_messages file at: {sync_file}")
 
-        self.loadPos()
+        super().loadPos()
 
         n_channels = getattr(self, 'n_channels', 384)
         trial_length = 0  # make sure a trial_length has a value
