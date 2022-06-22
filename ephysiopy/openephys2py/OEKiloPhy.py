@@ -270,8 +270,9 @@ class OpenEphysBase(FigureMaker):
             pos_ts = np.load(os.path.join(
                 self.path2PosData, 'timestamps.npy'))
             pos_ts = np.ravel(pos_ts)
+            pos_timebase = getattr(self, 'pos_timebase', 3e4)
             default_pos_sample_rate = np.floor(1/np.mean(np.diff(pos_ts) /
-                                               self.ap_sample_rate))
+                                               pos_timebase))
             sample_rate = getattr(self, 'pos_sample_rate',
                                   default_pos_sample_rate)
             self.xyTS = pos_ts - recording_start_time
