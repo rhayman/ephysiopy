@@ -385,7 +385,7 @@ class OpenEphysBase(FigureMaker):
         Returns the spike times in seconds of the given cluster
         '''
         times = self.kilodata.spk_times.T
-        return times[self.kilodata.spk_clusters == cluster].astype(np.int64)
+        return times[self.kilodata.spk_clusters == cluster].astype(np.int64) / self.ap_sample_rate
 
     def plotSummary(self, cluster: int, **kwargs):
         ts = self.getClusterSpikeTimes(cluster)
