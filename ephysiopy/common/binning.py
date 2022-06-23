@@ -285,7 +285,7 @@ class RateMap(object):
                 binned_spk = blurImage(
                     np.squeeze(binned_spk),
                     self.smooth_sz, ftype=self.smoothingType)
-                rmap = np.array(binned_spk / binned_pos, dtype=object)
+                rmap = binned_spk / binned_pos
                 if rmap.ndim <= 2:
                     rmap[nanIdx] = np.nan
 
