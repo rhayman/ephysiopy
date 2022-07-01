@@ -1,22 +1,19 @@
-import numpy as np
-from numpy.lib.nanfunctions import nanmax
-from scipy import signal
-from astropy import convolution  # deals with nans unlike other convs
-from ephysiopy.common.utils import blurImage
-
 # Suppress warnings generated from doing the ffts for the spatial
 # autocorrelogram
 # see autoCorr2D and crossCorr2D
 import warnings
-warnings.filterwarnings(
-    "ignore", message="invalid value encountered in sqrt")
-warnings.filterwarnings(
-    "ignore", message="invalid value encountered in subtract")
-warnings.filterwarnings(
-    "ignore", message="invalid value encountered in greater")
-warnings.filterwarnings(
-    "ignore", message="invalid value encountered in true_divide")
-np.seterr(divide='ignore', invalid='ignore')
+
+import numpy as np
+from astropy import convolution  # deals with nans unlike other convs
+from ephysiopy.common.utils import blurImage
+from scipy import signal
+
+warnings.filterwarnings("ignore", message="invalid value encountered in sqrt")
+warnings.filterwarnings("ignore", message="invalid value encountered in subtract")
+warnings.filterwarnings("ignore", message="invalid value encountered in greater")
+warnings.filterwarnings("ignore", message="invalid value encountered in true_divide")
+warnings.filterwarnings("ignore", message="divide by zero encountered in true_divide")
+np.seterr(divide="ignore", invalid="ignore")
 
 
 class RateMap(object):
@@ -58,11 +55,18 @@ class RateMap(object):
     There are several instance variables you can set, see below
 
     """
+
     def __init__(
-            self, xy: np.array=None, hdir: np.array=None,
-            speed: np.array=None, pos_weights: np.array=None,
-            ppm: int=430, xyInCms: bool=False, cmsPerBin: int=3,
-            smooth_sz: int=5):
+        self,
+        xy: np.array = None,
+        hdir: np.array = None,
+        speed: np.array = None,
+        pos_weights: np.array = None,
+        ppm: int = 430,
+        xyInCms: bool = False,
+        cmsPerBin: int = 3,
+        smooth_sz: int = 5,
+    ):
         self.xy = xy
         self.dir = hdir
         self.speed = speed
@@ -74,8 +78,8 @@ class RateMap(object):
         self._x_lims = None
         self._y_lims = None
         self._smooth_sz = smooth_sz
-        self._smoothingType = 'gaussian'  # 'boxcar' or 'gaussian'
-        self.whenToSmooth = 'before'  # or 'after'
+        self._smoothingType = "gaussian"  # 'boxcar' or 'gaussian'
+        self.whenToSmooth = "before"  # or 'after'
 
     @property
     def inCms(self):
@@ -110,7 +114,7 @@ class RateMap(object):
     @property
     def x_lims(self):
         return self._x_lims
-    
+
     @x_lims.setter
     def x_lims(self, value):
         self._x_lims = value
@@ -118,7 +122,7 @@ class RateMap(object):
     @property
     def y_lims(self):
         return self._y_lims
-    
+
     @y_lims.setter
     def y_lims(self, value):
         self._y_lims = value
@@ -168,7 +172,7 @@ class RateMap(object):
     def smoothingType(self, value):
         self._smoothingType = value
 
-    def _calcBinSize(self, cmsPerBin: int=3) -> tuple:
+    def _calcBinSize(self, cmsPerBin: int = 3) -> tuple:
         """
         Aims to get the right number of bins for x and y dims given the ppm
         in the set header and the x and y extent
@@ -182,21 +186,21 @@ class RateMap(object):
         -------
         2-tuple: each member an array of bin edges for x and y
         """
-        x_lims = getattr(self, 'x_lims', None)
-        y_lims = getattr(self, 'y_lims', None)
+        x_lims = getattr(self, "x_lims", None)
+        y_lims = getattr(self, "y_lims", None)
         if x_lims is None:
             x_lims = (np.nanmin(self.xy[0]), np.nanmax(self.xy[0]))
         if y_lims is None:
             y_lims = (np.nanmin(self.xy[1]), np.nanmax(self.xy[1]))
-            
-        n_x = np.ceil((x_lims[1] - x_lims[0])/ cmsPerBin)
-        n_y = np.ceil((y_lims[1] - y_lims[0])/ cmsPerBin)
+
+        n_x = np.ceil((x_lims[1] - x_lims[0]) / cmsPerBin)
+        n_y = np.ceil((y_lims[1] - y_lims[0]) / cmsPerBin)
         _x = np.linspace(x_lims[0], x_lims[1], int(n_x))
         _y = np.linspace(y_lims[0], y_lims[1], int(n_y))
 
         return _y, _x
 
-    def getMap(self, spkWeights, varType='xy', mapType='rate', smoothing=True):
+    def getMap(self, spkWeights, varType="xy", mapType="rate", smoothing=True):
         """
         Bins up the variable type varType and returns a tuple of
         (rmap, binnedPositionDir) or
@@ -226,65 +230,65 @@ class RateMap(object):
             for respectively
 
         """
-        sample = getattr(self, varType, 'xy')
-        assert(sample is not None)
+        sample = getattr(self, varType, "xy")
+        assert sample is not None
         # might happen if head direction not supplied for example
 
-        if 'xy' in varType:
+        if "xy" in varType:
             self.binsize = self._calcBinSize(self.cmsPerBin)
-        elif 'dir' in varType:
-            self.binsize = np.arange(0, 360+self.cmsPerBin, self.cmsPerBin)
-        elif 'speed' in varType:
+        elif "dir" in varType:
+            self.binsize = np.arange(0, 360 + self.cmsPerBin, self.cmsPerBin)
+        elif "speed" in varType:
             self.binsize = np.arange(0, 50, 1)
- 
+
         binned_pos = self._binData(sample, self.binsize, self.pos_weights)
-        
+
         binned_pos_edges = binned_pos[1]
         binned_pos = binned_pos[0]
         nanIdx = binned_pos == 0
 
-        if 'pos' in mapType:  # return just binned up position
+        if "pos" in mapType:  # return just binned up position
             if smoothing:
-                if 'dir' in varType:
-                    binned_pos = self._circPadSmooth(
-                        binned_pos, n=self.smooth_sz)
+                if "dir" in varType:
+                    binned_pos = self._circPadSmooth(binned_pos, n=self.smooth_sz)
                 else:
                     binned_pos = blurImage(
-                        binned_pos, self.smooth_sz, ftype=self.smoothingType)
+                        binned_pos, self.smooth_sz, ftype=self.smoothingType
+                    )
             return binned_pos, binned_pos_edges
 
         binned_spk = self._binData(sample, self.binsize, spkWeights)[0]
         # binned_spk is returned as a tuple of the binned data and the bin
         # edges
-        if 'after' in self.whenToSmooth:
+        if "after" in self.whenToSmooth:
             rmap = binned_spk / binned_pos
-            if 'dir' in varType:
+            if "dir" in varType:
                 rmap = self._circPadSmooth(rmap, self.smooth_sz)
             else:
-                rmap = blurImage(
-                    rmap, self.smooth_sz, ftype=self.smoothingType)
+                rmap = blurImage(rmap, self.smooth_sz, ftype=self.smoothingType)
         else:  # default case
             if not smoothing:
                 return binned_spk / binned_pos, binned_pos_edges
-            if 'dir' in varType:
+            if "dir" in varType:
                 binned_pos = self._circPadSmooth(binned_pos, self.smooth_sz)
                 binned_spk = self._circPadSmooth(binned_spk, self.smooth_sz)
                 rmap = binned_spk / binned_pos
             else:
                 binned_pos = blurImage(
-                    binned_pos, self.smooth_sz, ftype=self.smoothingType)
+                    binned_pos, self.smooth_sz, ftype=self.smoothingType
+                )
                 if binned_spk.ndim == 2:
                     pass
                 elif binned_spk.ndim == 1:
                     binned_spk_tmp = np.zeros(
-                        [binned_spk.shape[0],
-                            binned_spk.shape[0], 1])
+                        [binned_spk.shape[0], binned_spk.shape[0], 1]
+                    )
                     for i in range(binned_spk.shape[0]):
                         binned_spk_tmp[i, :, :] = binned_spk[i]
                     binned_spk = binned_spk_tmp
                 binned_spk = blurImage(
-                    np.squeeze(binned_spk),
-                    self.smooth_sz, ftype=self.smoothingType)
+                    np.squeeze(binned_spk), self.smooth_sz, ftype=self.smoothingType
+                )
                 rmap = binned_spk / binned_pos
                 if rmap.ndim <= 2:
                     rmap[nanIdx] = np.nan
@@ -343,16 +347,17 @@ class RateMap(object):
         if weights is None:
             weights = np.ones_like(var)
         dims = weights.ndim
-        if (dims == 1 and var.ndim == 1):
+        if dims == 1 and var.ndim == 1:
             var = var[np.newaxis, :]
             bin_edges = bin_edges[np.newaxis, :]
-        elif (dims > 1 and var.ndim == 1):
+        elif dims > 1 and var.ndim == 1:
             var = var[np.newaxis, :]
             bin_edges = bin_edges[np.newaxis, :]
         else:
             var = np.flipud(var)
-        ndhist = np.apply_along_axis(lambda x: np.histogramdd(
-            var.T, weights=x, bins=bin_edges), 0, weights.T)
+        ndhist = np.apply_along_axis(
+            lambda x: np.histogramdd(var.T, weights=x, bins=bin_edges), 0, weights.T
+        )
         return ndhist
 
     def _circPadSmooth(self, var, n=3, ny=None):
@@ -379,13 +384,13 @@ class RateMap(object):
         var = np.concatenate((var[t2:tn], var, var[0:t2]))
         if ny is None:
             ny = n
-        x, y = np.mgrid[-n:n+1, 0-ny:ny+1]
-        g = np.exp(-(x**2/float(n) + y**2/float(ny)))
+        x, y = np.mgrid[-n : n + 1, 0 - ny : ny + 1]
+        g = np.exp(-(x**2 / float(n) + y**2 / float(ny)))
         if np.ndim(var) == 1:
             g = g[n, :]
         g = g / g.sum()
-        improc = signal.convolve(var, g, mode='same')
-        improc = improc[tn-t2:tn-t2+tn]
+        improc = signal.convolve(var, g, mode="same")
+        improc = improc[tn - t2 : tn - t2 + tn]
         return improc
 
     def _circularStructure(self, radius):
@@ -411,6 +416,7 @@ class RateMap(object):
         RateMap.__adpativeMap
         """
         from skimage.morphology import disk
+
         return disk(radius)
 
     def getAdaptiveMap(self, pos_binned, spk_binned, alpha=200):
@@ -530,28 +536,42 @@ class RateMap(object):
 
         """
 
-        assert(np.ndim(A) == 2)
+        assert np.ndim(A) == 2
         m, n = np.shape(A)
         o = 1
         x = np.reshape(A, (m, n, o))
         nodwell = np.reshape(nodwell, (m, n, o))
         x[nodwell] = 0
         # [Step 1] Obtain FFTs of x, the sum of squares and bins visited
-        Fx = np.fft.fft(np.fft.fft(x, 2*m-1, axis=0), 2*n-1, axis=1)
-        FsumOfSquares_x = np.fft.fft(np.fft.fft(
-            np.power(x, 2), 2*m-1, axis=0), 2*n-1, axis=1)
-        Fn = np.fft.fft(np.fft.fft(
-            np.invert(nodwell).astype(int), 2*m-1, axis=0), 2*n-1, axis=1)
+        Fx = np.fft.fft(np.fft.fft(x, 2 * m - 1, axis=0), 2 * n - 1, axis=1)
+        FsumOfSquares_x = np.fft.fft(
+            np.fft.fft(np.power(x, 2), 2 * m - 1, axis=0), 2 * n - 1, axis=1
+        )
+        Fn = np.fft.fft(
+            np.fft.fft(np.invert(nodwell).astype(int), 2 * m - 1, axis=0),
+            2 * n - 1,
+            axis=1,
+        )
         # [Step 2] Multiply the relevant transforms and invert to obtain the
         # equivalent convolutions
-        rawCorr = np.fft.fftshift(np.real(np.fft.ifft(np.fft.ifft(
-            Fx * np.conj(Fx), axis=1), axis=0)), axes=(0, 1))
-        sums_x = np.fft.fftshift(np.real(np.fft.ifft(np.fft.ifft(
-            np.conj(Fx) * Fn, axis=1), axis=0)), axes=(0, 1))
-        sumOfSquares_x = np.fft.fftshift(np.real(np.fft.ifft(np.fft.ifft(
-            Fn * np.conj(FsumOfSquares_x), axis=1), axis=0)), axes=(0, 1))
-        N = np.fft.fftshift(np.real(np.fft.ifft(np.fft.ifft(
-            Fn * np.conj(Fn), axis=1), axis=0)), axes=(0, 1))
+        rawCorr = np.fft.fftshift(
+            np.real(np.fft.ifft(np.fft.ifft(Fx * np.conj(Fx), axis=1), axis=0)),
+            axes=(0, 1),
+        )
+        sums_x = np.fft.fftshift(
+            np.real(np.fft.ifft(np.fft.ifft(np.conj(Fx) * Fn, axis=1), axis=0)),
+            axes=(0, 1),
+        )
+        sumOfSquares_x = np.fft.fftshift(
+            np.real(
+                np.fft.ifft(np.fft.ifft(Fn * np.conj(FsumOfSquares_x), axis=1), axis=0)
+            ),
+            axes=(0, 1),
+        )
+        N = np.fft.fftshift(
+            np.real(np.fft.ifft(np.fft.ifft(Fn * np.conj(Fn), axis=1), axis=0)),
+            axes=(0, 1),
+        )
         # [Step 3] Account for rounding errors.
         rawCorr[np.abs(rawCorr) < tol] = 0
         sums_x[np.abs(sums_x) < tol] = 0
@@ -560,10 +580,9 @@ class RateMap(object):
         N[N <= 1] = np.nan
         # [Step 4] Compute correlation matrix
         mapStd = np.sqrt((sumOfSquares_x * N) - sums_x**2)
-        mapCovar = (rawCorr * N)-sums_x*sums_x[::-1, :, :][:, ::-1, :][:, :, :]
+        mapCovar = (rawCorr * N) - sums_x * sums_x[::-1, :, :][:, ::-1, :][:, :, :]
 
-        return np.squeeze(
-            mapCovar / mapStd / mapStd[::-1, :, :][:, ::-1, :][:, :, :])
+        return np.squeeze(mapCovar / mapStd / mapStd[::-1, :, :][:, ::-1, :][:, :, :])
 
     def crossCorr2D(self, A, B, A_nodwell, B_nodwell, tol=1e-10):
         """
@@ -596,8 +615,8 @@ class RateMap(object):
         >>> nodwell = ~np.isfinite(A)
         """
         if np.ndim(A) != np.ndim(B):
-            raise ValueError('Both arrays must have the same dimensionality')
-        assert(np.ndim(A) == 2)
+            raise ValueError("Both arrays must have the same dimensionality")
+        assert np.ndim(A) == 2
         ma, na = np.shape(A)
         mb, nb = np.shape(B)
         oa = ob = 1
@@ -608,31 +627,52 @@ class RateMap(object):
         A[A_nodwell] = 0
         B[B_nodwell] = 0
         # [Step 1] Obtain FFTs of x, the sum of squares and bins visited
-        Fa = np.fft.fft(np.fft.fft(A, 2*mb-1, axis=0), 2*nb-1, axis=1)
-        FsumOfSquares_a = np.fft.fft(np.fft.fft(
-            np.power(A, 2), 2*mb-1, axis=0), 2*nb-1, axis=1)
-        Fn_a = np.fft.fft(np.fft.fft(
-            np.invert(A_nodwell).astype(int), 2*mb-1, axis=0), 2*nb-1, axis=1)
-        Fb = np.fft.fft(np.fft.fft(
-            B, 2*ma-1, axis=0), 2*na-1, axis=1)
-        FsumOfSquares_b = np.fft.fft(np.fft.fft(
-            np.power(B, 2), 2*ma-1, axis=0), 2*na-1, axis=1)
-        Fn_b = np.fft.fft(np.fft.fft(
-            np.invert(B_nodwell).astype(int), 2*ma-1, axis=0), 2*na-1, axis=1)
+        Fa = np.fft.fft(np.fft.fft(A, 2 * mb - 1, axis=0), 2 * nb - 1, axis=1)
+        FsumOfSquares_a = np.fft.fft(
+            np.fft.fft(np.power(A, 2), 2 * mb - 1, axis=0), 2 * nb - 1, axis=1
+        )
+        Fn_a = np.fft.fft(
+            np.fft.fft(np.invert(A_nodwell).astype(int), 2 * mb - 1, axis=0),
+            2 * nb - 1,
+            axis=1,
+        )
+        Fb = np.fft.fft(np.fft.fft(B, 2 * ma - 1, axis=0), 2 * na - 1, axis=1)
+        FsumOfSquares_b = np.fft.fft(
+            np.fft.fft(np.power(B, 2), 2 * ma - 1, axis=0), 2 * na - 1, axis=1
+        )
+        Fn_b = np.fft.fft(
+            np.fft.fft(np.invert(B_nodwell).astype(int), 2 * ma - 1, axis=0),
+            2 * na - 1,
+            axis=1,
+        )
         # [Step 2] Multiply the relevant transforms and invert to obtain the
         # equivalent convolutions
-        rawCorr = np.fft.fftshift(np.real(np.fft.ifft(np.fft.ifft(
-            Fa * np.conj(Fb), axis=1), axis=0)))
-        sums_a = np.fft.fftshift(np.real(np.fft.ifft(np.fft.ifft(
-            Fa * np.conj(Fn_b), axis=1), axis=0)))
-        sums_b = np.fft.fftshift(np.real(np.fft.ifft(np.fft.ifft(
-            Fn_a * np.conj(Fb), axis=1), axis=0)))
-        sumOfSquares_a = np.fft.fftshift(np.real(np.fft.ifft(np.fft.ifft(
-            FsumOfSquares_a * np.conj(Fn_b), axis=1), axis=0)))
-        sumOfSquares_b = np.fft.fftshift(np.real(np.fft.ifft(np.fft.ifft(
-            Fn_a * np.conj(FsumOfSquares_b), axis=1), axis=0)))
-        N = np.fft.fftshift(np.real(np.fft.ifft(np.fft.ifft(
-            Fn_a * np.conj(Fn_b), axis=1), axis=0)))
+        rawCorr = np.fft.fftshift(
+            np.real(np.fft.ifft(np.fft.ifft(Fa * np.conj(Fb), axis=1), axis=0))
+        )
+        sums_a = np.fft.fftshift(
+            np.real(np.fft.ifft(np.fft.ifft(Fa * np.conj(Fn_b), axis=1), axis=0))
+        )
+        sums_b = np.fft.fftshift(
+            np.real(np.fft.ifft(np.fft.ifft(Fn_a * np.conj(Fb), axis=1), axis=0))
+        )
+        sumOfSquares_a = np.fft.fftshift(
+            np.real(
+                np.fft.ifft(
+                    np.fft.ifft(FsumOfSquares_a * np.conj(Fn_b), axis=1), axis=0
+                )
+            )
+        )
+        sumOfSquares_b = np.fft.fftshift(
+            np.real(
+                np.fft.ifft(
+                    np.fft.ifft(Fn_a * np.conj(FsumOfSquares_b), axis=1), axis=0
+                )
+            )
+        )
+        N = np.fft.fftshift(
+            np.real(np.fft.ifft(np.fft.ifft(Fn_a * np.conj(Fn_b), axis=1), axis=0))
+        )
         # [Step 3] Account for rounding errors.
         rawCorr[np.abs(rawCorr) < tol] = 0
         sums_a[np.abs(sums_a) < tol] = 0
@@ -649,8 +689,18 @@ class RateMap(object):
         return np.squeeze(mapCovar / (mapStd_a * mapStd_b))
 
     def tWinSAC(
-            self, xy, spkIdx, ppm=365, winSize=10, pos_sample_rate=50,
-            nbins=71, boxcar=5, Pthresh=100, downsampfreq=50, plot=False):
+        self,
+        xy,
+        spkIdx,
+        ppm=365,
+        winSize=10,
+        pos_sample_rate=50,
+        nbins=71,
+        boxcar=5,
+        Pthresh=100,
+        downsampfreq=50,
+        plot=False,
+    ):
         """
         Temporal windowed spatial autocorrelation.
 
@@ -702,20 +752,20 @@ class RateMap(object):
         # 1b. Keep looping until we have dealt with all spikes
         for i, s in enumerate(spkIdx):
             t = np.searchsorted(spkIdx, (s, s + winSizeBins))
-            nSpikesInWin[i] = len(spkIdx[t[0]:t[1]]) - 1  # ignore ith spike
+            nSpikesInWin[i] = len(spkIdx[t[0] : t[1]]) - 1  # ignore ith spike
 
         # [Stage 2] Prepare for main loop
         # 2a. Work out offset inidices to be used when storing spike data
         off_spike = np.cumsum([nSpikesInWin])
-        off_spike = np.pad(off_spike, (1, 0), 'constant', constant_values=(0))
+        off_spike = np.pad(off_spike, (1, 0), "constant", constant_values=(0))
 
         # 2b. Work out number of downsampled pos bins in window and
         # offset indices for storing data
         nPosInWindow = np.minimum(winSizeBins, n_samps - spkIdx)
-        nDownsampInWin = np.floor((nPosInWindow-1)/downsample)+1
+        nDownsampInWin = np.floor((nPosInWindow - 1) / downsample) + 1
 
         off_dwell = np.cumsum(nDownsampInWin.astype(int))
-        off_dwell = np.pad(off_dwell, (1, 0), 'constant', constant_values=(0))
+        off_dwell = np.pad(off_dwell, (1, 0), "constant", constant_values=(0))
 
         # 2c. Pre-allocate dwell and spike arrays, singles for speed
         dwell = np.zeros((2, off_dwell[-1]), dtype=np.single) * np.nan
@@ -727,19 +777,24 @@ class RateMap(object):
         for i in range(n_spks):
             # calculate dwell displacements
             winInd_dwell = np.arange(
-                spkIdx[i] + 1, np.minimum(
-                    spkIdx[i]+winSizeBins, n_samps), downsample, dtype=int)
+                spkIdx[i] + 1,
+                np.minimum(spkIdx[i] + winSizeBins, n_samps),
+                downsample,
+                dtype=int,
+            )
             WL = len(winInd_dwell)
-            dwell[:, filled_pvals:filled_pvals + WL] = np.rot90(
-                np.array(np.rot90(xy[:, winInd_dwell]) - xy[:, spkIdx[i]]))
+            dwell[:, filled_pvals : filled_pvals + WL] = np.rot90(
+                np.array(np.rot90(xy[:, winInd_dwell]) - xy[:, spkIdx[i]])
+            )
             filled_pvals = filled_pvals + WL
             # calculate spike displacements
-            winInd_spks = i + np.nonzero(
-                spkIdx[i+1:n_spks] < spkIdx[i] + winSizeBins)[0]
+            winInd_spks = (
+                i + np.nonzero(spkIdx[i + 1 : n_spks] < spkIdx[i] + winSizeBins)[0]
+            )
             WL = len(winInd_spks)
-            spike[:, filled_svals:filled_svals+WL] = np.rot90(
-                np.array(np.rot90(
-                    xy[:, spkIdx[winInd_spks]]) - xy[:, spkIdx[i]]))
+            spike[:, filled_svals : filled_svals + WL] = np.rot90(
+                np.array(np.rot90(xy[:, spkIdx[winInd_spks]]) - xy[:, spkIdx[i]])
+            )
             filled_svals = filled_svals + WL
 
         dwell = np.delete(dwell, np.isnan(dwell).nonzero()[1], axis=1)
@@ -754,16 +809,16 @@ class RateMap(object):
         binsize = (dwell_max[1] - dwell_min[1]) / nbins
 
         dwell = np.round(
-            (dwell - np.ones_like(dwell) * dwell_min[:, np.newaxis]) / binsize)
+            (dwell - np.ones_like(dwell) * dwell_min[:, np.newaxis]) / binsize
+        )
         spike = np.round(
-            (spike - np.ones_like(spike) * dwell_min[:, np.newaxis]) / binsize)
+            (spike - np.ones_like(spike) * dwell_min[:, np.newaxis]) / binsize
+        )
 
         binsize = np.max(dwell, axis=1).astype(int)
-        binedges = np.array(((-0.5, -0.5), binsize+0.5)).T
-        Hp = np.histogram2d(
-            dwell[0, :], dwell[1, :], range=binedges, bins=binsize)[0]
-        Hs = np.histogram2d(
-            spike[0, :], spike[1, :], range=binedges, bins=binsize)[0]
+        binedges = np.array(((-0.5, -0.5), binsize + 0.5)).T
+        Hp = np.histogram2d(dwell[0, :], dwell[1, :], range=binedges, bins=binsize)[0]
+        Hs = np.histogram2d(spike[0, :], spike[1, :], range=binedges, bins=binsize)[0]
 
         # reverse y,x order
         Hp = np.swapaxes(Hp, 1, 0)

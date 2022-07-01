@@ -620,7 +620,6 @@ class OpenEphysNPX(OpenEphysBase):
 
     def load(
         self,
-        pname_root=None,
         experiment_name="experiment1",
         recording_name="recording1",
         **kwargs,
@@ -642,48 +641,12 @@ class OpenEphysNPX(OpenEphysBase):
         """
         self.isBinary = True
         import os
-        import re
 
-        APdata_match = re.compile("Neuropix-PXI-[0-9][0-9][0-9].0")
-        LFPdata_match = re.compile("Neuropix-PXI-[0-9][0-9][0-9].1")
         self.sync_message_file = None
         self.recording_start_time = None
         ap_sample_rate = getattr(self, "ap_sample_rate", 30000)
 
-        if pname_root is None:
-            pname_root = self.pname_root
-
-        for d, c, f in os.walk(pname_root):
-            for ff in f:
-                if "." not in c:  # ignore hidden directories
-                    if "data_array.npy" in ff:
-                        if PurePath(d).match("*Pos_Tracker*/BINARY_group*"):
-                            if self.path2PosData is None:
-                                self.path2PosData = os.path.join(d)
-                                print(f"Found pos data at: {self.path2PosData}")
-                            self.path2PosOEBin = Path(d).parents[1]
-                        if PurePath(d).match("*pos_data*"):
-                            if self.path2PosData is None:
-                                self.path2PosData = os.path.join(d)
-                                print(f"Found pos data at: {self.path2PosData}")
-                        if PurePath(d).match("*Tracking_Port*/BINARY_group*"):
-                            if self.path2PosData is None:
-                                self.path2PosData = os.path.join(d)
-                                print(f"Found pos data at: {self.path2PosData}")
-                    if "continuous.dat" in ff:
-                        if APdata_match.search(d):
-                            self.path2APdata = os.path.join(d)
-                            print(f"Found continuous data at: {self.path2APdata}")
-                            self.path2APOEBin = Path(d).parents[1]
-                        if LFPdata_match.search(d):
-                            self.path2LFPdata = os.path.join(d)
-                            print(f"Found continuous data at: {self.path2LFPdata}")
-                    if "sync_messages.txt" in ff:
-                        sync_file = os.path.join(d, "sync_messages.txt")
-                        if fileContainsString(sync_file, "Processor"):
-                            self.sync_message_file = sync_file
-                            print(f"Found sync_messages file at: {sync_file}")
-
+        super().find_files(experiment_name, recording_name, RecordingKind.NEUROPIXELS)
         super().loadPos()
 
         n_channels = getattr(self, "n_channels", 384)
@@ -1049,7 +1012,7 @@ class OpenEphysBinary(OpenEphysBase):
     and the Rhythm-FPGA module .
     """
 
-    def __init__(self, pname_root):
+    def __init__(self, pname_root: str):
         super().__init__(pname_root)
         self.path2PosData = None
         self.path2APdata = None
@@ -1058,7 +1021,6 @@ class OpenEphysBinary(OpenEphysBase):
 
     def load(
         self,
-        pname_root=None,
         experiment_name="experiment1",
         recording_name="recording1",
         loadraw=False,
@@ -1080,62 +1042,13 @@ class OpenEphysBinary(OpenEphysBase):
         See open-ephys wiki
         """
         self.isBinary = True
-        import os
 
-        exp_name = Path(experiment_name)
-        APdata_match = (
-            exp_name / recording_name / "continuous" / "Rhythm_FPGA-[0-9][0-9][0-9].0"
-        )
-        LFPdata_match = (
-            exp_name / recording_name / "continuous" / "Rhythm_FPGA-[0-9][0-9][0-9].1"
-        )
-        PosTracker_match = (
-            exp_name / recording_name / "events" / "*Pos_Tracker*/BINARY_group*"
-        )
-        TrackingPlugin_match = (
-            exp_name / recording_name / "events" / "*Tracking_Port*/BINARY_group*"
-        )
-        sync_file_match = exp_name / recording_name
         self.sync_message_file = None
         self.recording_start_time = None
         ap_sample_rate = getattr(self, "ap_sample_rate", 30000)
 
-        if pname_root is None:
-            pname_root = self.pname_root
-
-        for d, c, f in os.walk(pname_root):
-            for ff in f:
-                if "." not in c:  # ignore hidden directories
-                    if "data_array.npy" in ff:
-                        if PurePath(d).match(str(PosTracker_match)):
-                            if self.path2PosData is None:
-                                self.path2PosData = os.path.join(d)
-                                print(f"Found pos data at: {self.path2PosData}")
-                            self.path2PosOEBin = Path(d).parents[1]
-                        if PurePath(d).match("*pos_data*"):
-                            if self.path2PosData is None:
-                                self.path2PosData = os.path.join(d)
-                                print(f"Found pos data at: {self.path2PosData}")
-                        if PurePath(d).match(str(TrackingPlugin_match)):
-                            if self.path2PosData is None:
-                                self.path2PosData = os.path.join(d)
-                                print(f"Found pos data at: {self.path2PosData}")
-                    if "continuous.dat" in ff:
-                        if PurePath(d).match(str(APdata_match)):
-                            self.path2APdata = os.path.join(d)
-                            print(f"Found continuous data at: {self.path2APdata}")
-                            self.path2APOEBin = Path(d).parents[1]
-                        if PurePath(d).match(str(LFPdata_match)):
-                            self.path2LFPdata = os.path.join(d)
-                            print(f"Found continuous data at: {self.path2LFPdata}")
-                    if "sync_messages.txt" in ff:
-                        if PurePath(d).match(str(sync_file_match)):
-                            sync_file = os.path.join(d, "sync_messages.txt")
-                            if fileContainsString(sync_file, "Processor"):
-                                self.sync_message_file = sync_file
-                                print(f"Found sync_messages file at: {sync_file}")
-
-        self.loadPos()
+        super().find_files(experiment_name, recording_name, RecordingKind.FPGA)
+        super().loadPos()
 
         n_channels = getattr(self, "n_channels", 384)
         trial_length = 0  # make sure a trial_length has a value
