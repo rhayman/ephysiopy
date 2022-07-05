@@ -300,6 +300,7 @@ class OpenEphysBase(FigureMaker):
                         if PurePath(d).match(str(PosTracker_match)):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
+                                setattr(self, "pos_data_type", "PosTracker")
                                 print(f"Found pos data at: {self.path2PosData}")
                             self.path2PosOEBin = Path(d).parents[1]
                         if PurePath(d).match("*pos_data*"):
@@ -309,6 +310,7 @@ class OpenEphysBase(FigureMaker):
                         if PurePath(d).match(str(TrackingPlugin_match)):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
+                                setattr(self, "pos_data_type", "TrackingPlugin")
                                 print(f"Found pos data at: {self.path2PosData}")
                     if "continuous.dat" in ff:
                         if PurePath(d).match(str(APdata_match)):
