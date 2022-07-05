@@ -287,8 +287,8 @@ class OpenEphysBase(FigureMaker):
             rec_kind = "Neuropix-PXI-[0-9][0-9][0-9]."
         elif recording_kind == RecordingKind.FPGA:
             rec_kind = "Rhythm_FPGA-[0-9][0-9][0-9]."
-        APdata_match = exp_name / recording_name / "continuous" / rec_kind + "0"
-        LFPdata_match = exp_name / recording_name / "continuous" / rec_kind + "1"
+        APdata_match = exp_name / recording_name / "continuous" / (rec_kind + "0")
+        LFPdata_match = exp_name / recording_name / "continuous" / (rec_kind + "1")
 
         if pname_root is None:
             pname_root = self.pname_root
@@ -1047,7 +1047,9 @@ class OpenEphysBinary(OpenEphysBase):
         self.recording_start_time = None
         ap_sample_rate = getattr(self, "ap_sample_rate", 30000)
 
-        super().find_files(experiment_name, recording_name, RecordingKind.FPGA)
+        super().find_files(
+            self.pname_root, experiment_name, recording_name, RecordingKind.FPGA
+        )
         super().loadPos()
 
         n_channels = getattr(self, "n_channels", 384)
