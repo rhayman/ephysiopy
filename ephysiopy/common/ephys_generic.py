@@ -393,7 +393,7 @@ class PosCalcsGeneric(object):
         self._ppm: float = value
         self.postprocesspos(self.tracker_params)
 
-    def postprocesspos(self, tracker_params: dict[str, float], **kwargs) -> None:
+    def postprocesspos(self, tracker_params: dict[str, float] = {}, **kwargs) -> None:
         """
         Post-process position data
 
