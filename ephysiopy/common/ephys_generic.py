@@ -431,6 +431,9 @@ class PosCalcsGeneric(object):
         xy[:, np.logical_or(x_zero, y_zero)] = np.ma.masked
 
         self.tracker_params: dict[str, float] = tracker_params
+        if "AxonaBadValue" in tracker_params:
+            bad_val = tracker_params["AxonaBadValue"]
+            xy = np.ma.masked_equal(xy, bad_val)
         if "LeftBorder" in tracker_params:
             min_x = tracker_params["LeftBorder"]
             xy[:, xy[0, :] <= min_x] = np.ma.masked

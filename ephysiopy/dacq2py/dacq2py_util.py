@@ -62,6 +62,7 @@ class AxonaTrial(FigureMaker):
                     AxonaPos.led_pos[1, :],
                     cm=True,
                     ppm=self.ppm,
+                    tracker_params={"AxonaBadValue": 1023},
                 )
                 P.postprocesspos()
                 self.xy = P.xy

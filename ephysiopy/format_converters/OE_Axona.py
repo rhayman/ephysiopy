@@ -135,7 +135,12 @@ class OE2Axona(object):
         # data (discard jumpy data, do some smoothing etc)
         self.settings.parse()
         posProcessor = PosCalcsGeneric(
-            self.OE_data.xy[:, 0], self.OE_data.xy[:, 1], ppm, True, jumpmax
+            self.OE_data.xy[:, 0],
+            self.OE_data.xy[:, 1],
+            ppm,
+            True,
+            jumpmax,
+            tracker_params={"AxonaBadValue": 1023},
         )
         print("Post-processing position data...")
         posProcessor.postprocesspos(self.settings.tracker_params)

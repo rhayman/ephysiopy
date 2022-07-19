@@ -49,7 +49,9 @@ class CosineDirectionalTuning(object):
         self._spk_sample_rate = 3e4
         self._pos_samples_for_spike = None
         self._min_runlength = 0.4  # in seconds
-        self.posCalcs = PosCalcsGeneric(x, y, 230, cm=True, jumpmax=100)
+        self.posCalcs = PosCalcsGeneric(
+            x, y, 230, cm=True, jumpmax=100, tracker_params=tracker_params
+        )
         self.spikeCalcs = SpikeCalcsGeneric(spike_times)
         self.spikeCalcs.spk_clusters = spk_clusters
         self.posCalcs.postprocesspos(tracker_params)
