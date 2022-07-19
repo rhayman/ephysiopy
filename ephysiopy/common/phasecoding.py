@@ -1,5 +1,3 @@
-import random  # used in bootstrapping in _circCircCorrTLinear()
-
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -69,7 +67,7 @@ class phasePrecession2D(object):
             The position data as 2 x num_position_samples
         spike_ts: np.array
             The times in samples at which the cell fired
-        spike_ts: np.array
+        pos_ts: np.array
             The times in samples at which position was captured
         pp_config: dict
             Contains parameters for running the analysis.
@@ -87,6 +85,8 @@ class phasePrecession2D(object):
     ):
 
         [setattr(self, k, pp_config[k]) for k in pp_config.keys()]
+
+        self._pos_ts = pos_ts
 
         # Create a dict to hold the stats values
         stats_dict = {
@@ -154,6 +154,14 @@ class phasePrecession2D(object):
         self.RateMap = R  # this will be used a fair bit below
 
         self.spike_ts = spike_ts
+
+    @property
+    def pos_ts(self):
+        return self._pos_ts
+
+    @pos_ts.setter
+    def pos_ts(self, value):
+        self._pos_ts = value
 
     def getSpikePosIndices(self, spk_times: np.array):
         pos_times = getattr(self, "pos_ts")
