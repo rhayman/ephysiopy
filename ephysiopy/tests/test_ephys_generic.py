@@ -57,7 +57,7 @@ def test_interpnans(basic_PosCalcs, basic_xy):
     basic_PosCalcs.calcSpeed(xy)
     fast_points: float = np.std(basic_PosCalcs.speed) * 5
     mask = np.tile(np.atleast_2d(basic_PosCalcs.speed > fast_points), [2, 1])
-    xy = np.ma.masked_where(xy, mask)
+    xy.mask = mask
     new_xy = basic_PosCalcs.interpnans(xy)
     assert new_xy.ndim == 2
     assert xy.shape == new_xy.shape
