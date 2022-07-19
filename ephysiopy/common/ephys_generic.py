@@ -525,8 +525,8 @@ class PosCalcsGeneric(object):
 
     def interpnans(self, xy: np.ma.MaskedArray) -> np.ma.MaskedArray:
         n_masked: int = np.count_nonzero(xy.mask)
-        xm: np.ma.MaskedArray = xy[0, :]
-        ym: np.ma.MaskedArray = xy[1, :]
+        xm: np.ma.MaskedArray = xy[0]
+        ym: np.ma.MaskedArray = xy[1]
         idx: np.ndarray = np.arange(0, len(xm))
         xi = griddata(idx[~xm.mask], xm[~xm.mask], idx, method="linear")
         yi = griddata(idx[~ym.mask], ym[~ym.mask], idx, method="linear")
