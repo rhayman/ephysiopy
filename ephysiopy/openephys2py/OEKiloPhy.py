@@ -648,7 +648,12 @@ class OpenEphysNPX(OpenEphysBase):
         self.recording_start_time = None
         ap_sample_rate = getattr(self, "ap_sample_rate", 30000)
 
-        super().find_files(experiment_name, recording_name, RecordingKind.NEUROPIXELS)
+        super().find_files(
+            self.pname_root,
+            experiment_name,
+            recording_name,
+            RecordingKind.NEUROPIXELS
+        )
         super().loadPos()
 
         n_channels = getattr(self, "n_channels", 384)
@@ -1014,7 +1019,11 @@ class OpenEphysBinary(OpenEphysBase):
     and the Rhythm-FPGA module .
     """
 
+<<<<<<< HEAD
     def __init__(self, pname_root: str):
+=======
+    def __init__(self, pname_root):
+>>>>>>> refactor
         super().__init__(pname_root)
         self.path2PosData = None
         self.path2APdata = None
@@ -1023,6 +1032,10 @@ class OpenEphysBinary(OpenEphysBase):
 
     def load(
         self,
+<<<<<<< HEAD
+=======
+        pname_root=None,
+>>>>>>> refactor
         experiment_name="experiment1",
         recording_name="recording1",
         loadraw=False,
@@ -1044,7 +1057,18 @@ class OpenEphysBinary(OpenEphysBase):
         See open-ephys wiki
         """
         self.isBinary = True
+<<<<<<< HEAD
 
+=======
+        import os
+        import re
+
+        APdata_match = re.compile("Rhythm_FPGA-[0-9][0-9][0-9].0")
+        LFPdata_match = re.compile("Rhythm_FPGA-[0-9][0-9][0-9].1")
+        PosTracker_match = re.compile(
+            "Pos_Tracker-[0-9][0-9][0-9].[0-9]/BINARY_group_[0-9]"
+        )
+>>>>>>> refactor
         self.sync_message_file = None
         self.recording_start_time = None
         ap_sample_rate = getattr(self, "ap_sample_rate", 30000)
@@ -1054,6 +1078,33 @@ class OpenEphysBinary(OpenEphysBase):
         )
         super().loadPos()
 
+<<<<<<< HEAD
+=======
+        for d, c, f in os.walk(pname_root):
+            for ff in f:
+                if "." not in c:  # ignore hidden directories
+                    if "data_array.npy" in ff:
+                        if PurePath(d).match("*Pos_Tracker*/BINARY_group*"):
+                            self.path2PosData = os.path.join(d)
+                            print(f"Found pos data at: {self.path2PosData}")
+                            self.path2PosOEBin = Path(d).parents[1]
+                    if "continuous.dat" in ff:
+                        if APdata_match.search(d):
+                            self.path2APdata = os.path.join(d)
+                            print(f"Found continuous data at: {self.path2APdata}")
+                            self.path2APOEBin = Path(d).parents[1]
+                        if LFPdata_match.search(d):
+                            self.path2LFPdata = os.path.join(d)
+                            print(f"Found continuous data at: {self.path2LFPdata}")
+                    if "sync_messages.txt" in ff:
+                        sync_file = os.path.join(d, "sync_messages.txt")
+                        if fileContainsString(sync_file, "Processor"):
+                            self.sync_message_file = sync_file
+                            print(f"Found sync_messages file at: {sync_file}")
+
+        self.loadPos()
+
+>>>>>>> refactor
         n_channels = getattr(self, "n_channels", 384)
         trial_length = 0  # make sure a trial_length has a value
         if fileExists(self.path2APdata, "continuous.dat"):
