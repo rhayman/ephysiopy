@@ -948,6 +948,8 @@ class phasePrecession2D(object):
         LL = np.insert(LL, 0, True)
         isStart = np.logical_and(mask, LL)
         startInds = np.nonzero(isStart)[0]
+        if len(startInds) == 0:
+            return S
         if startInds[0] == 0:
             S_starts = S[startInds[1::] - 1]
             S_starts = np.insert(S_starts, 0, 0)
