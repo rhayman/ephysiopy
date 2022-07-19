@@ -1,8 +1,8 @@
-import numpy as np
-from scipy import signal
 import matplotlib.pylab as plt
+import numpy as np
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
+from scipy import signal
 
 
 class CosineDirectionalTuning(object):
@@ -12,9 +12,14 @@ class CosineDirectionalTuning(object):
     """
 
     def __init__(
-            self, spike_times: np.array, pos_times: np.array,
-            spk_clusters: np.array, x: np.array, y: np.array,
-            tracker_params={}):
+        self,
+        spike_times: np.array,
+        pos_times: np.array,
+        spk_clusters: np.array,
+        x: np.array,
+        y: np.array,
+        tracker_params={},
+    ):
         """
         Parameters
         ----------
@@ -31,12 +36,12 @@ class CosineDirectionalTuning(object):
         self.spike_times = spike_times
         self.pos_times = pos_times
         self.spk_clusters = spk_clusters
-        '''
+        """
         There can be more spikes than pos samples in terms of sampling as the
         open-ephys buffer probably needs to finish writing and the camera has
         already stopped, so cut of any cluster indices and spike times
         that exceed the length of the pos indices
-        '''
+        """
         idx_to_keep = self.spike_times < self.pos_times[-1]
         self.spike_times = self.spike_times[idx_to_keep]
         self.spk_clusters = self.spk_clusters[idx_to_keep]
@@ -47,7 +52,9 @@ class CosineDirectionalTuning(object):
         self.posCalcs = PosCalcsGeneric(x, y, 230, cm=True, jumpmax=100)
         self.spikeCalcs = SpikeCalcsGeneric(spike_times)
         self.spikeCalcs.spk_clusters = spk_clusters
-        xy, hdir = self.posCalcs.postprocesspos(tracker_params)
+        self.posCalcs.postprocesspos(tracker_params)
+        xy = self.posCalcs.xy
+        hdir = self.posCalcs.dir
         self.posCalcs.calcSpeed(xy)
         self._xy = xy
         self._hdir = hdir
@@ -126,15 +133,16 @@ class CosineDirectionalTuning(object):
 
     def getPosIndices(self):
         self.pos_samples_for_spike = np.floor(
-            self.spike_times * self.pos_sample_rate).astype(int)
+            self.spike_times * self.pos_sample_rate
+        ).astype(int)
 
     def getClusterPosIndices(self, cluster: int) -> np.array:
         if self.pos_samples_for_spike is None:
             self.getPosIndices()
-        cluster_pos_indices = self.pos_samples_for_spike[
-            self.spk_clusters == cluster]
-        cluster_pos_indices[
-            cluster_pos_indices >= len(self.pos_times)] = len(self.pos_times)-1
+        cluster_pos_indices = self.pos_samples_for_spike[self.spk_clusters == cluster]
+        cluster_pos_indices[cluster_pos_indices >= len(self.pos_times)] = (
+            len(self.pos_times) - 1
+        )
         return cluster_pos_indices
 
     def getClusterSpikeTimes(self, cluster: int):
@@ -183,15 +191,15 @@ class CosineDirectionalTuning(object):
         b = self.getDirectionalBinPerPosition(45)
         # nabbed from SO
         from itertools import groupby
+
         grouped_runs = [(k, sum(1 for i in g)) for k, g in groupby(b)]
         grouped_runs = np.array(grouped_runs)
-        run_start_indices = np.cumsum(
-            grouped_runs[:, 1]) - grouped_runs[:, 1]
+        run_start_indices = np.cumsum(grouped_runs[:, 1]) - grouped_runs[:, 1]
         min_len_in_samples = int(self.pos_sample_rate * self.min_runlength)
         min_len_runs_mask = grouped_runs[:, 1] >= min_len_in_samples
         ret = np.array(
-            [run_start_indices[min_len_runs_mask], grouped_runs[
-                min_len_runs_mask, 1]]).T
+            [run_start_indices[min_len_runs_mask], grouped_runs[min_len_runs_mask, 1]]
+        ).T
         # ret contains run length as last column
         ret = np.insert(ret, 1, np.sum(ret, 1), 1)
         ret = np.insert(ret, 2, grouped_runs[min_len_runs_mask, 0], 1)
@@ -226,13 +234,12 @@ class CosineDirectionalTuning(object):
         all_speed = np.array(self.speed)
         for start_idx, end_idx, dir_bin in run_list:
             this_runs_speed = all_speed[start_idx:end_idx]
-            this_runs_runs = self._rolling_window(
-                this_runs_speed, minlength_in_samples)
+            this_runs_runs = self._rolling_window(this_runs_speed, minlength_in_samples)
             run_mask = np.all(this_runs_runs > minspeed, 1)
             if np.any(run_mask):
                 print("got one")
 
-    '''
+    """
     def testing(self, cluster: int):
         ts = self.getClusterSpikeTimes(cluster)
         pos_idx = self.getClusterPosIndices(cluster)
@@ -295,11 +302,18 @@ class CosineDirectionalTuning(object):
             axs[i].spines['left'].set_visible(False)
         plt.show()
         return pts
-    '''
+    """
 
-    def intrinsic_freq_autoCorr(self, spkTimes=None, posMask=None, maxFreq=25,
-                                acBinSize=0.002, acWindow=0.5, plot=True,
-                                **kwargs):
+    def intrinsic_freq_autoCorr(
+        self,
+        spkTimes=None,
+        posMask=None,
+        maxFreq=25,
+        acBinSize=0.002,
+        acWindow=0.5,
+        plot=True,
+        **kwargs,
+    ):
         """
         This is taken and adapted from ephysiopy.common.eegcalcs.EEGCalcs
 
@@ -314,65 +328,86 @@ class CosineDirectionalTuning(object):
 
         NB Make sure all times are in seconds
         """
-        acBinsPerPos = 1. / self.pos_sample_rate / acBinSize
+        acBinsPerPos = 1.0 / self.pos_sample_rate / acBinSize
         acWindowSizeBins = np.round(acWindow / acBinSize)
-        binCentres = np.arange(0.5, len(posMask)*acBinsPerPos) * acBinSize
+        binCentres = np.arange(0.5, len(posMask) * acBinsPerPos) * acBinSize
         spkTrHist, _ = np.histogram(spkTimes, bins=binCentres)
 
         # split the single histogram into individual chunks
-        splitIdx = np.nonzero(np.diff(posMask.astype(int)))[0]+1
+        splitIdx = np.nonzero(np.diff(posMask.astype(int)))[0] + 1
         splitMask = np.split(posMask, splitIdx)
-        splitSpkHist = np.split(
-            spkTrHist, (splitIdx * acBinsPerPos).astype(int))
+        splitSpkHist = np.split(spkTrHist, (splitIdx * acBinsPerPos).astype(int))
         histChunks = []
         for i in range(len(splitSpkHist)):
             if np.all(splitMask[i]):
                 if np.sum(splitSpkHist[i]) > 2:
-                    if len(splitSpkHist[i]) > int(acWindowSizeBins)*2:
+                    if len(splitSpkHist[i]) > int(acWindowSizeBins) * 2:
                         histChunks.append(splitSpkHist[i])
         autoCorrGrid = np.zeros((int(acWindowSizeBins) + 1, len(histChunks)))
         chunkLens = []
         from scipy import signal
+
         print(f"num chunks = {len(histChunks)}")
         for i in range(len(histChunks)):
             lenThisChunk = len(histChunks[i])
             chunkLens.append(lenThisChunk)
             tmp = np.zeros(lenThisChunk * 2)
-            tmp[lenThisChunk//2:lenThisChunk//2+lenThisChunk] = histChunks[i]
+            tmp[lenThisChunk // 2 : lenThisChunk // 2 + lenThisChunk] = histChunks[i]
             tmp2 = signal.fftconvolve(
-                tmp, histChunks[i][::-1], mode='valid')  # the autocorrelation
-            autoCorrGrid[:, i] = tmp2[
-                lenThisChunk//2:lenThisChunk//2+int
-                (acWindowSizeBins)+1] / acBinsPerPos
+                tmp, histChunks[i][::-1], mode="valid"
+            )  # the autocorrelation
+            autoCorrGrid[:, i] = (
+                tmp2[lenThisChunk // 2 : lenThisChunk // 2 + int(acWindowSizeBins) + 1]
+                / acBinsPerPos
+            )
 
         totalLen = np.sum(chunkLens)
         autoCorrSum = np.nansum(autoCorrGrid, 1) / totalLen
         meanNormdAc = autoCorrSum[1::] - np.nanmean(autoCorrSum[1::])
         # return meanNormdAc
-        out = self.power_spectrum(eeg=meanNormdAc, binWidthSecs=acBinSize,
-                                  maxFreq=maxFreq, pad2pow=16, **kwargs)
-        out.update({'meanNormdAc': meanNormdAc})
+        out = self.power_spectrum(
+            eeg=meanNormdAc,
+            binWidthSecs=acBinSize,
+            maxFreq=maxFreq,
+            pad2pow=16,
+            **kwargs,
+        )
+        out.update({"meanNormdAc": meanNormdAc})
         if plot:
             fig = plt.gcf()
             ax = fig.gca()
             xlim = ax.get_xlim()
             ylim = ax.get_ylim()
             ax.imshow(
-                autoCorrGrid, extent=[maxFreq*0.6, maxFreq, np.max(
-                    out['Power'])*0.6, ax.get_ylim()[1]])
+                autoCorrGrid,
+                extent=[
+                    maxFreq * 0.6,
+                    maxFreq,
+                    np.max(out["Power"]) * 0.6,
+                    ax.get_ylim()[1],
+                ],
+            )
             ax.set_ylim(ylim)
             ax.set_xlim(xlim)
         return out
 
-    def power_spectrum(self, eeg, plot=True, binWidthSecs=None,
-                       maxFreq=25, pad2pow=None, ymax=None, **kwargs):
+    def power_spectrum(
+        self,
+        eeg,
+        plot=True,
+        binWidthSecs=None,
+        maxFreq=25,
+        pad2pow=None,
+        ymax=None,
+        **kwargs,
+    ):
         """
         Method used by eeg_power_spectra and intrinsic_freq_autoCorr
         Signal in must be mean normalised already
         """
 
         # Get raw power spectrum
-        nqLim = 1 / binWidthSecs / 2.
+        nqLim = 1 / binWidthSecs / 2.0
         origLen = len(eeg)
         # if pad2pow is None:
         # 	fftLen = int(np.power(2, self._nextpow2(origLen)))
@@ -389,20 +424,22 @@ class CosineDirectionalTuning(object):
         # calculate freqs and crop spectrum to requested range
         freqs = nqLim * np.linspace(0, 1, fftHalfLen)
         freqs = freqs[freqs <= maxFreq].T
-        power = power[0:len(freqs)]
+        power = power[0 : len(freqs)]
 
         # smooth spectrum using gaussian kernel
         binsPerHz = (fftHalfLen - 1) / nqLim
         kernelLen = np.round(self.smthKernelWidth * binsPerHz)
         kernelSig = self.smthKernelSigma * binsPerHz
         from scipy import signal
-        k = signal.gaussian(kernelLen, kernelSig) / (kernelLen/2/2)
-        power_sm = signal.fftconvolve(power, k[::-1], mode='same')
+
+        k = signal.gaussian(kernelLen, kernelSig) / (kernelLen / 2 / 2)
+        power_sm = signal.fftconvolve(power, k[::-1], mode="same")
 
         # calculate some metrics
         # find max in theta band
-        spectrumMaskBand = np.logical_and(freqs > self.thetaRange[0],
-                                          freqs < self.thetaRange[1])
+        spectrumMaskBand = np.logical_and(
+            freqs > self.thetaRange[0], freqs < self.thetaRange[1]
+        )
         bandMaxPower = np.max(power_sm[spectrumMaskBand])
         maxBinInBand = np.argmax(power_sm[spectrumMaskBand])
         bandFreqs = freqs[spectrumMaskBand]
@@ -415,10 +452,11 @@ class CosineDirectionalTuning(object):
         # of spectrum to get snr
         spectrumMaskPeak = np.logical_and(
             freqs > freqAtBandMaxPower - self.sn2Width / 2,
-            freqs < freqAtBandMaxPower + self.sn2Width / 2)
-        s2n = np.nanmean(
-            power_sm[spectrumMaskPeak]) / np.nanmean(
-                power_sm[~spectrumMaskPeak])
+            freqs < freqAtBandMaxPower + self.sn2Width / 2,
+        )
+        s2n = np.nanmean(power_sm[spectrumMaskPeak]) / np.nanmean(
+            power_sm[~spectrumMaskPeak]
+        )
         self.freqs = freqs
         self.power_sm = power_sm
         self.spectrumMaskPeak = spectrumMaskPeak
@@ -431,40 +469,54 @@ class CosineDirectionalTuning(object):
                     ymax = 1
             ax.plot(freqs, power, c=[0.9, 0.9, 0.9])
             # ax.hold(True)
-            ax.plot(freqs, power_sm, 'k', lw=2)
-            ax.axvline(self.thetaRange[0], c='b', ls='--')
-            ax.axvline(self.thetaRange[1], c='b', ls='--')
-            _, stemlines, _ = ax.stem(
-                [freqAtBandMaxPower], [bandMaxPower], linefmt='r')
+            ax.plot(freqs, power_sm, "k", lw=2)
+            ax.axvline(self.thetaRange[0], c="b", ls="--")
+            ax.axvline(self.thetaRange[1], c="b", ls="--")
+            _, stemlines, _ = ax.stem([freqAtBandMaxPower], [bandMaxPower], linefmt="r")
             # plt.setp(stemlines, 'linewidth', 2)
-            ax.fill_between(freqs, 0, power_sm, where=spectrumMaskPeak,
-                            color='r', alpha=0.25, zorder=25)
+            ax.fill_between(
+                freqs,
+                0,
+                power_sm,
+                where=spectrumMaskPeak,
+                color="r",
+                alpha=0.25,
+                zorder=25,
+            )
             # ax.set_ylim(0, ymax)
             # ax.set_xlim(0, self.xmax)
-            ax.set_xlabel('Frequency (Hz)')
-            ax.set_ylabel('Power density (W/Hz)')
+            ax.set_xlabel("Frequency (Hz)")
+            ax.set_ylabel("Power density (W/Hz)")
         out_dict = {
-            'maxFreq': freqAtBandMaxPower, 'Power': power_sm,
-            'Freqs': freqs, 's2n': s2n, 'Power_raw': power, 'k': k,
-            'kernelLen': kernelLen, 'kernelSig': kernelSig,
-            'binsPerHz': binsPerHz, 'kernelLen': kernelLen}
+            "maxFreq": freqAtBandMaxPower,
+            "Power": power_sm,
+            "Freqs": freqs,
+            "s2n": s2n,
+            "Power_raw": power,
+            "k": k,
+            "kernelLen": kernelLen,
+            "kernelSig": kernelSig,
+            "binsPerHz": binsPerHz,
+            "kernelLen": kernelLen,
+        }
         return out_dict
 
 
 class LFPOscillations(object):
-    '''
+    """
     Does stuff with the LFP such as looking at nested oscillations
     (theta/ gamma coupling), the modulation index of such phenomena,
     filtering out certain frequencies in the LFP, getting the instantaneous
     phase and amplitude and so on
 
-    '''
+    """
+
     def __init__(self, sig, fs, **kwargs):
         self.sig = sig
         self.fs = fs
 
     def getFreqPhase(self, sig, band2filter: list, ford=3):
-        '''
+        """
         Uses the Hilbert transform to calculate the instantaneous phase and
         amplitude of the time series in sig
 
@@ -476,24 +528,29 @@ class LFPOscillations(object):
             The order for the Butterworth filter
         band2filter: list
             The two frequencies to be filtered for e.g. [6, 12]
-        '''
+        """
         if sig is None:
             sig = self.sig
         band2filter = np.array(band2filter, dtype=float)
 
-        b, a = signal.butter(
-            ford, band2filter / (self.fs / 2), btype='bandpass')
+        b, a = signal.butter(ford, band2filter / (self.fs / 2), btype="bandpass")
 
-        filt_sig = signal.filtfilt(b, a, sig, padtype='odd')
+        filt_sig = signal.filtfilt(b, a, sig, padtype="odd")
         phase = np.angle(signal.hilbert(filt_sig))
         amplitude = np.abs(signal.hilbert(filt_sig))
-        amplitude_filtered = signal.filtfilt(b, a, amplitude, padtype='odd')
+        amplitude_filtered = signal.filtfilt(b, a, amplitude, padtype="odd")
         return filt_sig, phase, amplitude, amplitude_filtered
 
-    def modulationindex(self, sig=None, nbins=20, forder=2,
-                        thetaband=[4, 8], gammaband=[30, 80],
-                        plot=True):
-        '''
+    def modulationindex(
+        self,
+        sig=None,
+        nbins=20,
+        forder=2,
+        thetaband=[4, 8],
+        gammaband=[30, 80],
+        plot=True,
+    ):
+        """
         Calculates the modulation index of theta and gamma oscillations
         Specifically this is the circular correlation between the phase of
         theta and the power of theta
@@ -513,40 +570,47 @@ class LFPOscillations(object):
         plot: bool
             Show some pics or not
 
-        '''
+        """
         if sig is None:
             sig = self.sig
         sig = sig - np.ma.mean(sig)
         if np.ma.is_masked(sig):
             sig = np.ma.compressed(sig)
-        _, lowphase, _, _ = self.getFreqPhase(
-            sig, thetaband, forder)
-        _, _, highamp, _ = self.getFreqPhase(
-            sig, gammaband, forder)
-        inc = 2*np.pi/nbins
-        a = np.arange(-np.pi+inc/2, np.pi, inc)
-        dt = np.array([-inc/2, inc/2])
+        _, lowphase, _, _ = self.getFreqPhase(sig, thetaband, forder)
+        _, _, highamp, _ = self.getFreqPhase(sig, gammaband, forder)
+        inc = 2 * np.pi / nbins
+        a = np.arange(-np.pi + inc / 2, np.pi, inc)
+        dt = np.array([-inc / 2, inc / 2])
         pbins = a[:, np.newaxis] + dt[np.newaxis, :]
         amp = np.zeros((nbins))
         phaselen = np.arange(len(lowphase))
         for i in range(nbins):
-            pts = np.nonzero((lowphase >= pbins[i, 0]) * (
-                lowphase < pbins[i, 1]) * phaselen)
+            pts = np.nonzero(
+                (lowphase >= pbins[i, 0]) * (lowphase < pbins[i, 1]) * phaselen
+            )
             amp[i] = np.mean(highamp[pts])
         amp = amp / np.sum(amp)
         from ephysiopy.common.statscalcs import circ_r
+
         mi = circ_r(pbins[:, 1], amp)
         if plot:
             fig = plt.figure()
             ax = fig.add_subplot(111, polar=True)
-            w = np.pi / (nbins/2)
+            w = np.pi / (nbins / 2)
             ax.bar(pbins[:, 1], amp, width=w)
             ax.set_title("Modulation index={0:.5f}".format(mi))
         return mi
 
-    def plv(self, sig=None, forder=2, thetaband=[4, 8], gammaband=[30, 80],
-            plot=True, **kwargs):
-        '''
+    def plv(
+        self,
+        sig=None,
+        forder=2,
+        thetaband=[4, 8],
+        gammaband=[30, 80],
+        plot=True,
+        **kwargs,
+    ):
+        """
         Computes the phase-amplitude coupling (PAC) of nested oscillations.
         More specifically this is the phase-locking value (PLV) between two
         nested oscillations in EEG data, in this case theta (default 4-8Hz)
@@ -570,7 +634,7 @@ class LFPOscillations(object):
         -------
         plv: float
             the value of the phase-amplitude coupling
-        '''
+        """
 
         if sig is None:
             sig = self.sig
@@ -578,18 +642,17 @@ class LFPOscillations(object):
         if np.ma.is_masked(sig):
             sig = np.ma.compressed(sig)
 
-        _, lowphase, _, _ = self.getFreqPhase(
-            sig, thetaband, forder)
-        _, _, _, highamp_f = self.getFreqPhase(
-            sig, gammaband, forder)
+        _, lowphase, _, _ = self.getFreqPhase(sig, thetaband, forder)
+        _, _, _, highamp_f = self.getFreqPhase(sig, gammaband, forder)
 
         highampphase = np.angle(signal.hilbert(highamp_f))
         phasedf = highampphase - lowphase
         phasedf = np.exp(1j * phasedf)
         phasedf = np.angle(phasedf)
         from ephysiopy.common.statscalcs import circ_r
+
         plv = circ_r(phasedf)
-        th = np.linspace(0.0, 2*np.pi, 20, endpoint=False)
+        th = np.linspace(0.0, 2 * np.pi, 20, endpoint=False)
         h, _ = np.histogram(phasedf, bins=20)
         h = h / float(len(phasedf))
 
@@ -610,21 +673,22 @@ class LFPOscillations(object):
         tailoring for each trial almost. Maybe a better way to do this using
         mean power or something...
         """
-        from scipy.signal import kaiserord, firwin, filtfilt
-        nyq = self.fs / 2.
+        from scipy.signal import filtfilt, firwin, kaiserord
+
+        nyq = self.fs / 2.0
         width = width / nyq
         dip = dip
         N, beta = kaiserord(dip, width)
         print("N: {0}\nbeta: {1}".format(N, beta))
-        upper = np.ceil(nyq/stimFreq)
-        c = np.arange(stimFreq, upper*stimFreq, stimFreq)
+        upper = np.ceil(nyq / stimFreq)
+        c = np.arange(stimFreq, upper * stimFreq, stimFreq)
         dt = np.array([-0.125, 0.125])
         cutoff_hz = dt[:, np.newaxis] + c[np.newaxis, :]
         cutoff_hz = cutoff_hz.ravel()
-        cutoff_hz = np.append(cutoff_hz, nyq-1)
+        cutoff_hz = np.append(cutoff_hz, nyq - 1)
         cutoff_hz.sort()
         cutoff_hz_nyq = cutoff_hz / nyq
-        taps = firwin(N, cutoff_hz_nyq, window=('kaiser', beta))
+        taps = firwin(N, cutoff_hz_nyq, window=("kaiser", beta))
         if sig is None:
             sig = self.sig
         fx = filtfilt(taps, [1.0], sig)

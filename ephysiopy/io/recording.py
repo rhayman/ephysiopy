@@ -94,10 +94,10 @@ class AxonaTrial(TrialInterface):
                     cm=True,
                     ppm=self.ppm,
                 )
-                xy, hdir = P.postprocesspos()
-                self.xy = xy
+                P.postprocesspos()
+                self.xy = P.xy
                 self.xyTS = AxonaPos.ts - AxonaPos.ts[0]
-                self.dir = hdir
+                self.dir = P.dir
                 self.speed = P.speed
                 self.pos_sample_rate = AxonaPos.getHeaderVal(
                     AxonaPos.header, "sample_rate"

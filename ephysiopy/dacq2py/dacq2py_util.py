@@ -1,27 +1,27 @@
 import os
 import warnings
+from collections import OrderedDict
+
 import matplotlib.pylab as plt
+from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.dacq2py import axonaIO
 from ephysiopy.dacq2py.tetrode_dict import TetrodeDict
-from ephysiopy.common.ephys_generic import PosCalcsGeneric
-from collections import OrderedDict
 from ephysiopy.visualise.plotting import FigureMaker
 
+warnings.filterwarnings("ignore", message="divide by zero encountered in int_scalars")
+warnings.filterwarnings("ignore", message="divide by zero encountered in divide")
+warnings.filterwarnings("ignore", message="invalid value encountered in divide")
 warnings.filterwarnings(
-    "ignore", message="divide by zero encountered in int_scalars")
-warnings.filterwarnings(
-    "ignore", message="divide by zero encountered in divide")
-warnings.filterwarnings(
-    "ignore", message="invalid value encountered in divide")
-warnings.filterwarnings(
-    "ignore", message="Casting complex values to real\
-        discards the imaginary part")
+    "ignore",
+    message="Casting complex values to real\
+        discards the imaginary part",
+)
 
 
 class AxonaTrial(FigureMaker):
     def __init__(self, fileset_root: str, **kwargs):
         # fileset_root here is the fully qualified path to the .set file
-        assert(os.path.exists(fileset_root))
+        assert os.path.exists(fileset_root)
         self.fileset_root = fileset_root
         self.common_name = os.path.splitext(fileset_root)[0]
         self.__settings = None  # will become a dict ~= the .set file
@@ -38,18 +38,18 @@ class AxonaTrial(FigureMaker):
         self.data_loaded = False
 
     def load(self, *args, **kwargs):
-        '''
+        """
         Minially, there should be at least a .set file
         Other files (.eeg, .pos, .stm, .1, .2 etc) are essentially optional
 
-        '''
+        """
         if self.settings is not None:
             print("Loaded .set file")
         # Give ppm a default value from the set file...
-        self.ppm = int(self.settings['tracker_pixels_per_metre'])
+        self.ppm = int(self.settings["tracker_pixels_per_metre"])
         # ...with the option to over-ride
-        if 'ppm' in kwargs:
-            self.ppm = kwargs['ppm']
+        if "ppm" in kwargs:
+            self.ppm = kwargs["ppm"]
 
         # ------------------------------------
         # ------------- Pos data -------------
@@ -58,17 +58,21 @@ class AxonaTrial(FigureMaker):
             try:
                 AxonaPos = axonaIO.Pos(self.common_name)
                 P = PosCalcsGeneric(
-                    AxonaPos.led_pos[0, :], AxonaPos.led_pos[1, :],
-                    cm=True, ppm=self.ppm)
-                xy, hdir = P.postprocesspos()
-                self.xy = xy
+                    AxonaPos.led_pos[0, :],
+                    AxonaPos.led_pos[1, :],
+                    cm=True,
+                    ppm=self.ppm,
+                )
+                P.postprocesspos()
+                self.xy = P.xy
                 self.xyTS = AxonaPos.ts - AxonaPos.ts[0]
-                self.dir = hdir
+                self.dir = P.dir
                 self.speed = P.speed
                 self.pos_sample_rate = AxonaPos.getHeaderVal(
-                    AxonaPos.header, 'sample_rate')
+                    AxonaPos.header, "sample_rate"
+                )
 
-                print('Loaded .pos file')
+                print("Loaded .pos file")
             except IOError:
                 print("Couldn't load the pos data")
 
@@ -85,6 +89,7 @@ class AxonaTrial(FigureMaker):
         if self.__settings is None:
             try:
                 from ephysiopy.dacq2py.axonaIO import IO
+
                 settings_io = IO()
                 self.__settings = settings_io.getHeader(self.fileset_root)
             except IOError:
@@ -102,7 +107,7 @@ class AxonaTrial(FigureMaker):
             try:
                 self.__EEG = axonaIO.EEG(self.common_name)
             except IOError:
-                print('Could not load EEG file')
+                print("Could not load EEG file")
                 self.__EEG = None
         return self.__EEG
 
@@ -116,7 +121,7 @@ class AxonaTrial(FigureMaker):
             try:
                 self.__EGF = axonaIO.EEG(self.common_name, egf=1)
             except IOError:
-                print('Could not load EGF file')
+                print("Could not load EGF file")
                 self.__EGF = None
         return self.__EGF
 
@@ -126,7 +131,7 @@ class AxonaTrial(FigureMaker):
 
     @property
     def ttl_timestamps(self):
-        return self.STM['on']
+        return self.STM["on"]
 
     @ttl_timestamps.setter
     def ttl_timestamps(self, value):
@@ -149,24 +154,22 @@ class AxonaTrial(FigureMaker):
                 the .set file and the headers of the eeg and pos files
                 """
                 from ephysiopy.dacq2py.axonaIO import IO
+
                 io = IO()
-                posHdr = io.getHeader(self.common_name + '.pos')
-                eegHdr = io.getHeader(self.common_name + '.eeg')
-                self.__STM['posSampRate'] = io.getHeaderVal(
-                    posHdr, 'sample_rate')
-                self.__STM['eegSampRate'] = io.getHeaderVal(
-                    eegHdr, 'sample_rate')
+                posHdr = io.getHeader(self.common_name + ".pos")
+                eegHdr = io.getHeader(self.common_name + ".eeg")
+                self.__STM["posSampRate"] = io.getHeaderVal(posHdr, "sample_rate")
+                self.__STM["eegSampRate"] = io.getHeaderVal(eegHdr, "sample_rate")
                 try:
-                    egfHdr = io.getHeader(self.common_name + '.egf')
-                    self.__STM['egfSampRate'] = io.getHeaderVal(
-                        egfHdr, 'sample_rate')
+                    egfHdr = io.getHeader(self.common_name + ".egf")
+                    self.__STM["egfSampRate"] = io.getHeaderVal(egfHdr, "sample_rate")
                 except Exception:
                     pass
                 # get into ms
                 self.settings
-                stim_pwidth = int(self.settings['stim_pwidth']) / int(1000)
-                self.__STM['off'] = self.__STM['on'] + int(stim_pwidth)
-                setattr(self, 'ttl_timestamps', self.__STM['on'])
+                stim_pwidth = int(self.settings["stim_pwidth"]) / int(1000)
+                self.__STM["off"] = self.__STM["on"] + int(stim_pwidth)
+                setattr(self, "ttl_timestamps", self.__STM["on"])
                 """
                 There are a set of key / value pairs in the set file that
                 correspond to the patterns/ protocols specified in the
@@ -187,39 +190,43 @@ class AxonaTrial(FigureMaker):
                 within every Phase.
                 """
                 # phase_info : a dict for each phase that is active
-                phase_info_keys = ['startTime', 'duration', 'name',
-                                                'pulseWidth', 'pulseRatio']
+                phase_info_keys = [
+                    "startTime",
+                    "duration",
+                    "name",
+                    "pulseWidth",
+                    "pulseRatio",
+                ]
                 phase_info = dict.fromkeys(phase_info_keys, None)
                 stim_dict = {}
                 stim_patt_dict = {}
                 for k, v in self.settings.items():
                     if k.startswith("stim_patternmask_"):
-                        if (int(v) == 1):
+                        if int(v) == 1:
                             # get the number of the phase
                             phase_num = k[-1]
-                            stim_dict['Phase_' + phase_num] = phase_info.copy()
+                            stim_dict["Phase_" + phase_num] = phase_info.copy()
                     if k.startswith("stim_patt_"):
                         stim_patt_dict[k] = v
                 self.patt_dict = stim_patt_dict
                 for k, v in stim_dict.items():
                     phase_num = k[-1]
-                    stim_dict[k]['duration'] = int(
-                        self.settings['stim_patterntimes_' + phase_num])
-                    phase_name = self.settings[
-                        'stim_patternnames_' + phase_num]
-                    stim_dict[k]['name'] = phase_name
+                    stim_dict[k]["duration"] = int(
+                        self.settings["stim_patterntimes_" + phase_num]
+                    )
+                    phase_name = self.settings["stim_patternnames_" + phase_num]
+                    stim_dict[k]["name"] = phase_name
                     if not (phase_name.startswith("Pause")):
                         # find the matching string in the stim_patt_dict
                         for _, vv in stim_patt_dict.items():
                             split_str = vv.split('"')
                             patt_name = split_str[1]
-                            if (patt_name == phase_name):
+                            if patt_name == phase_name:
                                 ss = split_str[2].split()
-                                stim_dict[k]['pulseWidth'] = int(ss[0])
-                                stim_dict[k]['pulsePause'] = int(ss[2])
+                                stim_dict[k]["pulseWidth"] = int(ss[0])
+                                stim_dict[k]["pulsePause"] = int(ss[2])
                 # make the dict ordered by Phase number
-                self.STM['stim_params'] = OrderedDict(
-                    sorted(stim_dict.items()))
+                self.STM["stim_params"] = OrderedDict(sorted(stim_dict.items()))
             except IOError:
                 self.__STM = None
         return self.__STM
@@ -232,8 +239,8 @@ class AxonaTrial(FigureMaker):
         ts = self.TETRODE.get_spike_samples(tetrode, cluster)  # in seconds
         ax = self.makeSummaryPlot(ts, **kwargs)
         plot = True
-        if 'plot' in kwargs:
-            plot = kwargs.pop('plot')
+        if "plot" in kwargs:
+            plot = kwargs.pop("plot")
         if plot:
             plt.show()
         return ax
@@ -243,8 +250,8 @@ class AxonaTrial(FigureMaker):
         if tetrode is not None:
             ts = self.TETRODE.get_spike_samples(tetrode, cluster)  # in seconds
         plot = True
-        if 'plot' in kwargs:
-            plot = kwargs.pop('plot')
+        if "plot" in kwargs:
+            plot = kwargs.pop("plot")
         ax = self.makeSpikePathPlot(ts, **kwargs)
         if plot:
             plt.show()
@@ -254,8 +261,8 @@ class AxonaTrial(FigureMaker):
         ts = self.TETRODE.get_spike_samples(tetrode, cluster)  # in seconds
         ax = self.makeRateMap(ts)
         plot = True
-        if 'plot' in kwargs:
-            plot = kwargs.pop('plot')
+        if "plot" in kwargs:
+            plot = kwargs.pop("plot")
         if plot:
             plt.show()
         return ax
@@ -264,8 +271,8 @@ class AxonaTrial(FigureMaker):
         ts = self.TETRODE.get_spike_samples(tetrode, cluster)  # in seconds
         ax = self.makeHDPlot(ts, ax=None, **kwargs)
         plot = True
-        if 'plot' in kwargs:
-            plot = kwargs.pop('plot')
+        if "plot" in kwargs:
+            plot = kwargs.pop("plot")
         if plot:
             plt.show()
         return ax
@@ -274,8 +281,8 @@ class AxonaTrial(FigureMaker):
         ts = self.TETRODE.get_spike_samples(tetrode, cluster)  # in seconds
         ax = self.makeSAC(ts, ax=None, **kwargs)
         plot = True
-        if 'plot' in kwargs:
-            plot = kwargs.pop('plot')
+        if "plot" in kwargs:
+            plot = kwargs.pop("plot")
         if plot:
             plt.show()
         return ax
@@ -284,8 +291,8 @@ class AxonaTrial(FigureMaker):
         ts = self.TETRODE.get_spike_samples(tetrode, cluster)  # in seconds
         ax = self.makeSpeedVsRatePlot(ts, ax=None, **kwargs)
         plot = True
-        if 'plot' in kwargs:
-            plot = kwargs.pop('plot')
+        if "plot" in kwargs:
+            plot = kwargs.pop("plot")
         if plot:
             plt.show()
         return ax
@@ -294,27 +301,31 @@ class AxonaTrial(FigureMaker):
         ts = self.TETRODE.get_spike_samples(tetrode, cluster)  # in seconds
         ax = self.makeSpeedVsHeadDirectionPlot(ts, ax=None, **kwargs)
         plot = True
-        if 'plot' in kwargs:
-            plot = kwargs.pop('plot')
+        if "plot" in kwargs:
+            plot = kwargs.pop("plot")
         if plot:
             plt.show()
         return ax
 
-    def plotEEGPower(self, eeg_type='eeg', **kwargs):
+    def plotEEGPower(self, eeg_type="eeg", **kwargs):
         from ephysiopy.common.ephys_generic import EEGCalcsGeneric
-        if 'eeg' in eeg_type:
+
+        if "eeg" in eeg_type:
             E = EEGCalcsGeneric(self.EEG.sig, self.EEG.sample_rate)
-        elif 'egf' in eeg_type:
+        elif "egf" in eeg_type:
             E = EEGCalcsGeneric(self.EGF.sig, self.EGF.sample_rate)
         power_res = E.calcEEGPowerSpectrum()
         ax = self.makePowerSpectrum(
-            power_res[0], power_res[1], power_res[2],
-            power_res[3], power_res[4],
+            power_res[0],
+            power_res[1],
+            power_res[2],
+            power_res[3],
+            power_res[4],
             **kwargs
         )
         plot = True
-        if 'plot' in kwargs:
-            plot = kwargs.pop('plot')
+        if "plot" in kwargs:
+            plot = kwargs.pop("plot")
         if plot:
             plt.show()
         return ax
@@ -323,15 +334,15 @@ class AxonaTrial(FigureMaker):
         ts = self.TETRODE.get_spike_samples(tetrode, cluster)  # in seconds
         ax = self.makeXCorr(ts)
         plot = True
-        if 'plot' in kwargs:
-            plot = kwargs.pop('plot')
+        if "plot" in kwargs:
+            plot = kwargs.pop("plot")
         if plot:
             plt.show()
         return ax
 
     def plotRaster(self, tetrode, cluster, **kwargs):
         ts = self.TETRODE.get_spike_samples(tetrode, cluster)  # in seconds
-        self.ttl_timestamps = self.STM['on']
+        self.ttl_timestamps = self.STM["on"]
         ax = self.makeRaster(ts, **kwargs)
         return ax
 

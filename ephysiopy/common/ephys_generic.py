@@ -363,7 +363,7 @@ class PosCalcsGeneric(object):
     ):
         assert np.shape(x) == np.shape(y)
         self.orig_xy: np.ma.MaskedArray = np.ma.MaskedArray([x, y])
-        self.dir = np.ma.MaskedArray(np.zeros_like(x))
+        self._dir = np.ma.MaskedArray(np.zeros_like(x))
         self.speed = None
         self._ppm = ppm
         self.cm = cm
@@ -383,6 +383,14 @@ class PosCalcsGeneric(object):
     @xy.setter
     def xy(self, value) -> None:
         self._xy: np.ma.MaskedArray = value
+
+    @property
+    def dir(self) -> np.ma.MaskedArray:
+        return self._dir
+
+    @dir.setter
+    def dir(self, value) -> None:
+        self._dir: np.ma.MaskedArray = value
 
     @property
     def ppm(self) -> float:
@@ -449,7 +457,7 @@ class PosCalcsGeneric(object):
         self.calcSpeed(xy)
         hdir = self.calcHeadDirection(xy)
         self._xy = xy
-        self.dir = hdir
+        self._dir = hdir
 
     def calcHeadDirection(self, xy: np.ma.MaskedArray) -> np.ma.MaskedArray:
         import math

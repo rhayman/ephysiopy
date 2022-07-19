@@ -377,10 +377,10 @@ class OpenEphysBase(FigureMaker):
                 ppm=self.ppm,
                 jumpmax=self.jumpmax,
             )
-            xy, hdir = P.postprocesspos({"SampleRate": sample_rate})
+            P.postprocesspos({"SampleRate": sample_rate})
             setattr(self, "PosCalcs", P)
-            self.xy = xy
-            self.dir = hdir
+            self.xy = P.xy
+            self.dir = P.dir
             self.speed = P.speed
         else:
             warnings.warn(
