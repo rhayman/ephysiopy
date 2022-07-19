@@ -93,9 +93,8 @@ class AxonaTrial(TrialInterface):
                     AxonaPos.led_pos[1, :],
                     cm=True,
                     ppm=self.ppm,
-                    tracker_params={"AxonaBadValue": 1023},
                 )
-                P.postprocesspos()
+                P.postprocesspos(tracker_params={"AxonaBadValue": 1023})
                 self.xy = P.xy
                 self.xyTS = AxonaPos.ts - AxonaPos.ts[0]
                 self.dir = P.dir

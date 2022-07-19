@@ -9,7 +9,7 @@ from ephysiopy.common.binning import RateMap
 def standard_Ratemap(basic_PosCalcs):
     """Returns a Ratemap instance with a random walk as x,y"""
     P = basic_PosCalcs
-    P.postprocesspos()
+    P.postprocesspos(tracker_params={"AxonaBadValue": 1023})
     # only have 10 seconds of spiking data so limit the pos stuff to that too
     P.xy = P.xy[:, 0 : 10 * P.sample_rate]
     P.dir = P.dir[0 : 10 * P.sample_rate]

@@ -77,7 +77,9 @@ def test_calcSpeed(basic_PosCalcs, basic_xy):
 
 
 def test_filter_pos(basic_PosCalcs):
-    basic_PosCalcs.postprocesspos({})
+    basic_PosCalcs.postprocesspos(
+        tracker_params={"AxonaBadValue": 1023},
+    )
     x_min = np.min(basic_PosCalcs.xy[0, :])
     y_min = np.min(basic_PosCalcs.xy[1, :])
     x_max = np.max(basic_PosCalcs.xy[0, :])
@@ -108,7 +110,9 @@ def test_filter_pos(basic_PosCalcs):
 
 # postprocesspos calls the functions in the above 4 tests
 def test_postprocesspos(basic_PosCalcs):
-    basic_PosCalcs.postprocesspos({})
+    basic_PosCalcs.postprocesspos(
+        tracker_params={"AxonaBadValue": 1023},
+    )
     assert basic_PosCalcs.xy.ndim == 2
     assert basic_PosCalcs.dir.ndim == 1
     assert basic_PosCalcs.xy.shape[1] == basic_PosCalcs.dir.shape[0]
@@ -118,6 +122,7 @@ def test_postprocesspos(basic_PosCalcs):
         "TopBorder": np.min(basic_PosCalcs.xy[1, :]),
         "BottomBorder": np.max(basic_PosCalcs.xy[1, :]),
         "SampleRate": 30,
+        "AxonaBadValue": 1023,
     }
     basic_PosCalcs.postprocesspos(tracker_dict)
     assert basic_PosCalcs.xy.ndim == 2
