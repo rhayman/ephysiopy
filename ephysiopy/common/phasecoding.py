@@ -140,14 +140,10 @@ class phasePrecession2D(object):
             xy[1, :],
             ppm=self.ppm,
             cm=True,
-            tracker_params={"AxonaBadValue": 1023},
         )
-        hdir = P.calcHeadDirection(xy)
-        speed = P.calcSpeed(xy)
-        self.pos_ts = pos_ts
-
+        P.postprocesspos(tracker_params={"AxonaBadValue": 1023})
         # ... do the ratemap creation here once
-        R = RateMap(xy, hdir, speed)
+        R = RateMap(P.xy, P.dir, P.speed)
         R.cmsPerBin = self.cms_per_bin
         R.smooth_sz = self.field_smoothing_kernel_len
         R.ppm = self.ppm

@@ -6,6 +6,7 @@ things like spike timing autocorrelograms, power spectrum calculation and so on
 import numpy as np
 import numpy.typing as npt
 from scipy import signal
+from scipy.interpolate import griddata
 
 
 class EventsGeneric(object):
@@ -364,7 +365,7 @@ class PosCalcsGeneric(object):
         assert np.shape(x) == np.shape(y)
         self.orig_xy: np.ma.MaskedArray = np.ma.MaskedArray([x, y])
         self._dir = np.ma.MaskedArray(np.zeros_like(x))
-        self.speed = None
+        self._speed = None
         self._ppm = ppm
         self.cm = cm
         self.jumpmax = jumpmax
@@ -400,6 +401,14 @@ class PosCalcsGeneric(object):
     def ppm(self, value) -> None:
         self._ppm: float = value
         self.postprocesspos(self.tracker_params)
+
+    @property
+    def speed(self):
+        return self._speed
+
+    @speed.setter
+    def speed(self, value):
+        self._speed = value
 
     def postprocesspos(self, tracker_params: dict[str, float] = {}, **kwargs) -> None:
         """
@@ -458,9 +467,8 @@ class PosCalcsGeneric(object):
         xy = self.interpnans(xy)
         xy = self.smoothPos(xy)
         self.calcSpeed(xy)
-        hdir = self.calcHeadDirection(xy)
         self._xy = xy
-        self._dir = hdir
+        self._dir = self.calcHeadDirection(xy)
 
     def calcHeadDirection(self, xy: np.ma.MaskedArray) -> np.ma.MaskedArray:
         import math
@@ -501,7 +509,7 @@ class PosCalcsGeneric(object):
         disp: np.ma.MaskedArray = np.diff(disp, axis=0)
         disp: np.ma.MaskedArray = np.insert(disp, -1, 0)
         if self.cm:
-            jumpmax: float = self.jumpmax / self.ppm
+            jumpmax: float = self.ppm / self.jumpmax
         else:
             jumpmax: float = self.jumpmax
         jumps: np.ma.MaskedArray = np.abs(disp) > jumpmax
@@ -520,8 +528,8 @@ class PosCalcsGeneric(object):
         xm: np.ma.MaskedArray = xy[0, :]
         ym: np.ma.MaskedArray = xy[1, :]
         idx: np.ndarray = np.arange(0, len(xm))
-        xi: np.ma.MaskedArray = np.interp(idx, idx, xm)
-        yi: np.ma.MaskedArray = np.interp(idx, idx, ym)
+        xi = griddata(idx[~xm.mask], xm[~xm.mask], idx, method="linear")
+        yi = griddata(idx[~ym.mask], ym[~ym.mask], idx, method="linear")
         print(f"Interpolated over {n_masked} bad values")
         return np.ma.MaskedArray([xi, yi])
 
@@ -567,7 +575,6 @@ class PosCalcsGeneric(object):
         self.speed = np.append(speed, speed[-1])
         if self.cm:
             self.speed = self.speed * self.sample_rate
-        return self.speed
 
     def upsamplePos(self, xy: np.ma.MaskedArray, upsample_rate: int = 50):
         """

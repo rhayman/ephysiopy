@@ -58,8 +58,8 @@ class AxonaTrial(FigureMaker):
             try:
                 AxonaPos = axonaIO.Pos(self.common_name)
                 P = PosCalcsGeneric(
-                    AxonaPos.led_pos[0, :],
-                    AxonaPos.led_pos[1, :],
+                    AxonaPos.led_pos[:, 0],
+                    AxonaPos.led_pos[:, 1],
                     cm=True,
                     ppm=self.ppm,
                 )
