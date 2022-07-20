@@ -34,7 +34,7 @@ phase_precession_config = {
     # AND THIS
     # kernel length for smoothing speed (boxcar)
     "speed_smoothing_window_len": 15,
-    "minimum_allowed_run_speed": 2.5,  # cm/s
+    "minimum_allowed_run_speed": 0.5,  # cm/s - original value = 2.5; lowered for mice
     "minimum_allowed_run_duration": 2,  # in seconds
     # instantaneous firing rate (ifr) smoothing constant
     "ifr_smoothing_constant": 1.0 / 3,
@@ -359,7 +359,7 @@ class phasePrecession2D(object):
         xy = self.RateMap.xy
         xydir = self.RateMap.dir
         spd = self.RateMap.speed
-        spkPosInd = np.ceil(spikeTS * self.pos_sample_rate).astype(int) - 1
+        spkPosInd = np.ceil(spikeTS).astype(int)
         spkPosInd[spkPosInd > len(xy.T)] = len(xy.T) - 1
         nPos = xy.shape[1]
         xy_old = xy.copy()
@@ -672,7 +672,9 @@ class phasePrecession2D(object):
         filteredEEG = self.filteredEEG
         oldAmplt = filteredEEG.copy()
         # get indices of spikes into eeg
-        spkEEGIdx = np.ceil(spikeTS * self.lfp_sample_rate).astype(int) - 1
+        spkEEGIdx = np.ceil(
+            spikeTS * (self.lfp_sample_rate / self.pos_sample_rate)
+        ).astype(int)
         spkEEGIdx[spkEEGIdx > len(phase)] = len(phase) - 1
         spkCount = np.bincount(spkEEGIdx, minlength=len(phase))
         spkPhase = phase[spkEEGIdx]
@@ -735,10 +737,10 @@ class phasePrecession2D(object):
         xy = self.RateMap.xy
         phase = self.phaseAdj
         cycleLabel = self.cycleLabel
-        spkEEGIdx = np.ceil(spikeTS * self.lfp_sample_rate) - 1
+        spkEEGIdx = np.ceil(spikeTS * (self.lfp_sample_rate / self.pos_sample_rate))
         spkEEGIdx[spkEEGIdx > len(phase)] = len(phase) - 1
         spkEEGIdx = spkEEGIdx.astype(int)
-        spkPosIdx = np.ceil(spikeTS * self.pos_sample_rate) - 1
+        spkPosIdx = np.ceil(spikeTS)
         spkPosIdx[spkPosIdx > xy.shape[1]] = xy.shape[1] - 1
         spkRunLabel = runLabel[spkPosIdx.astype(int)]
         thetaCycleLabel = cycleLabel[spkEEGIdx.astype(int)]
@@ -1224,6 +1226,8 @@ class phasePrecession2D(object):
         neither can contain NaNs, must be paired (of equal length).
         """
         # transform the linear co-variate to the range -1 to 1
+        if not np.any(x) or not np.any(t):
+            return x, t
         mnx = np.mean(x)
         xn = x - mnx
         mxx = np.max(np.fabs(xn))

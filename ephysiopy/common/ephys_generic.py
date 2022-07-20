@@ -345,7 +345,7 @@ class PosCalcsGeneric(object):
     def speed(self, value):
         self._speed = value
 
-    def postprocesspos(self, tracker_params: dict[str, float] = {}, **kwargs) -> None:
+    def postprocesspos(self, tracker_params: "dict[str, float]" = {}, **kwargs) -> None:
         """
         Post-process position data
 
