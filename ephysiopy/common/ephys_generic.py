@@ -299,6 +299,8 @@ class PosCalcsGeneric(object):
     ):
         assert np.shape(x) == np.shape(y)
         self.orig_xy: np.ma.MaskedArray = np.ma.MaskedArray([x, y])
+        self._xy = None
+        self._xyTS = None
         self._dir = np.ma.MaskedArray(np.zeros_like(x))
         self._speed = None
         self._ppm = ppm
@@ -310,7 +312,7 @@ class PosCalcsGeneric(object):
             self.tracker_params = kwargs["tracker_params"]
         else:
             self.tracker_params = {}
-        self.sample_rate = 30
+        self._sample_rate = 30
 
     @property
     def xy(self) -> np.ma.MaskedArray:
@@ -319,6 +321,14 @@ class PosCalcsGeneric(object):
     @xy.setter
     def xy(self, value) -> None:
         self._xy: np.ma.MaskedArray = value
+
+    @property
+    def xyTS(self):
+        return self._xyTS
+
+    @xyTS.setter
+    def xyTS(self, val):
+        self._xyTS = val
 
     @property
     def dir(self) -> np.ma.MaskedArray:
@@ -344,6 +354,14 @@ class PosCalcsGeneric(object):
     @speed.setter
     def speed(self, value):
         self._speed = value
+
+    @property
+    def sample_rate(self):
+        return self._sample_rate
+
+    @sample_rate.setter
+    def sample_rate(self, val):
+        self._sample_rate = val
 
     def postprocesspos(self, tracker_params: "dict[str, float]" = {}, **kwargs) -> None:
         """

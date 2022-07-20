@@ -262,7 +262,9 @@ class OpenEphysBase(FigureMaker):
             P = getattr(self, "PosCalcs")
             P.ppm = value
             sample_rate = getattr(P, "sample_rate")
-            P.postprocesspos({"SampleRate": sample_rate})
+            tracker_params = P.tracker_params
+            tracker_params["SampleRate"] = sample_rate
+            P.postprocesspos(tracker_params)
             setattr(self, "xy", P.xy)
             setattr(self, "dir", P.dir)
             setattr(self, "speed", P.speed)
