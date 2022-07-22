@@ -8,6 +8,8 @@ from typing import NoReturn
 import numpy as np
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.dacq2py.axonaIO import IO, Pos
+from ephysiopy.openephys2py.OEKiloPhy import KiloSortSession
+from sklearn import cluster
 
 
 def fileContainsString(pname: str, searchStr: str) -> bool:
@@ -46,6 +48,7 @@ def loadTrackingPluginData(pname: Path) -> np.array:
 class RecordingKind(Enum):
     FPGA = 1
     NEUROPIXELS = 2
+    NWB = 3
 
 
 class TrackingKind(Enum):
@@ -54,8 +57,8 @@ class TrackingKind(Enum):
 
 
 class TrialInterface(metaclass=abc.ABCMeta):
-    def __init__(self, pname: Path, **kwargs) -> None:
-        assert pname.exists()
+    def __init__(self, pname: str, **kwargs) -> None:
+        assert os.path.exists(pname)
         self._pname = pname
         self._settings = None
         self._PosCalcs = None
@@ -165,8 +168,21 @@ class TrialInterface(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def load_pos_data(self, pname: Path) -> NoReturn:
-        """Load the position data"""
+    def load_pos_data(
+        self, pname: Path, ppm: int = 300, jumpmax: int = 100
+    ) -> NoReturn:
+        """
+        Load the position data
+
+        Parameters
+        -----------
+        pname : Path
+            Path to base directory containing pos data
+        ppm : int
+            pixels per metre
+        jumpmax : int
+            max jump in pixels between positions
+        """
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -201,7 +217,7 @@ class AxonaTrial(TrialInterface):
     def load_cluster_data(self):
         pass
 
-    def load_pos_data(self, pname: Path) -> None:
+    def load_pos_data(self, pname: Path, ppm: int = 300, jumpmax: int = 100) -> None:
         if self.PosCalcs is None:
             try:
                 AxonaPos = Pos(self.pname)
@@ -228,7 +244,19 @@ class OpenEphysBase(TrialInterface):
     def load_neural_data(self, pname: Path) -> None:
         pass
 
-    def load_pos_data(self, pname: Path) -> None:
+    def load_cluster_data(self):
+        if self.pname is not None:
+            if os.path.exists(self.pname):
+                clusterData = KiloSortSession(self.pname)
+            if clusterData is not None:
+                if clusterData.load():
+                    try:
+                        clusterData.removeKSNoiseClusters()
+                    except Exception:
+                        pass
+        self.clusterData = clusterData
+
+    def load_pos_data(self, pname: Path, ppm: int = 300, jumpmax: int = 100) -> None:
         # Only sub-class that doesn't use this is OpenEphysNWB
         # which needs updating
         # TODO: Update / overhaul OpenEphysNWB
@@ -267,8 +295,8 @@ class OpenEphysBase(TrialInterface):
                 pos_data[:, 0],
                 pos_data[:, 1],
                 cm=True,
-                ppm=self.ppm,
-                jumpmax=self.jumpmax,
+                ppm=ppm,
+                jumpmax=jumpmax,
             )
             P.xyTS = xyTS
             P.sample_rate = sample_rate
@@ -322,6 +350,7 @@ class OpenEphysBase(TrialInterface):
                         if PurePath(d).match("*pos_data*"):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
+                                setattr(self, "pos_data_type", "PosTracker")
                                 print(f"Found pos data at: {self.path2PosData}")
                         if PurePath(d).match(str(TrackingPlugin_match)):
                             if self.path2PosData is None:
@@ -351,8 +380,23 @@ class OpenEphysNPX(OpenEphysBase):
     def load_neural_data(self, pname: Path) -> None:
         pass
 
-    def load_pos_data(self, pname: Path) -> None:
-        super().load_pos_data(pname)
+    def load_pos_data(self, pname: Path, ppm: int = 300, jumpmax: int = 100) -> None:
+        """
+        Load the position data
+
+        Parameters
+        -----------
+        pname : Path
+            Path to base directory containing pos data
+        ppm : int
+            pixels per metre
+        jumpmax : int
+            max jump in pixels between positions
+        """
+        super().load_pos_data(pname, ppm, jumpmax)
+
+    def load_cluster_data(self):
+        return super().load_cluster_data()
 
     def find_files(
         self,
@@ -374,7 +418,7 @@ class OpenEphysBinary(OpenEphysBase):
     def load_neural_data(self, pname: Path) -> None:
         pass
 
-    def load_pos_data(self, pname: Path) -> None:
+    def load_pos_data(self, pname: Path, ppm: int = 300, jumpmax: int = 100) -> None:
         super().load_pos_data(pname)
 
     def find_files(
@@ -397,5 +441,17 @@ class OpenEphysNWB(OpenEphysBase):
     def load_neural_data(self, pname: Path) -> None:
         pass
 
-    def load_pos_data(self, pname: Path) -> None:
+    def load_pos_data(self, pname: Path, ppm: int = 300, jumpmax: int = 100) -> None:
         super().load_pos_data(pname)
+
+    def find_files(
+        self,
+        experiment_name: str = "experiment1",
+        recording_name: str = "recording1",
+    ):
+        super().find_files(
+            self.pname,
+            experiment_name,
+            recording_name,
+            RecordingKind.NWB,
+        )

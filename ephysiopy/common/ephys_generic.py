@@ -305,7 +305,7 @@ class PosCalcsGeneric(object):
         self._speed = None
         self._ppm = ppm
         self.cm = cm
-        self.jumpmax = jumpmax
+        self._jumpmax = jumpmax
         self.nleds = np.ndim(x)
         self.npos = len(x)
         if "tracker_params" in kwargs:
@@ -345,6 +345,15 @@ class PosCalcsGeneric(object):
     @ppm.setter
     def ppm(self, value) -> None:
         self._ppm: float = value
+        self.postprocesspos(self.tracker_params)
+
+    @property
+    def jumpmax(self):
+        return self._jumpmax
+
+    @jumpmax.setter
+    def jumpmax(self, val):
+        self._jumpmax = val
         self.postprocesspos(self.tracker_params)
 
     @property
