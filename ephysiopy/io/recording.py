@@ -5,11 +5,12 @@ from enum import Enum
 from pathlib import Path, PurePath
 from typing import NoReturn
 
+import h5py
 import numpy as np
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.dacq2py.axonaIO import IO, Pos
 from ephysiopy.openephys2py.OEKiloPhy import KiloSortSession
-from sklearn import cluster
+from ephysiopy.openephys2py.OESettings import Settings
 
 
 def fileContainsString(pname: str, searchStr: str) -> bool:
@@ -79,6 +80,8 @@ class TrialInterface(metaclass=abc.ABCMeta):
             and callable(subclass.load_pos)
             and hasattr(subclass, "load_cluster_data")
             and callable(subclass.load_cluster_data)
+            and hasattr(subclass, "load_settings")
+            and callable(subclass.load_settings)
             or NotImplemented
         )
 
@@ -190,6 +193,11 @@ class TrialInterface(metaclass=abc.ABCMeta):
         """Load the cluster data (Kilosort/ Axona cut/ whatever else"""
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def load_settings(self):
+        """Loads the format specific settings file"""
+        raise NotImplementedError
+
 
 class AxonaTrial(TrialInterface):
     def __init__(self, pname: Path, **kwargs) -> None:
@@ -201,11 +209,10 @@ class AxonaTrial(TrialInterface):
         if self.__settings is None:
             try:
                 settings_io = IO()
-                self.__settings = settings_io.getHeader(self.pname)
+                self._settings = settings_io.getHeader(self.pname)
             except IOError:
                 print(".set file not loaded")
-                self.__settings = None
-        return self.__settings
+                self._settings = None
 
     @settings.setter
     def settings(self, value) -> None:
@@ -216,6 +223,9 @@ class AxonaTrial(TrialInterface):
 
     def load_cluster_data(self):
         pass
+
+    def load_settings(self):
+        return super().load_settings()
 
     def load_pos_data(self, pname: Path, ppm: int = 300, jumpmax: int = 100) -> None:
         if self.PosCalcs is None:
@@ -239,10 +249,19 @@ class AxonaTrial(TrialInterface):
 class OpenEphysBase(TrialInterface):
     def __init__(self, pname: Path, **kwargs) -> None:
         super().__init__(pname, **kwargs)
+        self.load_settings()
         setattr(self, "sync_messsage_file", None)
 
     def load_neural_data(self, pname: Path) -> None:
         pass
+
+    def load_settings(self):
+        if self._settings is None:
+            # pname_root gets walked through and over-written with
+            # correct location of settings.xml
+            settings = Settings(self.pname)
+            settings.parse()
+            self.settings = settings
 
     def load_cluster_data(self):
         if self.pname is not None:
@@ -333,6 +352,7 @@ class OpenEphysBase(TrialInterface):
             rec_kind = "Rhythm_FPGA-[0-9][0-9][0-9]."
         APdata_match = exp_name / recording_name / "continuous" / (rec_kind + "0")
         LFPdata_match = exp_name / recording_name / "continuous" / (rec_kind + "1")
+        NWBdata_match = Path(str(exp_name) + ".nwb")
 
         if pname_root is None:
             pname_root = self.pname_root
@@ -365,6 +385,32 @@ class OpenEphysBase(TrialInterface):
                         if PurePath(d).match(str(LFPdata_match)):
                             self.path2LFPdata = os.path.join(d)
                             print(f"Found continuous data at: {self.path2LFPdata}")
+                    if recording_kind == RecordingKind.NWB:
+                        if PurePath(ff).match(str(NWBdata_match)):
+                            self.path2NWBData = d
+                            self.path2PosData = (
+                                "acquisition/timeseries/"
+                                + str(recording_name)
+                                + "/events/binary1"
+                            )
+                            self.path2TTLData = (
+                                "acquisition/timeseries/"
+                                + str(recording_name)
+                                + "/events/ttl1"
+                            )
+                            fpgaId = self.settings.processors[
+                                "Sources/Rhythm FPGA"
+                            ].NodeId
+                            fpgaNode = "processor" + str(fpgaId) + "_" + str(fpgaId)
+                            self.path2APdata = (
+                                "acquisition/timeseries"
+                                + str(recording_name)
+                                + "/continuous/"
+                                + fpgaNode
+                            )
+                            print("NWB recording found:")
+                            print(f"Found nwb data at: {d}")
+                            setattr(self, "pos_data_type", "PosTrackerNWB")
                     if "sync_messages.txt" in ff:
                         if PurePath(d).match(str(sync_file_match)):
                             sync_file = os.path.join(d, "sync_messages.txt")
@@ -379,6 +425,9 @@ class OpenEphysNPX(OpenEphysBase):
 
     def load_neural_data(self, pname: Path) -> None:
         pass
+
+    def load_settings(self):
+        return super().load_settings()
 
     def load_pos_data(self, pname: Path, ppm: int = 300, jumpmax: int = 100) -> None:
         """
@@ -418,6 +467,9 @@ class OpenEphysBinary(OpenEphysBase):
     def load_neural_data(self, pname: Path) -> None:
         pass
 
+    def load_settings(self):
+        return super().load_settings()
+
     def load_pos_data(self, pname: Path, ppm: int = 300, jumpmax: int = 100) -> None:
         super().load_pos_data(pname)
 
@@ -441,13 +493,31 @@ class OpenEphysNWB(OpenEphysBase):
     def load_neural_data(self, pname: Path) -> None:
         pass
 
+    def load_settings(self):
+        return super().load_settings()
+
     def load_pos_data(self, pname: Path, ppm: int = 300, jumpmax: int = 100) -> None:
-        super().load_pos_data(pname)
+        assert pname.exists()
+        with h5py.File(os.path.join(self.path2NWBData), mode="r") as nwbData:
+            xy = np.array(nwbData[self.path2PosData + "/data"])
+            xy = xy[:, 0:2]
+            ts = np.array(nwbData[self.path2PosData]["timestamps"])
+            P = PosCalcsGeneric(
+                xy[0, :],
+                xy[1, :],
+                cm=True,
+                ppm=self.ppm,
+            )
+            P.xyTS = ts
+            P.sample_rate = 1.0 / np.mean(np.diff(ts))
+            P.postprocesspos()
+            print("Loaded pos data")
+            self.PosCalcs = P
 
     def find_files(
         self,
-        experiment_name: str = "experiment1",
-        recording_name: str = "recording1",
+        experiment_name: str = "experiment_1",
+        recording_name: str = "recording0",
     ):
         super().find_files(
             self.pname,
