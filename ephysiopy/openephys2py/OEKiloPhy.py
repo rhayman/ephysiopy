@@ -27,15 +27,32 @@ def fileContainsString(pname: str, searchStr: str) -> bool:
     else:
         return False
 
+def memmapBinaryFile(path2file: str, n_channels=384, **kwargs) ->np.ndarray:
+    """
+    Returns a numpy memmap of the int16 data in the
+    file path2file, if present
+    """
+    import os
 
-def loadTrackingPluginData(pname: Path) -> np.array:
+    if os.path.exists(path2file):
+        status = os.stat(path2file)
+        n_samples = int(status.st_size / (2.0 * n_channels))
+        mmap = np.memmap(
+            path2file, np.int16, "r", 0, (n_channels, n_samples), order="F"
+        )
+        return mmap
+    else:
+        return np.empty(0)
+    
+
+def loadTrackingPluginData(pname: Path) -> np.ndarray:
     dt = np.dtype(
-        {
-            "x": (np.single, 0),
-            "y": (np.single, 4),
-            "w": (np.single, 8),
-            "h": (np.single, 12),
-        }
+        [
+            ("x", np.single, 0),
+            ("y", np.single, 4),
+            ("w", np.single, 8),
+            ("h", np.single, 12),
+        ]
     )
     data_array = np.load(pname)
     new_array = data_array.view(dtype=dt).copy()
@@ -45,6 +62,10 @@ def loadTrackingPluginData(pname: Path) -> np.array:
     y = new_array["y"] * h
     pos_data = np.array([np.ravel(x), np.ravel(y)]).T
     return pos_data
+
+def loadTrackMePluginData(pname: Path) -> np.ndarray:
+    mmap = memmapBinaryFile(str(pname), n_channels=5)
+    return np.array(mmap[0,0:2])
 
 
 class RecordingKind(Enum):
@@ -112,7 +133,7 @@ class KiloSortSession(object):
 
         import pandas as pd
 
-        dtype = {"names": ("cluster_id", "group"), "formats": ("i4", "S10")}
+        dtype = {'names': ('cluster_id', 'group'), 'formats': ('i4', 'S10')}
         # One of these (cluster_groups.csv or cluster_group.tsv) is from
         # kilosort and the other from kilosort2
         # and is updated by the user when doing cluster assignment in phy
@@ -122,7 +143,7 @@ class KiloSortSession(object):
                 os.path.join(self.fname_root, "cluster_groups.csv"),
                 unpack=True,
                 skiprows=1,
-                dtype=dtype,
+                dtype=dtype
             )
         if fileExists(self.fname_root, "cluster_group.tsv"):
             self.cluster_id, self.group = np.loadtxt(
@@ -283,6 +304,9 @@ class OpenEphysBase(FigureMaker):
         TrackingPlugin_match = (
             exp_name / recording_name / "events" / "*Tracking_Port*/BINARY_group*"
         )
+        TrackMe_match = (
+            exp_name / recording_name / "continuous" / "TrackMe-[0-9][0-9][0-9].TrackingNode"
+        )
         sync_file_match = exp_name / recording_name
         rec_kind = ""
         if recording_kind == RecordingKind.NEUROPIXELS:
@@ -322,6 +346,9 @@ class OpenEphysBase(FigureMaker):
                         if PurePath(d).match(str(LFPdata_match)):
                             self.path2LFPdata = os.path.join(d)
                             print(f"Found continuous data at: {self.path2LFPdata}")
+                        if PurePath(d).match(str(TrackMe_match)):
+                            self.path2PosData = os.path.join(d)
+                            print(f"Found TrackMe posdata at: {self.path2PosData}")
                     if "sync_messages.txt" in ff:
                         if PurePath(d).match(str(sync_file_match)):
                             sync_file = os.path.join(d, "sync_messages.txt")
@@ -351,16 +378,26 @@ class OpenEphysBase(FigureMaker):
                     recording_start_time = float(tmp[0])
         if self.path2PosData is not None:
             pos_data_type = getattr(self, "pos_data_type", "PosTracker")
+
             if pos_data_type == "PosTracker":
                 print("Loading PosTracker data...")
                 pos_data = np.load(os.path.join(self.path2PosData, "data_array.npy"))
+
             if pos_data_type == "TrackingPlugin":
                 print("Loading Tracking Plugin data...")
                 pos_data = loadTrackingPluginData(
-                    os.path.join(self.path2PosData, "data_array.npy")
+                    Path(os.path.join(self.path2PosData, "data_array.npy"))
                 )
             pos_ts = np.load(os.path.join(self.path2PosData, "timestamps.npy"))
             pos_ts = np.ravel(pos_ts)
+
+            if pos_data_type == "TrackMe":
+                print("Loading TrackMe data...")
+                pos_data = loadTrackMePluginData(
+                    Path(os.path.join(self.path2PosData, "continuous.dat")))
+                    pos_ts = np.load(os.path.join(self.path2PosData, "camera_timestamps.npy"))
+                    pos_ts = np.ravel(pos_ts)
+           
             pos_timebase = getattr(self, "pos_timebase", 3e4)
             sample_rate = np.floor(1 / np.mean(np.diff(pos_ts) / pos_timebase))
             self.xyTS = pos_ts - recording_start_time
@@ -437,21 +474,6 @@ class OpenEphysBase(FigureMaker):
 
         status = os.stat(path2file)
         return status.st_size / (2.0 * n_channels * sample_rate)
-
-    def memmapBinaryFile(self, path2file: str, n_channels=384, **kwargs):
-        """
-        Returns a numpy memmap of the 30Khz sampled high frequency data in the
-        file 'continuous.dat', if present
-        """
-        import os
-
-        if os.path.exists(path2file):
-            status = os.stat(path2file)
-            n_samples = status.st_size / (2.0 * n_channels)
-            mmap = np.memmap(
-                path2file, np.int16, "r", 0, (n_channels, n_samples), order="F"
-            )
-            return mmap
 
     def exportPos(self):
         xy = self.plotPos(show=False)
