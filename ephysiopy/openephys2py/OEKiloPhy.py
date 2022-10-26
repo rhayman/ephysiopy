@@ -65,7 +65,7 @@ def loadTrackingPluginData(pname: Path) -> np.ndarray:
 
 def loadTrackMePluginData(pname: Path) -> np.ndarray:
     mmap = memmapBinaryFile(str(pname), n_channels=5)
-    return np.array(mmap[:,0:2])
+    return np.array(mmap[0:2,:]).T
 
 
 class RecordingKind(Enum):
