@@ -395,8 +395,8 @@ class OpenEphysBase(FigureMaker):
                 print("Loading TrackMe data...")
                 pos_data = loadTrackMePluginData(
                     Path(os.path.join(self.path2PosData, "continuous.dat")))
-                    pos_ts = np.load(os.path.join(self.path2PosData, "camera_timestamps.npy"))
-                    pos_ts = np.ravel(pos_ts)
+                pos_ts = np.load(os.path.join(self.path2PosData, "camera_timestamps.npy"))
+                pos_ts = np.ravel(pos_ts)
            
             pos_timebase = getattr(self, "pos_timebase", 3e4)
             sample_rate = np.floor(1 / np.mean(np.diff(pos_ts) / pos_timebase))
