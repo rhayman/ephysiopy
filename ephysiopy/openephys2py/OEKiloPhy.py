@@ -319,7 +319,7 @@ class OpenEphysBase(FigureMaker):
         elif recording_kind == RecordingKind.FPGA:
             rec_kind = "Rhythm_FPGA-[0-9][0-9][0-9]."
         elif recording_kind == RecordingKind.ACQUISITIONBOARD:
-            rec_kind = "Acquisition_Board-[0-9][0-9][0-9].Rhythm Data"
+            rec_kind = "Acquisition_Board-[0-9][0-9][0-9].*"
         
         if rec_kind == RecordingKind.NEUROPIXELS or rec_kind == RecordingKind.FPGA:
             APdata_match = exp_name / recording_name / "continuous" / (rec_kind + "0")
