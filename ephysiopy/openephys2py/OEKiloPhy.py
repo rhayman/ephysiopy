@@ -64,7 +64,7 @@ def loadTrackingPluginData(pname: Path) -> np.ndarray:
     return pos_data
 
 def loadTrackMePluginData(pname: Path) -> np.ndarray:
-    mmap = memmapBinaryFile(str(pname), n_channels=5)
+    mmap = memmapBinaryFile(str(pname), n_channels=6)
     return np.array(mmap[0:2,:]).T
 
 
@@ -348,6 +348,7 @@ class OpenEphysBase(FigureMaker):
                             print(f"Found continuous data at: {self.path2LFPdata}")
                         if PurePath(d).match(str(TrackMe_match)):
                             self.path2PosData = os.path.join(d)
+                            setattr(self, "pos_data_type", "TrackMe")
                             print(f"Found TrackMe posdata at: {self.path2PosData}")
                     if "sync_messages.txt" in ff:
                         if PurePath(d).match(str(sync_file_match)):
