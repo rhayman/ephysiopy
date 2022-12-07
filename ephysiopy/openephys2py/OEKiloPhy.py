@@ -328,9 +328,15 @@ class OpenEphysBase(FigureMaker):
             APdata_match = exp_name / recording_name / "continuous" / (rec_kind)
             LFPdata_match = exp_name / recording_name / "continuous" / (rec_kind)
 
+        print(f"APdata_match: {APdata_match}")
+        print(f"LFPdata_match: {LFPdata_match}")
+
+
         Events_match = (
             exp_name / recording_name / "events" / rec_kind / "TTL" # only dealing with a single TTL channel at the moment
         )
+        print(f"Events_match: {Events_match}")
+
 
         if pname_root is None:
             pname_root = self.pname_root
