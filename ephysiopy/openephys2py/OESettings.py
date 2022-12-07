@@ -104,14 +104,13 @@ class OEPlugin(ABC):
     name: str = field(default=None)
     insertionPoint: int = field(default=None)
     pluginName: str = field(default=None)
-    pluginType: int = field(default=None)
-    pluginIndex: int = field(default=None)
+    type: int = field(default=None)
+    index: int = field(default=None)
     libraryName: str = field(default=None)
     libraryVersion: int = field(default=None)
-    NodeId: int = field(default=None)
-    Type: str = field(default=None)
-    isSource: bool = field(default=True)
-    isSink: bool = field(default=False)
+    processorType: int = field(default=None)
+    nodeId: int = field(default=None)
+    channel_count: int = field(default=None)
 
 
 @dataclass
@@ -169,6 +168,26 @@ class PosTracker(OEPlugin):
     AutoExposure: bool = field(default=False)
     OverlayPath: bool = field(default=False)
 
+@dataclass
+class TrackMe(OEPlugin):
+    """
+    Documents the TrackMe plugin
+    """
+    pass
+
+@dataclass
+class StimControl(OEPlugin):
+    """
+    Documents the StimControl plugin
+    """
+    Device: int = field(default=None)
+    Duration: int = field(default=None)
+    Interval: int = field(default=None)
+    Gate: int = field(default=None)
+    Output: int = field(default=None)
+    Start: int = field(default=None)
+    Stop: int = field(default=None)
+    Trigger: int = field(default=None)
 
 @dataclass
 class SpikeSorter(OEPlugin):
@@ -218,24 +237,20 @@ class OEStructure(object):
     """
     Loads up the structure.oebin file for openephys flat binary
     format recordings
-
-    self.data is a dict
     """
 
     def __init__(self, pname: str):
-        self.filename = None
-        self.data = None
+        self.filename = []
+        self.data = []
         import os
+        import json
 
         for d, _, f in os.walk(pname):
             for ff in f:
                 if "structure.oebin" in ff:
-                    self.filename = os.path.join(d, "structure.oebin")
-        if self.filename is not None:
-            import json
-
-            with open(self.filename, "r") as f:
-                self.data = json.load(f)
+                    self.filename.append(os.path.join(d, ff))
+                    with open(os.path.join(d, ff), "r") as f:
+                        self.data.append(json.load(f))
 
 
 class Settings(object):
@@ -268,6 +283,7 @@ class Settings(object):
         self.tracker_params = {}
         self.stimcontrol_params = {}
         self.bandpass_params = OrderedDict()
+        self.trackMe = OrderedDict()
 
     def load(self):
         """
@@ -288,21 +304,25 @@ class Settings(object):
         if self.tree is not None:
             for elem in self.tree.iter("PROCESSOR"):
                 this_proc = elem.get("name")
-                if this_proc == "Sources/Pos Tracker":
+                if this_proc == "Pos Tracker":
                     pos_tracker = PosTracker()
                     recurseNode(elem, addValuesToDataClass, pos_tracker)
                     self.processors[this_proc] = pos_tracker
-                if this_proc == "Sources/Rhythm FPGA":
+                if this_proc == "Rhythm FPGA":
                     fpga = RhythmFPGA()
                     recurseNode(elem, addValuesToDataClass, fpga)
                     self.processors[this_proc] = fpga
-                if this_proc == "Sources/Neuropix-PXI":
+                if this_proc == "Neuropix-PXI":
                     npx = NeuropixPXI()
                     recurseNode(elem, addValuesToDataClass, npx)
                     self.processors[this_proc] = npx
                 if this_proc == "Filters/Spike Sorter":
                     spike_sorter = SpikeSorter()
                     recurseNode(elem, addValuesToDataClass, spike_sorter)
+                if this_proc == "TrackMe":
+                    track_me = TrackMe()
+                    recurseNode(elem, addValuesToDataClass, track_me)
+                    self.trackMe = track_me
 
     def parseStimControl(self):
         """
