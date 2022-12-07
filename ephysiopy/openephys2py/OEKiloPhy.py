@@ -67,10 +67,15 @@ def loadTrackMePluginData(pname: Path) -> np.ndarray:
     mmap = memmapBinaryFile(str(pname), n_channels=6)
     return np.array(mmap[0:2,:]).T
 
+def loadTrackMeTimestamps(pname: Path) -> np.ndarray:
+    ts = np.load(os.path.join(pname, "timestamps.npy"))
+    states = np.load(os.path.join(pname, "states.npy"))
+    return ts[states > 0]
 
 class RecordingKind(Enum):
     FPGA = 1
-    NEUROPIXELS = 2
+    ACQUISITIONBOARD = 2
+    NEUROPIXELS = 3
 
 
 class KiloSortSession(object):
@@ -313,8 +318,19 @@ class OpenEphysBase(FigureMaker):
             rec_kind = "Neuropix-PXI-[0-9][0-9][0-9]."
         elif recording_kind == RecordingKind.FPGA:
             rec_kind = "Rhythm_FPGA-[0-9][0-9][0-9]."
-        APdata_match = exp_name / recording_name / "continuous" / (rec_kind + "0")
-        LFPdata_match = exp_name / recording_name / "continuous" / (rec_kind + "1")
+        elif recording_kind == RecordingKind.ACQUISITIONBOARD:
+            rec_kind = "Acquisition_Board-[0-9][0-9][0-9].Rhythm Data"
+        
+        if rec_kind == RecordingKind.NEUROPIXELS or rec_kind == RecordingKind.FPGA:
+            APdata_match = exp_name / recording_name / "continuous" / (rec_kind + "0")
+            LFPdata_match = exp_name / recording_name / "continuous" / (rec_kind + "1")
+        else:
+            APdata_match = exp_name / recording_name / "continuous" / (rec_kind)
+            LFPdata_match = exp_name / recording_name / "continuous" / (rec_kind)
+
+        Events_match = (
+            exp_name / recording_name / "events" / rec_kind / "TTL" # only dealing with a single TTL channel at the moment
+        )
 
         if pname_root is None:
             pname_root = self.pname_root
@@ -356,6 +372,11 @@ class OpenEphysBase(FigureMaker):
                             if fileContainsString(sync_file, "Processor"):
                                 self.sync_message_file = sync_file
                                 print(f"Found sync_messages file at: {sync_file}")
+                    if "full_words.npy" in ff:
+                        if PurePath(d).match(str(Events_match)):
+                            self.path2EventsData = os.path.join(d)
+                            print(f"Found event data at: {self.path2EventsData}")
+
 
     def load(self, *args, **kwargs):
         # Overridden by sub-classes
@@ -396,8 +417,8 @@ class OpenEphysBase(FigureMaker):
                 print("Loading TrackMe data...")
                 pos_data = loadTrackMePluginData(
                     Path(os.path.join(self.path2PosData, "continuous.dat")))
-                pos_ts = np.load(os.path.join(self.path2PosData, "camera_timestamps.npy"))
-                pos_ts = np.ravel(pos_ts)
+                pos_ts = loadTrackMeTimestamps(self.path2EventsData)
+                pos_ts = pos_ts[0:len(pos_data)]
            
             pos_timebase = getattr(self, "pos_timebase", 3e4)
             sample_rate = np.floor(1 / np.mean(np.diff(pos_ts) / pos_timebase))
