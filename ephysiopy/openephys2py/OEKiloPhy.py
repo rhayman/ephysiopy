@@ -670,6 +670,7 @@ class OpenEphysNPX(OpenEphysBase):
         self,
         experiment_name="experiment1",
         recording_name="recording1",
+        recording_kind=RecordingKind.NEUROPIXELS,
         **kwargs,
     ):
         """
@@ -695,7 +696,7 @@ class OpenEphysNPX(OpenEphysBase):
         ap_sample_rate = getattr(self, "ap_sample_rate", 30000)
 
         super().find_files(
-            self.pname_root, experiment_name, recording_name, RecordingKind.NEUROPIXELS
+            self.pname_root, experiment_name, recording_name, recording_kind
         )
         super().loadPos()
 
@@ -1073,6 +1074,7 @@ class OpenEphysBinary(OpenEphysBase):
         self,
         experiment_name="experiment1",
         recording_name="recording1",
+        recording_kind=RecordingKind.FPGA,
         loadraw=False,
         n_channels=64,
     ):
@@ -1095,7 +1097,7 @@ class OpenEphysBinary(OpenEphysBase):
         import os
 
         super().find_files(
-            self.pname_root, experiment_name, recording_name, RecordingKind.FPGA
+            self.pname_root, experiment_name, recording_name, recording_kind
         )
         super().loadPos()
 
