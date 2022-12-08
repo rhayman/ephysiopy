@@ -2,17 +2,16 @@ import os
 import warnings
 from enum import Enum
 from pathlib import Path, PurePath
-
 import matplotlib.pylab as plt
 import numpy as np
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.visualise.plotting import FigureMaker
+from ephysiopy.tests.test_utils import dump_args
 
 
 def fileExists(pname, fname) -> bool:
     return os.path.exists(os.path.join(pname, fname))
-
 
 def fileContainsString(pname: str, searchStr: str) -> bool:
     if os.path.exists(pname):
@@ -295,6 +294,7 @@ class OpenEphysBase(FigureMaker):
             setattr(self, "dir", P.dir)
             setattr(self, "speed", P.speed)
 
+    @dump_args
     def find_files(
         self,
         pname_root: str,
@@ -325,11 +325,12 @@ class OpenEphysBase(FigureMaker):
             APdata_match = exp_name / recording_name / "continuous" / (rec_kind + "0")
             LFPdata_match = exp_name / recording_name / "continuous" / (rec_kind + "1")
         else:
-            APdata_match = exp_name / recording_name / "continuous" / (rec_kind)
-            LFPdata_match = exp_name / recording_name / "continuous" / (rec_kind)
+            APdata_match = exp_name / recording_name / "continuous" / rec_kind
+            LFPdata_match = exp_name / recording_name / "continuous" / rec_kind
 
         print(f"APdata_match: {APdata_match}")
         print(f"LFPdata_match: {LFPdata_match}")
+        print(f"rec_kind: {rec_kind}")
 
 
         Events_match = (
