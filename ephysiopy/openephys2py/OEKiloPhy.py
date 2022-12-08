@@ -13,6 +13,7 @@ from ephysiopy.tests.test_utils import dump_args
 def fileExists(pname, fname) -> bool:
     return os.path.exists(os.path.join(pname, fname))
 
+
 def fileContainsString(pname: str, searchStr: str) -> bool:
     if os.path.exists(pname):
         with open(pname, "r") as f:
@@ -26,7 +27,8 @@ def fileContainsString(pname: str, searchStr: str) -> bool:
     else:
         return False
 
-def memmapBinaryFile(path2file: str, n_channels=384, **kwargs) ->np.ndarray:
+
+def memmapBinaryFile(path2file: str, n_channels=384, **kwargs) -> np.ndarray:
     """
     Returns a numpy memmap of the int16 data in the
     file path2file, if present
@@ -62,14 +64,17 @@ def loadTrackingPluginData(pname: Path) -> np.ndarray:
     pos_data = np.array([np.ravel(x), np.ravel(y)]).T
     return pos_data
 
+
 def loadTrackMePluginData(pname: Path) -> np.ndarray:
     mmap = memmapBinaryFile(str(pname), n_channels=6)
-    return np.array(mmap[0:2,:]).T
+    return np.array(mmap[0:2, :]).T
+
 
 def loadTrackMeTimestamps(pname: Path) -> np.ndarray:
     ts = np.load(os.path.join(pname, "timestamps.npy"))
     states = np.load(os.path.join(pname, "states.npy"))
     return ts[states > 0]
+
 
 class RecordingKind(Enum):
     FPGA = 1
@@ -323,19 +328,17 @@ class OpenEphysBase(FigureMaker):
                 acquisition_method = "Rhythm_FPGA-[0-9][0-9][0-9]."
                 APdata_match = exp_name / recording_name / "continuous" / (acquisition_method + "0")
                 LFPdata_match = exp_name / recording_name / "continuous" / (acquisition_method + "1")
-            case RecordingKind.ACQUISITIONBOARD:
+            case _:
                 acquisition_method = "Acquisition_Board-[0-9][0-9][0-9].*"
                 APdata_match = exp_name / recording_name / "continuous" / acquisition_method
                 LFPdata_match = exp_name / recording_name / "continuous" / acquisition_method
-        
-        print(f"APdata_match: {APdata_match}")
-        print(f"LFPdata_match: {LFPdata_match}")
-        print(f"acquisition_method: {acquisition_method}")
-
-
         Events_match = (
             exp_name / recording_name / "events" / acquisition_method / "TTL" # only dealing with a single TTL channel at the moment
         )
+
+        print(f"APdata_match: {APdata_match}")
+        print(f"LFPdata_match: {LFPdata_match}")
+        print(f"acquisition_method: {acquisition_method}")
         print(f"Events_match: {Events_match}")
 
 
@@ -402,7 +405,7 @@ class OpenEphysBase(FigureMaker):
             for line in sync_lines:
                 if "subProcessor: 0" in line:
                     idx = line.find("start time: ")
-                    start_val = line[idx + len("start time: ") : -1]
+                    start_val = line[idx + len("start time: "): -1]
                     tmp = start_val.split("@")
                     recording_start_time = float(tmp[0])
         if self.path2PosData is not None:

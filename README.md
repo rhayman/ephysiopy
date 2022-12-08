@@ -8,7 +8,7 @@ Tools for the analysis of electrophysiological data collected with the Axona or 
 Installation
 ============
 
-ephysiopy requires python3.6 or greater. The easiest way to install is using pip:
+ephysiopy requires python3.10 or greater. The easiest way to install is using pip:
 
 ``python3 -m pip install ephysiopy``
 
