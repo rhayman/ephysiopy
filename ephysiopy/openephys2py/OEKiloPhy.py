@@ -314,20 +314,20 @@ class OpenEphysBase(FigureMaker):
         )
         sync_file_match = exp_name / recording_name
         acquisition_method = ""
-        if recording_kind == RecordingKind.NEUROPIXELS:
-            acquisition_method = "Neuropix-PXI-[0-9][0-9][0-9]."
-        elif recording_kind == RecordingKind.FPGA:
-            acquisition_method = "Rhythm_FPGA-[0-9][0-9][0-9]."
-        elif recording_kind == RecordingKind.ACQUISITIONBOARD:
-            acquisition_method = "Acquisition_Board-[0-9][0-9][0-9].*"
+        match recording_kind:
+            case RecordingKind.NEUROPIXELS:
+                acquisition_method = "Neuropix-PXI-[0-9][0-9][0-9]."
+                APdata_match = exp_name / recording_name / "continuous" / (acquisition_method + "0")
+                LFPdata_match = exp_name / recording_name / "continuous" / (acquisition_method + "1")
+            case RecordingKind.FPGA:
+                acquisition_method = "Rhythm_FPGA-[0-9][0-9][0-9]."
+                APdata_match = exp_name / recording_name / "continuous" / (acquisition_method + "0")
+                LFPdata_match = exp_name / recording_name / "continuous" / (acquisition_method + "1")
+            case RecordingKind.ACQUISITIONBOARD:
+                acquisition_method = "Acquisition_Board-[0-9][0-9][0-9].*"
+                APdata_match = exp_name / recording_name / "continuous" / acquisition_method
+                LFPdata_match = exp_name / recording_name / "continuous" / acquisition_method
         
-        if recording_kind == RecordingKind.NEUROPIXELS or recording_kind == RecordingKind.FPGA:
-            APdata_match = exp_name / recording_name / "continuous" / (acquisition_method + "0")
-            LFPdata_match = exp_name / recording_name / "continuous" / (acquisition_method + "1")
-        else:
-            APdata_match = exp_name / recording_name / "continuous" / acquisition_method
-            LFPdata_match = exp_name / recording_name / "continuous" / acquisition_method
-
         print(f"APdata_match: {APdata_match}")
         print(f"LFPdata_match: {LFPdata_match}")
         print(f"acquisition_method: {acquisition_method}")
