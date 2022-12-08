@@ -96,6 +96,18 @@ class Channel(object):
 
 
 @dataclass
+class Stream():
+    """
+    Documents the RecordNode plugin
+    """
+
+    name: str = field(default=None)
+    description: str = field(default=None)
+    sample_rate: int = field(default=None)
+    channel_count: int = field(default=None)
+
+
+@dataclass
 class OEPlugin(ABC):
     """
     Documents an OE plugin
@@ -111,6 +123,23 @@ class OEPlugin(ABC):
     processorType: int = field(default=None)
     nodeId: int = field(default=None)
     channel_count: int = field(default=None)
+    stream: Stream = field(default=None)
+
+
+@dataclass
+class RecordNode(OEPlugin):
+    """
+    Documents the RecordNode plugin
+    """
+    
+    path: str = field(default=None)
+    engine: str = field(default=None)
+    recordEvents: int = field(default=None)
+    recordSpikes: int = field(default=None)
+    isMainStream: int = field(default=None)
+    sync_line: int = field(default=None)
+    source_node_id: int = field(default=None)
+    recording_state: str = field(default=None)
 
 
 @dataclass
@@ -132,7 +161,18 @@ class NeuropixPXI(OEPlugin):
 
     channel_info: List[Channel] = field(default=None)
     sample_rate: int = field(default=None)
+    
 
+@dataclass
+class AcquisitionBoard(OEPlugin):
+    """
+    Documents the Acquisition Board plugin
+    """
+
+    sample_rate: int = field(default=None)
+    LowCut: int = field(default=None)
+    HighCut: int = field(default=None)
+    
 
 @dataclass
 class BandpassFilter(OEPlugin):
@@ -140,12 +180,10 @@ class BandpassFilter(OEPlugin):
     Documents the Bandpass Filter plugin
     """
 
-    name = "Filters/Bandpass Filter"
+    name = "Bandpass Filter"
     pluginName = "Bandpass Filter"
     pluginType = 1
     libraryName = "Bandpass Filter"
-    isSource = False
-    isSink = False
 
     channels: List[int] = field(default_factory=List)
     lowcuts: List[int] = field(default_factory=List)
@@ -167,13 +205,15 @@ class PosTracker(OEPlugin):
     BottomBorder: int = field(default=600)
     AutoExposure: bool = field(default=False)
     OverlayPath: bool = field(default=False)
+    
 
 @dataclass
 class TrackMe(OEPlugin):
     """
     Documents the TrackMe plugin
     """
-    pass
+    pass   
+
 
 @dataclass
 class StimControl(OEPlugin):
@@ -188,6 +228,7 @@ class StimControl(OEPlugin):
     Start: int = field(default=None)
     Stop: int = field(default=None)
     Trigger: int = field(default=None)
+    
 
 @dataclass
 class SpikeSorter(OEPlugin):
@@ -231,6 +272,10 @@ def addValuesToDataClass(node: xml.etree.ElementTree.Element, cls: dataclass):
         chan = Channel()
         recurseNode(node, addValuesToDataClass, chan)
         cls.channel_info.append(chan)
+    if hasattr(cls, "stream") and node.tag == "STREAM":
+        if cls.stream is None:
+            cls.stream = Stream()
+        recurseNode(node, addValuesToDataClass, cls.stream)
 
 
 class OEStructure(object):
@@ -278,12 +323,21 @@ class Settings(object):
         It's not uncommon to have > 1 of the same type of processor, i.e.
         2 x bandpass filter to look at LFP and APs. This deals with that...
         """
+        self.possible_processors = OrderedDict([
+            ("Pos Tracker", PosTracker()),
+            ("Rhythm FPGA", RhythmFPGA()),
+            ("Neuropix-PXI", NeuropixPXI()),
+            ("Acquisition Board", AcquisitionBoard()),
+            ("Spike Sorter", SpikeSorter()),
+            ("TrackMe", TrackMe()),
+            ("Record Node", RecordNode())
+        ])
         self.processors = OrderedDict()
-        self.electrodes = OrderedDict()
+        self.record_nodes = OrderedDict()
         self.tracker_params = {}
         self.stimcontrol_params = {}
-        self.bandpass_params = OrderedDict()
-        self.trackMe = OrderedDict()
+        self.load()
+        self.parse()
 
     def load(self):
         """
@@ -304,26 +358,14 @@ class Settings(object):
         if self.tree is not None:
             for elem in self.tree.iter("PROCESSOR"):
                 this_proc = elem.get("name")
-                if this_proc == "Pos Tracker":
-                    pos_tracker = PosTracker()
-                    recurseNode(elem, addValuesToDataClass, pos_tracker)
-                    self.processors[this_proc] = pos_tracker
-                if this_proc == "Rhythm FPGA":
-                    fpga = RhythmFPGA()
-                    recurseNode(elem, addValuesToDataClass, fpga)
-                    self.processors[this_proc] = fpga
-                if this_proc == "Neuropix-PXI":
-                    npx = NeuropixPXI()
-                    recurseNode(elem, addValuesToDataClass, npx)
-                    self.processors[this_proc] = npx
-                if this_proc == "Filters/Spike Sorter":
-                    spike_sorter = SpikeSorter()
-                    recurseNode(elem, addValuesToDataClass, spike_sorter)
-                if this_proc == "TrackMe":
-                    track_me = TrackMe()
-                    recurseNode(elem, addValuesToDataClass, track_me)
-                    self.trackMe = track_me
-
+                if this_proc == "Record Node":
+                    rec_node = RecordNode()
+                    recurseNode(elem, addValuesToDataClass, rec_node)
+                    self.record_nodes[this_proc + " " + rec_node.nodeId] = rec_node
+                elif this_proc in self.possible_processors.keys():
+                    self.processors[this_proc] = self.possible_processors[this_proc]
+                    recurseNode(elem, addValuesToDataClass, self.processors[this_proc])
+                
     def parseStimControl(self):
         """
         Parses information attached to the StimControl module I wrote
