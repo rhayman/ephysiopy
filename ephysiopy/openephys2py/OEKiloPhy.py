@@ -387,10 +387,12 @@ class OpenEphysBase(FigureMaker):
                             self.path2EventsData = os.path.join(d)
                             print(f"Found event data at: {self.path2EventsData}")
 
-
     def load(self, *args, **kwargs):
-        # Overridden by sub-classes
-        pass
+        # Overridden by sub-classes - now using this as testing ground
+        from ephysiopy.openephys2py.OESettings import Settings
+        settings = Settings(self.pname_root)
+        acquisition_methods = ["Acquisition Board", "Neuropix-PXI", "Rhythm_FPGA"]
+        acquisition_method = [i for i in settings.processors.keys() if i in acquisition_methods][0]
 
     def loadPos(self, *args, **kwargs):
         # Only sub-class that doesn't use this is OpenEphysNWB

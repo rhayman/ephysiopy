@@ -358,12 +358,15 @@ class Settings(object):
         if self.tree is not None:
             for elem in self.tree.iter("PROCESSOR"):
                 this_proc = elem.get("name")
-                if this_proc == "Record Node":
+                if this_proc == "Record Node": # special as could be > 1
                     rec_node = RecordNode()
                     recurseNode(elem, addValuesToDataClass, rec_node)
                     self.record_nodes[this_proc + " " + rec_node.nodeId] = rec_node
                 elif this_proc in self.possible_processors.keys():
                     self.processors[this_proc] = self.possible_processors[this_proc]
+                    recurseNode(elem, addValuesToDataClass, self.processors[this_proc])
+                else:
+                    self.processors[this_proc] = OEPlugin()
                     recurseNode(elem, addValuesToDataClass, self.processors[this_proc])
                 
     def parseStimControl(self):
