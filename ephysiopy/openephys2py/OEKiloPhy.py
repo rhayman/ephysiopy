@@ -313,28 +313,28 @@ class OpenEphysBase(FigureMaker):
             exp_name / recording_name / "continuous" / "TrackMe-[0-9][0-9][0-9].TrackingNode"
         )
         sync_file_match = exp_name / recording_name
-        rec_kind = ""
+        acquisition_method = ""
         if recording_kind == RecordingKind.NEUROPIXELS:
-            rec_kind = "Neuropix-PXI-[0-9][0-9][0-9]."
+            acquisition_method = "Neuropix-PXI-[0-9][0-9][0-9]."
         elif recording_kind == RecordingKind.FPGA:
-            rec_kind = "Rhythm_FPGA-[0-9][0-9][0-9]."
+            acquisition_method = "Rhythm_FPGA-[0-9][0-9][0-9]."
         elif recording_kind == RecordingKind.ACQUISITIONBOARD:
-            rec_kind = "Acquisition_Board-[0-9][0-9][0-9].*"
+            acquisition_method = "Acquisition_Board-[0-9][0-9][0-9].*"
         
-        if rec_kind == RecordingKind.NEUROPIXELS or rec_kind == RecordingKind.FPGA:
-            APdata_match = exp_name / recording_name / "continuous" / (rec_kind + "0")
-            LFPdata_match = exp_name / recording_name / "continuous" / (rec_kind + "1")
+        if recording_kind == RecordingKind.NEUROPIXELS or recording_kind == RecordingKind.FPGA:
+            APdata_match = exp_name / recording_name / "continuous" / (acquisition_method + "0")
+            LFPdata_match = exp_name / recording_name / "continuous" / (acquisition_method + "1")
         else:
-            APdata_match = exp_name / recording_name / "continuous" / rec_kind
-            LFPdata_match = exp_name / recording_name / "continuous" / rec_kind
+            APdata_match = exp_name / recording_name / "continuous" / acquisition_method
+            LFPdata_match = exp_name / recording_name / "continuous" / acquisition_method
 
         print(f"APdata_match: {APdata_match}")
         print(f"LFPdata_match: {LFPdata_match}")
-        print(f"rec_kind: {rec_kind}")
+        print(f"acquisition_method: {acquisition_method}")
 
 
         Events_match = (
-            exp_name / recording_name / "events" / rec_kind / "TTL" # only dealing with a single TTL channel at the moment
+            exp_name / recording_name / "events" / acquisition_method / "TTL" # only dealing with a single TTL channel at the moment
         )
         print(f"Events_match: {Events_match}")
 
