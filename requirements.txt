@@ -6,3 +6,4 @@ scikit-image
 mahotas
 h5py
 scikit-learn
+pytest
