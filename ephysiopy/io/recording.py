@@ -82,6 +82,12 @@ class RecordingKind(Enum):
     NWB = 4
 
 
+Xml2RecordingKind = {
+    "Acquisition Board": RecordingKind.ACQUISITIONBOARD,
+    "Neuropix-PXI": RecordingKind.NEUROPIXELS,
+    "Rhythm_FPGA": RecordingKind.FPGA}
+
+
 class TrackingKind(Enum):
     POSTRACKER = 1
     TRACKINGPLUGIN = 2
@@ -281,6 +287,10 @@ class OpenEphysBase(TrialInterface):
         super().__init__(pname, **kwargs)
         self.load_settings()
         setattr(self, "sync_messsage_file", None)
+        record_methods = ["Acquisition Board", "Neuropix-PXI", "Rhythm_FPGA"]
+        record_method = [i for i in self.settings.processors.keys()
+                         if i in record_methods][0]
+        self.rec_kind = Xml2RecordingKind[record_method]
 
     def load_neural_data(self, pname: Path) -> None:
         pass
@@ -369,7 +379,6 @@ class OpenEphysBase(TrialInterface):
         pname_root: str,
         experiment_name: str = "experiment1",
         recording_name: str = "recording1",
-        recording_kind: RecordingKind = RecordingKind.NEUROPIXELS,
     ):
         exp_name = Path(experiment_name)
         PosTracker_match = (
@@ -383,7 +392,7 @@ class OpenEphysBase(TrialInterface):
         )
         sync_file_match = exp_name / recording_name
         acquisition_method = ""
-        match recording_kind:
+        match self.rec_kind:
             case RecordingKind.NEUROPIXELS:
                 acquisition_method = "Neuropix-PXI-[0-9][0-9][0-9]."
                 APdata_match = exp_name / recording_name / "continuous" / (acquisition_method + "0")
@@ -445,73 +454,9 @@ class OpenEphysBase(TrialInterface):
                         if PurePath(d).match(str(Events_match)):
                             self.path2EventsData = os.path.join(d)
                             print(f"Found event data at: {self.path2EventsData}")
-
-
-class OpenEphysNPX(OpenEphysBase):
-    def __init__(self, pname: Path, **kwargs) -> None:
-        super().__init__(pname, **kwargs)
-
-    def load_neural_data(self, pname: Path) -> None:
-        pass
-
-    def load_settings(self):
-        return super().load_settings()
-
-    def load_pos_data(self, pname: Path, ppm: int = 300, jumpmax: int = 100) -> None:
-        """
-        Load the position data
-
-        Parameters
-        -----------
-        pname : Path
-            Path to base directory containing pos data
-        ppm : int
-            pixels per metre
-        jumpmax : int
-            max jump in pixels between positions
-        """
-        super().load_pos_data(pname, ppm, jumpmax)
-
-    def load_cluster_data(self):
-        return super().load_cluster_data()
-
-    def find_files(
-        self,
-        experiment_name: str = "experiment1",
-        recording_name: str = "recording1",
-    ):
-        super().find_files(
-            self.pname,
-            experiment_name,
-            recording_name,
-            RecordingKind.NEUROPIXELS,
-        )
-
-
-class OpenEphysBinary(OpenEphysBase):
-    def __init__(self, pname: Path, **kwargs) -> None:
-        super().__init__(pname, **kwargs)
-
-    def load_neural_data(self, pname: Path) -> None:
-        pass
-
-    def load_settings(self):
-        return super().load_settings()
-
-    def load_pos_data(self, pname: Path, ppm: int = 300, jumpmax: int = 100) -> None:
-        super().load_pos_data(pname)
-
-    def find_files(
-        self,
-        experiment_name: str = "experiment1",
-        recording_name: str = "recording1",
-    ):
-        super().find_files(
-            self.pname,
-            experiment_name,
-            recording_name,
-            RecordingKind.NEUROPIXELS,
-        )
+                    if ".nwb" in ff:
+                        self.path2NWBData = os.path.join(d, ff)
+                        print(f"Found nwb data at: {self.path2NWBData}")
 
 
 class OpenEphysNWB(OpenEphysBase):
