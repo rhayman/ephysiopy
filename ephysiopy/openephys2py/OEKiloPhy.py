@@ -82,6 +82,12 @@ class RecordingKind(Enum):
     NEUROPIXELS = 3
 
 
+Xml2RecordingKind = {
+    "Acquisition Board": RecordingKind.ACQUISITIONBOARD,
+    "Neuropix-PXI": RecordingKind.NEUROPIXELS,
+    "Rhythm_FPGA": RecordingKind.FPGA}
+
+
 class KiloSortSession(object):
     """
     Loads and processes data from a Kilosort session.
@@ -387,12 +393,21 @@ class OpenEphysBase(FigureMaker):
                             self.path2EventsData = os.path.join(d)
                             print(f"Found event data at: {self.path2EventsData}")
 
-    def load(self, *args, **kwargs):
+    def load(
+        self,
+        experiment_name="experiment1",
+        recording_name="recording1",
+    ):
         # Overridden by sub-classes - now using this as testing ground
         from ephysiopy.openephys2py.OESettings import Settings
         settings = Settings(self.pname_root)
-        acquisition_methods = ["Acquisition Board", "Neuropix-PXI", "Rhythm_FPGA"]
-        acquisition_method = [i for i in settings.processors.keys() if i in acquisition_methods][0]
+        record_methods = ["Acquisition Board", "Neuropix-PXI", "Rhythm_FPGA"]
+        record_method = [i for i in settings.processors.keys()
+                         if i in record_methods][0]
+        rec_kind = Xml2RecordingKind[record_method]
+        self.find_files(
+            self.pname_root, experiment_name, recording_name, rec_kind)
+        self.loadPos()
 
     def loadPos(self, *args, **kwargs):
         # Only sub-class that doesn't use this is OpenEphysNWB
@@ -431,7 +446,7 @@ class OpenEphysBase(FigureMaker):
                     Path(os.path.join(self.path2PosData, "continuous.dat")))
                 pos_ts = loadTrackMeTimestamps(self.path2EventsData)
                 pos_ts = pos_ts[0:len(pos_data)]
-           
+
             pos_timebase = getattr(self, "pos_timebase", 3e4)
             sample_rate = np.floor(1 / np.mean(np.diff(pos_ts) / pos_timebase))
             self.xyTS = pos_ts - recording_start_time
@@ -633,8 +648,11 @@ class OpenEphysBase(FigureMaker):
         the PSTH for each 'good' cluster and just keeps spitting out figure
         windows
         """
-        self.__loadSettings__()
-        self.settings.parseStimControl()
+        if self.settings is not None:
+            self.settings.parseStimControl()
+        else:
+            warnings.warn("You need to load the stim control plugin settings")
+            return
         if self.kilodata is None:
             self.loadKilo(**kwargs)
         from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
@@ -986,8 +1004,7 @@ class OpenEphysNWB(OpenEphysBase):
 
         # ...everything else
         try:
-            self.__loadSettings__()
-            fpgaId = self.settings.processors["Sources/Rhythm FPGA"].NodeId
+            fpgaId = self.settings.processors["Rhythm_FPGA"].NodeId
             fpgaNode = "processor" + str(fpgaId) + "_" + str(fpgaId)
             self.ts = np.array(
                 self.nwbData["acquisition"]["timeseries"][self.recording_name][
@@ -1008,7 +1025,6 @@ class OpenEphysNWB(OpenEphysBase):
                     "data"
                 ]
                 print("Referenced the raw data! Yay!\nParsing channels...")
-                self.settings.parseProcessor()  # get the neural data channels
                 print("Channels parsed\nAccessing accelerometer data...")
                 self.accelerometerData = self.rawData[:, 64:]
                 print(

@@ -27,6 +27,24 @@ def fileContainsString(pname: str, searchStr: str) -> bool:
         return False
 
 
+def memmapBinaryFile(path2file: str, n_channels=384, **kwargs) -> np.ndarray:
+    """
+    Returns a numpy memmap of the int16 data in the
+    file path2file, if present
+    """
+    import os
+
+    if os.path.exists(path2file):
+        status = os.stat(path2file)
+        n_samples = int(status.st_size / (2.0 * n_channels))
+        mmap = np.memmap(
+            path2file, np.int16, "r", 0, (n_channels, n_samples), order="F"
+        )
+        return mmap
+    else:
+        return np.empty(0)
+
+
 def loadTrackingPluginData(pname: Path) -> np.array:
     dt = np.dtype(
         {
@@ -46,10 +64,22 @@ def loadTrackingPluginData(pname: Path) -> np.array:
     return pos_data
 
 
+def loadTrackMePluginData(pname: Path) -> np.ndarray:
+    mmap = memmapBinaryFile(str(pname), n_channels=6)
+    return np.array(mmap[0:2, :]).T
+
+
+def loadTrackMeTimestamps(pname: Path) -> np.ndarray:
+    ts = np.load(os.path.join(pname, "timestamps.npy"))
+    states = np.load(os.path.join(pname, "states.npy"))
+    return ts[states > 0]
+
+
 class RecordingKind(Enum):
     FPGA = 1
     NEUROPIXELS = 2
-    NWB = 3
+    ACQUISITIONBOARD = 3
+    NWB = 4
 
 
 class TrackingKind(Enum):
@@ -259,9 +289,7 @@ class OpenEphysBase(TrialInterface):
         if self._settings is None:
             # pname_root gets walked through and over-written with
             # correct location of settings.xml
-            settings = Settings(self.pname)
-            settings.parse()
-            self.settings = settings
+            self.settings = Settings(self.pname)
 
     def load_cluster_data(self):
         if self.pname is not None:
@@ -303,6 +331,12 @@ class OpenEphysBase(TrialInterface):
                 )
             pos_ts = np.load(os.path.join(self.path2PosData, "timestamps.npy"))
             pos_ts = np.ravel(pos_ts)
+            if pos_data_type == "TrackMe":
+                print("Loading TrackMe data...")
+                pos_data = loadTrackMePluginData(
+                    Path(os.path.join(self.path2PosData, "continuous.dat")))
+                pos_ts = loadTrackMeTimestamps(self.path2EventsData)
+                pos_ts = pos_ts[0:len(pos_data)]
             pos_timebase = getattr(self, "pos_timebase", 3e4)
             sample_rate = np.floor(1 / np.mean(np.diff(pos_ts) / pos_timebase))
             xyTS = pos_ts - recording_start_time
@@ -344,15 +378,28 @@ class OpenEphysBase(TrialInterface):
         TrackingPlugin_match = (
             exp_name / recording_name / "events" / "*Tracking_Port*/BINARY_group*"
         )
+        TrackMe_match = (
+            exp_name / recording_name / "continuous" / "TrackMe-[0-9][0-9][0-9].TrackingNode"
+        )
         sync_file_match = exp_name / recording_name
-        rec_kind = ""
-        if recording_kind == RecordingKind.NEUROPIXELS:
-            rec_kind = "Neuropix-PXI-[0-9][0-9][0-9]."
-        elif recording_kind == RecordingKind.FPGA:
-            rec_kind = "Rhythm_FPGA-[0-9][0-9][0-9]."
-        APdata_match = exp_name / recording_name / "continuous" / (rec_kind + "0")
-        LFPdata_match = exp_name / recording_name / "continuous" / (rec_kind + "1")
-        NWBdata_match = Path(str(exp_name) + ".nwb")
+        acquisition_method = ""
+        match recording_kind:
+            case RecordingKind.NEUROPIXELS:
+                acquisition_method = "Neuropix-PXI-[0-9][0-9][0-9]."
+                APdata_match = exp_name / recording_name / "continuous" / (acquisition_method + "0")
+                LFPdata_match = exp_name / recording_name / "continuous" / (acquisition_method + "1")
+            case RecordingKind.FPGA:
+                acquisition_method = "Rhythm_FPGA-[0-9][0-9][0-9]."
+                APdata_match = exp_name / recording_name / "continuous" / (acquisition_method + "0")
+                LFPdata_match = exp_name / recording_name / "continuous" / (acquisition_method + "1")
+            case _:
+                acquisition_method = "Acquisition_Board-[0-9][0-9][0-9].*"
+                APdata_match = exp_name / recording_name / "continuous" / acquisition_method
+                LFPdata_match = exp_name / recording_name / "continuous" / acquisition_method
+        Events_match = (
+            # only dealing with a single TTL channel at the moment
+            exp_name / recording_name / "events" / acquisition_method / "TTL"
+        )
 
         if pname_root is None:
             pname_root = self.pname_root
@@ -370,7 +417,6 @@ class OpenEphysBase(TrialInterface):
                         if PurePath(d).match("*pos_data*"):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
-                                setattr(self, "pos_data_type", "PosTracker")
                                 print(f"Found pos data at: {self.path2PosData}")
                         if PurePath(d).match(str(TrackingPlugin_match)):
                             if self.path2PosData is None:
@@ -385,38 +431,20 @@ class OpenEphysBase(TrialInterface):
                         if PurePath(d).match(str(LFPdata_match)):
                             self.path2LFPdata = os.path.join(d)
                             print(f"Found continuous data at: {self.path2LFPdata}")
-                    if recording_kind == RecordingKind.NWB:
-                        if PurePath(ff).match(str(NWBdata_match)):
-                            self.path2NWBData = d
-                            self.path2PosData = (
-                                "acquisition/timeseries/"
-                                + str(recording_name)
-                                + "/events/binary1"
-                            )
-                            self.path2TTLData = (
-                                "acquisition/timeseries/"
-                                + str(recording_name)
-                                + "/events/ttl1"
-                            )
-                            fpgaId = self.settings.processors[
-                                "Sources/Rhythm FPGA"
-                            ].NodeId
-                            fpgaNode = "processor" + str(fpgaId) + "_" + str(fpgaId)
-                            self.path2APdata = (
-                                "acquisition/timeseries"
-                                + str(recording_name)
-                                + "/continuous/"
-                                + fpgaNode
-                            )
-                            print("NWB recording found:")
-                            print(f"Found nwb data at: {d}")
-                            setattr(self, "pos_data_type", "PosTrackerNWB")
+                        if PurePath(d).match(str(TrackMe_match)):
+                            self.path2PosData = os.path.join(d)
+                            setattr(self, "pos_data_type", "TrackMe")
+                            print(f"Found TrackMe posdata at: {self.path2PosData}")
                     if "sync_messages.txt" in ff:
                         if PurePath(d).match(str(sync_file_match)):
                             sync_file = os.path.join(d, "sync_messages.txt")
                             if fileContainsString(sync_file, "Processor"):
                                 self.sync_message_file = sync_file
                                 print(f"Found sync_messages file at: {sync_file}")
+                    if "full_words.npy" in ff:
+                        if PurePath(d).match(str(Events_match)):
+                            self.path2EventsData = os.path.join(d)
+                            print(f"Found event data at: {self.path2EventsData}")
 
 
 class OpenEphysNPX(OpenEphysBase):

@@ -98,7 +98,7 @@ class Channel(object):
 @dataclass
 class Stream():
     """
-    Documents the RecordNode plugin
+    Documents an OE DatasSream
     """
 
     name: str = field(default=None)
@@ -131,7 +131,7 @@ class RecordNode(OEPlugin):
     """
     Documents the RecordNode plugin
     """
-    
+
     path: str = field(default=None)
     engine: str = field(default=None)
     recordEvents: int = field(default=None)
@@ -161,7 +161,7 @@ class NeuropixPXI(OEPlugin):
 
     channel_info: List[Channel] = field(default=None)
     sample_rate: int = field(default=None)
-    
+
 
 @dataclass
 class AcquisitionBoard(OEPlugin):
@@ -172,7 +172,7 @@ class AcquisitionBoard(OEPlugin):
     sample_rate: int = field(default=None)
     LowCut: int = field(default=None)
     HighCut: int = field(default=None)
-    
+
 
 @dataclass
 class BandpassFilter(OEPlugin):
@@ -205,14 +205,14 @@ class PosTracker(OEPlugin):
     BottomBorder: int = field(default=600)
     AutoExposure: bool = field(default=False)
     OverlayPath: bool = field(default=False)
-    
+
 
 @dataclass
 class TrackMe(OEPlugin):
     """
     Documents the TrackMe plugin
     """
-    pass   
+    pass
 
 
 @dataclass
@@ -228,7 +228,7 @@ class StimControl(OEPlugin):
     Start: int = field(default=None)
     Stop: int = field(default=None)
     Trigger: int = field(default=None)
-    
+
 
 @dataclass
 class SpikeSorter(OEPlugin):
@@ -358,7 +358,7 @@ class Settings(object):
         if self.tree is not None:
             for elem in self.tree.iter("PROCESSOR"):
                 this_proc = elem.get("name")
-                if this_proc == "Record Node": # special as could be > 1
+                if this_proc == "Record Node":  # special as could be > 1
                     rec_node = RecordNode()
                     recurseNode(elem, addValuesToDataClass, rec_node)
                     self.record_nodes[this_proc + " " + rec_node.nodeId] = rec_node
@@ -375,7 +375,7 @@ class Settings(object):
         """
         if len(self.processors) == 0:
             self.parse()
-        children = self.processors["Sinks/StimControl"][0].iter()
+        children = self.processors["StimControl"][0].iter()
         for child in children:
             if "Parameters" in child.tag:
                 self.stimcontrol_params = child.attrib
