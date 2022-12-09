@@ -39,19 +39,26 @@ class FigureMaker(object):
         self.data_loaded = False
 
     def initialise(self):
-        xy = getattr(self, 'xy', None)
+        # hack for re-write of i/o code
+        if hasattr(self, "PosCalcs"):
+            xy = getattr(self.PosCalcs, "xy")
+            hdir = getattr(self.PosCalcs, "dir")
+            speed = getattr(self.PosCalcs, "speed")
+            ppm = getattr(self.PosCalcs, "ppm")
+            cmsPerBin = getattr(self.PosCalcs, "cmsPerBin")
+        else:
+            xy = getattr(self, 'xy', None)
+            hdir = getattr(self, 'dir', None)
+            speed = getattr(self, 'speed', None)
+            ppm = getattr(self, 'ppm', 300)
+            cmsPerBin = getattr(self, 'cmsPerBin', 3)
         self.npos = xy.shape[1]
-        hdir = getattr(self, 'dir', None)
-        speed = getattr(self, 'speed', None)
         pos_weights = None
         if hdir is not None:
             if np.ma.is_masked(hdir):
                 pos_weights = np.array(~hdir.mask).astype(int)
             else:
                 pos_weights = np.ones_like(hdir)
-        ppm = getattr(self, 'ppm', 300)
-        cmsPerBin = getattr(self, 'cmsPerBin', 3)
-
         self.RateMapMaker = RateMap(
             xy=xy, hdir=hdir, speed=speed, pos_weights=pos_weights, ppm=ppm,
             xyInCms=True, cmsPerBin=cmsPerBin)

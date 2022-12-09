@@ -11,6 +11,7 @@ from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.dacq2py.axonaIO import IO, Pos
 from ephysiopy.openephys2py.OEKiloPhy import KiloSortSession
 from ephysiopy.openephys2py.OESettings import Settings
+from ephysiopy.visualise.plotting import FigureMaker
 
 
 def fileContainsString(pname: str, searchStr: str) -> bool:
@@ -93,7 +94,7 @@ class TrackingKind(Enum):
     TRACKINGPLUGIN = 2
 
 
-class TrialInterface(metaclass=abc.ABCMeta):
+class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     def __init__(self, pname: str, **kwargs) -> None:
         assert os.path.exists(pname)
         self._pname = pname
