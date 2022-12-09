@@ -46,6 +46,11 @@ class FigureMaker(object):
             speed = getattr(self.PosCalcs, "speed")
             ppm = getattr(self.PosCalcs, "ppm")
             cmsPerBin = getattr(self.PosCalcs, "cmsPerBin")
+            self.xy = xy
+            self.hdir = hdir
+            self.speed = speed
+            self.ppm = ppm
+            self.cmsPerBin = cmsPerBin
         else:
             xy = getattr(self, 'xy', None)
             hdir = getattr(self, 'dir', None)
