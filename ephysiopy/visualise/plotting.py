@@ -39,25 +39,12 @@ class FigureMaker(object):
         self.data_loaded = False
 
     def initialise(self):
-        # hack for re-write of i/o code
-        if hasattr(self, "PosCalcs"):
-            xy = getattr(self.PosCalcs, "xy")
-            hdir = getattr(self.PosCalcs, "dir")
-            speed = getattr(self.PosCalcs, "speed")
-            ppm = getattr(self.PosCalcs, "ppm")
-            cmsPerBin = getattr(self.PosCalcs, "cmsPerBin")
-            self.xy = xy
-            self.hdir = hdir
-            self.speed = speed
-            self.ppm = ppm
-            self.cmsPerBin = cmsPerBin
-        else:
-            xy = getattr(self, 'xy', None)
-            hdir = getattr(self, 'dir', None)
-            speed = getattr(self, 'speed', None)
-            ppm = getattr(self, 'ppm', 300)
-            cmsPerBin = getattr(self, 'cmsPerBin', 3)
-        self.npos = xy.shape[1]
+        xy = getattr(self.PosCalcs, "xy")
+        hdir = getattr(self.PosCalcs, "dir")
+        speed = getattr(self.PosCalcs, "speed")
+        ppm = getattr(self.PosCalcs, "ppm")
+        cmsPerBin = getattr(self.PosCalcs, "cmsPerBin")
+        setattr(self, "npos", xy.shape[1])
         pos_weights = None
         if hdir is not None:
             if np.ma.is_masked(hdir):
@@ -72,7 +59,7 @@ class FigureMaker(object):
         self.data_loaded = True
 
     def getSpikePosIndices(self, spk_times: np.array):
-        pos_times = getattr(self, 'xyTS')
+        pos_times = getattr(self.PosCalcs, 'xyTS')
         idx = np.searchsorted(pos_times, spk_times)
         idx[idx == len(pos_times)] = idx[idx == len(pos_times)] - 1
         return idx
@@ -124,12 +111,13 @@ class FigureMaker(object):
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-        ax.plot(self.xy[0, :], self.xy[1, :], c=tcols.colours[0], zorder=1)
+        ax.plot(self.PosCalcs.xy[0, :],
+                self.PosCalcs.xy[1, :], c=tcols.colours[0], zorder=1)
         ax.set_aspect('equal')
         if spk_times is not None:
             idx = self.getSpikePosIndices(spk_times)
-            ax.plot(
-                self.xy[0, idx], self.xy[1, idx], 's', c=col, **kwargs)
+            ax.plot(self.PosCalcs.xy[0, idx],
+                    self.PosCalcs.xy[1, idx], 's', c=col, **kwargs)
         return ax
 
     @stripAxes
@@ -200,7 +188,7 @@ class FigureMaker(object):
         self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
 
-        speed = np.ravel(self.speed)
+        speed = np.ravel(self.PosCalcs.speed)
         if np.nanmax(speed) < maxSpeed:
             maxSpeed = np.nanmax(speed)
         spd_bins = np.arange(minSpeed, maxSpeed, 1.0)
@@ -212,7 +200,7 @@ class FigureMaker(object):
 
         x1 = spk_times_in_pos_samples
         S = SpikeCalcsGeneric(x1)
-        spk_sm = S.smoothSpikePosCount(x1, self.xyTS.shape[0], sigma, None)
+        spk_sm = S.smoothSpikePosCount(x1, self.PosCalcs.xyTS.shape[0], sigma, None)
         spk_sm = np.ma.MaskedArray(spk_sm, mask=np.ma.getmask(speed_filt))
         spd_dig = np.digitize(speed_filt, spd_bins, right=True)
         mn_rate = np.array([np.ma.mean(
@@ -248,8 +236,9 @@ class FigureMaker(object):
             w = np.bincount(idx, minlength=self.speed.shape[0])
         dir_bins = np.arange(0, 360, 6)
         spd_bins = np.arange(0, 30, 1)
-        h = np.histogram2d(
-            self.dir, self.speed, [dir_bins, spd_bins], weights=w)
+        h = np.histogram2d(self.PosCalcs.dir,
+                           self.PosCalcs.speed,
+                           [dir_bins, spd_bins], weights=w)
         from ephysiopy.common.utils import blurImage
         im = blurImage(h[0], 5, ftype='gaussian')
         im = np.ma.MaskedArray(im)
