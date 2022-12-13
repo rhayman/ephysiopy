@@ -43,7 +43,7 @@ class FigureMaker(object):
         hdir = getattr(self.PosCalcs, "dir")
         speed = getattr(self.PosCalcs, "speed")
         ppm = getattr(self.PosCalcs, "ppm")
-        cmsPerBin = getattr(self.PosCalcs, "cmsPerBin")
+        cmsPerBin = getattr(self.PosCalcs, "cmsPerBin", 3)
         setattr(self, "npos", xy.shape[1])
         pos_weights = None
         if hdir is not None:
@@ -167,7 +167,7 @@ class FigureMaker(object):
         # See if we should add the mean resultant vector (mrv)
         if 'add_mrv' in kwargs:
             from ephysiopy.common.statscalcs import mean_resultant_vector
-            angles = self.dir[spk_times_in_pos_samples]
+            angles = self.PosCalcs.dir[spk_times_in_pos_samples]
             r, th = mean_resultant_vector(np.deg2rad(angles))
             ax.plot([th, th], [0, r*np.max(rmap[0])], 'r')
         if 'polar' in ax.name:
@@ -200,7 +200,8 @@ class FigureMaker(object):
 
         x1 = spk_times_in_pos_samples
         S = SpikeCalcsGeneric(x1)
-        spk_sm = S.smoothSpikePosCount(x1, self.PosCalcs.xyTS.shape[0], sigma, None)
+        spk_sm = S.smoothSpikePosCount(
+            x1, self.PosCalcs.xyTS.shape[0], sigma, None)
         spk_sm = np.ma.MaskedArray(spk_sm, mask=np.ma.getmask(speed_filt))
         spd_dig = np.digitize(speed_filt, spd_bins, right=True)
         mn_rate = np.array([np.ma.mean(
@@ -212,13 +213,13 @@ class FigureMaker(object):
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.errorbar(
-            spd_bins, mn_rate * self.pos_sample_rate,
+            spd_bins, mn_rate * self.PosCalcs.sample_rate,
             yerr=var, color='k')
         ax.set_xlim(spd_bins[0], spd_bins[-1])
         plt.xticks([spd_bins[0], spd_bins[-1]], ['0', '{:.2g}'.format(
             spd_bins[-1])], fontweight='normal', size=6)
         plt.yticks([0, np.nanmax(
-            mn_rate)*self.pos_sample_rate], ['0', '{:.2f}'.format(
+            mn_rate)*self.PosCalcs.sample_rate], ['0', '{:.2f}'.format(
                 np.nanmax(mn_rate))], fontweight='normal', size=6)
         return ax
 
@@ -229,11 +230,11 @@ class FigureMaker(object):
         self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         idx = np.array(spk_times_in_pos_samples, dtype=int)
-        if np.ma.is_masked(self.speed):
+        if np.ma.is_masked(self.PosCalcs.speed):
             w = self.speed.mask
             w = np.array(~w, dtype=int)
         else:
-            w = np.bincount(idx, minlength=self.speed.shape[0])
+            w = np.bincount(idx, minlength=self.PosCalcs.speed.shape[0])
         dir_bins = np.arange(0, 360, 6)
         spd_bins = np.arange(0, 30, 1)
         h = np.histogram2d(self.PosCalcs.dir,
@@ -531,7 +532,8 @@ class FigureMaker(object):
             if p[0] <= inDict['dist_to_centre'].shape[0] / 2:
                 ax.plot(
                     (inDict['dist_to_centre'].shape[1]/2, p[1]),
-                    (inDict['dist_to_centre'].shape[0] / 2, p[0]), 'k', **kwargs)
+                    (inDict['dist_to_centre'].shape[0] / 2, p[0]), 'k',
+                    **kwargs)
         ax.invert_yaxis()
         all_ax = ax.axes
         all_ax.set_aspect('equal')

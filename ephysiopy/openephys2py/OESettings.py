@@ -124,6 +124,7 @@ class OEPlugin(ABC):
     nodeId: int = field(default=None)
     channel_count: int = field(default=None)
     stream: Stream = field(default=None)
+    sample_rate: int = field(default=None)
 
 
 @dataclass
@@ -149,7 +150,6 @@ class RhythmFPGA(OEPlugin):
     """
 
     channel_info: List[Channel] = field(default=None)
-    sample_rate: int = field(default=None)
 
 
 # Identical to the RhythmFPGA class above for now
@@ -160,7 +160,6 @@ class NeuropixPXI(OEPlugin):
     """
 
     channel_info: List[Channel] = field(default=None)
-    sample_rate: int = field(default=None)
 
 
 @dataclass
@@ -169,7 +168,6 @@ class AcquisitionBoard(OEPlugin):
     Documents the Acquisition Board plugin
     """
 
-    sample_rate: int = field(default=None)
     LowCut: int = field(default=None)
     HighCut: int = field(default=None)
 

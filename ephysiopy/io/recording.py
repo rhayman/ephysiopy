@@ -9,6 +9,7 @@ import h5py
 import numpy as np
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.dacq2py.axonaIO import IO, Pos
+from ephysiopy.dacq2py.tetrode_dict import TetrodeDict
 from ephysiopy.openephys2py.OEKiloPhy import KiloSortSession
 from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.visualise.plotting import FigureMaker
@@ -119,6 +120,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             and callable(subclass.load_cluster_data)
             and hasattr(subclass, "load_settings")
             and callable(subclass.load_settings)
+            and hasattr(subclass, "get_spike_times")
+            and callable(subclass.get_spike_times)
             or NotImplemented
         )
 
@@ -235,11 +238,17 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """Loads the format specific settings file"""
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def get_spike_times(self, cluster: int, tetrode: int = None):
+        """Returns the times of an individual cluster"""
+        raise NotImplementedError
+
 
 class AxonaTrial(TrialInterface):
     def __init__(self, pname: Path, **kwargs) -> None:
         super().__init__(pname, **kwargs)
         self.__settings = None
+        self.TETRODE = TetrodeDict(self.pname, volts=True)
 
     @property
     def settings(self) -> None:
@@ -262,36 +271,56 @@ class AxonaTrial(TrialInterface):
         pass
 
     def load_settings(self):
-        return super().load_settings()
+        return self.settings
 
-    def load_pos_data(self, pname: Path, ppm: int = 300, jumpmax: int = 100) -> None:
-        if self.PosCalcs is None:
-            try:
-                AxonaPos = Pos(self.pname)
-                P = PosCalcsGeneric(
-                    AxonaPos.led_pos[0, :],
-                    AxonaPos.led_pos[1, :],
-                    cm=True,
-                    ppm=self.ppm,
-                )
-                P.xyTS = Pos.ts
-                P.sample_rate = AxonaPos.getHeaderVal(AxonaPos.header, "sample_rate")
-                P.postprocesspos()
-                print("Loaded pos data")
-                self.PosCalcs = P
-            except IOError:
-                print("Couldn't load the pos data")
+    def load_pos_data(self, pname: Path,
+                      ppm: int = 300, jumpmax: int = 100) -> None:
+        try:
+            AxonaPos = Pos(Path(pname))
+            P = PosCalcsGeneric(
+                AxonaPos.led_pos[:, 0],
+                AxonaPos.led_pos[:, 1],
+                cm=True,
+                ppm=ppm,
+                jumpmax=jumpmax
+            )
+            P.xyTS = AxonaPos.ts
+            P.sample_rate = AxonaPos.getHeaderVal(
+                AxonaPos.header, "sample_rate")
+            P.postprocesspos()
+            print("Loaded pos data")
+            self.PosCalcs = P
+        except IOError:
+            print("Couldn't load the pos data")
+
+    def get_spike_times(self, cluster: int, tetrode: int = None):
+        if tetrode is not None:
+            return self.TETRODE.get_spike_samples(tetrode, cluster)
 
 
 class OpenEphysBase(TrialInterface):
     def __init__(self, pname: Path, **kwargs) -> None:
         super().__init__(pname, **kwargs)
-        self.load_settings()
         setattr(self, "sync_messsage_file", None)
-        record_methods = ["Acquisition Board", "Neuropix-PXI", "Rhythm_FPGA"]
+        self.load_settings()
+        record_methods = ["Acquisition Board", "Neuropix-PXI", "Rhythm FPGA"]
         record_method = [i for i in self.settings.processors.keys()
                          if i in record_methods][0]
         self.rec_kind = Xml2RecordingKind[record_method]
+        self.sample_rate = None
+        self.sample_rate = self.settings.processors[record_method].sample_rate
+        self.kilodata = None
+
+    def __load_kilo__(self):
+        """Loads KiloSort data"""
+        self.kilodata = KiloSortSession(self.pname)
+        self.kilodata.load()
+        self.kilodata.removeNoiseClusters()
+
+    def get_spike_times(self, cluster: int, tetrode: int = None):
+        ts = self.kilodata.spk_times
+        times = ts[self.kilodata.spk_clusters == cluster]
+        return times.astype(np.int64) / self.sample_rate
 
     def load_neural_data(self, pname: Path) -> None:
         pass
@@ -314,7 +343,8 @@ class OpenEphysBase(TrialInterface):
                         pass
         self.clusterData = clusterData
 
-    def load_pos_data(self, pname: Path, ppm: int = 300, jumpmax: int = 100) -> None:
+    def load_pos_data(self, pname: Path,
+                      ppm: int = 300, jumpmax: int = 100) -> None:
         # Only sub-class that doesn't use this is OpenEphysNWB
         # which needs updating
         # TODO: Update / overhaul OpenEphysNWB
@@ -327,14 +357,15 @@ class OpenEphysBase(TrialInterface):
             for line in sync_lines:
                 if "subProcessor: 0" in line:
                     idx = line.find("start time: ")
-                    start_val = line[idx + len("start time: ") : -1]
+                    start_val = line[idx + len("start time: "): -1]
                     tmp = start_val.split("@")
                     recording_start_time = float(tmp[0])  # in samples
         if self.path2PosData is not None:
             pos_data_type = getattr(self, "pos_data_type", "PosTracker")
             if pos_data_type == "PosTracker":
                 print("Loading PosTracker data...")
-                pos_data = np.load(os.path.join(self.path2PosData, "data_array.npy"))
+                pos_data = np.load(os.path.join(
+                    self.path2PosData, "data_array.npy"))
             if pos_data_type == "TrackingPlugin":
                 print("Loading Tracking Plugin data...")
                 pos_data = loadTrackingPluginData(
@@ -379,36 +410,41 @@ class OpenEphysBase(TrialInterface):
         self,
         pname_root: str,
         experiment_name: str = "experiment1",
-        recording_name: str = "recording1",
+        rec_name: str = "recording1",
     ):
         exp_name = Path(experiment_name)
         PosTracker_match = (
-            exp_name / recording_name / "events" / "*Pos_Tracker*/BINARY_group*"
+            exp_name / rec_name / "events" / "*Pos_Tracker*/BINARY_group*"
         )
         TrackingPlugin_match = (
-            exp_name / recording_name / "events" / "*Tracking_Port*/BINARY_group*"
+            exp_name / rec_name / "events" / "*Tracking_Port*/BINARY_group*"
         )
         TrackMe_match = (
-            exp_name / recording_name / "continuous" / "TrackMe-[0-9][0-9][0-9].TrackingNode"
+            exp_name / rec_name /
+            "continuous" / "TrackMe-[0-9][0-9][0-9].TrackingNode"
         )
-        sync_file_match = exp_name / recording_name
-        acquisition_method = ""
+        sync_file_match = exp_name / rec_name
+        acq_method = ""
         match self.rec_kind:
             case RecordingKind.NEUROPIXELS:
-                acquisition_method = "Neuropix-PXI-[0-9][0-9][0-9]."
-                APdata_match = exp_name / recording_name / "continuous" / (acquisition_method + "0")
-                LFPdata_match = exp_name / recording_name / "continuous" / (acquisition_method + "1")
+                acq_method = "Neuropix-PXI-[0-9][0-9][0-9]."
+                APdata_match = (exp_name / rec_name /
+                                "continuous" / (acq_method + "0"))
+                LFPdata_match = (exp_name / rec_name /
+                                 "continuous" / (acq_method + "1"))
             case RecordingKind.FPGA:
-                acquisition_method = "Rhythm_FPGA-[0-9][0-9][0-9]."
-                APdata_match = exp_name / recording_name / "continuous" / (acquisition_method + "0")
-                LFPdata_match = exp_name / recording_name / "continuous" / (acquisition_method + "1")
+                acq_method = "Rhythm_FPGA-[0-9][0-9][0-9]."
+                APdata_match = (exp_name / rec_name /
+                                "continuous" / (acq_method + "0"))
+                LFPdata_match = (exp_name / rec_name /
+                                 "continuous" / (acq_method + "1"))
             case _:
-                acquisition_method = "Acquisition_Board-[0-9][0-9][0-9].*"
-                APdata_match = exp_name / recording_name / "continuous" / acquisition_method
-                LFPdata_match = exp_name / recording_name / "continuous" / acquisition_method
+                acq_method = "Acquisition_Board-[0-9][0-9][0-9].*"
+                APdata_match = exp_name / rec_name / "continuous" / acq_method
+                LFPdata_match = exp_name / rec_name / "continuous" / acq_method
         Events_match = (
             # only dealing with a single TTL channel at the moment
-            exp_name / recording_name / "events" / acquisition_method / "TTL"
+            exp_name / rec_name / "events" / acq_method / "TTL"
         )
 
         if pname_root is None:
@@ -422,42 +458,44 @@ class OpenEphysBase(TrialInterface):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
                                 setattr(self, "pos_data_type", "PosTracker")
-                                print(f"Found pos data at: {self.path2PosData}")
+                                print(f"Pos data at: {self.path2PosData}")
                             self.path2PosOEBin = Path(d).parents[1]
                         if PurePath(d).match("*pos_data*"):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
-                                print(f"Found pos data at: {self.path2PosData}")
+                                print(f"Pos data at: {self.path2PosData}")
                         if PurePath(d).match(str(TrackingPlugin_match)):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
-                                setattr(self, "pos_data_type", "TrackingPlugin")
-                                print(f"Found pos data at: {self.path2PosData}")
+                                setattr(self,
+                                        "pos_data_type",
+                                        "TrackingPlugin")
+                                print(f"Pos data at: {self.path2PosData}")
                     if "continuous.dat" in ff:
                         if PurePath(d).match(str(APdata_match)):
                             self.path2APdata = os.path.join(d)
-                            print(f"Found continuous data at: {self.path2APdata}")
+                            print(f"Continuous data at: {self.path2APdata}")
                             self.path2APOEBin = Path(d).parents[1]
                         if PurePath(d).match(str(LFPdata_match)):
                             self.path2LFPdata = os.path.join(d)
-                            print(f"Found continuous data at: {self.path2LFPdata}")
+                            print(f"Continuous data at: {self.path2LFPdata}")
                         if PurePath(d).match(str(TrackMe_match)):
                             self.path2PosData = os.path.join(d)
                             setattr(self, "pos_data_type", "TrackMe")
-                            print(f"Found TrackMe posdata at: {self.path2PosData}")
+                            print(f"TrackMe posdata at: {self.path2PosData}")
                     if "sync_messages.txt" in ff:
                         if PurePath(d).match(str(sync_file_match)):
                             sync_file = os.path.join(d, "sync_messages.txt")
                             if fileContainsString(sync_file, "Processor"):
                                 self.sync_message_file = sync_file
-                                print(f"Found sync_messages file at: {sync_file}")
+                                print(f"sync_messages file at: {sync_file}")
                     if "full_words.npy" in ff:
                         if PurePath(d).match(str(Events_match)):
                             self.path2EventsData = os.path.join(d)
-                            print(f"Found event data at: {self.path2EventsData}")
+                            print(f"Event data at: {self.path2EventsData}")
                     if ".nwb" in ff:
                         self.path2NWBData = os.path.join(d, ff)
-                        print(f"Found nwb data at: {self.path2NWBData}")
+                        print(f"nwb data at: {self.path2NWBData}")
 
 
 class OpenEphysNWB(OpenEphysBase):
@@ -470,7 +508,8 @@ class OpenEphysNWB(OpenEphysBase):
     def load_settings(self):
         return super().load_settings()
 
-    def load_pos_data(self, pname: Path, ppm: int = 300, jumpmax: int = 100) -> None:
+    def load_pos_data(self, pname: Path,
+                      ppm: int = 300, jumpmax: int = 100) -> None:
         assert pname.exists()
         with h5py.File(os.path.join(self.path2NWBData), mode="r") as nwbData:
             xy = np.array(nwbData[self.path2PosData + "/data"])

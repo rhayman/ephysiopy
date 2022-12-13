@@ -1,12 +1,10 @@
 import fnmatch
-import math
 import os
-import pickle
 from contextlib import redirect_stdout
 from dataclasses import dataclass
-
 import numpy as np
-from ephysiopy.common.utils import smooth
+from pathlib import Path
+
 
 MAXSPEED = 4.0  # pos data speed filter in m/s
 BOXCAR = 20  # this gives a 400ms smoothing window for pos averaging
@@ -23,7 +21,8 @@ class IO(object):
     """
 
     tetrode_files = dict.fromkeys(
-        ["." + str(i) for i in range(1, 17)], [("ts", ">i"), ("waveform", "50b")]
+        ["." + str(i) for i in range(1, 17)],
+        [("ts", ">i"), ("waveform", "50b")]
     )
     other_files = {
         ".pos": [("ts", ">i"), ("pos", ">8h")],
@@ -39,7 +38,7 @@ class IO(object):
     # this only works in >= Python3.5
     axona_files = {**other_files, **tetrode_files}
 
-    def __init__(self, filename_root=""):
+    def __init__(self, filename_root: Path = ""):
         self.filename_root = filename_root
 
     def getData(self, filename_root: str) -> np.ndarray:
@@ -93,11 +92,11 @@ class IO(object):
         out : ndarray
             Data read from the clu file
         """
-        filename_root = self.filename_root + "." + "clu." + str(tet)
+        filename_root = self.filename_root.with_suffix("." + "clu." + str(tet))
         if os.path.exists(filename_root):
             dt = np.dtype([("data", "<i")])
             clu_data = np.loadtxt(filename_root, dtype=dt)
-            return clu_data["data"][1::]  # first entry is number of clusters found
+            return clu_data["data"][1::]  # first entry is num of clusters
         else:
             return None
 
@@ -116,11 +115,13 @@ class IO(object):
             The data read from the cut file
         """
         a = []
-        filename_root = self.filename_root + "_" + str(tet) + ".cut"
+        filename_root = os.path.splitext(
+            self.filename_root.with_stem(
+                self.filename_root.stem + "_" + str(tet) + ".cut"))[0]
         if not os.path.exists(filename_root):
             cut = self.getCluCut(tet)
             if cut is not None:
-                return cut - 1  #  clusters 1 indexed in clu
+                return cut - 1  # clusters 1 indexed in clu
             return cut
         with open(filename_root, "r") as f:
             cut_data = f.read()
@@ -200,7 +201,7 @@ class IO(object):
             f.close()
         if os.path.splitext(filename_root)[1] != ".set":
             st = data.find(b"data_start") + len("data_start")
-            header = data[0 : st - len("data_start") - 2]
+            header = data[0: st - len("data_start") - 2]
         else:
             header = data
         headerDict = {}
@@ -253,13 +254,16 @@ class Pos(IO):
     set correctly
     """
 
-    def __init__(self, filename_root, *args, **kwargs):
+    def __init__(self, filename_root: Path, *args, **kwargs):
+        filename_root = Path(filename_root)
+        if filename_root.suffix == ".set":
+            filename_root = Path(os.path.splitext(filename_root)[0])
         self.filename_root = filename_root
-        self.header = self.getHeader(filename_root + ".pos")
+        self.header = self.getHeader(filename_root.with_suffix(".pos"))
         self.setheader = None
-        self.setheader = self.getHeader(filename_root + ".set")
+        self.setheader = self.getHeader(filename_root.with_suffix(".set"))
         self.posProcessed = False
-        posData = self.getData(filename_root + ".pos")
+        posData = self.getData(filename_root.with_suffix(".pos"))
         self.nLEDs = 1
         if self.setheader is not None:
             self.nLEDs = sum(
@@ -274,8 +278,8 @@ class Pos(IO):
         if self.nLEDs == 2:
             self.led_pos = np.ma.MaskedArray(posData["pos"][:, 0:4])
             self.led_pix = np.ma.MaskedArray(posData["pos"][:, 4:6])
-        self.led_pos: np.ma.MaskedArray = np.ma.masked_equal(self.led_pos, 1023)
-        self.led_pix: np.ma.MaskedArray = np.ma.masked_equal(self.led_pix, 1023)
+        self.led_pos = np.ma.masked_equal(self.led_pos, 1023)
+        self.led_pix = np.ma.masked_equal(self.led_pix, 1023)
         self.ts = np.array(posData["ts"])
         self.npos = len(self.led_pos[0])
         self.xy = np.ones([2, self.npos]) * np.nan
@@ -317,25 +321,30 @@ class Tetrode(IO):
         Whether to convert the data values volts. Default True
     """
 
-    def __init__(self, filename_root, tetrode, volts=True):
+    def __init__(self, filename_root: Path, tetrode, volts=True):
+        filename_root = Path(filename_root)
+        if filename_root.suffix == ".set":
+            filename_root = Path(os.path.splitext(filename_root)[0])
         self.filename_root = filename_root
         self.tetrode = tetrode
         self.volts = volts
-        self.header = self.getHeader(self.filename_root + "." + str(tetrode))
-        data = self.getData(filename_root + "." + str(tetrode))
+        self.header = self.getHeader(
+            self.filename_root.with_suffix("." + str(tetrode)))
+        data = self.getData(filename_root.with_suffix("." + str(tetrode)))
         self.spk_ts = data["ts"][::4]
         self.nChans = self.getHeaderVal(self.header, "num_chans")
         self.samples = self.getHeaderVal(self.header, "samples_per_spike")
         self.nSpikes = self.getHeaderVal(self.header, "num_spikes")
         self.posSampleRate = self.getHeaderVal(
-            self.getHeader(self.filename_root + "." + "pos"), "sample_rate"
+            self.getHeader(
+                self.filename_root.with_suffix(".pos")), "sample_rate"
         )
         self.waveforms = data["waveform"].reshape(
             self.nSpikes, self.nChans, self.samples
         )
         del data
         if volts:
-            set_header = self.getHeader(self.filename_root + ".set")
+            set_header = self.getHeader(self.filename_root.with_suffix(".set"))
             gains = np.zeros(4)
             st = (tetrode - 1) * 4
             for i, g in enumerate(np.arange(st, st + 4)):
@@ -435,7 +444,7 @@ class Tetrode(IO):
             if self.cut is None:
                 return None
         if self.pos_samples is None:
-            self.getPosSamples()  #  sets self.pos_samples
+            self.getPosSamples()  # sets self.pos_samples
         return self.pos_samples[self.cut == cluster].astype(int)
 
     def getUniqueClusters(self):
@@ -486,9 +495,9 @@ class EEG(IO):
         # to match 'num_EEG_samples'
         # TODO: this could be taken care of in the IO base class
         if egf:
-            self.eeg = self.eeg[0 : int(self.header["num_EGF_samples"])]
+            self.eeg = self.eeg[0: int(self.header["num_EGF_samples"])]
         else:
-            self.eeg = self.eeg[0 : int(self.header["num_EEG_samples"])]
+            self.eeg = self.eeg[0: int(self.header["num_EEG_samples"])]
         self.sample_rate = int(self.getHeaderVal(self.header, "sample_rate"))
         set_header = self.getHeader(self.filename_root + ".set")
         eeg_ch = int(set_header["EEG_ch_1"]) - 1
