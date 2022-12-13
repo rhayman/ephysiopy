@@ -115,9 +115,9 @@ class IO(object):
             The data read from the cut file
         """
         a = []
-        filename_root = os.path.splitext(
-            self.filename_root.with_stem(
-                self.filename_root.stem + "_" + str(tet) + ".cut"))[0]
+        filename_root = Path(os.path.splitext(
+            self.filename_root)[0] + "_" + str(tet) + ".cut")
+        
         if not os.path.exists(filename_root):
             cut = self.getCluCut(tet)
             if cut is not None:
@@ -474,8 +474,9 @@ class EEG(IO):
 
     """
 
-    def __init__(self, filename_root, eeg_file=1, egf=0):
+    def __init__(self, filename_root: Path, eeg_file=1, egf=0):
         self.showfigs = 0
+        filename_root = Path(os.path.splitext(filename_root)[0])
         self.filename_root = filename_root
         if egf == 0:
             if eeg_file == 1:
@@ -487,8 +488,8 @@ class EEG(IO):
                 eeg_suffix = ".egf"
             else:
                 eeg_suffix = ".egf" + str(eeg_file)
-        self.header = self.getHeader(self.filename_root + eeg_suffix)
-        self.eeg = self.getData(filename_root + eeg_suffix)["eeg"]
+        self.header = self.getHeader(self.filename_root.with_suffix(eeg_suffix))
+        self.eeg = self.getData(filename_root.with_suffix(eeg_suffix))["eeg"]
         # sometimes the eeg record is longer than reported in
         # the 'num_EEG_samples'
         # value of the header so eeg record should be truncated
@@ -499,7 +500,7 @@ class EEG(IO):
         else:
             self.eeg = self.eeg[0: int(self.header["num_EEG_samples"])]
         self.sample_rate = int(self.getHeaderVal(self.header, "sample_rate"))
-        set_header = self.getHeader(self.filename_root + ".set")
+        set_header = self.getHeader(self.filename_root.with_suffix(".set"))
         eeg_ch = int(set_header["EEG_ch_1"]) - 1
         eeg_gain = int(set_header["gain_ch_" + str(eeg_ch)])
         # EEG polarity is determined by the "mode_ch_n" key in the setfile
@@ -541,12 +542,13 @@ class Stim(dict, IO):
         The fully qualified filename without the suffix
     """
 
-    def __init__(self, filename_root, *args, **kwargs):
+    def __init__(self, filename_root: Path, *args, **kwargs):
         self.update(*args, **kwargs)
+        filename_root = Path(os.path.splitext(filename_root)[0])
         self.filename_root = filename_root
-        stmData = self.getData(filename_root + ".stm")
+        stmData = self.getData(filename_root.with_suffix(".stm"))
         self.__setitem__("on", stmData["ts"])
-        stmHdr = self.getHeader(filename_root + ".stm")
+        stmHdr = self.getHeader(filename_root.with_suffix(".stm"))
         for k, v in stmHdr.items():
             self.__setitem__(k, v)
         tb = int(self["timebase"].split(" ")[0])

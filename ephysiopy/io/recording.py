@@ -7,7 +7,7 @@ from typing import NoReturn
 
 import h5py
 import numpy as np
-from ephysiopy.common.ephys_generic import PosCalcsGeneric
+from ephysiopy.common.ephys_generic import PosCalcsGeneric, EEGCalcsGeneric
 from ephysiopy.dacq2py.axonaIO import IO, Pos
 from ephysiopy.dacq2py.tetrode_dict import TetrodeDict
 from ephysiopy.openephys2py.OEKiloPhy import KiloSortSession
@@ -47,7 +47,7 @@ def memmapBinaryFile(path2file: str, n_channels=384, **kwargs) -> np.ndarray:
         return np.empty(0)
 
 
-def loadTrackingPluginData(pname: Path) -> np.array:
+def loadTrackingPluginData(pname: Path) -> np.ndarray:
     dt = np.dtype(
         {
             "x": (np.single, 0),
@@ -96,7 +96,7 @@ class TrackingKind(Enum):
 
 
 class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
-    def __init__(self, pname: str, **kwargs) -> None:
+    def __init__(self, pname: Path, **kwargs) -> None:
         assert os.path.exists(pname)
         self._pname = pname
         self._settings = None
@@ -114,6 +114,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         return (
             hasattr(subclass, "load_neural_data")
             and callable(subclass.load_neural_data)
+            and hasattr(subclass, "load_lfp")
+            and callable(subclass.load_lfp)
             and hasattr(subclass, "load_pos")
             and callable(subclass.load_pos)
             and hasattr(subclass, "load_cluster_data")
@@ -206,6 +208,11 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self._path2PosData = val
 
     @abc.abstractmethod
+    def load_lfp(self, pname: Path, *args, **kwargs):
+        """Load the LFP data"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def load_neural_data(self, pname: Path) -> NoReturn:
         """Load the neural data"""
         raise NotImplementedError
@@ -264,6 +271,16 @@ class AxonaTrial(TrialInterface):
     def settings(self, value) -> None:
         self.__settings = value
 
+    def load_lfp(self, pname: Path, *args, **kwargs):
+        from ephysiopy.dacq2py.axonaIO import EEG
+        lfp  = None
+        if "egf" in args:
+            lfp = EEG(self.pname, egf=1)
+        else:
+            lfp = EEG(self.pname)
+        if lfp is not None:
+            self.EEGCalcs = EEGCalcsGeneric(lfp.sig, lfp.sample_rate)
+
     def load_neural_data(self, pname: Path) -> None:
         pass
 
@@ -303,12 +320,17 @@ class OpenEphysBase(TrialInterface):
         super().__init__(pname, **kwargs)
         setattr(self, "sync_messsage_file", None)
         self.load_settings()
-        record_methods = ["Acquisition Board", "Neuropix-PXI", "Rhythm FPGA"]
+        record_methods = ["Acquisition Board",
+                                                "Neuropix-PXI", "Sources/Neuropix-PXI",
+                                                "Rhythm FPGA", "Sources/Rhythm FPGA"]
         record_method = [i for i in self.settings.processors.keys()
                          if i in record_methods][0]
+        if "/" in record_method:
+            record_method = record_method.split("/")[-1]
         self.rec_kind = Xml2RecordingKind[record_method]
         self.sample_rate = None
         self.sample_rate = self.settings.processors[record_method].sample_rate
+        self.channel_count = self.settings.processors[record_method].channel_count
         self.kilodata = None
 
     def __load_kilo__(self):
@@ -322,6 +344,22 @@ class OpenEphysBase(TrialInterface):
         times = ts[self.kilodata.spk_clusters == cluster]
         return times.astype(np.int64) / self.sample_rate
 
+    def load_lfp(self, pname: Path, *args, **kwargs):
+        from scipy import signal
+        if self.path2LFPdata is not None:
+            lfp = memmapBinaryFile(
+                os.path.join(self.path2LFPdata, "continuous.dat"),
+                n_channels=self.channel_count)
+            channel = 0
+            if "channel" in kwargs.keys():
+                channel = kwargs["channel"]
+            sample_rate = 500
+            if "sample_rate" in kwargs.keys():
+                sample_rate = kwargs["sample_rate"]
+            n_samples = np.shape(lfp[:, channel])[0]
+            sig = signal.resample(lfp[:, channel], int(n_samples / 3e4) * sample_rate)
+            self.EEGCalcs = EEGCalcsGeneric(sig, sample_rate)
+    
     def load_neural_data(self, pname: Path) -> None:
         pass
 
@@ -425,23 +463,22 @@ class OpenEphysBase(TrialInterface):
         )
         sync_file_match = exp_name / rec_name
         acq_method = ""
-        match self.rec_kind:
-            case RecordingKind.NEUROPIXELS:
-                acq_method = "Neuropix-PXI-[0-9][0-9][0-9]."
-                APdata_match = (exp_name / rec_name /
-                                "continuous" / (acq_method + "0"))
-                LFPdata_match = (exp_name / rec_name /
+        if self.rec_kind == RecordingKind.NEUROPIXELS:
+            acq_method = "Neuropix-PXI-[0-9][0-9][0-9]."
+            APdata_match = (exp_name / rec_name /
+                            "continuous" / (acq_method + "0"))
+            LFPdata_match = (exp_name / rec_name /
                                  "continuous" / (acq_method + "1"))
-            case RecordingKind.FPGA:
-                acq_method = "Rhythm_FPGA-[0-9][0-9][0-9]."
-                APdata_match = (exp_name / rec_name /
-                                "continuous" / (acq_method + "0"))
-                LFPdata_match = (exp_name / rec_name /
-                                 "continuous" / (acq_method + "1"))
-            case _:
-                acq_method = "Acquisition_Board-[0-9][0-9][0-9].*"
-                APdata_match = exp_name / rec_name / "continuous" / acq_method
-                LFPdata_match = exp_name / rec_name / "continuous" / acq_method
+        elif self.rec_kind == RecordingKind.FPGA:
+            acq_method = "Rhythm_FPGA-[0-9][0-9][0-9]."
+            APdata_match = (exp_name / rec_name /
+                            "continuous" / (acq_method + "0"))
+            LFPdata_match = (exp_name / rec_name /
+                                "continuous" / (acq_method + "1"))
+        else:
+            acq_method = "Acquisition_Board-[0-9][0-9][0-9].*"
+            APdata_match = exp_name / rec_name / "continuous" / acq_method
+            LFPdata_match = exp_name / rec_name / "continuous" / acq_method
         Events_match = (
             # only dealing with a single TTL channel at the moment
             exp_name / rec_name / "events" / acq_method / "TTL"

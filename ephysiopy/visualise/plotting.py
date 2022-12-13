@@ -37,6 +37,7 @@ class FigureMaker(object):
     '''
     def __init__(self):
         self.data_loaded = False
+        self.PosCalcs = None
 
     def initialise(self):
         xy = getattr(self.PosCalcs, "xy")
@@ -58,13 +59,13 @@ class FigureMaker(object):
         self.RateMapMaker.y_lims = getattr(self, 'y_lims', None)
         self.data_loaded = True
 
-    def getSpikePosIndices(self, spk_times: np.array):
+    def getSpikePosIndices(self, spk_times: np.ndarray):
         pos_times = getattr(self.PosCalcs, 'xyTS')
         idx = np.searchsorted(pos_times, spk_times)
         idx[idx == len(pos_times)] = idx[idx == len(pos_times)] - 1
         return idx
 
-    def makeSummaryPlot(self, spk_times: np.array):
+    def makeSummaryPlot(self, spk_times: np.ndarray):
         fig = plt.figure()
         ax = plt.subplot(221)
         self.makeSpikePathPlot(spk_times, ax=ax, markersize=2)
@@ -80,7 +81,7 @@ class FigureMaker(object):
         return fig
 
     @stripAxes
-    def makeRateMap(self, spk_times: np.array,
+    def makeRateMap(self, spk_times: np.ndarray,
                     ax: matplotlib.axes = None) -> matplotlib.axes:
         self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
@@ -100,7 +101,7 @@ class FigureMaker(object):
         return ax
 
     @stripAxes
-    def makeSpikePathPlot(self, spk_times: np.array = None,
+    def makeSpikePathPlot(self, spk_times: np.ndarray = None,
                           ax: matplotlib.axes = None,
                           **kwargs) -> matplotlib.axes:
         self.initialise()

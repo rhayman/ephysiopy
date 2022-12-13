@@ -8,11 +8,16 @@ from astropy import convolution  # deals with nans unlike other convs
 from ephysiopy.common.utils import blurImage
 from scipy import signal
 
-warnings.filterwarnings("ignore", message="invalid value encountered in sqrt")
-warnings.filterwarnings("ignore", message="invalid value encountered in subtract")
-warnings.filterwarnings("ignore", message="invalid value encountered in greater")
-warnings.filterwarnings("ignore", message="invalid value encountered in true_divide")
-warnings.filterwarnings("ignore", message="divide by zero encountered in true_divide")
+warnings.filterwarnings(
+    "ignore", message="invalid value encountered in sqrt")
+warnings.filterwarnings(
+    "ignore", message="invalid value encountered in subtract")
+warnings.filterwarnings(
+    "ignore", message="invalid value encountered in greater")
+warnings.filterwarnings(
+    "ignore", message="invalid value encountered in true_divide")
+warnings.filterwarnings(
+    "ignore", message="divide by zero encountered in true_divide")
 np.seterr(divide="ignore", invalid="ignore")
 
 
@@ -250,7 +255,8 @@ class RateMap(object):
         if "pos" in mapType:  # return just binned up position
             if smoothing:
                 if "dir" in varType:
-                    binned_pos = self._circPadSmooth(binned_pos, n=self.smooth_sz)
+                    binned_pos = self._circPadSmooth(
+                        binned_pos, n=self.smooth_sz)
                 else:
                     binned_pos = blurImage(
                         binned_pos, self.smooth_sz, ftype=self.smoothingType
@@ -265,7 +271,8 @@ class RateMap(object):
             if "dir" in varType:
                 rmap = self._circPadSmooth(rmap, self.smooth_sz)
             else:
-                rmap = blurImage(rmap, self.smooth_sz, ftype=self.smoothingType)
+                rmap = blurImage(
+                    rmap, self.smooth_sz, ftype=self.smoothingType)
         else:  # default case
             if not smoothing:
                 return binned_spk / binned_pos, binned_pos_edges
@@ -287,7 +294,9 @@ class RateMap(object):
                         binned_spk_tmp[i, :, :] = binned_spk[i]
                     binned_spk = binned_spk_tmp
                 binned_spk = blurImage(
-                    np.squeeze(binned_spk), self.smooth_sz, ftype=self.smoothingType
+                    np.squeeze(binned_spk),
+                    self.smooth_sz,
+                    ftype=self.smoothingType
                 )
                 rmap = binned_spk / binned_pos
                 if rmap.ndim <= 2:
@@ -356,7 +365,8 @@ class RateMap(object):
         else:
             var = np.flipud(var)
         ndhist = np.apply_along_axis(
-            lambda x: np.histogramdd(var.T, weights=x, bins=bin_edges), 0, weights.T
+            lambda x: np.histogramdd(
+                var.T, weights=x, bins=bin_edges), 0, weights.T
         )
         return ndhist
 
@@ -384,13 +394,13 @@ class RateMap(object):
         var = np.concatenate((var[t2:tn], var, var[0:t2]))
         if ny is None:
             ny = n
-        x, y = np.mgrid[-n : n + 1, 0 - ny : ny + 1]
+        x, y = np.mgrid[-n: n + 1, 0 - ny: ny + 1]
         g = np.exp(-(x**2 / float(n) + y**2 / float(ny)))
         if np.ndim(var) == 1:
             g = g[n, :]
         g = g / g.sum()
         improc = signal.convolve(var, g, mode="same")
-        improc = improc[tn - t2 : tn - t2 + tn]
+        improc = improc[tn - t2: tn - t2 + tn]
         return improc
 
     def _circularStructure(self, radius):
@@ -555,21 +565,25 @@ class RateMap(object):
         # [Step 2] Multiply the relevant transforms and invert to obtain the
         # equivalent convolutions
         rawCorr = np.fft.fftshift(
-            np.real(np.fft.ifft(np.fft.ifft(Fx * np.conj(Fx), axis=1), axis=0)),
+            np.real(np.fft.ifft(
+                np.fft.ifft(Fx * np.conj(Fx), axis=1), axis=0)),
             axes=(0, 1),
         )
         sums_x = np.fft.fftshift(
-            np.real(np.fft.ifft(np.fft.ifft(np.conj(Fx) * Fn, axis=1), axis=0)),
+            np.real(np.fft.ifft(
+                np.fft.ifft(np.conj(Fx) * Fn, axis=1), axis=0)),
             axes=(0, 1),
         )
         sumOfSquares_x = np.fft.fftshift(
             np.real(
-                np.fft.ifft(np.fft.ifft(Fn * np.conj(FsumOfSquares_x), axis=1), axis=0)
+                np.fft.ifft(
+                    np.fft.ifft(Fn * np.conj(FsumOfSquares_x), axis=1), axis=0)
             ),
             axes=(0, 1),
         )
         N = np.fft.fftshift(
-            np.real(np.fft.ifft(np.fft.ifft(Fn * np.conj(Fn), axis=1), axis=0)),
+            np.real(np.fft.ifft(
+                np.fft.ifft(Fn * np.conj(Fn), axis=1), axis=0)),
             axes=(0, 1),
         )
         # [Step 3] Account for rounding errors.
@@ -580,7 +594,8 @@ class RateMap(object):
         N[N <= 1] = np.nan
         # [Step 4] Compute correlation matrix
         mapStd = np.sqrt((sumOfSquares_x * N) - sums_x**2)
-        mapCovar = (rawCorr * N) - sums_x * sums_x[::-1, :, :][:, ::-1, :][:, :, :]
+        mapCovar = (rawCorr * N) - sums_x * \
+            sums_x[::-1, :, :][:, ::-1, :][:, :, :]
 
         return np.squeeze(mapCovar / mapStd / mapStd[::-1, :, :][:, ::-1, :][:, :, :])
 

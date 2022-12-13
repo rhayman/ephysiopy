@@ -102,13 +102,17 @@ class KiloSortSession(object):
             self.cluster_info = pd.read_csv(
                 os.path.join(self.fname_root, "cluster_info.tsv"), "\t"
             )
-            if fileExists(self.fname_root, "channel_positions.npy") and fileExists(
+            if fileExists(
+                self.fname_root, "channel_positions.npy") and fileExists(
                 self.fname_root, "channel_map.npy"
             ):
-                chXZ = np.load(os.path.join(self.fname_root, "channel_positions.npy"))
-                chMap = np.load(os.path.join(self.fname_root, "channel_map.npy"))
+                chXZ = np.load(
+                    os.path.join(self.fname_root, "channel_positions.npy"))
+                chMap = np.load(
+                    os.path.join(self.fname_root, "channel_map.npy"))
                 chID = np.asarray(
-                    [np.argmax(chMap == x) for x in self.cluster_info.ch.values]
+                    [np.argmax(chMap == x) for x in
+                     self.cluster_info.ch.values]
                 )
                 self.cluster_info["chanX"] = chXZ[chID, 0]
                 self.cluster_info["chanY"] = chXZ[chID, 1]

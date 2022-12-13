@@ -7,3 +7,4 @@ mahotas
 h5py
 scikit-learn
 pytest
+pytest-mpl

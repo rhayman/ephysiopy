@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 from ephysiopy.dacq2py.axonaIO import IO
 from ephysiopy.dacq2py.axona_headers import PosHeader
-from pathlib import Path
+from pathlib import Path, PurePath
 
 
 def test_io(path_to_axona_data):
@@ -18,10 +18,10 @@ def test_io(path_to_axona_data):
 
 
 def test_get_cut(path_to_axona_data):
-    fname_root = Path(os.path.splitext(path_to_axona_data)[0])
+    fname_root = PurePath(os.path.splitext(path_to_axona_data)[0])
     io = IO(fname_root)
     data = io.getCut(1)
-    assert isinstance(data, np.ndarray)
+    assert isinstance(data, list)
     data = io.getCluCut(1)
     assert isinstance(data, np.ndarray)
     # a file that doesn't exist
