@@ -324,12 +324,12 @@ class phasePrecession2D(object):
         return peaksXY, peaksRate, labels, rmap
 
     def getPosProps(
-                    self,
-                    labels,
-                    peaksXY,
-                    laserEvents=None,
-                    plot=False,
-                    **kwargs):
+            self,
+            labels,
+            peaksXY,
+            laserEvents=None,
+            plot=False,
+            **kwargs):
         """
         Uses the output of partitionFields and returns vectors the same
         length as pos.

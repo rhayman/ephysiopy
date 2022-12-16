@@ -60,7 +60,6 @@ The pos data is loaded by calling the load_pos_data() method:
 
 ```python
 npx.load_pos_data(ppm=300, jumpmax=100)
-
 ```
 
 Note
