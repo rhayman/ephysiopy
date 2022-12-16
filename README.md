@@ -62,14 +62,17 @@ The pos data is loaded by calling the load_pos_data() method:
 npx.load_pos_data(ppm=300, jumpmax=100)
 
 ```
+
 Note
 ppm = pixels per metre, used to convert pixel coords to cms.
 jumpmax = maximum "jump" in cms for point to be considered "bad" and smoothed over
 
 The same principles apply to the other classes that inherit from TrialInterface (AxonaTrial and OpenEphysNWB)
 
+
 Plotting data
 =============
+
 A mixin class called FigureMaker allows consistent plots, regardless of recording technique. All plotting functions
 there begin with "make" e.g "makeRateMap" and return an instance of a matplotlib axis
 
