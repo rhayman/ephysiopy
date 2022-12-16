@@ -273,7 +273,7 @@ class AxonaTrial(TrialInterface):
 
     def load_lfp(self, pname: Path, *args, **kwargs):
         from ephysiopy.dacq2py.axonaIO import EEG
-        lfp  = None
+        lfp = None
         if "egf" in args:
             lfp = EEG(self.pname, egf=1)
         else:
@@ -321,8 +321,8 @@ class OpenEphysBase(TrialInterface):
         setattr(self, "sync_messsage_file", None)
         self.load_settings()
         record_methods = ["Acquisition Board",
-                                                "Neuropix-PXI", "Sources/Neuropix-PXI",
-                                                "Rhythm FPGA", "Sources/Rhythm FPGA"]
+                          "Neuropix-PXI", "Sources/Neuropix-PXI",
+                          "Rhythm FPGA", "Sources/Rhythm FPGA"]
         record_method = [i for i in self.settings.processors.keys()
                          if i in record_methods][0]
         if "/" in record_method:
