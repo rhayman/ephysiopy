@@ -8,7 +8,7 @@ Tools for the analysis of electrophysiological data collected with the Axona or 
 Installation
 ============
 
-ephysiopy requires python3.10 or greater. The easiest way to install is using pip:
+ephysiopy requires python3.7 or greater. The easiest way to install is using pip:
 
 ``python3 -m pip install ephysiopy``
 
@@ -18,8 +18,6 @@ or,
 
 Or similar.
 
-I haven't yet tried this in a conda like environment but a quick google shows it should be pretty easy.
-
 Code Example
 ============
 
@@ -27,12 +25,13 @@ Neuropixels / openephys tetrode recordings
 ------------------------------------------
 
 For openephys-type analysis there are two main entry classes depending on whether you are doing
-Neuropixels or tetrode-based analysis. Both classes inherit from the same
-parent class (OpenEphysBase) and so share a high degree of overlap in what they can do.
+OpenEphys- or Axona-based analysis. Both classes inherit from the same abstract base
+class (TrialInterface) and so share a high degree of overlap in what they can do. Because
+of the inheritance structure, the methods you call on each concrete class are the same
 
 ```python
-from ephysiopy.openephys2py.OEKiloPhy import OpenEphysNPX
-npx = OpenEphysNPX("/path/to/top_level")
+from ephysiopy.io.recording import OpenEphysBase
+trial = OpenEphysBase("/path/to/top_level")
 ```
 
 The "/path/to/top_level" bit here means that if your directory hierarchy looks like this:
@@ -51,56 +50,29 @@ The "/path/to/top_level" bit here means that if your directory hierarchy looks l
     |            └── events
 
 
-Then OpenEphysNPX should be instantiated as follows:
+Walk through the folders/ files to see where the data is:
 
 ```python
-npx = OpenEphysNPX("2020-03-20_12-40-15")
+trial.find_files("/path/to/top_level", "experiment1", "recording1")
 ```
 
-When you load the data the directory structure is iterated over to find files such as sync_messages.txt and settings.xml and so on. The data is loaded by calling the load method:
+The pos data is loaded by calling the load_pos_data() method:
 
 ```python
-npx.load()
+npx.load_pos_data(ppm=300, jumpmax=100)
+
 ```
+Note
+ppm = pixels per metre, used to convert pixel coords to cms.
+jumpmax = maximum "jump" in cms for point to be considered "bad" and smoothed over
 
-The same principles apply to the OpenEphysNWB class - as the name suggests this is for use with data recorded in the `.nwb format <https://www.nwb.org/>`_
+The same principles apply to the other classes that inherit from TrialInterface (AxonaTrial and OpenEphysNWB)
 
-When data is recorded using the `PosTracker <https://github.com/rhayman/PosTracker>`_ plugin for openephys, the position data recorded using that plugin is also loaded, which means plots of position can be produced:
+Plotting data
+=============
+A mixin class called FigureMaker allows consistent plots, regardless of recording technique. All plotting functions
+there begin with "make" e.g "makeRateMap" and return an instance of a matplotlib axis
 
-```python
-npx.plotPos()
-```
-
-For ratemaps and so on you call plotMaps() which can take several arguments to make maps of different types. See the documentation for the base class for details (OpenEphysBase)
-
-Axona tetrode recordings
-------------------------
-
-The main entry class for Axona related analysis is "Trial" contained in ephysiopy.dacq2py.dacq2py_util i.e.
-
-```python
-from ephysiopy.dacq2py.dacq2py_util import Trial
-T = Trial("/path/to/dataset/mytrial")
-```
-
-The "usual" Axona dataset includes the following files:
-
-* mytrial.set
-* mytrial.1
-* mytrial.2
-* mytrial.3
-* mytrial.4
-* mytrial.pos
-* mytrial.eeg
-
-Note that you shouldn't specify a suffix when constructing the filename in the code example above.
-
-You can now start analysing your data! i.e.
-
-```python
-T.plotEEGPower()
-T.plotMap(tetrode=1, cluster=4)
-```
 
 Motivation
 ==========

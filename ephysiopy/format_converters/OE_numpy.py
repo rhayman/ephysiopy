@@ -1,6 +1,7 @@
 import numpy as np
 import os
-from ephysiopy.openephys2py import OEKiloPhy, OESettings
+from ephysiopy.openephys2py import OESettings
+from ephysiopy.io.recording import OpenEphysNWB
 from scipy import signal
 
 
@@ -16,7 +17,7 @@ class OE2Numpy(object):
         # 'experiment_1.nwb'
         self.experiment_name = os.path.basename(self.filename_root)
         self.recording_name = None  # will become 'recording1' etc
-        self.OE_data = None  # will become OEKiloPhy.OpenEphysNWB instance
+        self.OE_data = None  # becomes OpenEphysBase instance
         self._settings = None  # will become an instance of OESettings.Settings
         self.fs = None
         self.lfp_lowcut = None
@@ -59,7 +60,7 @@ class OE2Numpy(object):
         'recording0' to 'recording1'
         """
         if os.path.isfile(filename_root):
-            OE_data = OEKiloPhy.OpenEphysNWB(self.dirname)
+            OE_data = OpenEphysNWB(self.dirname)
             print("Loading nwb data...")
             OE_data.load(
                 self.dirname, session_name=self.experiment_name,
@@ -96,7 +97,6 @@ class OE2Numpy(object):
             self.settings.parse()
         if self.settings.fpga_sample_rate is None:
             self.settings.parseProcessor()
-        fpga_sample_rate = None
         output_name = os.path.join(self.dirname, "lfp.npy")
         output_ts_name = os.path.join(self.dirname, "lfp_timestamps.npy")
         if len(channels) == 1:

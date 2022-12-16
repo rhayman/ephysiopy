@@ -8,9 +8,12 @@ from ephysiopy.dacq2py import axonaIO
 from ephysiopy.dacq2py.tetrode_dict import TetrodeDict
 from ephysiopy.visualise.plotting import FigureMaker
 
-warnings.filterwarnings("ignore", message="divide by zero encountered in int_scalars")
-warnings.filterwarnings("ignore", message="divide by zero encountered in divide")
-warnings.filterwarnings("ignore", message="invalid value encountered in divide")
+warnings.filterwarnings(
+    "ignore", message="divide by zero encountered in int_scalars")
+warnings.filterwarnings(
+    "ignore", message="divide by zero encountered in divide")
+warnings.filterwarnings(
+    "ignore", message="invalid value encountered in divide")
 warnings.filterwarnings(
     "ignore",
     message="Casting complex values to real\
@@ -158,11 +161,14 @@ class AxonaTrial(FigureMaker):
                 io = IO()
                 posHdr = io.getHeader(self.common_name + ".pos")
                 eegHdr = io.getHeader(self.common_name + ".eeg")
-                self.__STM["posSampRate"] = io.getHeaderVal(posHdr, "sample_rate")
-                self.__STM["eegSampRate"] = io.getHeaderVal(eegHdr, "sample_rate")
+                self.__STM["posSampRate"] = io.getHeaderVal(
+                    posHdr, "sample_rate")
+                self.__STM["eegSampRate"] = io.getHeaderVal(
+                    eegHdr, "sample_rate")
                 try:
                     egfHdr = io.getHeader(self.common_name + ".egf")
-                    self.__STM["egfSampRate"] = io.getHeaderVal(egfHdr, "sample_rate")
+                    self.__STM["egfSampRate"] = io.getHeaderVal(
+                        egfHdr, "sample_rate")
                 except Exception:
                     pass
                 # get into ms
@@ -204,17 +210,17 @@ class AxonaTrial(FigureMaker):
                     if k.startswith("stim_patternmask_"):
                         if int(v) == 1:
                             # get the number of the phase
-                            phase_num = k[-1]
-                            stim_dict["Phase_" + phase_num] = phase_info.copy()
+                            phasenum = k[-1]
+                            stim_dict["Phase_" + phasenum] = phase_info.copy()
                     if k.startswith("stim_patt_"):
                         stim_patt_dict[k] = v
                 self.patt_dict = stim_patt_dict
                 for k, v in stim_dict.items():
-                    phase_num = k[-1]
+                    phasenum = k[-1]
                     stim_dict[k]["duration"] = int(
-                        self.settings["stim_patterntimes_" + phase_num]
+                        self.settings["stim_patterntimes_" + phasenum]
                     )
-                    phase_name = self.settings["stim_patternnames_" + phase_num]
+                    phase_name = self.settings["stim_patternnames_" + phasenum]
                     stim_dict[k]["name"] = phase_name
                     if not (phase_name.startswith("Pause")):
                         # find the matching string in the stim_patt_dict
@@ -226,7 +232,8 @@ class AxonaTrial(FigureMaker):
                                 stim_dict[k]["pulseWidth"] = int(ss[0])
                                 stim_dict[k]["pulsePause"] = int(ss[2])
                 # make the dict ordered by Phase number
-                self.STM["stim_params"] = OrderedDict(sorted(stim_dict.items()))
+                self.STM["stim_params"] = OrderedDict(
+                    sorted(stim_dict.items()))
             except IOError:
                 self.__STM = None
         return self.__STM

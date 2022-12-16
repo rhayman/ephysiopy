@@ -10,7 +10,7 @@ import numpy as np
 from ephysiopy.common.ephys_generic import PosCalcsGeneric, EEGCalcsGeneric
 from ephysiopy.dacq2py.axonaIO import IO, Pos
 from ephysiopy.dacq2py.tetrode_dict import TetrodeDict
-from ephysiopy.openephys2py.OEKiloPhy import KiloSortSession
+from ephysiopy.openephys2py.KiloSort import KiloSortSession
 from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.visualise.plotting import FigureMaker
 
@@ -208,7 +208,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self._path2PosData = val
 
     @abc.abstractmethod
-    def load_lfp(self, pname: Path, *args, **kwargs):
+    def load_lfp(self, pname: Path, *args, **kwargs) -> NoReturn:
         """Load the LFP data"""
         raise NotImplementedError
 
@@ -219,7 +219,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def load_pos_data(
-        self, pname: Path, ppm: int = 300, jumpmax: int = 100
+        self, ppm: int = 300, jumpmax: int = 100
     ) -> NoReturn:
         """
         Load the position data
@@ -236,12 +236,12 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def load_cluster_data(self):
+    def load_cluster_data(self) -> NoReturn:
         """Load the cluster data (Kilosort/ Axona cut/ whatever else"""
         raise NotImplementedError
 
     @abc.abstractmethod
-    def load_settings(self):
+    def load_settings(self) -> NoReturn:
         """Loads the format specific settings file"""
         raise NotImplementedError
 
@@ -273,7 +273,6 @@ class AxonaTrial(TrialInterface):
 
     def load_lfp(self, pname: Path, *args, **kwargs):
         from ephysiopy.dacq2py.axonaIO import EEG
-        lfp  = None
         if "egf" in args:
             lfp = EEG(self.pname, egf=1)
         else:
@@ -321,16 +320,16 @@ class OpenEphysBase(TrialInterface):
         setattr(self, "sync_messsage_file", None)
         self.load_settings()
         record_methods = ["Acquisition Board",
-                                                "Neuropix-PXI", "Sources/Neuropix-PXI",
-                                                "Rhythm FPGA", "Sources/Rhythm FPGA"]
-        record_method = [i for i in self.settings.processors.keys()
-                         if i in record_methods][0]
-        if "/" in record_method:
-            record_method = record_method.split("/")[-1]
-        self.rec_kind = Xml2RecordingKind[record_method]
+                          "Neuropix-PXI", "Sources/Neuropix-PXI",
+                          "Rhythm FPGA", "Sources/Rhythm FPGA"]
+        rec_method = [i for i in self.settings.processors.keys()
+                      if i in record_methods][0]
+        if "/" in rec_method:
+            rec_method = rec_method.split("/")[-1]
+        self.rec_kind = Xml2RecordingKind[rec_method]
         self.sample_rate = None
-        self.sample_rate = self.settings.processors[record_method].sample_rate
-        self.channel_count = self.settings.processors[record_method].channel_count
+        self.sample_rate = self.settings.processors[rec_method].sample_rate
+        self.channel_count = self.settings.processors[rec_method].channel_count
         self.kilodata = None
 
     def __load_kilo__(self):
@@ -357,9 +356,10 @@ class OpenEphysBase(TrialInterface):
             if "sample_rate" in kwargs.keys():
                 sample_rate = kwargs["sample_rate"]
             n_samples = np.shape(lfp[:, channel])[0]
-            sig = signal.resample(lfp[:, channel], int(n_samples / 3e4) * sample_rate)
+            sig = signal.resample(lfp[:, channel], int(
+                n_samples / 3e4) * sample_rate)
             self.EEGCalcs = EEGCalcsGeneric(sig, sample_rate)
-    
+
     def load_neural_data(self, pname: Path) -> None:
         pass
 
@@ -381,8 +381,7 @@ class OpenEphysBase(TrialInterface):
                         pass
         self.clusterData = clusterData
 
-    def load_pos_data(self, pname: Path,
-                      ppm: int = 300, jumpmax: int = 100) -> None:
+    def load_pos_data(self, ppm: int = 300, jumpmax: int = 100) -> None:
         # Only sub-class that doesn't use this is OpenEphysNWB
         # which needs updating
         # TODO: Update / overhaul OpenEphysNWB
@@ -468,13 +467,13 @@ class OpenEphysBase(TrialInterface):
             APdata_match = (exp_name / rec_name /
                             "continuous" / (acq_method + "0"))
             LFPdata_match = (exp_name / rec_name /
-                                 "continuous" / (acq_method + "1"))
+                             "continuous" / (acq_method + "1"))
         elif self.rec_kind == RecordingKind.FPGA:
             acq_method = "Rhythm_FPGA-[0-9][0-9][0-9]."
             APdata_match = (exp_name / rec_name /
                             "continuous" / (acq_method + "0"))
             LFPdata_match = (exp_name / rec_name /
-                                "continuous" / (acq_method + "1"))
+                             "continuous" / (acq_method + "1"))
         else:
             acq_method = "Acquisition_Board-[0-9][0-9][0-9].*"
             APdata_match = exp_name / rec_name / "continuous" / acq_method
@@ -545,9 +544,7 @@ class OpenEphysNWB(OpenEphysBase):
     def load_settings(self):
         return super().load_settings()
 
-    def load_pos_data(self, pname: Path,
-                      ppm: int = 300, jumpmax: int = 100) -> None:
-        assert pname.exists()
+    def load_pos_data(self, ppm: int = 300, jumpmax: int = 100) -> None:
         with h5py.File(os.path.join(self.path2NWBData), mode="r") as nwbData:
             xy = np.array(nwbData[self.path2PosData + "/data"])
             xy = xy[:, 0:2]
@@ -556,7 +553,8 @@ class OpenEphysNWB(OpenEphysBase):
                 xy[0, :],
                 xy[1, :],
                 cm=True,
-                ppm=self.ppm,
+                ppm=ppm,
+                jumpmax=jumpmax
             )
             P.xyTS = ts
             P.sample_rate = 1.0 / np.mean(np.diff(ts))

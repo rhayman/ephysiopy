@@ -32,7 +32,7 @@ def stripAxes(func):
 
 class FigureMaker(object):
     '''
-    A mixin class for dacq2py_util and OEKiloPhy that deals solely with
+    A mixin class for TrialInterface that deals solely with
     producing graphical output
     '''
     def __init__(self):

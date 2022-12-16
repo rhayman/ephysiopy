@@ -591,8 +591,10 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
             speed_mesh = speed_mesh[:-1, :-1]
             spk_mesh = spk_mesh[:-1, :-1]
             ax.pcolormesh(
-                speed_mesh, spk_mesh, sm_binned_rate,
-                norm=LogNorm(), alpha=0.5, shading='nearest', edgecolors='None')
+                speed_mesh,
+                spk_mesh, sm_binned_rate,
+                norm=LogNorm(), alpha=0.5,
+                shading='nearest', edgecolors='None')
             # overlay the smoothed binned rate against speed
             ax.plot(sp_bin_edges, binned_spk_rate, 'r')
             # do the linear regression and plot the fit too
@@ -639,8 +641,6 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
     """
     Replaces SpikeCalcs from ephysiopy.dacq2py.spikecalcs
     """
-    
-
     def half_amp_dur(self, waveforms):
         """
         Half amplitude duration of a spike
@@ -754,7 +754,8 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
                     amps[:, c[0]], amps[:, c[1]],
                     range=myRange[:, c].T, bins=bins)
                 x, y = np.meshgrid(xe[0:-1], ye[0:-1])
-                grid[i].pcolormesh(x, y, h, cmap=clustCMap0, shading='nearest', edgecolors='face')
+                grid[i].pcolormesh(x, y, h, cmap=clustCMap0,
+                                   shading='nearest', edgecolors='face')
                 h, ye, xe = np.histogram2d(
                     amps[:, c[0]], amps[:, c[1]],
                     range=myRange[:, c].T, bins=bins)
@@ -764,8 +765,8 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
                 clustCMap = colors.ListedColormap(clustCMap)
                 clustCMap._init()
                 clustCMap._lut[:, -1] = alpha_vals
-                grid[i].pcolormesh(
-                    x, y, h, cmap=clustCMap, shading='nearest', edgecolors='face')
+                grid[i].pcolormesh(x, y, h, cmap=clustCMap,
+                                   shading='nearest', edgecolors='face')
             s = str(c[0]+1) + ' v ' + str(c[1]+1)
             grid[i].text(
                 0.05, 0.95, s, va='top', ha='left', size='small',

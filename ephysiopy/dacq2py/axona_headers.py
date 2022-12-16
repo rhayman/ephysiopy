@@ -35,20 +35,21 @@ class AxonaHeader(ABC):
 
 # --------------------- pos headers --------------------
 
+
 pos_entries = [
-        ('min_x', None), ('max_x', None), ('min_y', None),
-        ('max_y', None), ('window_min_x', None), ('window_max_x', None),
-        ('window_min_y', None), ('window_max_y', None),
-        ('sample_rate', None),
-        ('pixels_per_metre', None), ('num_pos_samples', None),
-        ('sw_version', '1.2.2.1'),
-        ('num_colours', '4'), ('timebase', '50.0 hz'),
-        ('bytes_per_timestamp', '4'),
-        ('EEG_samples_per_position', '5'), ('bearing_colour_1', '210'),
-        ('bearing_colour_2', '30'), ('bearing_colour_3', '0'),
-        ('bearing_colour_4', '0'),
-        ('pos_format', 't,x1,y1,x2,y2,numpix1,numpix2'),
-        ('bytes_per_coord', '2')
+    ('min_x', None), ('max_x', None), ('min_y', None),
+    ('max_y', None), ('window_min_x', None), ('window_max_x', None),
+    ('window_min_y', None), ('window_max_y', None),
+    ('sample_rate', None),
+    ('pixels_per_metre', None), ('num_pos_samples', None),
+    ('sw_version', '1.2.2.1'),
+    ('num_colours', '4'), ('timebase', '50.0 hz'),
+    ('bytes_per_timestamp', '4'),
+    ('EEG_samples_per_position', '5'), ('bearing_colour_1', '210'),
+    ('bearing_colour_2', '30'), ('bearing_colour_3', '0'),
+    ('bearing_colour_4', '0'),
+    ('pos_format', 't,x1,y1,x2,y2,numpix1,numpix2'),
+    ('bytes_per_coord', '2')
 ]
 
 
@@ -64,6 +65,7 @@ class PosHeader(AxonaHeader):
     pos: dict = field(default_factory=make_pos_entries)
 
 # --------------------- eeg/ egf headers --------------------
+
 
 lfp_entries = [
     ('sw_version', '1.1.0'),

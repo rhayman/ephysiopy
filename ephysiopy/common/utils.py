@@ -187,7 +187,7 @@ def rect(r, w, deg=False):
     return r * np.cos(w), r * np.sin(w)
 
 
-def polar(x, y, deg=False): 
+def polar(x, y, deg=False):
     """
     Converts from rectangular coordinates to polar ones
     Parameters
@@ -199,7 +199,7 @@ def polar(x, y, deg=False):
     Returns
     -------
     p : array_like
-        The polar version of x and y	
+        The polar version of x and y
     """
     if deg:
         return np.hypot(x, y), 180.0 * np.arctan2(y, x) / np.pi

@@ -359,7 +359,7 @@ def _get_field_labels(A: np.ndarray, **kwargs) -> tuple:
     clear_border = True
     if 'clear_border' in kwargs:
         clear_border = kwargs.pop('clear_border')
-        
+
     min_distance = 1
     if 'min_distance' in kwargs:
         min_distance = kwargs.pop('min_distance')
@@ -472,7 +472,7 @@ def field_props(
     """
     ellipse_ratio = np.nan
     _, central_field, _ = limit_to_one(A, prc=50)
-    
+
     contour_coords = find_contours(central_field, 0.5)
     from skimage.measure import EllipseModel
     E = EllipseModel()
@@ -783,7 +783,7 @@ def grid_field_props(
         min_distance = kwargs.pop('min_distance')
     else:
         min_distance = np.ceil(np.min(A_sz / 2) / 8.).astype(int)
-    
+
     peak_idx, field_labels = _get_field_labels(
         A_tmp, neighbours=7, **kwargs)
     # a fcn for the labeled_comprehension function that returns
@@ -818,7 +818,7 @@ def grid_field_props(
     peak_dist_to_centre = np.hypot(
         centred_peak_coords.T[0],
         centred_peak_coords.T[1]
-        )
+    )
     closest_peak_idx = np.argsort(peak_dist_to_centre)
     central_peak_label = closest_peak_idx[0]
     closest_peak_idx = closest_peak_idx[1:np.min((7, len(closest_peak_idx)-1))]
@@ -846,7 +846,7 @@ def grid_field_props(
                 d = np.max(np.hypot(xc, yc))
                 if d > max_dist_from_centre:
                     max_dist_from_centre = d
-    
+
     # Set the outer bits and the central region of the SAC to nans
     # getting ready for the correlation procedure
     dist_to_centre[np.abs(dist_to_centre) > max_dist_from_centre] = 0
@@ -881,7 +881,7 @@ def grid_field_props(
                 return xc[idx], yc[idx]
             ellipse_coords = ndimage.labeled_comprehension(
                 A, half_peak_labels, closest_peak_idx, fn2, tuple, 0, True)
-        
+
             ellipse_fit_coords = np.array([(x, y) for x, y in ellipse_coords])
             from skimage.measure import EllipseModel
             E = EllipseModel()
@@ -890,19 +890,19 @@ def grid_field_props(
             ellipse_axes = E.params[2:4]
             ellipse_angle = E.params[-1]
             ellipseXY = E.predict_xy(np.linspace(0, 2*np.pi, 50), E.params)
-        
+
             # get the min containing circle given the eliipse minor axis
             from skimage.measure import CircleModel
             _params = im_centre
             _params.append(np.min(ellipse_axes))
             circleXY = CircleModel().predict_xy(
                 np.linspace(0, 2*np.pi, 50), params=_params)
-        except (TypeError, ValueError): #  non-iterable x and y i.e. ellipse coords fail
+        except (TypeError, ValueError):  # non-iterable x and y
             ellipse_axes = None
             ellipse_angle = (None, None)
             ellipseXY = None
             circleXY = None
-        
+
     # collect all the following keywords into a dict for output
     closest_peak_coords = np.array(peak_coords)[closest_peak_idx]
     dictKeys = (
@@ -1018,10 +1018,10 @@ def gridness(image, step=30):
         (
             rotationalCorrVals[60],
             rotationalCorrVals[120])) - np.max(
-            (
-                rotationalCorrVals[150],
-                rotationalCorrVals[30],
-                rotationalCorrVals[90]))
+        (
+            rotationalCorrVals[150],
+            rotationalCorrVals[30],
+            rotationalCorrVals[90]))
     return gridscore, rotationalCorrVals, rotationArr
 
 
