@@ -15,7 +15,7 @@ ephysiopy.tests.conftest module
 ephysiopy.tests.test\_axona\_headers module
 -------------------------------------------
 
-.. automodule:: ephysiopy.tests.test_axona_headers
+.. automodule:: ephysiopy.tests.test_file_headers
     :members:
     :undoc-members:
     :show-inheritance:
@@ -36,10 +36,10 @@ ephysiopy.tests.test\_binning module
     :undoc-members:
     :show-inheritance:
 
-ephysiopy.tests.test\_dacq2py module
+ephysiopy.tests.test\_axona module
 ------------------------------------
 
-.. automodule:: ephysiopy.tests.test_dacq2py
+.. automodule:: ephysiopy.tests.test_axona
     :members:
     :undoc-members:
     :show-inheritance:

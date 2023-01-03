@@ -146,7 +146,7 @@ class IO(object):
             the end (e.g. ".set", ".pos" or whatever)
 
         header : dataclass
-            See ephysiopy.dacq2py.axona_headers
+            See ephysiopy.axona.file_headers
         """
         with open(filename_root, "w") as f:
             with redirect_stdout(f):

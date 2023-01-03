@@ -260,7 +260,7 @@ def test_plot_ifr_sp_corr(basic_SpikeCalcsTetrode, basic_xy):
 
 
 def test_tint_colours():
-    from ephysiopy.dacq2py import tintcolours
+    from ephysiopy.axona import tintcolours
 
     assert isinstance(tintcolours.colours, list)
 

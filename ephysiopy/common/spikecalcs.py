@@ -640,7 +640,7 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
 
 class SpikeCalcsAxona(SpikeCalcsGeneric):
     """
-    Replaces SpikeCalcs from ephysiopy.dacq2py.spikecalcs
+    Replaces SpikeCalcs from ephysiopy.axona.spikecalcs
     """
 
     def half_amp_dur(self, waveforms):
@@ -717,7 +717,7 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         TODO: aspect of plot boxes in ImageGrid not right as scaled by range of
         values now
         """
-        from ephysiopy.dacq2py.tintcolours import colours as tcols
+        from ephysiopy.axona.tintcolours import colours as tcols
         import matplotlib.colors as colors
         from itertools import combinations
         from mpl_toolkits.axes_grid1 import ImageGrid

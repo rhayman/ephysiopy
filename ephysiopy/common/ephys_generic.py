@@ -18,8 +18,8 @@ class EventsGeneric(object):
     Idea is to present a generic interface to other classes/ functions
     regardless of how the events were created.
 
-    As a starting point lets base this on the dacq2py STM class which extends
-    dict() and dacq2py.axonaIO.IO().
+    As a starting point lets base this on the axona STM class which extends
+    dict() and axona.axonaIO.IO().
 
     For a fairly complete description of the nomenclature used for the
     timulation / event parameters see the STM property of the
@@ -586,7 +586,7 @@ class PosCalcsGeneric(object):
     def filterPos(self, filt: dict = {}):
         """
         Filters data based on key/ values in filt
-        Meant to replicate a similar function in dacq2py_util.Trial
+        Meant to replicate a similar function in axona_util.Trial
         called filterPos
 
         Parameters

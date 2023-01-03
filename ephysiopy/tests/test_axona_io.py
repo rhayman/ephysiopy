@@ -1,8 +1,8 @@
 import os
 import numpy as np
 import pytest
-from ephysiopy.dacq2py.axonaIO import IO
-from ephysiopy.dacq2py.axona_headers import PosHeader
+from ephysiopy.axona.axonaIO import IO
+from ephysiopy.axona.file_headers import PosHeader
 from pathlib import Path, PurePath
 
 
@@ -41,7 +41,7 @@ def test_save_data(tmp_path):
 
 
 def test_read_data(path_to_axona_data):
-    from ephysiopy.dacq2py.axonaIO import Pos
+    from ephysiopy.axona.axonaIO import Pos
     fname_root = Path(os.path.splitext(path_to_axona_data)[0])
     pos_data = Pos(fname_root)
     pos_data.ppm
@@ -50,7 +50,7 @@ def test_read_data(path_to_axona_data):
 
 
 def test_tetrode_io(path_to_axona_data):
-    from ephysiopy.dacq2py.axonaIO import Tetrode
+    from ephysiopy.axona.axonaIO import Tetrode
     fname_root = Path(os.path.splitext(path_to_axona_data)[0])
     # tetrode 1 has a cut and clu file, tetrode 2
     # only has a clu file and tetrode 3 has neither
@@ -83,14 +83,14 @@ def test_tetrode_io(path_to_axona_data):
 
 
 def test_eeg_io(path_to_axona_data):
-    from ephysiopy.dacq2py.axonaIO import EEG
+    from ephysiopy.axona.axonaIO import EEG
     fname_root = os.path.splitext(path_to_axona_data)[0]
     EEG(fname_root)
     EEG(fname_root, egf=1)
 
 
 def test_stim_io(path_to_axona_data):
-    from ephysiopy.dacq2py.axonaIO import Stim
+    from ephysiopy.axona.axonaIO import Stim
     fname_root = os.path.splitext(path_to_axona_data)[0]
     stim = Stim(fname_root)
     stim.update(foo=2)

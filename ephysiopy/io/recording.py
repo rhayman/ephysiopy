@@ -8,8 +8,8 @@ from typing import NoReturn
 import h5py
 import numpy as np
 from ephysiopy.common.ephys_generic import PosCalcsGeneric, EEGCalcsGeneric
-from ephysiopy.dacq2py.axonaIO import IO, Pos
-from ephysiopy.dacq2py.tetrode_dict import TetrodeDict
+from ephysiopy.axona.axonaIO import IO, Pos
+from ephysiopy.axona.tetrode_dict import TetrodeDict
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.visualise.plotting import FigureMaker
@@ -278,7 +278,7 @@ class AxonaTrial(TrialInterface):
         self.__settings = value
 
     def load_lfp(self, pname: Path, *args, **kwargs):
-        from ephysiopy.dacq2py.axonaIO import EEG
+        from ephysiopy.axona.axonaIO import EEG
         if "egf" in args:
             lfp = EEG(self.pname, egf=1)
         else:
@@ -316,7 +316,7 @@ class AxonaTrial(TrialInterface):
             print("Couldn't load the pos data")
 
     def load_ttl(self):
-        from ephysiopy.dacq2py.axonaIO import Stim
+        from ephysiopy.axona.axonaIO import Stim
         self.ttl_data = Stim(self.pname)
 
     def get_spike_times(self, cluster: int, tetrode: int = None):

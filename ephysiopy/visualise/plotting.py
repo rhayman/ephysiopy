@@ -4,7 +4,7 @@ import numpy as np
 import functools
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
-from ephysiopy.dacq2py import tintcolours as tcols
+from ephysiopy.axona import tintcolours as tcols
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.transforms as transforms
 from matplotlib.patches import Rectangle

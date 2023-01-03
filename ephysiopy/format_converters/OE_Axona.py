@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import h5py
 import numpy as np
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
-from ephysiopy.dacq2py import axonaIO
+from ephysiopy.axona import axonaIO
 from ephysiopy.openephys2py import OESettings
 from ephysiopy.io.recording import OpenEphysBase
 from scipy import signal
@@ -160,7 +160,7 @@ class OE2Axona(object):
             0: int(self.last_pos_ts - self.first_pos_ts) * 50
         ]
         # Create an empty header for the pos data
-        from ephysiopy.dacq2py.axona_headers import PosHeader
+        from ephysiopy.axona.file_headers import PosHeader
 
         pos_header = PosHeader()
         pos_header.pos["min_x"] = str(
@@ -221,7 +221,7 @@ class OE2Axona(object):
         self.makeLFPData(data, eeg_type=lfp_type, gain=gain)
         # if the set file has been created then update which channel contains
         #  the eeg record so
-        # that the gain can be loaded correctly when using dacq2py_util
+        # that the gain can be loaded correctly when using axona_util
 
         print("Completed exporting LFP data to " + lfp_type + " format")
 
@@ -274,7 +274,7 @@ class OE2Axona(object):
         dt = self.AxonaData.axona_files[".1"]
         # ... and a basic header for the tetrode file that use for each
         # tetrode file, changing only the num_spikes value
-        from ephysiopy.dacq2py.axona_headers import TetrodeHeader
+        from ephysiopy.axona.file_headers import TetrodeHeader
 
         header = TetrodeHeader()
         header.common["duration"] = str(
@@ -343,12 +343,12 @@ class OE2Axona(object):
         hdf5_continuous_data - np.array with dtype as np.int16
         """
         if eeg_type == "eeg":
-            from ephysiopy.dacq2py.axona_headers import EEGHeader
+            from ephysiopy.axona.file_headers import EEGHeader
 
             header = EEGHeader()
             dst_rate = 250
         elif eeg_type == "egf":
-            from ephysiopy.dacq2py.axona_headers import EGFHeader
+            from ephysiopy.axona.file_headers import EGFHeader
 
             header = EGFHeader()
             dst_rate = 4800
@@ -386,7 +386,7 @@ class OE2Axona(object):
         if self.OE_data is None:
             # to get the timestamps for duration key
             self.getOEData(self.filename_root)
-        from ephysiopy.dacq2py.axona_headers import SetHeader
+        from ephysiopy.axona.file_headers import SetHeader
 
         header = SetHeader()
         # set some reasonable default values

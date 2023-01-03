@@ -1,4 +1,4 @@
-from ephysiopy.dacq2py import axonaIO
+from ephysiopy.axona import axonaIO
 
 
 class TetrodeDict(dict):
