@@ -124,6 +124,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             and callable(subclass.load_settings)
             and hasattr(subclass, "get_spike_times")
             and callable(subclass.get_spike_times)
+            and hasattr(subclass, "load_ttl")
+            and callable(subclass.load_ttl)
             or NotImplemented
         )
 
@@ -246,6 +248,10 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
+    def load_ttl(self):
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def get_spike_times(self, cluster: int, tetrode: int = None):
         """Returns the times of an individual cluster"""
         raise NotImplementedError
@@ -308,6 +314,10 @@ class AxonaTrial(TrialInterface):
             self.PosCalcs = P
         except IOError:
             print("Couldn't load the pos data")
+
+    def load_ttl(self):
+        from ephysiopy.dacq2py.axonaIO import Stim
+        self.ttl_data = Stim(self.pname)
 
     def get_spike_times(self, cluster: int, tetrode: int = None):
         if tetrode is not None:
@@ -442,6 +452,9 @@ class OpenEphysBase(TrialInterface):
                 and timestamps.npy in"
             )
         self.recording_start_time = recording_start_time
+
+    def load_ttl(self):
+        pass
 
     def find_files(
         self,

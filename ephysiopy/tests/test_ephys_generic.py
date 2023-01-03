@@ -45,8 +45,12 @@ def test_events_class():
 # ------------ PosCalcsGeneric testing ----------------------
 # -----------------------------------------------------------------------
 def test_speedfilter(basic_PosCalcs, basic_xy):
+    basic_PosCalcs.ppm = 300
+    basic_PosCalcs.jumpmax = 100
     xy = np.ma.masked_array([basic_xy[0], basic_xy[1]])
     new_xy = basic_PosCalcs.speedfilter(xy)
+    basic_PosCalcs.cm = False
+    basic_PosCalcs.speedfilter(xy)
     assert new_xy.ndim == 2
     assert xy.shape == new_xy.shape
 
@@ -61,6 +65,10 @@ def test_interpnans(basic_PosCalcs, basic_xy):
     new_xy = basic_PosCalcs.interpnans(xy)
     assert new_xy.ndim == 2
     assert xy.shape == new_xy.shape
+    # test for case where no nans are present
+    xy[0] = range(len(xy[0]))
+    xy[1] = range(len(xy[1]))
+    basic_PosCalcs.interpnans(xy)
 
 
 def test_smoothPos(basic_PosCalcs, basic_xy):
@@ -164,7 +172,8 @@ def test_nextpow2(basic_EEGCalcs):
 
 
 def test_ifft_filter(basic_EEGCalcs):
-    val = basic_EEGCalcs.ifftFilter(basic_EEGCalcs.sig, [50, 60], basic_EEGCalcs.fs)
+    val = basic_EEGCalcs.ifftFilter(
+        basic_EEGCalcs.sig, [50, 60], basic_EEGCalcs.fs)
     assert isinstance(val, np.ndarray)
 
 

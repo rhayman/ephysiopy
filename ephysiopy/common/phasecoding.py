@@ -34,7 +34,8 @@ phase_precession_config = {
     # AND THIS
     # kernel length for smoothing speed (boxcar)
     "speed_smoothing_window_len": 15,
-    "minimum_allowed_run_speed": 0.5,  # cm/s - original value = 2.5; lowered for mice
+    # cm/s - original value = 2.5; lowered for mice
+    "minimum_allowed_run_speed": 0.5,
     "minimum_allowed_run_duration": 2,  # in seconds
     # instantaneous firing rate (ifr) smoothing constant
     "ifr_smoothing_constant": 1.0 / 3,
@@ -53,7 +54,8 @@ class phasePrecession2D(object):
         2D phase precession in place and grid cells [1]_
 
     .. [1] Jeewajee A, Barry C, Douchamps V, Manson D, Lever C, Burgess N.
-        Theta phase precession of grid and place cell firing in open environments.
+        Theta phase precession of grid and place cell firing in open
+        environments.
         Philos Trans R Soc Lond B Biol Sci. 2013 Dec 23;369(1635):20120532.
         doi: 10.1098/rstb.2012.0532.
 
@@ -521,11 +523,14 @@ class phasePrecession2D(object):
             if filtLen[i] > 2:
                 filt = signal.firwin(
                     int(filtLen[i] - 1),
-                    cutoff=self.spatial_lowpass_cutoff / self.pos_sample_rate * 2,
+                    cutoff=self.spatial_lowpass_cutoff /
+                    self.pos_sample_rate * 2,
                     window="blackman",
                 )
                 xy_new[:, runStartIdx[i]: runEndIdx[i]] = signal.filtfilt(
-                    filt, [1], posXYUnSmthd[:, runStartIdx[i]: runEndIdx[i]], axis=1
+                    filt, [1], posXYUnSmthd[:,
+                                            runStartIdx[i]: runEndIdx[i]],
+                    axis=1
                 )
 
         r, phi = self._cart2pol(xy_new[0], xy_new[1])
@@ -609,7 +614,11 @@ class phasePrecession2D(object):
             runVals = runVals
             ax = fig.add_subplot(223)
             imm = ax.imshow(
-                runVals, cmap=cmap, norm=norm, origin="lower", interpolation="nearest"
+                runVals,
+                cmap=cmap,
+                norm=norm,
+                origin="lower",
+                interpolation="nearest"
             )
             plt.colorbar(imm, orientation="horizontal")
             ax.set_aspect("equal")
@@ -624,7 +633,11 @@ class phasePrecession2D(object):
             norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N)
 
             imm = ax.imshow(
-                imM, cmap=cmap, norm=norm, origin="lower", interpolation="nearest"
+                imM,
+                cmap=cmap,
+                norm=norm,
+                origin="lower",
+                interpolation="nearest"
             )
             plt.colorbar(imm)
             ax.set_title("Runs by distance and angle")
@@ -808,6 +821,9 @@ class phasePrecession2D(object):
         if "first" in whichSpk:
             spkUsed[~spkDict["firstInTheta"]] = False
         elif "last" in whichSpk:
+            if len(spkDict["lastInTheta"]) < len(spkDict["spkRunLabel"]):
+                spkDict["lastInTheta"] = np.insert(
+                    spkDict["lastInTheta"], -1, False)
             spkUsed[~spkDict["lastInTheta"]] = False
         spkPosIdxUsed = spkDict["spkPosIdx"].astype(int)
         # copy self.regressors and update with spk/ pos of interest
@@ -1111,7 +1127,13 @@ class phasePrecession2D(object):
         )
         return rho
 
-    def _circCircCorrTLinear(self, theta, phi, k=1000, alpha=0.05, hyp=0, conf=True):
+    def _circCircCorrTLinear(self,
+                             theta,
+                             phi,
+                             k=1000,
+                             alpha=0.05,
+                             hyp=0,
+                             conf=True):
         """
         ====
         circCircCorrTLinear

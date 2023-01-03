@@ -528,6 +528,7 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
     Encapsulates methods specific to the geometry inherent in tetrode-based
     recordings
     """
+
     def __init__(self, spike_times, waveforms=None, **kwargs):
         super().__init__(spike_times, waveforms, ** kwargs)
 
@@ -641,6 +642,7 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
     """
     Replaces SpikeCalcs from ephysiopy.dacq2py.spikecalcs
     """
+
     def half_amp_dur(self, waveforms):
         """
         Half amplitude duration of a spike

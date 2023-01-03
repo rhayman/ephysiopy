@@ -1,30 +1,28 @@
-import pytest
 import numpy as np
-import matplotlib.pylab as plt
-from ephysiopy.dacq2py.dacq2py_util import AxonaTrial
+from ephysiopy.io.recording import AxonaTrial
 from ephysiopy.common.rhythmicity import CosineDirectionalTuning
 from ephysiopy.common.rhythmicity import LFPOscillations
 
 
 def test_cosine_init(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
-    T.load()
+    T.load_pos_data(path_to_axona_data)
     C = CosineDirectionalTuning(
         T.TETRODE[1].spk_ts,
-        T.xyTS,
+        T.PosCalcs.xyTS,
         T.TETRODE[1].cut,
-        T.xy[0, :],
-        T.xy[1, :]
+        T.PosCalcs.xy[0, :],
+        T.PosCalcs.xy[1, :]
     )
     C.getPosIndices()
     clust_pos_indices = C.getClusterPosIndices(1)
-    assert(isinstance(clust_pos_indices, np.ndarray))
+    assert isinstance(clust_pos_indices, np.ndarray)
     ts = C.getClusterSpikeTimes(1)
-    assert(isinstance(ts, np.ndarray))
+    assert isinstance(ts, np.ndarray)
     dbs = C.getDirectionalBinPerPosition(6)
-    assert(isinstance(dbs, np.ndarray))
+    assert isinstance(dbs, np.ndarray)
     dbs = C.getDirectionalBinForCluster(1)
-    assert(isinstance(dbs, np.ndarray))
+    assert isinstance(dbs, np.ndarray)
     C.spk_sample_rate
     C.spk_sample_rate = 48000
     C.pos_sample_rate
@@ -43,13 +41,13 @@ def test_cosine_init(path_to_axona_data):
 
 def test_the_rest_of_CDT(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
-    T.load()
+    T.load_pos_data(path_to_axona_data)
     C = CosineDirectionalTuning(
         T.TETRODE[1].spk_ts,
-        T.xyTS,
+        T.PosCalcs.xyTS,
         T.TETRODE[1].cut,
-        T.xy[0, :],
-        T.xy[1, :]
+        T.PosCalcs.xy[0, :],
+        T.PosCalcs.xy[1, :]
     )
     runs = C.getRunsOfMinLength()
     C.speedFilterRuns(runs)
@@ -60,9 +58,10 @@ def test_the_rest_of_CDT(path_to_axona_data):
 
 def test_LFP_oscillations(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
-    T.load()
-    sig = T.EEG.sig
-    fs = T.EEG.sample_rate
+    T.load_pos_data(path_to_axona_data)
+    T.load_lfp(path_to_axona_data)
+    sig = T.EEGCalcs.sig
+    fs = T.EEGCalcs.fs
     LFP_Osc = LFPOscillations(sig, fs)
     LFP_Osc.getFreqPhase(sig, [6, 12])
     LFP_Osc.modulationindex(sig)

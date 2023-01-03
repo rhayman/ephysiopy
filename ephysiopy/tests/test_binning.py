@@ -11,15 +11,16 @@ def standard_Ratemap(basic_PosCalcs):
     P = basic_PosCalcs
     P.postprocesspos(tracker_params={"AxonaBadValue": 1023})
     # only have 10 seconds of spiking data so limit the pos stuff to that too
-    P.xy = P.xy[:, 0 : 10 * P.sample_rate]
-    P.dir = P.dir[0 : 10 * P.sample_rate]
-    P.speed = P.speed[0 : 10 * P.sample_rate]
+    P.xy = P.xy[:, 0:10 * P.sample_rate]
+    P.dir = P.dir[0:10 * P.sample_rate]
+    P.speed = P.speed[0:10 * P.sample_rate]
     P.npos = 10 * P.sample_rate
     return RateMap(P.xy, P.dir, P.speed)
 
 
 def test_calc_bin_size(standard_Ratemap):
     bs = standard_Ratemap._calcBinSize()
+    print(f"Using {standard_Ratemap.ppm} ppm")
     assert isinstance(bs, (np.ndarray, list, Sequence))
 
 

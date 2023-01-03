@@ -6,6 +6,7 @@ class SAC(object):
     """
     Spatial AutoCorrelation (SAC) class
     """
+
     def autoCorr2D(self, A, nodwell, tol=1e-10):
         """
         Performs a spatial autocorrelation on the array A
