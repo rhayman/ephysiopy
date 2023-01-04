@@ -246,9 +246,9 @@ class RateMap(object):
         elif "speed" in varType:
             self.binsize = np.arange(0, 50, 1)
 
-        binned_pos = self._binData(sample, self.binsize, self.pos_weights)
+        binned_pos = self._binData(sample, self.binsize, self.pos_weights)[0]
 
-        binned_pos_edges = binned_pos[1]
+        binned_pos_edges = binned_pos[0][1]
         binned_pos = binned_pos[0]
         nanIdx = binned_pos == 0
 
@@ -263,7 +263,7 @@ class RateMap(object):
                     )
             return binned_pos, binned_pos_edges
 
-        binned_spk = self._binData(sample, self.binsize, spkWeights)[0]
+        binned_spk = self._binData(sample, self.binsize, spkWeights)[0][0]
         # binned_spk is returned as a tuple of the binned data and the bin
         # edges
         if "after" in self.whenToSmooth:
@@ -364,11 +364,17 @@ class RateMap(object):
             bin_edges = bin_edges[np.newaxis, :]
         else:
             var = np.flipud(var)
-        ndhist = np.apply_along_axis(
-            lambda x: np.histogramdd(
-                var.T, weights=x, bins=bin_edges), 0, weights.T
-        )
-        return ndhist
+        weights = np.atleast_2d(weights)  # needed for list comp below
+        var = np.array(var.data.T.tolist())
+        ndhist = [np.histogramdd(
+                sample=var,
+                bins=bin_edges,
+                weights=np.ravel(w)) for w in weights]
+        if weights.ndim == 1 or weights is None:
+            return ndhist
+        else:  # strip out redundant arrays
+            tmp = [d[0] for d in ndhist]
+            return tmp, ndhist[0][1]
 
     def _circPadSmooth(self, var, n=3, ny=None):
         """
