@@ -30,6 +30,10 @@ def stripAxes(func):
     return wrapper
 
 
+jet_cmap = matplotlib.colormaps["jet"]
+grey_cmap = matplotlib.colormaps["gray_r"]
+
+
 class FigureMaker(object):
     '''
     A mixin class for TrialInterface that deals solely with
@@ -88,14 +92,18 @@ class FigureMaker(object):
         spk_weights = np.bincount(
             spk_times_in_pos_samples, minlength=self.npos)
         rmap = self.RateMapMaker.getMap(spk_weights)
+        print(f"len rmap = {len(rmap)}")
+        for i, r in enumerate(rmap):
+            print(f"rmap[{i}] shape = {np.shape(r)}")
+            print(f"rmap[{i}] = {r}")
         ratemap = np.ma.MaskedArray(rmap[0], np.isnan(rmap[0]), copy=True)
-        x, y = np.meshgrid(rmap[1][1][0:-1], rmap[1][0][0:-1])
+        x, y = np.meshgrid(rmap[1][1][0:-1].data, rmap[1][0][0:-1].data)
         vmax = np.nanmax(np.ravel(ratemap))
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
         ax.pcolormesh(
-            x, y, ratemap, cmap=plt.cm.get_cmap("jet"), edgecolors='face',
+            x, y, ratemap, cmap=jet_cmap, edgecolors='face',
             vmax=vmax, shading='auto')
         ax.set_aspect('equal')
         return ax
@@ -252,7 +260,7 @@ class FigureMaker(object):
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-        ax.pcolormesh(x, y, im.T, cmap=plt.cm.get_cmap("jet"),
+        ax.pcolormesh(x, y, im.T, cmap=jet_cmap,
                       edgecolors='face',
                       vmax=vmax, shading='auto')
         plt.xticks([90, 180, 270], fontweight='normal', size=6)
@@ -508,10 +516,10 @@ class FigureMaker(object):
             np.arange(0, np.shape(A)[0]))
         vmax = np.nanmax(np.ravel(A))
         ax.pcolormesh(
-            x, y, A, cmap=plt.cm.get_cmap("gray_r"),
+            x, y, A, cmap=grey_cmap,
             edgecolors='face', vmax=vmax, shading='auto')
         import copy
-        cmap = copy.copy(plt.cm.get_cmap("jet"))
+        cmap = copy.copy(jet_cmap)
         cmap.set_bad('w', 0)
         ax.pcolormesh(
             x, y, Am, cmap=cmap,

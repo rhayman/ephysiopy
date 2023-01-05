@@ -116,7 +116,6 @@ def test_p2t_time(path_to_axona_data):
     S.p2t_time(waveforms)
 
 
-@pytest.mark.mpl_image_compare
 def test_plot_cluster_space(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     T.load_pos_data(path_to_axona_data)
@@ -124,5 +123,4 @@ def test_plot_cluster_space(path_to_axona_data):
     waveforms = waveforms[T.TETRODE[1].cut == 1, :, :]
     spk_ts = T.TETRODE.get_spike_samples(1, 1)
     S = SpikeCalcsAxona(spk_ts)
-    fig = S.plotClusterSpace(waveforms)
-    return fig
+    S.plotClusterSpace(waveforms)

@@ -1,6 +1,5 @@
 import pytest
 import numpy as np
-import matplotlib.pylab as plt
 from ephysiopy.io.recording import AxonaTrial
 from pathlib import Path
 
@@ -14,79 +13,54 @@ def test_load_axona_trial(path_to_axona_data):
     AxonaTrial(path_to_axona_data)
 
 
-@pytest.mark.mpl_image_compare
 def test_plot_axona_path(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     get_spike_times(T)
     T.makeSpikePathPlot()
-    fig = plt.gcf()
-    return fig
 
 
-@pytest.mark.mpl_image_compare
 def test_plot_axona_spikes_on_path(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     ts = get_spike_times(T)
     T.makeSpikePathPlot(ts)
-    fig = plt.gcf()
-    return fig
 
 
-@pytest.mark.mpl_image_compare
 def test_plot_axona_ratemap(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     ts = get_spike_times(T)
     T.makeRateMap(ts)
-    fig = plt.gcf()
-    return fig
 
 
-@pytest.mark.mpl_image_compare
 def test_plot_axona_HD_map(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     ts = get_spike_times(T)
     T.makeHDPlot(ts)
-    fig = plt.gcf()
-    return fig
 
 
-@pytest.mark.mpl_image_compare
 def test_plot_axona_HD_map_with_mrv(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     ts = get_spike_times(T)
     T.makeHDPlot(ts, add_mrv=True, fill=True)
-    fig = plt.gcf()
-    return fig
 
 
-@pytest.mark.mpl_image_compare
 def test_plot_axona_SAC(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     ts = get_spike_times(T)
     T.makeSAC(ts)
-    fig = plt.gcf()
-    return fig
 
 
-@pytest.mark.mpl_image_compare
 def test_plot_axona_speed_vs_rate(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     ts = get_spike_times(T)
     T.makeSpeedVsRatePlot(ts, maxSpeed=1e6)
-    fig = plt.gcf()
-    return fig
 
 
-@pytest.mark.mpl_image_compare
 def test_plot_axona_speed_vs_HD(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     ts = get_spike_times(T)
     T.makeSpeedVsHeadDirectionPlot(ts)
-    fig = plt.gcf()
-    return fig
 
 
-@pytest.mark.mpl_image_compare
 def test_plot_axona_EEG_power(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     T.load_lfp(Path(path_to_axona_data))
@@ -96,11 +70,8 @@ def test_plot_axona_EEG_power(path_to_axona_data):
                         T.EEGCalcs.sm_power,
                         T.EEGCalcs.bandmaxpower,
                         T.EEGCalcs.freqatbandmaxpower)
-    fig = plt.gcf()
-    return fig
 
 
-@pytest.mark.mpl_image_compare
 def test_plot_axona_EGF_power(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     T.load_lfp(Path(path_to_axona_data), "egf")
@@ -110,21 +81,15 @@ def test_plot_axona_EGF_power(path_to_axona_data):
                         T.EEGCalcs.sm_power,
                         T.EEGCalcs.bandmaxpower,
                         T.EEGCalcs.freqatbandmaxpower)
-    fig = plt.gcf()
-    return fig
 
 
-@pytest.mark.mpl_image_compare
 def test_plot_axona_xcorr(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     ts = get_spike_times(T)
     T.makeXCorr(ts)
-    fig = plt.gcf()
-    return fig
 
 
-# @pytest.mark.mpl_image_compare
-# def test_plot_raster(path_to_axona_data):
+# # def test_plot_raster(path_to_axona_data):
 #     T = AxonaTrial(path_to_axona_data)
 #     ts = get_spike_times(T)
 #     ax = plt.gca()

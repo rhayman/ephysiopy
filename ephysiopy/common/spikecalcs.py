@@ -725,8 +725,6 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         self.scaling = np.full(4, 15)
 
         amps = self.getParam(waveforms, param=param)
-        bad_electrodes = np.setdiff1d(
-            np.array(range(4)), np.array(np.sum(amps, 0).nonzero())[0])
         cmap = np.tile(tcols[0], (bins, 1))
         cmap[0] = (1, 1, 1)
         cmap = colors.ListedColormap(cmap)
@@ -751,24 +749,23 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         clustCMap0._init()
         clustCMap0._lut[:, -1] = alpha_vals
         for i, c in enumerate(cmb):
-            if c not in bad_electrodes:
-                h, ye, xe = np.histogram2d(
-                    amps[:, c[0]], amps[:, c[1]],
-                    range=myRange[:, c].T, bins=bins)
-                x, y = np.meshgrid(xe[0:-1], ye[0:-1])
-                grid[i].pcolormesh(x, y, h, cmap=clustCMap0,
-                                   shading='nearest', edgecolors='face')
-                h, ye, xe = np.histogram2d(
-                    amps[:, c[0]], amps[:, c[1]],
-                    range=myRange[:, c].T, bins=bins)
-                clustCMap = np.tile(
-                    tcols[1], (bins, 1))
-                clustCMap[0] = (1, 1, 1)
-                clustCMap = colors.ListedColormap(clustCMap)
-                clustCMap._init()
-                clustCMap._lut[:, -1] = alpha_vals
-                grid[i].pcolormesh(x, y, h, cmap=clustCMap,
-                                   shading='nearest', edgecolors='face')
+            h, ye, xe = np.histogram2d(
+                amps[:, c[0]], amps[:, c[1]],
+                range=myRange[:, c].T, bins=bins)
+            x, y = np.meshgrid(xe[0:-1], ye[0:-1])
+            grid[i].pcolormesh(x, y, h, cmap=clustCMap0,
+                               shading='nearest', edgecolors='face')
+            h, ye, xe = np.histogram2d(
+                amps[:, c[0]], amps[:, c[1]],
+                range=myRange[:, c].T, bins=bins)
+            clustCMap = np.tile(
+                tcols[1], (bins, 1))
+            clustCMap[0] = (1, 1, 1)
+            clustCMap = colors.ListedColormap(clustCMap)
+            clustCMap._init()
+            clustCMap._lut[:, -1] = alpha_vals
+            grid[i].pcolormesh(x, y, h, cmap=clustCMap,
+                               shading='nearest', edgecolors='face')
             s = str(c[0]+1) + ' v ' + str(c[1]+1)
             grid[i].text(
                 0.05, 0.95, s, va='top', ha='left', size='small',

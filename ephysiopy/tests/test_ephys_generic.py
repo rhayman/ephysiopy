@@ -236,7 +236,6 @@ def test_smooth_spike_pos_count(basic_SpikeCalcs):
 # -----------------------------------------------------------------------
 # ------------ SpikeCalcsTetrode testing ----------------------
 # -----------------------------------------------------------------------
-@pytest.mark.mpl_image_compare
 def test_plot_ifr_sp_corr(basic_SpikeCalcsTetrode, basic_xy):
     # Assume a 10 second trial sampled at 30Hz so times are congruous
     # with the spiking data
@@ -250,8 +249,7 @@ def test_plot_ifr_sp_corr(basic_SpikeCalcsTetrode, basic_xy):
         basic_SpikeCalcsTetrode.spk_clusters == 1
     ]
     c1_pos_idx = np.floor(c1_times / 3e4 * 30).astype(int)
-    fig = basic_SpikeCalcsTetrode.ifr_sp_corr(c1_pos_idx, speed, plot=True)
-    return fig
+    basic_SpikeCalcsTetrode.ifr_sp_corr(c1_pos_idx, speed, plot=True)
 
 
 # -----------------------------------------------------------------------

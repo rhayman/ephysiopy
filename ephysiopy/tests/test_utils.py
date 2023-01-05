@@ -1,23 +1,6 @@
 import numpy as np
 import pytest
 from ephysiopy.common import utils
-import inspect
-
-
-def dump_args(func):
-    """
-    Decorator to print function call details.
-
-    This includes parameters names and effective values.
-    """
-
-    def wrapper(*args, **kwargs):
-        func_args = inspect.signature(func).bind(*args, **kwargs).arguments
-        func_args_str = ", ".join(map("{0[0]} = {0[1]!r}".format, func_args.items()))
-        print(f"{func.__module__}.{func.__qualname__} ( {func_args_str} )")
-        return func(*args, **kwargs)
-
-    return wrapper
 
 
 def test_smooth():
@@ -33,7 +16,7 @@ def test_smooth():
         utils.smooth(x, window='deliberate_error')
     utils.smooth(x, window='flat')
     y = utils.smooth(x, window='hamming')
-    assert(isinstance(y, np.ndarray))
+    assert isinstance(y, np.ndarray)
 
 
 def test_blur_image(basic_ratemap):
@@ -46,7 +29,7 @@ def test_blur_image(basic_ratemap):
     for f in filt:
         for rmap in rmaps:
             b = utils.blurImage(rmap, 3, ftype=f)
-            assert(isinstance(b, np.ndarray))
+            assert isinstance(b, np.ndarray)
 
 
 def test_count_to():
@@ -55,7 +38,7 @@ def test_count_to():
     with pytest.raises(Exception):
         utils.count_to(np.atleast_2d(n))
     y = utils.count_to(n)
-    assert(isinstance(y, np.ndarray))
+    assert isinstance(y, np.ndarray)
 
 
 def test_repeat_ind():
@@ -64,7 +47,7 @@ def test_repeat_ind():
     with pytest.raises(Exception):
         utils.repeat_ind(np.atleast_2d(n))
     res = utils.repeat_ind(n)
-    assert(isinstance(res, np.ndarray))
+    assert isinstance(res, np.ndarray)
 
 
 def test_rect():
@@ -77,20 +60,20 @@ def test_rect():
         np.rad2deg(x),
         np.rad2deg(y),
         deg=True)
-    assert(isinstance(r, np.ndarray))
+    assert isinstance(r, np.ndarray)
 
 
 def test_polar():
     x = np.random.randint(0, 10, 20)
     y = np.random.randint(0, 10, 20)
     r, _ = utils.polar(x, y)
-    assert(isinstance(r, np.ndarray))
+    assert isinstance(r, np.ndarray)
     r, _ = utils.polar(x, y, deg=True)
-    assert(isinstance(r, np.ndarray))
+    assert isinstance(r, np.ndarray)
 
 
 def test_bwperim(basic_ratemap):
     with pytest.raises(ValueError):
         utils.bwperim(basic_ratemap, n=2)
     res = utils.bwperim(basic_ratemap, n=8)
-    assert(isinstance(res, np.ndarray))
+    assert isinstance(res, np.ndarray)

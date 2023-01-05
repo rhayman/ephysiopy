@@ -1,4 +1,3 @@
-import pytest
 from ephysiopy.axona.file_headers import PosHeader
 from ephysiopy.axona.file_headers import EEGHeader
 from ephysiopy.axona.file_headers import EGFHeader

@@ -268,7 +268,7 @@ class phasePrecession2D(object):
         fieldId = fieldId[1::]
         # TODO: come back to this as may need to know field id ordering
         peakCoords = np.array(
-            ndimage.measurements.maximum_position(
+            ndimage.maximum_position(
                 rmap, labels=labels, index=fieldId)
         ).astype(int)
         peaksXY = np.vstack((xe[peakCoords[:, 0]], ye[peakCoords[:, 1]])).T
@@ -304,8 +304,8 @@ class phasePrecession2D(object):
         if plot:
             fig = plt.figure()
             ax = fig.add_subplot(211)
-            ax.pcolormesh(ye, xe, rmap, cmap=plt.cm.get_cmap(
-                "jet"), edgecolors="face")
+            ax.pcolormesh(ye, xe, rmap, cmap=matplotlib.colormaps["jet"],
+                          edgecolors="face")
             ax.set_title("Smoothed ratemap + peaks")
             ax.xaxis.set_visible(False)
             ax.yaxis.set_visible(False)
@@ -401,7 +401,7 @@ class phasePrecession2D(object):
         fieldPerimY = xe[fieldPerimYBins]
         fieldPerimXY = np.vstack((fieldPerimX, fieldPerimY))
         peaksXYBins = np.array(
-            ndimage.measurements.maximum_position(
+            ndimage.maximum_position(
                 rmap, labels=labels, index=np.unique(labels)[1::]
             )
         ).astype(int)
@@ -625,7 +625,7 @@ class phasePrecession2D(object):
             # add a custom colorbar for colors in runVals
 
             # create a custom colormap for the plot
-            cmap = plt.cm.get_cmap("hsv")
+            cmap = matplotlib.colormaps["hsv"]
             cmaplist = [cmap(i) for i in range(cmap.N)]
             cmaplist[0] = (1, 1, 1, 1)
             cmap = cmap.from_list("Perim cmap", cmaplist, cmap.N)
@@ -1062,7 +1062,7 @@ class phasePrecession2D(object):
         k = signal.gaussian(kernelLen, kernelSig)
         bins = np.arange(-179.5, 180, 1)
         phaseDist, _ = np.histogram(spkPhase / np.pi * 180, bins=bins)
-        phaseDist = ndimage.filters.convolve(phaseDist, k)
+        phaseDist = ndimage.convolve(phaseDist, k)
         phaseMin = bins[
             int(np.ceil(np.nanmean(np.nonzero(
                 phaseDist == np.min(phaseDist))[0])))

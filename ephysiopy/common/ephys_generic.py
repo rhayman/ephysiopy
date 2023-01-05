@@ -614,7 +614,7 @@ class PosCalcsGeneric(object):
             self.dir.mask = False
             self.speed.mask = False
             return False
-        bool_arr = np.ones(shape=(len(filt), self.npos), dtype=np.bool)
+        bool_arr = np.ones(shape=(len(filt), self.npos), dtype=bool)
         for idx, key in enumerate(filt):
             if isinstance(filt[key], str):
                 if len(filt[key]) == 1 and "dir" in key:

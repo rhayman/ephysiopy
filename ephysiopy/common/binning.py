@@ -246,10 +246,10 @@ class RateMap(object):
         elif "speed" in varType:
             self.binsize = np.arange(0, 50, 1)
 
-        binned_pos = self._binData(sample, self.binsize, self.pos_weights)[0]
-
-        binned_pos_edges = binned_pos[0][1]
-        binned_pos = binned_pos[0]
+        binned_pos, binned_pos_edges = self._binData(
+                                                     sample,
+                                                     self.binsize,
+                                                     self.pos_weights)
         nanIdx = binned_pos == 0
 
         if "pos" in mapType:  # return just binned up position
@@ -263,7 +263,7 @@ class RateMap(object):
                     )
             return binned_pos, binned_pos_edges
 
-        binned_spk = self._binData(sample, self.binsize, spkWeights)[0][0]
+        binned_spk, _ = self._binData(sample, self.binsize, spkWeights)
         # binned_spk is returned as a tuple of the binned data and the bin
         # edges
         if "after" in self.whenToSmooth:
@@ -370,11 +370,11 @@ class RateMap(object):
                 sample=var,
                 bins=bin_edges,
                 weights=np.ravel(w)) for w in weights]
-        if weights.ndim == 1 or weights is None:
-            return ndhist
-        else:  # strip out redundant arrays
+        if np.shape(weights)[0] == 1:
+            return ndhist[0][0], ndhist[0][1]
+        else:
             tmp = [d[0] for d in ndhist]
-            return tmp, ndhist[0][1]
+            return tmp, ndhist[1]
 
     def _circPadSmooth(self, var, n=3, ny=None):
         """

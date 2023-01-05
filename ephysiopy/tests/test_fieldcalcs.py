@@ -5,7 +5,7 @@ from ephysiopy.common import fieldcalcs
 
 def test_limit_to_one(basic_ratemap):
     _, middle_field, _ = fieldcalcs.limit_to_one(basic_ratemap)
-    assert(isinstance(middle_field, np.ndarray))
+    assert isinstance(middle_field, np.ndarray)
     basic_ratemap[1::, :] = np.nan
     fieldcalcs.limit_to_one(basic_ratemap)
 
@@ -16,7 +16,7 @@ def test_global_threshold(basic_ratemap):
 
 def test_local_threshold(basic_ratemap):
     A = fieldcalcs.local_threshold(basic_ratemap)
-    assert(isinstance(A, np.ndarray))
+    assert isinstance(A, np.ndarray)
 
 
 def test_get_border_score(basic_ratemap):
@@ -34,7 +34,7 @@ def test_get_border_score(basic_ratemap):
 
 def test_field_props(basic_ratemap):
     fp = fieldcalcs.field_props(basic_ratemap)
-    assert(isinstance(fp, dict))
+    assert isinstance(fp, dict)
     fieldcalcs.field_props(
         basic_ratemap, clear_border=True,
         neighbours=100,
@@ -56,7 +56,7 @@ def test_field_props(basic_ratemap):
 def test_corr_maps(basic_ratemap):
     flipped_map = np.rot90(basic_ratemap)
     cc = fieldcalcs.corr_maps(basic_ratemap, flipped_map)
-    assert(isinstance(cc, float))
+    assert isinstance(cc, float)
     flipped_map = flipped_map[1::, :]
     fieldcalcs.corr_maps(basic_ratemap, flipped_map, maptype='grid')
     fieldcalcs.corr_maps(flipped_map, basic_ratemap, maptype='grid')
@@ -68,14 +68,14 @@ def test_corr_maps(basic_ratemap):
 def test_coherence(basic_ratemap):
     blurred = fieldcalcs.blurImage(basic_ratemap, n=15)
     coh = fieldcalcs.coherence(basic_ratemap, blurred)
-    assert(isinstance(coh, float))
+    assert isinstance(coh, float)
 
 
 def test_kldiv_dir():
     t = np.linspace(0, 2*np.pi, 100)
     y = np.cos(t)
     kldiv = fieldcalcs.kldiv_dir(y)
-    assert(isinstance(kldiv, float))
+    assert isinstance(kldiv, float)
 
 
 def test_kldiv():
@@ -100,7 +100,7 @@ def test_skaggs_info(basic_ratemap):
     dwell_times = dwell_times / np.sum(dwell_times)
     dwell_times = dwell_times * 10
     skaggs = fieldcalcs.skaggs_info(basic_ratemap, dwell_times)
-    assert(isinstance(skaggs, float))
+    assert isinstance(skaggs, float)
     fieldcalcs.skaggs_info(basic_ratemap, dwell_times, sample_rate=30)
     basic_ratemap[:, :] = 0
     fieldcalcs.skaggs_info(basic_ratemap, dwell_times)
@@ -109,7 +109,7 @@ def test_skaggs_info(basic_ratemap):
 def test_grid_field_measures(basic_ratemap):
     # Set allProps to True to try the ellipse fitting stuff
     measures = fieldcalcs.grid_field_props(basic_ratemap, allProps=True)
-    assert(isinstance(measures, dict))
+    assert isinstance(measures, dict)
     fieldcalcs.grid_field_props(
         basic_ratemap, min_distance=10,
         maxima='single',
@@ -126,14 +126,14 @@ def test_deform_SAC(basic_ratemap):
         scale=[1, 1.15], translation=[0, -15])
     sac = transform.warp(sac, A.inverse)
     deformed_SAC = fieldcalcs.deform_SAC(sac)
-    assert(isinstance(deformed_SAC, np.ndarray))
+    assert isinstance(deformed_SAC, np.ndarray)
     A = np.zeros_like(basic_ratemap)
     A[3:10, 3:8] = 10
     nodwell = ~np.isfinite(A)
     sac = R.autoCorr2D(A, nodwell)
     fieldcalcs.deform_SAC(sac)
     fieldcalcs.deform_SAC(
-        sac, np.array([[3,9],[10,2]]), np.array([[1,9],[10,2]]))
+        sac, np.array([[3, 9], [10, 2]]), np.array([[1, 9], [10, 2]]))
 
 
 def test_get_grid_orientation(basic_ratemap):
