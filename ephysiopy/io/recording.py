@@ -67,7 +67,7 @@ def loadTrackingPluginData(pname: Path) -> np.ndarray:
 
 
 def loadTrackMePluginData(pname: Path) -> np.ndarray:
-    mmap = memmapBinaryFile(str(pname), n_channels=6)
+    mmap = memmapBinaryFile(str(pname), n_channels=4)
     return np.array(mmap[0:2, :]).T
 
 
