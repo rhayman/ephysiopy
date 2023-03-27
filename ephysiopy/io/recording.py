@@ -367,8 +367,8 @@ class OpenEphysBase(TrialInterface):
             sample_rate = 500
             if "sample_rate" in kwargs.keys():
                 sample_rate = kwargs["sample_rate"]
-            n_samples = np.shape(lfp[:, channel])[0]
-            sig = signal.resample(lfp[:, channel], int(
+            n_samples = np.shape(lfp[channel, :])[0]
+            sig = signal.resample(lfp[channel, :], int(
                 n_samples / 3e4) * sample_rate)
             self.EEGCalcs = EEGCalcsGeneric(sig, sample_rate)
 
