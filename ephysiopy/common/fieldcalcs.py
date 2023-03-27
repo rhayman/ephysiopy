@@ -298,7 +298,7 @@ def border_score(
     # remove small objects
     min_size = int(minArea / binSize) - 1
     skimage.morphology.remove_small_objects(
-        labels, min_size=min_size, connectivity=2, in_place=True)
+        labels, min_size=min_size, connectivity=2)
     labels = skimage.segmentation.relabel_sequential(labels)[0]
     nFields = np.max(labels)
     if nFields == 0:
