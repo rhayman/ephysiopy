@@ -329,7 +329,7 @@ class AxonaTrial(TrialInterface):
 class OpenEphysBase(TrialInterface):
     def __init__(self, pname: Path, **kwargs) -> None:
         super().__init__(pname, **kwargs)
-        setattr(self, "sync_messsage_file", None)
+        setattr(self, "sync_message_file", None)
         self.load_settings()
         record_methods = ["Acquisition Board",
                           "Neuropix-PXI", "Sources/Neuropix-PXI",
