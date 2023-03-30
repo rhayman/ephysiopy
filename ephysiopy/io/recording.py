@@ -73,10 +73,15 @@ def loadTrackMePluginData(pname: Path) -> np.ndarray:
     return np.array(mmap[0:2, :]).T
 
 
-def loadTrackMeTimestamps(pname: Path) -> np.ndarray:
+def loadTrackMeTTLTimestamps(pname: Path) -> np.ndarray:
     ts = np.load(os.path.join(pname, "timestamps.npy"))
     states = np.load(os.path.join(pname, "states.npy"))
     return ts[states > 0]
+
+
+def loadTrackMeTimestamps(pname: Path) -> np.ndarray:
+    ts = np.load(os.path.join(pname, "timestamps.npy"))
+    return ts
 
 
 class RecordingKind(Enum):
@@ -424,7 +429,9 @@ class OpenEphysBase(TrialInterface):
                 print("Loading TrackMe data...")
                 pos_data = loadTrackMePluginData(
                     Path(os.path.join(self.path2PosData, "continuous.dat")))
-                pos_ts = loadTrackMeTimestamps(self.path2EventsData)
+                # pos_ts = loadTrackMeTTLTimestamps(self.path2EventsData)
+                pos_ts = loadTrackMeTimestamps(
+                    Path(self.path2PosData))
                 pos_ts = pos_ts[0:len(pos_data)]
             pos_timebase = getattr(self, "pos_timebase", 3e4)
             sample_rate = np.floor(1 / np.mean(np.diff(pos_ts) / pos_timebase))
