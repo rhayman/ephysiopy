@@ -542,7 +542,7 @@ class OpenEphysBase(TrialInterface):
                     if "sync_messages.txt" in ff:
                         if PurePath(d).match(str(sync_file_match)):
                             sync_file = os.path.join(d, "sync_messages.txt")
-                            if fileContainsString(sync_file, "Processor"):
+                            if fileContainsString(sync_file, "Start Time"):
                                 self.sync_message_file = sync_file
                                 print(f"sync_messages file at: {sync_file}")
                     if "full_words.npy" in ff:
