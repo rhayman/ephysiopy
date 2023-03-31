@@ -407,11 +407,12 @@ class OpenEphysBase(TrialInterface):
                 sync_strs = f.read()
             sync_lines = sync_strs.split("\n")
             for line in sync_lines:
-                if "subProcessor: 0" in line:
-                    idx = line.find("start time: ")
-                    start_val = line[idx + len("start time: "): -1]
-                    tmp = start_val.split("@")
-                    recording_start_time = float(tmp[0])  # in samples
+                if "Start Time" in line:
+                    tokens = line.split(":")
+                    start_time = int(tokens[-1])
+                    sample_rate = int(tokens[0].split("@")
+                                      [-1].strip().split()[0])
+                    recording_start_time = start_time / sample_rate
         if self.path2PosData is not None:
             pos_data_type = getattr(self, "pos_data_type", "PosTracker")
             if pos_data_type == "PosTracker":
