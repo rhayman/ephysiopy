@@ -7,9 +7,10 @@ from typing import NoReturn
 
 import h5py
 import numpy as np
-from ephysiopy.common.ephys_generic import PosCalcsGeneric, EEGCalcsGeneric
+
 from ephysiopy.axona.axonaIO import IO, Pos
 from ephysiopy.axona.tetrode_dict import TetrodeDict
+from ephysiopy.common.ephys_generic import EEGCalcsGeneric, PosCalcsGeneric
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.visualise.plotting import FigureMaker
@@ -94,7 +95,7 @@ class RecordingKind(Enum):
 Xml2RecordingKind = {
     "Acquisition Board": RecordingKind.ACQUISITIONBOARD,
     "Neuropix-PXI": RecordingKind.NEUROPIXELS,
-    "Rhythm_FPGA": RecordingKind.FPGA}
+    "Rhythm FPGA": RecordingKind.FPGA}
 
 
 class TrackingKind(Enum):
