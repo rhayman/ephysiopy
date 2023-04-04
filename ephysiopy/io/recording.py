@@ -342,6 +342,8 @@ class OpenEphysBase(TrialInterface):
                           "Rhythm FPGA", "Sources/Rhythm FPGA"]
         rec_method = [i for i in self.settings.processors.keys()
                       if i in record_methods][0]
+        if 'Sources/' in rec_method:
+            rec_method = rec_method.lstrip('Sources/')
         self.rec_kind = Xml2RecordingKind[rec_method]
         self.sample_rate = None
         self.sample_rate = self.settings.processors[rec_method].sample_rate
