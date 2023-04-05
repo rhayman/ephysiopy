@@ -18,8 +18,8 @@ class EventsGeneric(object):
     Idea is to present a generic interface to other classes/ functions
     regardless of how the events were created.
 
-    As a starting point lets base this on the dacq2py STM class which extends
-    dict() and dacq2py.axonaIO.IO().
+    As a starting point lets base this on the axona STM class which extends
+    dict() and axona.axonaIO.IO().
 
     For a fairly complete description of the nomenclature used for the
     timulation / event parameters see the STM property of the
@@ -101,7 +101,8 @@ class EventsGeneric(object):
         self._event_dict = dict.fromkeys(level_one_keys)
         self._event_dict["stim_params"] = OrderedDict.fromkeys(level_two_keys)
         for k in self._event_dict["stim_params"].keys():
-            self._event_dict["stim_params"][k] = dict.fromkeys(level_three_keys)
+            self._event_dict["stim_params"][k] = dict.fromkeys(
+                level_three_keys)
 
 
 class EEGCalcsGeneric(object):
@@ -141,7 +142,11 @@ class EEGCalcsGeneric(object):
         val = (val >> 32) | val
         return np.log2(val + 1)
 
-    def butterFilter(self, low: float, high: float, order: int = 5) -> np.ndarray:
+    def butterFilter(
+                     self,
+                     low: float,
+                     high: float,
+                     order: int = 5) -> np.ndarray:
         """
         Filters self.sig with a butterworth filter with a bandpass filter
         defined by low and high
@@ -254,7 +259,8 @@ class EEGCalcsGeneric(object):
         idx = np.zeros([len(freqs), len(f)]).astype(bool)
 
         for i, freq in enumerate(freqs):
-            idx[i, :] = np.logical_and(np.abs(f) < freq + band, np.abs(f) > freq - band)
+            idx[i, :] = np.logical_and(
+                np.abs(f) < freq + band, np.abs(f) > freq - band)
 
         pollutedIdx = np.sum(idx, 0)
         fftRes[pollutedIdx] = np.mean(fftRes)
@@ -372,14 +378,17 @@ class PosCalcsGeneric(object):
     def sample_rate(self, val):
         self._sample_rate = val
 
-    def postprocesspos(self, tracker_params: "dict[str, float]" = {}, **kwargs) -> None:
+    def postprocesspos(
+                       self,
+                       tracker_params: "dict[str, float]" = {},
+                       **kwargs) -> None:
         """
         Post-process position data
 
         Parameters
         ----------
         tracker_params : dict
-            Same dict as created in OEKiloPhy.Settings.parse
+            Same dict as created in OESettings.Settings.parse
             (from module openephys2py)
 
         Returns
@@ -568,14 +577,16 @@ class PosCalcsGeneric(object):
 
         denom = np.gcd(upsample_rate, 30)
 
-        new_x = signal.resample_poly(xy[0, :], upsample_rate / denom, 30 / denom)
-        new_y = signal.resample_poly(xy[1, :], upsample_rate / denom, 30 / denom)
+        new_x = signal.resample_poly(
+            xy[0, :], upsample_rate / denom, 30 / denom)
+        new_y = signal.resample_poly(
+            xy[1, :], upsample_rate / denom, 30 / denom)
         return np.array([new_x, new_y])
 
-    def filterPos(self, filter_dict: dict = {}):
+    def filterPos(self, filt: dict = {}):
         """
-        Filters data based on key/ values in filter_dict
-        Meant to replicate a similar function in dacq2py_util.Trial
+        Filters data based on key/ values in filt
+        Meant to replicate a similar function in axona_util.Trial
         called filterPos
 
         Parameters
@@ -598,60 +609,61 @@ class PosCalcsGeneric(object):
         pos_index_to_keep : ndarray
             The position indices that should be kept
         """
-        if filter_dict is None:
+        if filt is None:
             self.xy.mask = False
             self.dir.mask = False
             self.speed.mask = False
             return False
-        bool_arr = np.ones(shape=(len(filter_dict), self.npos), dtype=np.bool)
-        for idx, key in enumerate(filter_dict):
-            if isinstance(filter_dict[key], str):
-                if len(filter_dict[key]) == 1 and "dir" in key:
-                    if "w" in filter_dict[key]:
-                        filter_dict[key] = (135, 225)
-                    elif "e" in filter_dict[key]:
-                        filter_dict[key] = (315, 45)
-                    elif "s" in filter_dict[key]:
-                        filter_dict[key] = (225, 315)
-                    elif "n" in filter_dict[key]:
-                        filter_dict[key] = (45, 135)
+        bool_arr = np.ones(shape=(len(filt), self.npos), dtype=bool)
+        for idx, key in enumerate(filt):
+            if isinstance(filt[key], str):
+                if len(filt[key]) == 1 and "dir" in key:
+                    if "w" in filt[key]:
+                        filt[key] = (135, 225)
+                    elif "e" in filt[key]:
+                        filt[key] = (315, 45)
+                    elif "s" in filt[key]:
+                        filt[key] = (225, 315)
+                    elif "n" in filt[key]:
+                        filt[key] = (45, 135)
                 else:
                     raise ValueError("filter must contain a key / value pair")
             if "speed" in key:
-                if filter_dict[key][0] > filter_dict[key][1]:
+                if filt[key][0] > filt[key][1]:
                     raise ValueError(
                         "First value must be less \
                         than the second one"
                     )
                 else:
                     bool_arr[idx, :] = np.logical_and(
-                        self.speed > filter_dict[key][0],
-                        self.speed < filter_dict[key][1],
+                        self.speed > filt[key][0],
+                        self.speed < filt[key][1],
                     )
             elif "dir" in key:
-                if filter_dict[key][0] < filter_dict[key][1]:
+                if filt[key][0] < filt[key][1]:
                     bool_arr[idx, :] = np.logical_and(
-                        self.dir > filter_dict[key][0], self.dir < filter_dict[key][1]
+                        self.dir > filt[key][0], self.dir < filt[key][1]
                     )
                 else:
                     bool_arr[idx, :] = np.logical_or(
-                        self.dir > filter_dict[key][0], self.dir < filter_dict[key][1]
+                        self.dir > filt[key][0], self.dir < filt[key][1]
                     )
             elif "xrange" in key:
                 bool_arr[idx, :] = np.logical_and(
-                    self.xy[0, :] > filter_dict[key][0],
-                    self.xy[0, :] < filter_dict[key][1],
+                    self.xy[0, :] > filt[key][0],
+                    self.xy[0, :] < filt[key][1],
                 )
             elif "yrange" in key:
                 bool_arr[idx, :] = np.logical_and(
-                    self.xy[1, :] > filter_dict[key][0],
-                    self.xy[1, :] < filter_dict[key][1],
+                    self.xy[1, :] > filt[key][0],
+                    self.xy[1, :] < filt[key][1],
                 )
             elif "time" in key:
                 # takes the form of 'from' - 'to' times in SECONDS
                 # such that only pos's between these ranges are KEPT
-                for i in filter_dict[key]:
-                    bool_arr[idx, i * self.sample_rate : i * self.sample_rate] = False
+                for i in filt[key]:
+                    bool_arr[idx, i * self.sample_rate: i *
+                             self.sample_rate] = False
                 bool_arr = ~bool_arr
             else:
                 raise KeyError("Unrecognised key")

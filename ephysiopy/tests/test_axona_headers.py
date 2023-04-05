@@ -1,9 +1,8 @@
-import pytest
-from ephysiopy.dacq2py.axona_headers import PosHeader
-from ephysiopy.dacq2py.axona_headers import EEGHeader
-from ephysiopy.dacq2py.axona_headers import EGFHeader
-from ephysiopy.dacq2py.axona_headers import TetrodeHeader
-from ephysiopy.dacq2py.axona_headers import SetHeader
+from ephysiopy.axona.file_headers import PosHeader
+from ephysiopy.axona.file_headers import EEGHeader
+from ephysiopy.axona.file_headers import EGFHeader
+from ephysiopy.axona.file_headers import TetrodeHeader
+from ephysiopy.axona.file_headers import SetHeader
 
 
 def test_pos_header():

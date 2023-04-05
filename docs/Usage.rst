@@ -69,9 +69,9 @@ analysis are :py:class:`~ephysiopy.common.ephys_generic.MapCalcsGeneric` and :py
 Axona
 -----
 
-The package started life as a way of doing more with Axona data and extended some old code I had that did some of the same things but in Matlab. The main entry class for Axona related analysis is "Trial" contained in ephysiopy.dacq2py.dacq2py_util i.e.
+The package started life as a way of doing more with Axona data and extended some old code I had that did some of the same things but in Matlab. The main entry class for Axona related analysis is "Trial" contained in ephysiopy.axona.axona_util i.e.
 
->>> from ephysiopy.dacq2py.dacq2py_util import Trial
+>>> from ephysiopy.axona.axona_util import Trial
 >>> T = Trial("/path/to/dataset/mytrial")
 
 The "usual" Axona dataset includes the following files:

@@ -248,7 +248,10 @@ class Electrode(object):
     postPeakSamples: int = field(default=32)
 
 
-def recurseNode(node: xml.etree.ElementTree.Element, func: Callable, cls: dataclass):
+def recurseNode(
+                node: xml.etree.ElementTree.Element,
+                func: Callable,
+                cls: dataclass):
     """
     Recursive function that applies func to each node
     """
@@ -260,7 +263,7 @@ def recurseNode(node: xml.etree.ElementTree.Element, func: Callable, cls: datacl
         return
 
 
-def addValuesToDataClass(node: xml.etree.ElementTree.Element, cls: dataclass):
+def addValues2Class(node: xml.etree.ElementTree.Element, cls: dataclass):
     for i in node.items():
         if hasattr(cls, i[0]):
             setattr(cls, i[0], i[1])
@@ -268,12 +271,12 @@ def addValuesToDataClass(node: xml.etree.ElementTree.Element, cls: dataclass):
         if cls.channel_info is None:
             cls.channel_info = list()
         chan = Channel()
-        recurseNode(node, addValuesToDataClass, chan)
+        recurseNode(node, addValues2Class, chan)
         cls.channel_info.append(chan)
     if hasattr(cls, "stream") and node.tag == "STREAM":
         if cls.stream is None:
             cls.stream = Stream()
-        recurseNode(node, addValuesToDataClass, cls.stream)
+        recurseNode(node, addValues2Class, cls.stream)
 
 
 class OEStructure(object):
@@ -355,18 +358,18 @@ class Settings(object):
         # quick hack to deal with flat binary format that has no settings.xml
         if self.tree is not None:
             for elem in self.tree.iter("PROCESSOR"):
-                this_proc = elem.get("name")
-                if this_proc == "Record Node":  # special as could be > 1
-                    rec_node = RecordNode()
-                    recurseNode(elem, addValuesToDataClass, rec_node)
-                    self.record_nodes[this_proc + " " + rec_node.nodeId] = rec_node
-                elif this_proc in self.possible_processors.keys():
-                    self.processors[this_proc] = self.possible_processors[this_proc]
-                    recurseNode(elem, addValuesToDataClass, self.processors[this_proc])
+                i_proc = elem.get("name")
+                if i_proc == "Record Node":  # special as could be > 1
+                    recNode = RecordNode()
+                    recurseNode(elem, addValues2Class, recNode)
+                    self.record_nodes[i_proc + " " + recNode.nodeId] = recNode
+                elif i_proc in self.possible_processors.keys():
+                    self.processors[i_proc] = self.possible_processors[i_proc]
+                    recurseNode(elem, addValues2Class, self.processors[i_proc])
                 else:
-                    self.processors[this_proc] = OEPlugin()
-                    recurseNode(elem, addValuesToDataClass, self.processors[this_proc])
-                
+                    self.processors[i_proc] = OEPlugin()
+                    recurseNode(elem, addValues2Class, self.processors[i_proc])
+
     def parseStimControl(self):
         """
         Parses information attached to the StimControl module I wrote

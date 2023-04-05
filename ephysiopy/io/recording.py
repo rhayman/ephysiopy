@@ -7,10 +7,11 @@ from typing import NoReturn
 
 import h5py
 import numpy as np
-from ephysiopy.common.ephys_generic import PosCalcsGeneric, EEGCalcsGeneric
-from ephysiopy.dacq2py.axonaIO import IO, Pos
-from ephysiopy.dacq2py.tetrode_dict import TetrodeDict
-from ephysiopy.openephys2py.OEKiloPhy import KiloSortSession
+
+from ephysiopy.axona.axonaIO import IO, Pos
+from ephysiopy.axona.tetrode_dict import TetrodeDict
+from ephysiopy.common.ephys_generic import EEGCalcsGeneric, PosCalcsGeneric
+from ephysiopy.openephys2py.KiloSort import KiloSortSession
 from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.visualise.plotting import FigureMaker
 
@@ -37,6 +38,8 @@ def memmapBinaryFile(path2file: str, n_channels=384, **kwargs) -> np.ndarray:
     import os
 
     if os.path.exists(path2file):
+        # make sure n_channels is int as could be str
+        n_channels = int(n_channels)
         status = os.stat(path2file)
         n_samples = int(status.st_size / (2.0 * n_channels))
         mmap = np.memmap(
@@ -67,14 +70,19 @@ def loadTrackingPluginData(pname: Path) -> np.ndarray:
 
 
 def loadTrackMePluginData(pname: Path) -> np.ndarray:
-    mmap = memmapBinaryFile(str(pname), n_channels=6)
+    mmap = memmapBinaryFile(str(pname), n_channels=4)
     return np.array(mmap[0:2, :]).T
+
+
+def loadTrackMeTTLTimestamps(pname: Path) -> np.ndarray:
+    ts = np.load(os.path.join(pname, "timestamps.npy"))
+    states = np.load(os.path.join(pname, "states.npy"))
+    return ts[states > 0]
 
 
 def loadTrackMeTimestamps(pname: Path) -> np.ndarray:
     ts = np.load(os.path.join(pname, "timestamps.npy"))
-    states = np.load(os.path.join(pname, "states.npy"))
-    return ts[states > 0]
+    return ts
 
 
 class RecordingKind(Enum):
@@ -87,7 +95,7 @@ class RecordingKind(Enum):
 Xml2RecordingKind = {
     "Acquisition Board": RecordingKind.ACQUISITIONBOARD,
     "Neuropix-PXI": RecordingKind.NEUROPIXELS,
-    "Rhythm_FPGA": RecordingKind.FPGA}
+    "Rhythm FPGA": RecordingKind.FPGA}
 
 
 class TrackingKind(Enum):
@@ -124,6 +132,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             and callable(subclass.load_settings)
             and hasattr(subclass, "get_spike_times")
             and callable(subclass.get_spike_times)
+            and hasattr(subclass, "load_ttl")
+            and callable(subclass.load_ttl)
             or NotImplemented
         )
 
@@ -208,7 +218,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self._path2PosData = val
 
     @abc.abstractmethod
-    def load_lfp(self, pname: Path, *args, **kwargs):
+    def load_lfp(self, pname: Path, *args, **kwargs) -> NoReturn:
         """Load the LFP data"""
         raise NotImplementedError
 
@@ -219,7 +229,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def load_pos_data(
-        self, pname: Path, ppm: int = 300, jumpmax: int = 100
+        self, ppm: int = 300, jumpmax: int = 100
     ) -> NoReturn:
         """
         Load the position data
@@ -236,13 +246,17 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def load_cluster_data(self):
+    def load_cluster_data(self) -> NoReturn:
         """Load the cluster data (Kilosort/ Axona cut/ whatever else"""
         raise NotImplementedError
 
     @abc.abstractmethod
-    def load_settings(self):
+    def load_settings(self) -> NoReturn:
         """Loads the format specific settings file"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def load_ttl(self):
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -272,8 +286,7 @@ class AxonaTrial(TrialInterface):
         self.__settings = value
 
     def load_lfp(self, pname: Path, *args, **kwargs):
-        from ephysiopy.dacq2py.axonaIO import EEG
-        lfp = None
+        from ephysiopy.axona.axonaIO import EEG
         if "egf" in args:
             lfp = EEG(self.pname, egf=1)
         else:
@@ -310,6 +323,10 @@ class AxonaTrial(TrialInterface):
         except IOError:
             print("Couldn't load the pos data")
 
+    def load_ttl(self):
+        from ephysiopy.axona.axonaIO import Stim
+        self.ttl_data = Stim(self.pname)
+
     def get_spike_times(self, cluster: int, tetrode: int = None):
         if tetrode is not None:
             return self.TETRODE.get_spike_samples(tetrode, cluster)
@@ -318,19 +335,19 @@ class AxonaTrial(TrialInterface):
 class OpenEphysBase(TrialInterface):
     def __init__(self, pname: Path, **kwargs) -> None:
         super().__init__(pname, **kwargs)
-        setattr(self, "sync_messsage_file", None)
+        setattr(self, "sync_message_file", None)
         self.load_settings()
         record_methods = ["Acquisition Board",
-                          "Neuropix-PXI", "Sources/Neuropix-PXI",
-                          "Rhythm FPGA", "Sources/Rhythm FPGA"]
+                                                "Neuropix-PXI", "Sources/Neuropix-PXI",
+                                                "Rhythm FPGA", "Sources/Rhythm FPGA"]
         record_method = [i for i in self.settings.processors.keys()
                          if i in record_methods][0]
         if "/" in record_method:
             record_method = record_method.split("/")[-1]
         self.rec_kind = Xml2RecordingKind[record_method]
         self.sample_rate = None
-        self.sample_rate = self.settings.processors[record_method].sample_rate
-        self.channel_count = self.settings.processors[record_method].channel_count
+        self.sample_rate = self.settings.processors[rec_method].sample_rate
+        self.channel_count = self.settings.processors[rec_method].channel_count
         self.kilodata = None
 
     def __load_kilo__(self):
@@ -356,10 +373,11 @@ class OpenEphysBase(TrialInterface):
             sample_rate = 500
             if "sample_rate" in kwargs.keys():
                 sample_rate = kwargs["sample_rate"]
-            n_samples = np.shape(lfp[:, channel])[0]
-            sig = signal.resample(lfp[:, channel], int(n_samples / 3e4) * sample_rate)
+            n_samples = np.shape(lfp[channel, :])[0]
+            sig = signal.resample(lfp[channel, :], int(
+                n_samples / 3e4) * sample_rate)
             self.EEGCalcs = EEGCalcsGeneric(sig, sample_rate)
-    
+
     def load_neural_data(self, pname: Path) -> None:
         pass
 
@@ -381,8 +399,7 @@ class OpenEphysBase(TrialInterface):
                         pass
         self.clusterData = clusterData
 
-    def load_pos_data(self, pname: Path,
-                      ppm: int = 300, jumpmax: int = 100) -> None:
+    def load_pos_data(self, ppm: int = 300, jumpmax: int = 100) -> None:
         # Only sub-class that doesn't use this is OpenEphysNWB
         # which needs updating
         # TODO: Update / overhaul OpenEphysNWB
@@ -393,11 +410,12 @@ class OpenEphysBase(TrialInterface):
                 sync_strs = f.read()
             sync_lines = sync_strs.split("\n")
             for line in sync_lines:
-                if "subProcessor: 0" in line:
-                    idx = line.find("start time: ")
-                    start_val = line[idx + len("start time: "): -1]
-                    tmp = start_val.split("@")
-                    recording_start_time = float(tmp[0])  # in samples
+                if "Start Time" in line:
+                    tokens = line.split(":")
+                    start_time = int(tokens[-1])
+                    sample_rate = int(tokens[0].split("@")
+                                      [-1].strip().split()[0])
+                    recording_start_time = start_time / sample_rate
         if self.path2PosData is not None:
             pos_data_type = getattr(self, "pos_data_type", "PosTracker")
             if pos_data_type == "PosTracker":
@@ -415,7 +433,9 @@ class OpenEphysBase(TrialInterface):
                 print("Loading TrackMe data...")
                 pos_data = loadTrackMePluginData(
                     Path(os.path.join(self.path2PosData, "continuous.dat")))
-                pos_ts = loadTrackMeTimestamps(self.path2EventsData)
+                # pos_ts = loadTrackMeTTLTimestamps(self.path2EventsData)
+                pos_ts = loadTrackMeTimestamps(
+                    Path(self.path2PosData))
                 pos_ts = pos_ts[0:len(pos_data)]
             pos_timebase = getattr(self, "pos_timebase", 3e4)
             sample_rate = np.floor(1 / np.mean(np.diff(pos_ts) / pos_timebase))
@@ -444,6 +464,9 @@ class OpenEphysBase(TrialInterface):
             )
         self.recording_start_time = recording_start_time
 
+    def load_ttl(self):
+        pass
+
     def find_files(
         self,
         pname_root: str,
@@ -468,13 +491,13 @@ class OpenEphysBase(TrialInterface):
             APdata_match = (exp_name / rec_name /
                             "continuous" / (acq_method + "0"))
             LFPdata_match = (exp_name / rec_name /
-                                 "continuous" / (acq_method + "1"))
+                             "continuous" / (acq_method + "1"))
         elif self.rec_kind == RecordingKind.FPGA:
             acq_method = "Rhythm_FPGA-[0-9][0-9][0-9]."
             APdata_match = (exp_name / rec_name /
                             "continuous" / (acq_method + "0"))
             LFPdata_match = (exp_name / rec_name /
-                                "continuous" / (acq_method + "1"))
+                             "continuous" / (acq_method + "1"))
         else:
             acq_method = "Acquisition_Board-[0-9][0-9][0-9].*"
             APdata_match = exp_name / rec_name / "continuous" / acq_method
@@ -523,7 +546,7 @@ class OpenEphysBase(TrialInterface):
                     if "sync_messages.txt" in ff:
                         if PurePath(d).match(str(sync_file_match)):
                             sync_file = os.path.join(d, "sync_messages.txt")
-                            if fileContainsString(sync_file, "Processor"):
+                            if fileContainsString(sync_file, "Start Time"):
                                 self.sync_message_file = sync_file
                                 print(f"sync_messages file at: {sync_file}")
                     if "full_words.npy" in ff:
@@ -545,9 +568,7 @@ class OpenEphysNWB(OpenEphysBase):
     def load_settings(self):
         return super().load_settings()
 
-    def load_pos_data(self, pname: Path,
-                      ppm: int = 300, jumpmax: int = 100) -> None:
-        assert pname.exists()
+    def load_pos_data(self, ppm: int = 300, jumpmax: int = 100) -> None:
         with h5py.File(os.path.join(self.path2NWBData), mode="r") as nwbData:
             xy = np.array(nwbData[self.path2PosData + "/data"])
             xy = xy[:, 0:2]
@@ -556,7 +577,8 @@ class OpenEphysNWB(OpenEphysBase):
                 xy[0, :],
                 xy[1, :],
                 cm=True,
-                ppm=self.ppm,
+                ppm=ppm,
+                jumpmax=jumpmax
             )
             P.xyTS = ts
             P.sample_rate = 1.0 / np.mean(np.diff(ts))

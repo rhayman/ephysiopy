@@ -45,8 +45,12 @@ def test_events_class():
 # ------------ PosCalcsGeneric testing ----------------------
 # -----------------------------------------------------------------------
 def test_speedfilter(basic_PosCalcs, basic_xy):
+    basic_PosCalcs.ppm = 300
+    basic_PosCalcs.jumpmax = 100
     xy = np.ma.masked_array([basic_xy[0], basic_xy[1]])
     new_xy = basic_PosCalcs.speedfilter(xy)
+    basic_PosCalcs.cm = False
+    basic_PosCalcs.speedfilter(xy)
     assert new_xy.ndim == 2
     assert xy.shape == new_xy.shape
 
@@ -61,6 +65,10 @@ def test_interpnans(basic_PosCalcs, basic_xy):
     new_xy = basic_PosCalcs.interpnans(xy)
     assert new_xy.ndim == 2
     assert xy.shape == new_xy.shape
+    # test for case where no nans are present
+    xy[0] = range(len(xy[0]))
+    xy[1] = range(len(xy[1]))
+    basic_PosCalcs.interpnans(xy)
 
 
 def test_smoothPos(basic_PosCalcs, basic_xy):
@@ -164,7 +172,8 @@ def test_nextpow2(basic_EEGCalcs):
 
 
 def test_ifft_filter(basic_EEGCalcs):
-    val = basic_EEGCalcs.ifftFilter(basic_EEGCalcs.sig, [50, 60], basic_EEGCalcs.fs)
+    val = basic_EEGCalcs.ifftFilter(
+        basic_EEGCalcs.sig, [50, 60], basic_EEGCalcs.fs)
     assert isinstance(val, np.ndarray)
 
 
@@ -227,7 +236,6 @@ def test_smooth_spike_pos_count(basic_SpikeCalcs):
 # -----------------------------------------------------------------------
 # ------------ SpikeCalcsTetrode testing ----------------------
 # -----------------------------------------------------------------------
-@pytest.mark.mpl_image_compare
 def test_plot_ifr_sp_corr(basic_SpikeCalcsTetrode, basic_xy):
     # Assume a 10 second trial sampled at 30Hz so times are congruous
     # with the spiking data
@@ -241,8 +249,7 @@ def test_plot_ifr_sp_corr(basic_SpikeCalcsTetrode, basic_xy):
         basic_SpikeCalcsTetrode.spk_clusters == 1
     ]
     c1_pos_idx = np.floor(c1_times / 3e4 * 30).astype(int)
-    fig = basic_SpikeCalcsTetrode.ifr_sp_corr(c1_pos_idx, speed, plot=True)
-    return fig
+    basic_SpikeCalcsTetrode.ifr_sp_corr(c1_pos_idx, speed, plot=True)
 
 
 # -----------------------------------------------------------------------
@@ -251,7 +258,7 @@ def test_plot_ifr_sp_corr(basic_SpikeCalcsTetrode, basic_xy):
 
 
 def test_tint_colours():
-    from ephysiopy.dacq2py import tintcolours
+    from ephysiopy.axona import tintcolours
 
     assert isinstance(tintcolours.colours, list)
 

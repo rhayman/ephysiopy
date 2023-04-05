@@ -1,45 +1,45 @@
-ephysiopy.dacq2py package
+ephysiopy.axona package
 =========================
 
 Submodules
 ----------
 
-ephysiopy.dacq2py.axonaIO module
+ephysiopy.axona.axonaIO module
 --------------------------------
 
-.. automodule:: ephysiopy.dacq2py.axonaIO
+.. automodule:: ephysiopy.axona.axonaIO
     :members:
     :undoc-members:
     :show-inheritance:
 
-ephysiopy.dacq2py.axona\_headers module
+ephysiopy.axona.axona\_headers module
 ---------------------------------------
 
-.. automodule:: ephysiopy.dacq2py.axona_headers
+.. automodule:: ephysiopy.axona.file_headers
     :members:
     :undoc-members:
     :show-inheritance:
 
-ephysiopy.dacq2py.dacq2py\_util module
+ephysiopy.axona.axona\_util module
 --------------------------------------
 
-.. automodule:: ephysiopy.dacq2py.dacq2py_util
+.. automodule:: ephysiopy.axona.axona_util
     :members:
     :undoc-members:
     :show-inheritance:
 
-ephysiopy.dacq2py.tetrode\_dict module
+ephysiopy.axona.tetrode\_dict module
 --------------------------------------
 
-.. automodule:: ephysiopy.dacq2py.tetrode_dict
+.. automodule:: ephysiopy.axona.tetrode_dict
     :members:
     :undoc-members:
     :show-inheritance:
 
-ephysiopy.dacq2py.tintcolours module
+ephysiopy.axona.tintcolours module
 ------------------------------------
 
-.. automodule:: ephysiopy.dacq2py.tintcolours
+.. automodule:: ephysiopy.axona.tintcolours
     :members:
     :undoc-members:
     :show-inheritance:
@@ -48,7 +48,7 @@ ephysiopy.dacq2py.tintcolours module
 Module contents
 ---------------
 
-.. automodule:: ephysiopy.dacq2py
+.. automodule:: ephysiopy.axona
     :members:
     :undoc-members:
     :show-inheritance:

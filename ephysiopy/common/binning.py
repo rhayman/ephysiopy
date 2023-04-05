@@ -246,10 +246,10 @@ class RateMap(object):
         elif "speed" in varType:
             self.binsize = np.arange(0, 50, 1)
 
-        binned_pos = self._binData(sample, self.binsize, self.pos_weights)
-
-        binned_pos_edges = binned_pos[1]
-        binned_pos = binned_pos[0]
+        binned_pos, binned_pos_edges = self._binData(
+                                                     sample,
+                                                     self.binsize,
+                                                     self.pos_weights)
         nanIdx = binned_pos == 0
 
         if "pos" in mapType:  # return just binned up position
@@ -263,7 +263,7 @@ class RateMap(object):
                     )
             return binned_pos, binned_pos_edges
 
-        binned_spk = self._binData(sample, self.binsize, spkWeights)[0]
+        binned_spk, _ = self._binData(sample, self.binsize, spkWeights)
         # binned_spk is returned as a tuple of the binned data and the bin
         # edges
         if "after" in self.whenToSmooth:
@@ -364,11 +364,17 @@ class RateMap(object):
             bin_edges = bin_edges[np.newaxis, :]
         else:
             var = np.flipud(var)
-        ndhist = np.apply_along_axis(
-            lambda x: np.histogramdd(
-                var.T, weights=x, bins=bin_edges), 0, weights.T
-        )
-        return ndhist
+        weights = np.atleast_2d(weights)  # needed for list comp below
+        var = np.array(var.data.T.tolist())
+        ndhist = [np.histogramdd(
+                sample=var,
+                bins=bin_edges,
+                weights=np.ravel(w)) for w in weights]
+        if np.shape(weights)[0] == 1:
+            return ndhist[0][0], ndhist[0][1]
+        else:
+            tmp = [d[0] for d in ndhist]
+            return tmp, ndhist[1]
 
     def _circPadSmooth(self, var, n=3, ny=None):
         """
@@ -597,7 +603,8 @@ class RateMap(object):
         mapCovar = (rawCorr * N) - sums_x * \
             sums_x[::-1, :, :][:, ::-1, :][:, :, :]
 
-        return np.squeeze(mapCovar / mapStd / mapStd[::-1, :, :][:, ::-1, :][:, :, :])
+        return np.squeeze(
+            mapCovar / mapStd / mapStd[::-1, :, :][:, ::-1, :][:, :, :])
 
     def crossCorr2D(self, A, B, A_nodwell, B_nodwell, tol=1e-10):
         """
@@ -666,27 +673,32 @@ class RateMap(object):
             np.real(np.fft.ifft(np.fft.ifft(Fa * np.conj(Fb), axis=1), axis=0))
         )
         sums_a = np.fft.fftshift(
-            np.real(np.fft.ifft(np.fft.ifft(Fa * np.conj(Fn_b), axis=1), axis=0))
+            np.real(np.fft.ifft(np.fft.ifft(
+                Fa * np.conj(Fn_b), axis=1), axis=0))
         )
         sums_b = np.fft.fftshift(
-            np.real(np.fft.ifft(np.fft.ifft(Fn_a * np.conj(Fb), axis=1), axis=0))
+            np.real(np.fft.ifft(np.fft.ifft(
+                Fn_a * np.conj(Fb), axis=1), axis=0))
         )
         sumOfSquares_a = np.fft.fftshift(
             np.real(
                 np.fft.ifft(
-                    np.fft.ifft(FsumOfSquares_a * np.conj(Fn_b), axis=1), axis=0
+                    np.fft.ifft(
+                        FsumOfSquares_a * np.conj(Fn_b), axis=1), axis=0
                 )
             )
         )
         sumOfSquares_b = np.fft.fftshift(
             np.real(
                 np.fft.ifft(
-                    np.fft.ifft(Fn_a * np.conj(FsumOfSquares_b), axis=1), axis=0
+                    np.fft.ifft(
+                        Fn_a * np.conj(FsumOfSquares_b), axis=1), axis=0
                 )
             )
         )
         N = np.fft.fftshift(
-            np.real(np.fft.ifft(np.fft.ifft(Fn_a * np.conj(Fn_b), axis=1), axis=0))
+            np.real(np.fft.ifft(np.fft.ifft(
+                Fn_a * np.conj(Fn_b), axis=1), axis=0))
         )
         # [Step 3] Account for rounding errors.
         rawCorr[np.abs(rawCorr) < tol] = 0
@@ -767,7 +779,7 @@ class RateMap(object):
         # 1b. Keep looping until we have dealt with all spikes
         for i, s in enumerate(spkIdx):
             t = np.searchsorted(spkIdx, (s, s + winSizeBins))
-            nSpikesInWin[i] = len(spkIdx[t[0] : t[1]]) - 1  # ignore ith spike
+            nSpikesInWin[i] = len(spkIdx[t[0]: t[1]]) - 1  # ignore ith spike
 
         # [Stage 2] Prepare for main loop
         # 2a. Work out offset inidices to be used when storing spike data
@@ -798,17 +810,19 @@ class RateMap(object):
                 dtype=int,
             )
             WL = len(winInd_dwell)
-            dwell[:, filled_pvals : filled_pvals + WL] = np.rot90(
+            dwell[:, filled_pvals: filled_pvals + WL] = np.rot90(
                 np.array(np.rot90(xy[:, winInd_dwell]) - xy[:, spkIdx[i]])
             )
             filled_pvals = filled_pvals + WL
             # calculate spike displacements
             winInd_spks = (
-                i + np.nonzero(spkIdx[i + 1 : n_spks] < spkIdx[i] + winSizeBins)[0]
+                i + np.nonzero(spkIdx[i + 1: n_spks] <
+                               spkIdx[i] + winSizeBins)[0]
             )
             WL = len(winInd_spks)
-            spike[:, filled_svals : filled_svals + WL] = np.rot90(
-                np.array(np.rot90(xy[:, spkIdx[winInd_spks]]) - xy[:, spkIdx[i]])
+            spike[:, filled_svals: filled_svals + WL] = np.rot90(
+                np.array(
+                    np.rot90(xy[:, spkIdx[winInd_spks]]) - xy[:, spkIdx[i]])
             )
             filled_svals = filled_svals + WL
 
@@ -832,8 +846,10 @@ class RateMap(object):
 
         binsize = np.max(dwell, axis=1).astype(int)
         binedges = np.array(((-0.5, -0.5), binsize + 0.5)).T
-        Hp = np.histogram2d(dwell[0, :], dwell[1, :], range=binedges, bins=binsize)[0]
-        Hs = np.histogram2d(spike[0, :], spike[1, :], range=binedges, bins=binsize)[0]
+        Hp = np.histogram2d(dwell[0, :], dwell[1, :],
+                            range=binedges, bins=binsize)[0]
+        Hs = np.histogram2d(spike[0, :], spike[1, :],
+                            range=binedges, bins=binsize)[0]
 
         # reverse y,x order
         Hp = np.swapaxes(Hp, 1, 0)

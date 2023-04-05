@@ -528,6 +528,7 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
     Encapsulates methods specific to the geometry inherent in tetrode-based
     recordings
     """
+
     def __init__(self, spike_times, waveforms=None, **kwargs):
         super().__init__(spike_times, waveforms, ** kwargs)
 
@@ -591,8 +592,10 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
             speed_mesh = speed_mesh[:-1, :-1]
             spk_mesh = spk_mesh[:-1, :-1]
             ax.pcolormesh(
-                speed_mesh, spk_mesh, sm_binned_rate,
-                norm=LogNorm(), alpha=0.5, shading='nearest', edgecolors='None')
+                speed_mesh,
+                spk_mesh, sm_binned_rate,
+                norm=LogNorm(), alpha=0.5,
+                shading='nearest', edgecolors='None')
             # overlay the smoothed binned rate against speed
             ax.plot(sp_bin_edges, binned_spk_rate, 'r')
             # do the linear regression and plot the fit too
@@ -637,9 +640,8 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
 
 class SpikeCalcsAxona(SpikeCalcsGeneric):
     """
-    Replaces SpikeCalcs from ephysiopy.dacq2py.spikecalcs
+    Replaces SpikeCalcs from ephysiopy.axona.spikecalcs
     """
-    
 
     def half_amp_dur(self, waveforms):
         """
@@ -715,7 +717,7 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         TODO: aspect of plot boxes in ImageGrid not right as scaled by range of
         values now
         """
-        from ephysiopy.dacq2py.tintcolours import colours as tcols
+        from ephysiopy.axona.tintcolours import colours as tcols
         import matplotlib.colors as colors
         from itertools import combinations
         from mpl_toolkits.axes_grid1 import ImageGrid
@@ -723,8 +725,6 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         self.scaling = np.full(4, 15)
 
         amps = self.getParam(waveforms, param=param)
-        bad_electrodes = np.setdiff1d(
-            np.array(range(4)), np.array(np.sum(amps, 0).nonzero())[0])
         cmap = np.tile(tcols[0], (bins, 1))
         cmap[0] = (1, 1, 1)
         cmap = colors.ListedColormap(cmap)
@@ -749,23 +749,23 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         clustCMap0._init()
         clustCMap0._lut[:, -1] = alpha_vals
         for i, c in enumerate(cmb):
-            if c not in bad_electrodes:
-                h, ye, xe = np.histogram2d(
-                    amps[:, c[0]], amps[:, c[1]],
-                    range=myRange[:, c].T, bins=bins)
-                x, y = np.meshgrid(xe[0:-1], ye[0:-1])
-                grid[i].pcolormesh(x, y, h, cmap=clustCMap0, shading='nearest', edgecolors='face')
-                h, ye, xe = np.histogram2d(
-                    amps[:, c[0]], amps[:, c[1]],
-                    range=myRange[:, c].T, bins=bins)
-                clustCMap = np.tile(
-                    tcols[1], (bins, 1))
-                clustCMap[0] = (1, 1, 1)
-                clustCMap = colors.ListedColormap(clustCMap)
-                clustCMap._init()
-                clustCMap._lut[:, -1] = alpha_vals
-                grid[i].pcolormesh(
-                    x, y, h, cmap=clustCMap, shading='nearest', edgecolors='face')
+            h, ye, xe = np.histogram2d(
+                amps[:, c[0]], amps[:, c[1]],
+                range=myRange[:, c].T, bins=bins)
+            x, y = np.meshgrid(xe[0:-1], ye[0:-1])
+            grid[i].pcolormesh(x, y, h, cmap=clustCMap0,
+                               shading='nearest', edgecolors='face')
+            h, ye, xe = np.histogram2d(
+                amps[:, c[0]], amps[:, c[1]],
+                range=myRange[:, c].T, bins=bins)
+            clustCMap = np.tile(
+                tcols[1], (bins, 1))
+            clustCMap[0] = (1, 1, 1)
+            clustCMap = colors.ListedColormap(clustCMap)
+            clustCMap._init()
+            clustCMap._lut[:, -1] = alpha_vals
+            grid[i].pcolormesh(x, y, h, cmap=clustCMap,
+                               shading='nearest', edgecolors='face')
             s = str(c[0]+1) + ' v ' + str(c[1]+1)
             grid[i].text(
                 0.05, 0.95, s, va='top', ha='left', size='small',

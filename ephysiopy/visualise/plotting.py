@@ -4,7 +4,7 @@ import numpy as np
 import functools
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
-from ephysiopy.dacq2py import tintcolours as tcols
+from ephysiopy.axona import tintcolours as tcols
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.transforms as transforms
 from matplotlib.patches import Rectangle
@@ -30,9 +30,13 @@ def stripAxes(func):
     return wrapper
 
 
+jet_cmap = matplotlib.cm.get_cmap("jet")
+grey_cmap = matplotlib.cm.get_cmap("gray_r")
+
+
 class FigureMaker(object):
     '''
-    A mixin class for dacq2py_util and OEKiloPhy that deals solely with
+    A mixin class for TrialInterface that deals solely with
     producing graphical output
     '''
     def __init__(self):
@@ -88,14 +92,18 @@ class FigureMaker(object):
         spk_weights = np.bincount(
             spk_times_in_pos_samples, minlength=self.npos)
         rmap = self.RateMapMaker.getMap(spk_weights)
+        print(f"len rmap = {len(rmap)}")
+        for i, r in enumerate(rmap):
+            print(f"rmap[{i}] shape = {np.shape(r)}")
+            print(f"rmap[{i}] = {r}")
         ratemap = np.ma.MaskedArray(rmap[0], np.isnan(rmap[0]), copy=True)
-        x, y = np.meshgrid(rmap[1][1][0:-1], rmap[1][0][0:-1])
+        x, y = np.meshgrid(rmap[1][1][0:-1].data, rmap[1][0][0:-1].data)
         vmax = np.nanmax(np.ravel(ratemap))
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
         ax.pcolormesh(
-            x, y, ratemap, cmap=plt.cm.get_cmap("jet"), edgecolors='face',
+            x, y, ratemap, cmap=jet_cmap, edgecolors='face',
             vmax=vmax, shading='auto')
         ax.set_aspect('equal')
         return ax
@@ -252,7 +260,7 @@ class FigureMaker(object):
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-        ax.pcolormesh(x, y, im.T, cmap=plt.cm.get_cmap("jet"),
+        ax.pcolormesh(x, y, im.T, cmap=jet_cmap,
                       edgecolors='face',
                       vmax=vmax, shading='auto')
         plt.xticks([90, 180, 270], fontweight='normal', size=6)
@@ -508,10 +516,10 @@ class FigureMaker(object):
             np.arange(0, np.shape(A)[0]))
         vmax = np.nanmax(np.ravel(A))
         ax.pcolormesh(
-            x, y, A, cmap=plt.cm.get_cmap("gray_r"),
+            x, y, A, cmap=grey_cmap,
             edgecolors='face', vmax=vmax, shading='auto')
         import copy
-        cmap = copy.copy(plt.cm.get_cmap("jet"))
+        cmap = copy.copy(jet_cmap)
         cmap.set_bad('w', 0)
         ax.pcolormesh(
             x, y, Am, cmap=cmap,
@@ -541,6 +549,132 @@ class FigureMaker(object):
         all_ax.set_xlim((0.5, inDict['dist_to_centre'].shape[1]-1.5))
         all_ax.set_ylim((inDict['dist_to_centre'].shape[0]-.5, -.5))
         return ax
+
+    def plotSpectrogramByDepth(self,
+                               nchannels: int = 384,
+                               nseconds: int = 100,
+                               maxFreq: int = 125,
+                               **kwargs):
+        """
+        Plots a heat map spectrogram of the LFP for each channel.
+        Line plots of power per frequency band and power on a subset of
+        channels are also displayed to the right and above the main plot.
+        Parameters
+        ----------
+        nchannels : int
+            The number of channels on the probe
+        nseconds : int, optional
+            How long in seconds from the start of the trial to do
+            the spectrogram for (for speed).
+            Default 100
+        maxFreq : int
+            The maximum frequency in Hz to plot the spectrogram out to.
+            Maximum 1250. Default 125
+        kwargs: valid key value pairs:
+            "saveas" - save the figure to this location, needs absolute
+            path and filename
+
+        Notes
+        -----
+        Should also allow kwargs to specify exactly which channels
+        and / or frequency bands to do the line plots for
+        """
+        if not self.path2LFPdata:
+            raise TypeError("Not a probe recording so not plotting")
+        import os
+        lfp_file = os.path.join(self.path2LFPdata, 'continuous.dat')
+        status = os.stat(lfp_file)
+        nsamples = int(status.st_size / 2 / nchannels)
+        mmap = np.memmap(lfp_file,
+                         np.int16,
+                         'r',
+                         0,
+                         (nchannels, nsamples),
+                         order='F')
+        # Load the channel map NB assumes this is in the AP data
+        # location and that kilosort was run there
+        channel_map = np.squeeze(
+            np.load(os.path.join(self.path2APdata, 'channel_map.npy')))
+        lfp_sample_rate = 2500
+        data = np.array(mmap[channel_map, 0:nseconds*lfp_sample_rate])
+        from ephysiopy.common.ephys_generic import EEGCalcsGeneric
+        E = EEGCalcsGeneric(data[0, :], lfp_sample_rate)
+        E.calcEEGPowerSpectrum()
+        spec_data = np.zeros(shape=(data.shape[0], len(E.sm_power[0::50])))
+        for chan in range(data.shape[0]):
+            E = EEGCalcsGeneric(data[chan, :], lfp_sample_rate)
+            E.calcEEGPowerSpectrum()
+            spec_data[chan, :] = E.sm_power[0::50]
+
+        x, y = np.meshgrid(E.freqs[0::50], channel_map)
+        import matplotlib.colors as colors
+        from matplotlib.pyplot import cm
+        from mpl_toolkits.axes_grid1 import make_axes_locatable
+        _, spectoAx = plt.subplots()
+        spectoAx.pcolormesh(x,
+                            y,
+                            spec_data,
+                            edgecolors='face',
+                            cmap='bone',
+                            norm=colors.LogNorm())
+        spectoAx.set_xlim(0, maxFreq)
+        spectoAx.set_ylim(channel_map[0], channel_map[-1])
+        spectoAx.set_xlabel('Frequency (Hz)')
+        spectoAx.set_ylabel('Channel')
+        divider = make_axes_locatable(spectoAx)
+        channel_spectoAx = divider.append_axes("top",
+                                               1.2,
+                                               pad=0.1,
+                                               sharex=spectoAx)
+        meanfreq_powerAx = divider.append_axes("right",
+                                               1.2,
+                                               pad=0.1,
+                                               sharey=spectoAx)
+        plt.setp(channel_spectoAx.get_xticklabels() +
+                 meanfreq_powerAx.get_yticklabels(), visible=False)
+
+        mn_power = np.mean(spec_data, 0)
+        cols = iter(cm.rainbow(np.linspace(0, 1, (nchannels//60)+1)))
+        for i in range(0, spec_data.shape[0], 60):
+            c = next(cols)
+            channel_spectoAx.plot(E.freqs[0::50],
+                                  10*np.log10(spec_data[i, :]/mn_power),
+                                  c=c,
+                                  label=str(i))
+
+        channel_spectoAx.set_ylabel('Channel power(dB)')
+        channel_spectoAx.legend(bbox_to_anchor=(0., 1.02, 1., .102),
+                                loc='lower left',
+                                mode='expand',
+                                fontsize='x-small',
+                                ncol=4)
+
+        freq_inc = 6
+        lower_freqs = np.arange(1, maxFreq-freq_inc, freq_inc)
+        upper_freqs = np.arange(1+freq_inc, maxFreq, freq_inc)
+        cols = iter(cm.nipy_spectral(np.linspace(0, 1, len(upper_freqs))))
+        mn_power = np.mean(spec_data, 1)
+        for freqs in zip(lower_freqs, upper_freqs):
+            freq_mask = np.logical_and(
+                E.freqs[0::50] > freqs[0], E.freqs[0::50] < freqs[1])
+            mean_power = 10*np.log10(
+                np.mean(spec_data[:, freq_mask], 1) / mn_power)
+            c = next(cols)
+            meanfreq_powerAx.plot(mean_power,
+                                  channel_map,
+                                  c=c,
+                                  label=str(freqs[0]) + " - " + str(freqs[1]))
+        meanfreq_powerAx.set_xlabel('Mean freq. band power(dB)')
+        meanfreq_powerAx.legend(bbox_to_anchor=(0., 1.02, 1., .102),
+                                loc='lower left',
+                                mode='expand',
+                                fontsize='x-small',
+                                ncol=1)
+        if 'saveas' in kwargs:
+            saveas = kwargs['saveas']
+            plt.savefig(saveas)
+        plt.show()
+
     '''
     def plotDirFilteredRmaps(self, tetrode, cluster, maptype='rmap', **kwargs):
         """

@@ -36,10 +36,12 @@ def field_lims(A):
     sm_rmap = blurImage(A, h, ftype='gaussian')
     thresh = np.max(sm_rmap.ravel()) * 0.2  # select area > 20% of peak
     distance = ndimage.distance_transform_edt(sm_rmap > thresh)
-    mask = skimage.feature.peak_local_max(
-        distance, indices=False,
+    peak_idx = skimage.feature.peak_local_max(
+        distance,
         exclude_border=False,
         labels=sm_rmap > thresh)
+    mask = np.zeros_like(distance, dtype=bool)
+    mask[tuple(peak_idx.T)] = True
     label = ndimage.label(mask)[0]
     w = watershed(
         image=-distance, markers=label,
@@ -65,10 +67,11 @@ def limit_to_one(A, prc=50, min_dist=5):
     Ac = signal.convolve(Ac, g, mode='same')
     # remove really small values
     Ac[Ac < 1e-10] = 0
-    peak_mask = skimage.feature.peak_local_max(
+    peak_idx = skimage.feature.peak_local_max(
         Ac, min_distance=min_dist,
-        exclude_border=False,
-        indices=False)
+        exclude_border=False)
+    peak_mask = np.zeros_like(Ac, dtype=bool)
+    peak_mask[tuple(peak_idx.T)] = True
     peak_labels = skimage.measure.label(peak_mask, connectivity=2)
     field_labels = watershed(
         image=-Ac, markers=peak_labels)
@@ -125,10 +128,11 @@ def global_threshold(A, prc=50, min_dist=5):
     Ac = signal.convolve(Ac, g, mode='same')
     maxRate = np.nanmax(np.ravel(Ac))
     Ac[Ac < maxRate*(prc/float(100))] = 0
-    peak_mask = skimage.feature.peak_local_max(
+    peak_idx = skimage.feature.peak_local_max(
         Ac, min_distance=min_dist,
-        exclude_border=False,
-        indices=False)
+        exclude_border=False)
+    peak_mask = np.zeros_like(Ac, dtype=bool)
+    peak_mask[tuple(peak_idx.T)] = True
     peak_labels = skimage.measure.label(peak_mask, connectivity=2)
     field_labels = watershed(
         image=-Ac, markers=peak_labels)
@@ -150,9 +154,10 @@ def local_threshold(A, prc=50, min_dist=5):
     g = np.exp(-(x**2/float(n) + y**2/float(ny)))
     g = g / g.sum()
     Ac = signal.convolve(Ac, g, mode='same')
-    peak_mask = skimage.feature.peak_local_max(
-        Ac, min_distance=min_dist, exclude_border=False,
-        indices=False)
+    peak_idx = skimage.feature.peak_local_max(
+        Ac, min_distance=min_dist, exclude_border=False)
+    peak_mask = np.zeros_like(Ac, dtype=bool)
+    peak_mask[tuple(peak_idx.T)] = True
     peak_labels = skimage.measure.label(peak_mask, connectivity=2)
     field_labels = watershed(
         image=-Ac, markers=peak_labels)
@@ -260,7 +265,7 @@ def border_score(
             dist_mask = dist_mask[1:A_rows+1, 1:A_cols+1]
         tmp = np.zeros([A_rows + 2, A_cols + 2])
         tmp[1:-1, 1:-1] = dist_mask
-        dists = ndimage.morphology.distance_transform_bf(tmp)
+        dists = ndimage.distance_transform_bf(tmp)
         dists = dists[1:-1, 1:-1]
         borderMask = np.logical_xor(dists <= 0, dists < 2)
         # open up the border mask a little
@@ -274,7 +279,7 @@ def border_score(
         tmp = np.zeros([A_rows + 2, A_cols + 2])
         dist_mask = np.ones_like(A)
         tmp[1:-1, 1:-1] = dist_mask
-        dists = ndimage.morphology.distance_transform_bf(tmp)
+        dists = ndimage.distance_transform_bf(tmp)
         # remove edges to make same shape as input ratemap
         dists = dists[1:-1, 1:-1]
     A[np.isnan(A)] = 0
@@ -293,7 +298,7 @@ def border_score(
     # remove small objects
     min_size = int(minArea / binSize) - 1
     skimage.morphology.remove_small_objects(
-        labels, min_size=min_size, connectivity=2, in_place=True)
+        labels, min_size=min_size, connectivity=2)
     labels = skimage.segmentation.relabel_sequential(labels)[0]
     nFields = np.max(labels)
     if nFields == 0:
@@ -359,7 +364,7 @@ def _get_field_labels(A: np.ndarray, **kwargs) -> tuple:
     clear_border = True
     if 'clear_border' in kwargs:
         clear_border = kwargs.pop('clear_border')
-        
+
     min_distance = 1
     if 'min_distance' in kwargs:
         min_distance = kwargs.pop('min_distance')
@@ -472,7 +477,7 @@ def field_props(
     """
     ellipse_ratio = np.nan
     _, central_field, _ = limit_to_one(A, prc=50)
-    
+
     contour_coords = find_contours(central_field, 0.5)
     from skimage.measure import EllipseModel
     E = EllipseModel()
@@ -663,6 +668,8 @@ def kldiv(X, pvect1, pvect2, variant=None):
     if (np.abs(
         np.sum(pvect1) - 1) > 0.00001) or (np.abs(
             np.sum(pvect2) - 1) > 0.00001):
+        print(f"Probabilities sum to {np.abs(np.sum(pvect1))} for pvect1")
+        print(f"Probabilities sum to {np.abs(np.sum(pvect2))} for pvect2")
         warnings.warn('Probabilities don''t sum to 1.', UserWarning)
     if variant:
         if variant == 'js':
@@ -783,7 +790,7 @@ def grid_field_props(
         min_distance = kwargs.pop('min_distance')
     else:
         min_distance = np.ceil(np.min(A_sz / 2) / 8.).astype(int)
-    
+
     peak_idx, field_labels = _get_field_labels(
         A_tmp, neighbours=7, **kwargs)
     # a fcn for the labeled_comprehension function that returns
@@ -818,7 +825,7 @@ def grid_field_props(
     peak_dist_to_centre = np.hypot(
         centred_peak_coords.T[0],
         centred_peak_coords.T[1]
-        )
+    )
     closest_peak_idx = np.argsort(peak_dist_to_centre)
     central_peak_label = closest_peak_idx[0]
     closest_peak_idx = closest_peak_idx[1:np.min((7, len(closest_peak_idx)-1))]
@@ -846,7 +853,7 @@ def grid_field_props(
                 d = np.max(np.hypot(xc, yc))
                 if d > max_dist_from_centre:
                     max_dist_from_centre = d
-    
+
     # Set the outer bits and the central region of the SAC to nans
     # getting ready for the correlation procedure
     dist_to_centre[np.abs(dist_to_centre) > max_dist_from_centre] = 0
@@ -881,7 +888,7 @@ def grid_field_props(
                 return xc[idx], yc[idx]
             ellipse_coords = ndimage.labeled_comprehension(
                 A, half_peak_labels, closest_peak_idx, fn2, tuple, 0, True)
-        
+
             ellipse_fit_coords = np.array([(x, y) for x, y in ellipse_coords])
             from skimage.measure import EllipseModel
             E = EllipseModel()
@@ -890,19 +897,19 @@ def grid_field_props(
             ellipse_axes = E.params[2:4]
             ellipse_angle = E.params[-1]
             ellipseXY = E.predict_xy(np.linspace(0, 2*np.pi, 50), E.params)
-        
+
             # get the min containing circle given the eliipse minor axis
             from skimage.measure import CircleModel
             _params = im_centre
             _params.append(np.min(ellipse_axes))
             circleXY = CircleModel().predict_xy(
                 np.linspace(0, 2*np.pi, 50), params=_params)
-        except (TypeError, ValueError): #  non-iterable x and y i.e. ellipse coords fail
+        except (TypeError, ValueError):  # non-iterable x and y
             ellipse_axes = None
             ellipse_angle = (None, None)
             ellipseXY = None
             circleXY = None
-        
+
     # collect all the following keywords into a dict for output
     closest_peak_coords = np.array(peak_coords)[closest_peak_idx]
     dictKeys = (
@@ -1018,10 +1025,10 @@ def gridness(image, step=30):
         (
             rotationalCorrVals[60],
             rotationalCorrVals[120])) - np.max(
-            (
-                rotationalCorrVals[150],
-                rotationalCorrVals[30],
-                rotationalCorrVals[90]))
+        (
+            rotationalCorrVals[150],
+            rotationalCorrVals[30],
+            rotationalCorrVals[90]))
     return gridscore, rotationalCorrVals, rotationArr
 
 

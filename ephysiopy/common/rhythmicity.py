@@ -28,7 +28,7 @@ class CosineDirectionalTuning(object):
         spk_clusters - 1d np.array
         x and y - 1d np.array
         tracker_params - dict - from the PosTracker as created in
-            OEKiloPhy.Settings.parse
+            OESettings.Settings.parse
 
         NB All timestamps should be given in sub-millisecond accurate
              seconds and pos_xy in cms
@@ -138,14 +138,14 @@ class CosineDirectionalTuning(object):
             self.spike_times * self.pos_sample_rate
         ).astype(int)
 
-    def getClusterPosIndices(self, cluster: int) -> np.array:
+    def getClusterPosIndices(self, clust: int) -> np.array:
         if self.pos_samples_for_spike is None:
             self.getPosIndices()
-        cluster_pos_indices = self.pos_samples_for_spike[self.spk_clusters == cluster]
-        cluster_pos_indices[cluster_pos_indices >= len(self.pos_times)] = (
+        clust_pos_idx = self.pos_samples_for_spike[self.spk_clusters == clust]
+        clust_pos_idx[clust_pos_idx >= len(self.pos_times)] = (
             len(self.pos_times) - 1
         )
-        return cluster_pos_indices
+        return clust_pos_idx
 
     def getClusterSpikeTimes(self, cluster: int):
         ts = self.spike_times[self.spk_clusters == cluster]
@@ -200,7 +200,8 @@ class CosineDirectionalTuning(object):
         min_len_in_samples = int(self.pos_sample_rate * self.min_runlength)
         min_len_runs_mask = grouped_runs[:, 1] >= min_len_in_samples
         ret = np.array(
-            [run_start_indices[min_len_runs_mask], grouped_runs[min_len_runs_mask, 1]]
+            [run_start_indices[min_len_runs_mask],
+                grouped_runs[min_len_runs_mask, 1]]
         ).T
         # ret contains run length as last column
         ret = np.insert(ret, 1, np.sum(ret, 1), 1)
@@ -236,7 +237,8 @@ class CosineDirectionalTuning(object):
         all_speed = np.array(self.speed)
         for start_idx, end_idx, dir_bin in run_list:
             this_runs_speed = all_speed[start_idx:end_idx]
-            this_runs_runs = self._rolling_window(this_runs_speed, minlength_in_samples)
+            this_runs_runs = self._rolling_window(
+                this_runs_speed, minlength_in_samples)
             run_mask = np.all(this_runs_runs > minspeed, 1)
             if np.any(run_mask):
                 print("got one")
@@ -338,7 +340,8 @@ class CosineDirectionalTuning(object):
         # split the single histogram into individual chunks
         splitIdx = np.nonzero(np.diff(posMask.astype(int)))[0] + 1
         splitMask = np.split(posMask, splitIdx)
-        splitSpkHist = np.split(spkTrHist, (splitIdx * acBinsPerPos).astype(int))
+        splitSpkHist = np.split(
+            spkTrHist, (splitIdx * acBinsPerPos).astype(int))
         histChunks = []
         for i in range(len(splitSpkHist)):
             if np.all(splitMask[i]):
@@ -354,12 +357,14 @@ class CosineDirectionalTuning(object):
             lenThisChunk = len(histChunks[i])
             chunkLens.append(lenThisChunk)
             tmp = np.zeros(lenThisChunk * 2)
-            tmp[lenThisChunk // 2 : lenThisChunk // 2 + lenThisChunk] = histChunks[i]
+            tmp[lenThisChunk // 2: lenThisChunk //
+                2 + lenThisChunk] = histChunks[i]
             tmp2 = signal.fftconvolve(
                 tmp, histChunks[i][::-1], mode="valid"
             )  # the autocorrelation
             autoCorrGrid[:, i] = (
-                tmp2[lenThisChunk // 2 : lenThisChunk // 2 + int(acWindowSizeBins) + 1]
+                tmp2[lenThisChunk // 2: lenThisChunk //
+                     2 + int(acWindowSizeBins) + 1]
                 / acBinsPerPos
             )
 
@@ -426,7 +431,7 @@ class CosineDirectionalTuning(object):
         # calculate freqs and crop spectrum to requested range
         freqs = nqLim * np.linspace(0, 1, fftHalfLen)
         freqs = freqs[freqs <= maxFreq].T
-        power = power[0 : len(freqs)]
+        power = power[0: len(freqs)]
 
         # smooth spectrum using gaussian kernel
         binsPerHz = (fftHalfLen - 1) / nqLim
@@ -474,7 +479,8 @@ class CosineDirectionalTuning(object):
             ax.plot(freqs, power_sm, "k", lw=2)
             ax.axvline(self.thetaRange[0], c="b", ls="--")
             ax.axvline(self.thetaRange[1], c="b", ls="--")
-            _, stemlines, _ = ax.stem([freqAtBandMaxPower], [bandMaxPower], linefmt="r")
+            _, stemlines, _ = ax.stem([freqAtBandMaxPower], [
+                                      bandMaxPower], linefmt="r")
             # plt.setp(stemlines, 'linewidth', 2)
             ax.fill_between(
                 freqs,
@@ -535,7 +541,8 @@ class LFPOscillations(object):
             sig = self.sig
         band2filter = np.array(band2filter, dtype=float)
 
-        b, a = signal.butter(ford, band2filter / (self.fs / 2), btype="bandpass")
+        b, a = signal.butter(ford, band2filter /
+                             (self.fs / 2), btype="bandpass")
 
         filt_sig = signal.filtfilt(b, a, sig, padtype="odd")
         phase = np.angle(signal.hilbert(filt_sig))

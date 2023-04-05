@@ -2,12 +2,12 @@ import numpy as np
 import pytest
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 from ephysiopy.common.spikecalcs import SpikeCalcsAxona
-from ephysiopy.dacq2py.dacq2py_util import AxonaTrial
+from ephysiopy.io.recording import AxonaTrial
 
 
 def get_spikecalcs_instance(path_to_axona_data) -> SpikeCalcsGeneric:
     T = AxonaTrial(path_to_axona_data)
-    T.load()
+    T.load_pos_data(path_to_axona_data)
     spk_ts = T.TETRODE[1].spk_ts
     S = SpikeCalcsGeneric(spk_ts)
     S.getClusterWaveforms(1, 1)
@@ -38,14 +38,14 @@ def test_spikecalcs_init(path_to_axona_data):
         S.trial_mean_fr(1)
     S.duration = 50.
     fr = S.trial_mean_fr(1)
-    assert(isinstance(fr, float))
+    assert (isinstance(fr, float))
     S.spk_clusters = None
 
 
 def test_mean_isi_range(path_to_axona_data):
     S = get_spikecalcs_instance(path_to_axona_data)
     r = S.mean_isi_range(1, 50)
-    assert(isinstance(r, float))
+    assert (isinstance(r, float))
     with pytest.raises(IndexError):
         S.mean_isi_range(999, 50)
 
@@ -55,7 +55,7 @@ def test_xcorr(path_to_axona_data):
     spk_ts = S.spike_times[S.spk_clusters == 1]
     S.xcorr(spk_ts)
     y = S.xcorr(spk_ts, Trange=[-100, 100])
-    assert(isinstance(y, np.ndarray))
+    assert (isinstance(y, np.ndarray))
 
 
 def test_mean_waveforms(path_to_axona_data):
@@ -75,8 +75,8 @@ def test_mean_waveforms(path_to_axona_data):
 def test_cluster_quality(path_to_axona_data):
     S = get_spikecalcs_instance(path_to_axona_data)
     L_ratio, isolation_dist = S.clusterQuality(1)
-    assert(isinstance(L_ratio, float))
-    assert(isinstance(isolation_dist, float))
+    assert (isinstance(L_ratio, float))
+    assert (isinstance(isolation_dist, float))
 
 
 '''
@@ -86,7 +86,7 @@ def test_cluster_quality(path_to_axona_data):
 
 def test_get_param(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
-    T.load()
+    T.load_pos_data(path_to_axona_data)
     waveforms = T.TETRODE[1].waveforms
     waveforms = waveforms[T.TETRODE[1].cut == 1, :, :]
     spk_ts = T.TETRODE.get_spike_samples(1, 1)
@@ -98,7 +98,7 @@ def test_get_param(path_to_axona_data):
 
 def test_half_amp_duration(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
-    T.load()
+    T.load_pos_data(path_to_axona_data)
     waveforms = T.TETRODE[1].waveforms
     waveforms = waveforms[T.TETRODE[1].cut == 1, :, :]
     spk_ts = T.TETRODE.get_spike_samples(1, 1)
@@ -108,7 +108,7 @@ def test_half_amp_duration(path_to_axona_data):
 
 def test_p2t_time(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
-    T.load()
+    T.load_pos_data(path_to_axona_data)
     waveforms = T.TETRODE[1].waveforms
     waveforms = waveforms[T.TETRODE[1].cut == 1, :, :]
     spk_ts = T.TETRODE.get_spike_samples(1, 1)
@@ -116,13 +116,11 @@ def test_p2t_time(path_to_axona_data):
     S.p2t_time(waveforms)
 
 
-@pytest.mark.mpl_image_compare
 def test_plot_cluster_space(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
-    T.load()
+    T.load_pos_data(path_to_axona_data)
     waveforms = T.TETRODE[1].waveforms
     waveforms = waveforms[T.TETRODE[1].cut == 1, :, :]
     spk_ts = T.TETRODE.get_spike_samples(1, 1)
     S = SpikeCalcsAxona(spk_ts)
-    fig = S.plotClusterSpace(waveforms)
-    return fig
+    S.plotClusterSpace(waveforms)

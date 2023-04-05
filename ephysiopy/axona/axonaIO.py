@@ -117,7 +117,7 @@ class IO(object):
         a = []
         filename_root = Path(os.path.splitext(
             self.filename_root)[0] + "_" + str(tet) + ".cut")
-        
+
         if not os.path.exists(filename_root):
             cut = self.getCluCut(tet)
             if cut is not None:
@@ -146,7 +146,7 @@ class IO(object):
             the end (e.g. ".set", ".pos" or whatever)
 
         header : dataclass
-            See ephysiopy.dacq2py.axona_headers
+            See ephysiopy.axona.file_headers
         """
         with open(filename_root, "w") as f:
             with redirect_stdout(f):
@@ -488,7 +488,8 @@ class EEG(IO):
                 eeg_suffix = ".egf"
             else:
                 eeg_suffix = ".egf" + str(eeg_file)
-        self.header = self.getHeader(self.filename_root.with_suffix(eeg_suffix))
+        self.header = self.getHeader(
+            self.filename_root.with_suffix(eeg_suffix))
         self.eeg = self.getData(filename_root.with_suffix(eeg_suffix))["eeg"]
         # sometimes the eeg record is longer than reported in
         # the 'num_EEG_samples'
