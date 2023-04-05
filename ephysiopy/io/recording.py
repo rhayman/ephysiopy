@@ -338,13 +338,15 @@ class OpenEphysBase(TrialInterface):
         setattr(self, "sync_message_file", None)
         self.load_settings()
         record_methods = ["Acquisition Board",
-                                                "Neuropix-PXI", "Sources/Neuropix-PXI",
-                                                "Rhythm FPGA", "Sources/Rhythm FPGA"]
-        record_method = [i for i in self.settings.processors.keys()
-                         if i in record_methods][0]
-        if "/" in record_method:
-            record_method = record_method.split("/")[-1]
-        self.rec_kind = Xml2RecordingKind[record_method]
+                          "Neuropix-PXI", "Sources/Neuropix-PXI",
+                          "Rhythm FPGA", "Sources/Rhythm FPGA"]
+        rec_method = [i for i in self.settings.processors.keys()
+                      if i in record_methods][0]
+        if 'Sources/' in rec_method:
+            tmp_rec_method = rec_method.lstrip('Sources/')
+            self.rec_kind = Xml2RecordingKind[tmp_rec_method]
+        else:
+            self.rec_kind = Xml2RecordingKind[rec_method]
         self.sample_rate = None
         self.sample_rate = self.settings.processors[rec_method].sample_rate
         self.channel_count = self.settings.processors[rec_method].channel_count
