@@ -487,11 +487,20 @@ class OpenEphysBase(TrialInterface):
         sync_file_match = exp_name / rec_name
         acq_method = ""
         if self.rec_kind == RecordingKind.NEUROPIXELS:
+            # the old OE NPX plugins saved two forms of the data,
+            # one for AP @30kHz and one for LFP @??Hz
+            # the newer plugin saves only the 30kHz data. Also, the
+            # 2.0 probes are saved with Probe[A-Z] appended to the end
+            # of the folder
+            # the older way:
             acq_method = "Neuropix-PXI-[0-9][0-9][0-9]."
             APdata_match = (exp_name / rec_name /
                             "continuous" / (acq_method + "0"))
             LFPdata_match = (exp_name / rec_name /
                              "continuous" / (acq_method + "1"))
+            # the new way:
+            Rawdata_match = (exp_name / rec_name / 
+                             "continuous" / (acq_method + "Probe[A-Z]"))
         elif self.rec_kind == RecordingKind.FPGA:
             acq_method = "Rhythm_FPGA-[0-9][0-9][0-9]."
             APdata_match = (exp_name / rec_name /
@@ -539,6 +548,9 @@ class OpenEphysBase(TrialInterface):
                         if PurePath(d).match(str(LFPdata_match)):
                             self.path2LFPdata = os.path.join(d)
                             print(f"Continuous data at: {self.path2LFPdata}")
+                        if PurePath(d).match(str(Rawdata_match)):
+                            self.path2APdata = os.path.join(d)
+                            self.path2LFPdata = os.path.join(d)
                         if PurePath(d).match(str(TrackMe_match)):
                             self.path2PosData = os.path.join(d)
                             setattr(self, "pos_data_type", "TrackMe")
