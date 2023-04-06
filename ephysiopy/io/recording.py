@@ -501,7 +501,7 @@ class OpenEphysBase(TrialInterface):
             LFPdata_match = (exp_name / rec_name /
                              "continuous" / (acq_method + "1"))
             # the new way:
-            Rawdata_match = (exp_name / rec_name / 
+            Rawdata_match = (exp_name / rec_name /
                              "continuous" / (acq_method + "Probe[A-Z]"))
         elif self.rec_kind == RecordingKind.FPGA:
             acq_method = "Rhythm_FPGA-[0-9][0-9][0-9]."
@@ -509,10 +509,14 @@ class OpenEphysBase(TrialInterface):
                             "continuous" / (acq_method + "0"))
             LFPdata_match = (exp_name / rec_name /
                              "continuous" / (acq_method + "1"))
+            Rawdata_match = (exp_name / rec_name /
+                             "continuous" / (acq_method + "Probe[A-Z]"))
         else:
             acq_method = "Acquisition_Board-[0-9][0-9][0-9].*"
             APdata_match = exp_name / rec_name / "continuous" / acq_method
             LFPdata_match = exp_name / rec_name / "continuous" / acq_method
+            Rawdata_match = (exp_name / rec_name /
+                             "continuous" / (acq_method + "Probe[A-Z]"))
         Events_match = (
             # only dealing with a single TTL channel at the moment
             exp_name / rec_name / "events" / acq_method / "TTL"
