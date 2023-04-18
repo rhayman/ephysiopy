@@ -1,13 +1,15 @@
-import matplotlib.pylab as plt
-import matplotlib
-import numpy as np
 import functools
+
+import matplotlib
+import matplotlib.pylab as plt
+import matplotlib.transforms as transforms
+import numpy as np
+from matplotlib.patches import Rectangle
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+from ephysiopy.axona import tintcolours as tcols
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
-from ephysiopy.axona import tintcolours as tcols
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-import matplotlib.transforms as transforms
-from matplotlib.patches import Rectangle
 
 
 # Decorators
@@ -554,6 +556,9 @@ class FigureMaker(object):
                                nchannels: int = 384,
                                nseconds: int = 100,
                                maxFreq: int = 125,
+                               channels: list = [],
+                               frequencies: list = [],
+                               frequencyIncrement: int = 1,
                                **kwargs):
         """
         Plots a heat map spectrogram of the LFP for each channel.
@@ -570,6 +575,14 @@ class FigureMaker(object):
         maxFreq : int
             The maximum frequency in Hz to plot the spectrogram out to.
             Maximum 1250. Default 125
+        channels: list
+            The channels to plot separately on the top plot
+        frequencies: list
+            The specific frequencies to examine across
+            all channels. The mean from frequency: frequency+frequencyIncrement
+            is calculated and plotted on the left hand side of the plot
+        frequencyIncrement: int
+            The amount to add to each value of the frequencies list above
         kwargs: valid key value pairs:
             "saveas" - save the figure to this location, needs absolute
             path and filename
@@ -633,14 +646,17 @@ class FigureMaker(object):
         plt.setp(channel_spectoAx.get_xticklabels() +
                  meanfreq_powerAx.get_yticklabels(), visible=False)
 
+        # plot mean power across some channels
         mn_power = np.mean(spec_data, 0)
-        cols = iter(cm.rainbow(np.linspace(0, 1, (nchannels//60)+1)))
-        for i in range(0, spec_data.shape[0], 60):
+        if not channels:
+            channels = range(1, nchannels, 60)
+        cols = iter(cm.rainbow(np.linspace(0, 1, len(channels))))
+        for chan in channels:
             c = next(cols)
             channel_spectoAx.plot(E.freqs[0::50],
-                                  10*np.log10(spec_data[i, :]/mn_power),
+                                  10*np.log10(spec_data[chan, :]/mn_power),
                                   c=c,
-                                  label=str(i))
+                                  label=str(chan))
 
         channel_spectoAx.set_ylabel('Channel power(dB)')
         channel_spectoAx.legend(bbox_to_anchor=(0., 1.02, 1., .102),
@@ -649,9 +665,16 @@ class FigureMaker(object):
                                 fontsize='x-small',
                                 ncol=4)
 
-        freq_inc = 6
-        lower_freqs = np.arange(1, maxFreq-freq_inc, freq_inc)
-        upper_freqs = np.arange(1+freq_inc, maxFreq, freq_inc)
+        # plot mean frequencies across all channels
+        if not frequencyIncrement:
+            freq_inc = 6
+        else:
+            freq_inc = frequencyIncrement
+        if not frequencies:
+            lower_freqs = np.arange(1, maxFreq-freq_inc, freq_inc)
+        else:
+            lower_freqs = frequencies
+        upper_freqs = [f + freq_inc for f in lower_freqs]
         cols = iter(cm.nipy_spectral(np.linspace(0, 1, len(upper_freqs))))
         mn_power = np.mean(spec_data, 1)
         for freqs in zip(lower_freqs, upper_freqs):
