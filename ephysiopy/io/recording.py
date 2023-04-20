@@ -336,6 +336,10 @@ class OpenEphysBase(TrialInterface):
     def __init__(self, pname: Path, **kwargs) -> None:
         super().__init__(pname, **kwargs)
         setattr(self, "sync_message_file", None)
+        # Attempt to find the files contained in the parent directory
+        # related to the recording with the default experiment and
+        # recording name
+        self.find_files(pname)
         self.load_settings()
         record_methods = ["Acquisition Board",
                           "Neuropix-PXI", "Sources/Neuropix-PXI",
@@ -349,7 +353,13 @@ class OpenEphysBase(TrialInterface):
             self.rec_kind = Xml2RecordingKind[rec_method]
         self.sample_rate = None
         self.sample_rate = self.settings.processors[rec_method].sample_rate
+        if self.sample_rate is None:
+            if self.rec_kind == RecordingKind.NEUROPIXELS:
+                self.sample_rate = 30000
         self.channel_count = self.settings.processors[rec_method].channel_count
+        if self.channel_count is None:
+            if self.rec_kind == RecordingKind.NEUROPIXELS:
+                self.channel_count = 384
         self.kilodata = None
 
     def __load_kilo__(self):
