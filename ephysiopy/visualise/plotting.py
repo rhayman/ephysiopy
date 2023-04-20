@@ -94,10 +94,6 @@ class FigureMaker(object):
         spk_weights = np.bincount(
             spk_times_in_pos_samples, minlength=self.npos)
         rmap = self.RateMapMaker.getMap(spk_weights)
-        print(f"len rmap = {len(rmap)}")
-        for i, r in enumerate(rmap):
-            print(f"rmap[{i}] shape = {np.shape(r)}")
-            print(f"rmap[{i}] = {r}")
         ratemap = np.ma.MaskedArray(rmap[0], np.isnan(rmap[0]), copy=True)
         x, y = np.meshgrid(rmap[1][1][0:-1].data, rmap[1][0][0:-1].data)
         vmax = np.nanmax(np.ravel(ratemap))

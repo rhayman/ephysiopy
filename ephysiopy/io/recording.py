@@ -375,6 +375,11 @@ class OpenEphysBase(TrialInterface):
         return times.astype(np.int64) / self.sample_rate
 
     def load_lfp(self, pname: Path, *args, **kwargs):
+        '''
+        Valid kwargs are:
+        'target_sample_rate' - int
+            the sample rate to downsample to from the original
+        '''
         from scipy import signal
         if self.path2LFPdata is not None:
             lfp = memmapBinaryFile(
@@ -383,13 +388,13 @@ class OpenEphysBase(TrialInterface):
             channel = 0
             if "channel" in kwargs.keys():
                 channel = kwargs["channel"]
-            sample_rate = 500
-            if "sample_rate" in kwargs.keys():
-                sample_rate = kwargs["sample_rate"]
+            target_sample_rate = 500
+            if "target_sample_rate" in kwargs.keys():
+                target_sample_rate = kwargs["target_sample_rate"]
             n_samples = np.shape(lfp[channel, :])[0]
             sig = signal.resample(lfp[channel, :], int(
-                n_samples / 3e4) * sample_rate)
-            self.EEGCalcs = EEGCalcsGeneric(sig, sample_rate)
+                n_samples / self.sample_rate) * target_sample_rate)
+            self.EEGCalcs = EEGCalcsGeneric(sig, target_sample_rate)
 
     def load_neural_data(self, pname: Path) -> None:
         pass
