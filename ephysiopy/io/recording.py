@@ -223,13 +223,13 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def load_neural_data(self, pname: Path) -> NoReturn:
+    def load_neural_data(self, pname: Path, *args, **kwargs) -> NoReturn:
         """Load the neural data"""
         raise NotImplementedError
 
     @abc.abstractmethod
     def load_pos_data(
-        self, ppm: int = 300, jumpmax: int = 100
+        self, ppm: int = 300, jumpmax: int = 100, *args, **kwargs
     ) -> NoReturn:
         """
         Load the position data
@@ -246,21 +246,21 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def load_cluster_data(self) -> NoReturn:
+    def load_cluster_data(self, *args, **kwargs) -> NoReturn:
         """Load the cluster data (Kilosort/ Axona cut/ whatever else"""
         raise NotImplementedError
 
     @abc.abstractmethod
-    def load_settings(self) -> NoReturn:
+    def load_settings(self, *args, **kwargs) -> NoReturn:
         """Loads the format specific settings file"""
         raise NotImplementedError
 
     @abc.abstractmethod
-    def load_ttl(self):
+    def load_ttl(self, *args, **kwargs):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_spike_times(self, cluster: int, tetrode: int = None):
+    def get_spike_times(self, cluster: int, tetrode: int = None, *args, **kwargs):
         """Returns the times of an individual cluster"""
         raise NotImplementedError
 
@@ -294,17 +294,18 @@ class AxonaTrial(TrialInterface):
         if lfp is not None:
             self.EEGCalcs = EEGCalcsGeneric(lfp.sig, lfp.sample_rate)
 
-    def load_neural_data(self, pname: Path) -> None:
+    def load_neural_data(self, pname: Path, *args, **kwargs) -> None:
         pass
 
-    def load_cluster_data(self):
+    def load_cluster_data(self, *args, **kwargs):
         pass
 
-    def load_settings(self):
+    def load_settings(self, *args, **kwargs):
         return self.settings
 
     def load_pos_data(self, pname: Path,
-                      ppm: int = 300, jumpmax: int = 100) -> None:
+                      ppm: int = 300, jumpmax: int = 100,
+                      *args, **kwargs) -> None:
         try:
             AxonaPos = Pos(Path(pname))
             P = PosCalcsGeneric(
@@ -323,11 +324,12 @@ class AxonaTrial(TrialInterface):
         except IOError:
             print("Couldn't load the pos data")
 
-    def load_ttl(self):
+    def load_ttl(self, *args, **kwargs):
         from ephysiopy.axona.axonaIO import Stim
         self.ttl_data = Stim(self.pname)
 
-    def get_spike_times(self, cluster: int, tetrode: int = None):
+    def get_spike_times(self, cluster: int, tetrode: int = None,
+                        *args, **kwargs):
         if tetrode is not None:
             return self.TETRODE.get_spike_samples(tetrode, cluster)
 
@@ -369,7 +371,8 @@ class OpenEphysBase(TrialInterface):
         self.kilodata.load()
         self.kilodata.removeNoiseClusters()
 
-    def get_spike_times(self, cluster: int, tetrode: int = None):
+    def get_spike_times(self, cluster: int, tetrode: int = None,
+                        *args, **kwargs):
         ts = self.kilodata.spk_times
         times = ts[self.kilodata.spk_clusters == cluster]
         return times.astype(np.int64) / self.sample_rate
@@ -396,16 +399,16 @@ class OpenEphysBase(TrialInterface):
                 n_samples / self.sample_rate) * target_sample_rate)
             self.EEGCalcs = EEGCalcsGeneric(sig, target_sample_rate)
 
-    def load_neural_data(self, pname: Path) -> None:
+    def load_neural_data(self, pname: Path, *args, **kwargs) -> None:
         pass
 
-    def load_settings(self):
+    def load_settings(self, *args, **kwargs):
         if self._settings is None:
             # pname_root gets walked through and over-written with
             # correct location of settings.xml
             self.settings = Settings(self.pname)
 
-    def load_cluster_data(self):
+    def load_cluster_data(self, *args, **kwargs):
         if self.pname is not None:
             if os.path.exists(self.pname):
                 clusterData = KiloSortSession(self.pname)
@@ -417,11 +420,16 @@ class OpenEphysBase(TrialInterface):
                         pass
         self.clusterData = clusterData
 
-    def load_pos_data(self, ppm: int = 300, jumpmax: int = 100) -> None:
+    def load_pos_data(self, ppm: int = 300, jumpmax: int = 100,
+                      *args, **kwargs) -> None:
         # Only sub-class that doesn't use this is OpenEphysNWB
         # which needs updating
         # TODO: Update / overhaul OpenEphysNWB
         # Load the start time from the sync_messages file
+        if "cm" in kwargs:
+            cm = kwargs["cm"]
+        else:
+            cm = True
         recording_start_time = 0
         if self.sync_message_file is not None:
             with open(self.sync_message_file, "r") as f:
@@ -465,7 +473,7 @@ class OpenEphysBase(TrialInterface):
             P = PosCalcsGeneric(
                 pos_data[:, 0],
                 pos_data[:, 1],
-                cm=True,
+                cm=cm,
                 ppm=ppm,
                 jumpmax=jumpmax,
             )
@@ -482,7 +490,7 @@ class OpenEphysBase(TrialInterface):
             )
         self.recording_start_time = recording_start_time
 
-    def load_ttl(self):
+    def load_ttl(self, *args, **kwargs):
         pass
 
     def find_files(
@@ -596,13 +604,14 @@ class OpenEphysNWB(OpenEphysBase):
     def __init__(self, pname: Path, **kwargs) -> None:
         super().__init__(pname, **kwargs)
 
-    def load_neural_data(self, pname: Path) -> None:
+    def load_neural_data(self, pname: Path, *args, **kwargs) -> None:
         pass
 
-    def load_settings(self):
+    def load_settings(self, *args, **kwargs):
         return super().load_settings()
 
-    def load_pos_data(self, ppm: int = 300, jumpmax: int = 100) -> None:
+    def load_pos_data(self, ppm: int = 300, jumpmax: int = 100,
+                      *args, **kwargs) -> None:
         with h5py.File(os.path.join(self.path2NWBData), mode="r") as nwbData:
             xy = np.array(nwbData[self.path2PosData + "/data"])
             xy = xy[:, 0:2]
