@@ -34,12 +34,22 @@ class KiloSortSession(object):
         has been called in another way i.e. binary format a la Neuropixels
         """
         self.fname_root = fname_root
+        
+        # param_dict = dict()
 
         for d, c, f in os.walk(fname_root):
             for ff in f:
                 if "." not in c:  # ignore hidden directories
                     if "spike_times.npy" in ff:
                         self.fname_root = d
+                    # if "params.py" in ff:
+                    #     with open(ff, 'r') as _f:
+                    #         param = _f.readline
+                    #         keys = 
+                    #         param_dict[]
+                            
+        # parse out the lines in params.py
+        
         self.cluster_id = None
         self.spk_clusters = None
         self.spk_times = None
@@ -162,3 +172,10 @@ class KiloSortSession(object):
         for cluster_id, kslabel in zip(self.ks_cluster_id, self.ks_group):
             if "good" in kslabel.decode():
                 self.good_clusters.append(cluster_id)
+
+    def get_cluster_spike_times(self, cluster: int):
+        '''
+        Returns the spike times for cluster in samples
+        '''
+        if cluster in self.good_clusters:
+            return self.spk_times[self.spk_clusters == cluster]

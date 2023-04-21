@@ -38,9 +38,10 @@ The "/path/to/top_level" bit here means that if your directory hierarchy looks l
 
 ::
 
-    ├── settings.xml
     ├── 2020-03-20_12-40-15
-    |    └── experiment1
+    ├── Record Node 101
+    |    └── settings.xml
+             experiment1
     |        └── recording1
     |            ├── structure.oebin
     |            ├── sync_messages.txt
@@ -48,18 +49,18 @@ The "/path/to/top_level" bit here means that if your directory hierarchy looks l
     |            |   └── Neuropix-PXI-107.0
     |            |       └── continuous.dat
     |            └── events
+    ├── Record Node 102
 
 
-Walk through the folders/ files to see where the data is:
+Then the "/path/to/top_level" is the folder "2020-03-20_12-40-15"
 
-```python
-trial.find_files("/path/to/top_level", "experiment1", "recording1")
-```
+On insantiation of an OpenEphysBase object the directory structure containing the recording
+is traversed and various file locations are noted for later processing of the data in them.
 
 The pos data is loaded by calling the load_pos_data() method:
 
 ```python
-npx.load_pos_data(ppm=300, jumpmax=100)
+npx.load_pos_data(ppm=300, jumpmax=100, cm=True)
 ```
 
 Note
@@ -74,21 +75,3 @@ Plotting data
 
 A mixin class called FigureMaker allows consistent plots, regardless of recording technique. All plotting functions
 there begin with "make" e.g "makeRateMap" and return an instance of a matplotlib axis
-
-
-Motivation
-==========
-
-Analysis using Axona's Tint cluster cutting program or phy/ phy2 (openephys) is great but limited. This extends that functionality.
-
-Optional packages include:
-
-* `klustakwik <https://github.com/klusta-team/klustakwik>`_
-
-Download the files and extract to a folder and make sure it's on your Python path
-NB this is limited to data recorded using Axona as it has now been superceded by tools such as KiloSort/ KiloSort2 etc.
-
-Contributors
-============
-
-Robin Hayman.

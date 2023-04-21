@@ -7,6 +7,7 @@ import numpy as np
 from astropy import convolution  # deals with nans unlike other convs
 from ephysiopy.common.utils import blurImage
 from scipy import signal
+from enum import Enum
 
 warnings.filterwarnings(
     "ignore", message="invalid value encountered in sqrt")
@@ -19,6 +20,17 @@ warnings.filterwarnings(
 warnings.filterwarnings(
     "ignore", message="divide by zero encountered in true_divide")
 np.seterr(divide="ignore", invalid="ignore")
+
+
+class VariableToBin(Enum):
+    XY = 1
+    DIR = 2
+    SPEED = 3
+
+
+class MapType(Enum):
+    RATE = 1
+    POS = 2
 
 
 class RateMap(object):
