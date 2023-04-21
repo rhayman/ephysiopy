@@ -409,15 +409,16 @@ class OpenEphysBase(TrialInterface):
             self.settings = Settings(self.pname)
 
     def load_cluster_data(self, *args, **kwargs):
-        if self.pname is not None:
-            if os.path.exists(self.pname):
-                clusterData = KiloSortSession(self.pname)
-            if clusterData is not None:
-                if clusterData.load():
-                    try:
-                        clusterData.removeKSNoiseClusters()
-                    except Exception:
-                        pass
+        if self.path2KiloSortData is not None:
+            clusterData = KiloSortSession(self.pname)
+        if clusterData is not None:
+            if clusterData.load():
+                print("Loaded KiloSort data")
+                try:
+                    clusterData.removeKSNoiseClusters()
+                    print("Removed noise clusters")
+                except Exception:
+                    pass
         self.clusterData = clusterData
 
     def load_pos_data(self, ppm: int = 300, jumpmax: int = 100,
@@ -598,6 +599,9 @@ class OpenEphysBase(TrialInterface):
                     if ".nwb" in ff:
                         self.path2NWBData = os.path.join(d, ff)
                         print(f"nwb data at: {self.path2NWBData}")
+                    if "spike_templates.npy" in ff:
+                        self.path2KiloSortData = os.path.join(d)
+                        print(f"Found KiloSort data at {self.path2KiloSortData}")
 
 
 class OpenEphysNWB(OpenEphysBase):

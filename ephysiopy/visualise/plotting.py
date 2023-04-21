@@ -230,7 +230,7 @@ class FigureMaker(object):
                 np.nanmax(mn_rate))], fontweight='normal', size=6)
         return ax
 
-    @stripAxes
+    # @stripAxes
     def makeSpeedVsHeadDirectionPlot(self, spk_times: np.array,
                                      ax: matplotlib.axes = None,
                                      **kwargs) -> matplotlib.axes:
@@ -263,6 +263,7 @@ class FigureMaker(object):
                       vmax=vmax, shading='auto')
         plt.xticks([90, 180, 270], fontweight='normal', size=6)
         plt.yticks([10, 20], fontweight='normal', size=6)
+        plt.xlabel("Heading", fontweight='normal', size=6)
         return ax
 
     def makePowerSpectrum(
