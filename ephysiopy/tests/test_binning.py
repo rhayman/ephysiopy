@@ -19,7 +19,7 @@ def standard_Ratemap(basic_PosCalcs):
 
 
 def test_calc_bin_size(standard_Ratemap):
-    bs = standard_Ratemap._calcBinSize()
+    bs = standard_Ratemap._calcBinEdges()
     print(f"Using {standard_Ratemap.ppm} ppm")
     assert isinstance(bs, (np.ndarray, list, Sequence))
 
