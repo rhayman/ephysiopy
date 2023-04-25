@@ -8,7 +8,7 @@ from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from ephysiopy.axona import tintcolours as tcols
-from ephysiopy.common.binning import RateMap
+from ephysiopy.common.binning import RateMap, VariableToBin
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 
 
@@ -42,7 +42,6 @@ class FigureMaker(object):
     producing graphical output
     '''
     def __init__(self):
-        self.data_loaded = False
         self.PosCalcs = None
 
     def initialise(self):
@@ -58,12 +57,11 @@ class FigureMaker(object):
                 pos_weights = np.array(~hdir.mask).astype(int)
             else:
                 pos_weights = np.ones_like(hdir)
-        self.RateMapMaker = RateMap(
+        self.RateMap = RateMap(
             xy=xy, hdir=hdir, speed=speed, pos_weights=pos_weights, ppm=ppm,
-            xyInCms=True, cmsPerBin=cmsPerBin)
-        self.RateMapMaker.x_lims = getattr(self, 'x_lims', None)  # 2-tuple
-        self.RateMapMaker.y_lims = getattr(self, 'y_lims', None)
-        self.data_loaded = True
+            xyInCms=True, binsize=cmsPerBin)
+        self.RateMap.x_lims = getattr(self, 'x_lims', None)  # 2-tuple
+        self.RateMap.y_lims = getattr(self, 'y_lims', None)
 
     def getSpikePosIndices(self, spk_times: np.ndarray):
         pos_times = getattr(self.PosCalcs, 'xyTS')
@@ -89,11 +87,12 @@ class FigureMaker(object):
     @stripAxes
     def makeRateMap(self, spk_times: np.ndarray,
                     ax: matplotlib.axes = None) -> matplotlib.axes:
-        self.initialise()
+        if not self.RateMap:
+            self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         spk_weights = np.bincount(
             spk_times_in_pos_samples, minlength=self.npos)
-        rmap = self.RateMapMaker.getMap(spk_weights)
+        rmap = self.RateMap.getMap(spk_weights)
         ratemap = np.ma.MaskedArray(rmap[0], np.isnan(rmap[0]), copy=True)
         x, y = np.meshgrid(rmap[1][1][0:-1].data, rmap[1][0][0:-1].data)
         vmax = np.nanmax(np.ravel(ratemap))
@@ -110,7 +109,8 @@ class FigureMaker(object):
     def makeSpikePathPlot(self, spk_times: np.ndarray = None,
                           ax: matplotlib.axes = None,
                           **kwargs) -> matplotlib.axes:
-        self.initialise()
+        if not self.RateMap:
+            self.initialise()
         if 'c' in kwargs:
             col = kwargs.pop('c')
         else:
@@ -130,15 +130,16 @@ class FigureMaker(object):
     @stripAxes
     def makeSAC(self, spk_times: np.array = None,
                 ax: matplotlib.axes = None, **kwargs) -> matplotlib.axes:
-        self.initialise()
+        if not self.RateMap:
+            self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         spk_weights = np.bincount(
             spk_times_in_pos_samples, minlength=self.npos)
-        rmap = self.RateMapMaker.getMap(spk_weights)
-        from ephysiopy.common import gridcell
-        S = gridcell.SAC()
+        rmap = self.RateMap.getMap(spk_weights)
         nodwell = ~np.isfinite(rmap[0])
-        sac = S.autoCorr2D(rmap[0], nodwell)
+        sac = self.RateMap.autoCorr2D(rmap[0], nodwell)
+        from ephysiopy.common.gridcell import SAC
+        S = SAC()
         measures = S.getMeasures(sac)
         if ax is None:
             fig = plt.figure()
@@ -149,11 +150,12 @@ class FigureMaker(object):
     @stripAxes
     def makeHDPlot(self, spk_times: np.array = None,
                    ax: matplotlib.axes = None, **kwargs) -> matplotlib.axes:
-        self.initialise()
+        if not self.RateMap:
+            self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         spk_weights = np.bincount(
             spk_times_in_pos_samples, minlength=self.npos)
-        rmap = self.RateMapMaker.getMap(spk_weights, 'dir')
+        rmap = self.RateMap.getMap(spk_weights, varType=VariableToBin.DIR)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='polar')
@@ -161,7 +163,7 @@ class FigureMaker(object):
         # is not polar. deal with polar first
         theta = np.deg2rad(rmap[1][0])
         ax.clear()
-        r = rmap[0]
+        r = rmap[0]  # in samples so * pos sample_rate
         r = np.insert(r, -1, r[0])
         if 'polar' in ax.name:
             ax.plot(theta, r)
@@ -181,7 +183,7 @@ class FigureMaker(object):
             ax.set_thetagrids([0, 90, 180, 270])
         return ax
 
-    @stripAxes
+    # @stripAxes
     def makeSpeedVsRatePlot(
             self, spk_times: np.array, minSpeed: float = 0.0,
             maxSpeed: float = 40.0, sigma: float = 3.0,

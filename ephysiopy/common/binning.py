@@ -81,7 +81,7 @@ class RateMap(object):
         pos_weights: np.array = None,
         ppm: int = 430,
         xyInCms: bool = False,
-        cmsPerBin: int = 3,
+        binsize: int = 3,
         smooth_sz: int = 5,
     ):
         self.xy = xy
@@ -89,7 +89,7 @@ class RateMap(object):
         self.speed = speed
         self._pos_weights = pos_weights
         self._ppm = ppm  # pixels per metre
-        self._cmsPerBin = cmsPerBin
+        self._binsize = binsize
         self._inCms = xyInCms
         self._nBins = None
         self._binedges = None  # has setter and getter - see below
@@ -100,6 +100,7 @@ class RateMap(object):
         self.whenToSmooth = "before"  # or 'after'
         self._var2Bin = VariableToBin.XY
         self._mapType = MapType.RATE
+        self._calcBinEdges()
 
     @property
     def inCms(self):
@@ -127,6 +128,7 @@ class RateMap(object):
     @var2Bin.setter
     def var2Bin(self, value):
         self._var2Bin = value
+        self._calcBinEdges()
 
     @property
     def mapType(self):
@@ -156,21 +158,22 @@ class RateMap(object):
             if len(value) == 1:
                 _x = np.linspace(x_lims[0], x_lims[1], int(value[0]))
                 _y = np.linspace(y_lims[0], y_lims[1], int(value[0]))
-            elif len(value == 2):
+            elif len(value) == 2:
                 _x = np.linspace(x_lims[0], x_lims[1], int(value[0]))
                 _y = np.linspace(y_lims[0], y_lims[1], int(value[1]))
-            self._binedges = _x, _y
+            self._binedges = _y, _x
         elif self.var2Bin == VariableToBin.DIR:
-            self._binedges = [np.linspace(0, 360 + self.cmsPerBin, value[0])]
+            self._binedges = [np.linspace(0, 360 + self.binsize, value[0])]
         elif self.var2Bin == VariableToBin.SPEED:
-            self._binedges = [np.linspace(0, 50, value[0])]
-        self._nBins = [len(b) for b in self._binedges]
+            maxspeed = np.max(self.speed)
+            self._binedges = [np.linspace(0, maxspeed, value[0])]
+        self._calcBinDims()
 
     @property
     def binedges(self):
         # Returns binedges calculated in _calcBinEdges and based on cmsPerBin
-        if self._binedges is None:
-            self._binedges = self._calcBinEdges(self.cmsPerBin)
+        # if self._binedges is None:
+        #     self._binedges = self._calcBinEdges(self.binsize)
         return self._binedges
 
     @binedges.setter
@@ -211,14 +214,14 @@ class RateMap(object):
         self._pos_weights = value
 
     @property
-    def cmsPerBin(self):
+    def binsize(self):
         # The number of cms per bin of the binned up map
-        return self._cmsPerBin
+        return self._binsize
 
-    @cmsPerBin.setter
-    def cmsPerBin(self, value):
-        self._cmsPerBin = value
-        self._binedges = self._calcBinEdges(self.cmsPerBin)
+    @binsize.setter
+    def binsize(self, value):
+        self._binsize = value
+        self._binedges = self._calcBinEdges(self.binsize)
 
     @property
     def smooth_sz(self):
@@ -248,31 +251,47 @@ class RateMap(object):
             x_lims = (np.nanmin(self.xy[0]), np.nanmax(self.xy[0]))
         if y_lims is None:
             y_lims = (np.nanmin(self.xy[1]), np.nanmax(self.xy[1]))
+        self.x_lims = x_lims
+        self.y_lims = y_lims
         return x_lims, y_lims
 
-    def _calcBinEdges(self, cmsPerBin: int = 3) -> tuple:
+    def _calcBinDims(self):
+        try:
+            self._binDims = [len(b) for b in self._binedges]
+        except TypeError:
+            self._binDims = len(self._binedges)
+
+    def _calcBinEdges(self, binsize: int = 3) -> tuple:
         """
-        Aims to get the right number of bins for x and y dims given the ppm
-        in the set header and the x and y extent
+        Aims to get the right number of bins for the variable to be
+        binned
 
         Parameters
         ----------
-        cmsPerBin : int, optional, default = 3
-            The number of cms per bin OR degrees for directional binning
+        binsize : int, optional, default = 3
+            The number of cms per bin for XY
+            OR degrees for DIR
+            OR cm/s for SPEED
 
         Returns
         -------
-        2-tuple: each member an array of bin edges for x and y
+        tuple: each member an array of bin edges
         """
-        x_lims, y_lims = self._getXYLimits()
-
-        n_x = np.ceil((x_lims[1] - x_lims[0]) / cmsPerBin)
-        n_y = np.ceil((y_lims[1] - y_lims[0]) / cmsPerBin)
-        _x = np.linspace(x_lims[0], x_lims[1], int(n_x))
-        _y = np.linspace(y_lims[0], y_lims[1], int(n_y))
-
-        self.nBins = len(_x), len(_y)
-        return _y, _x
+        if self.var2Bin == VariableToBin.DIR:
+            self.binedges = np.arange(0, 360 + binsize, binsize)
+        elif self.var2Bin == VariableToBin.SPEED:
+            maxspeed = np.max(self.speed)
+            # assume min speed = 0
+            self.binedges = np.arange(0, maxspeed, binsize)
+        else:  # self.var2Bin == VariableToBin.XY:
+            x_lims, y_lims = self._getXYLimits()
+            n_x = np.ceil((x_lims[1] - x_lims[0]) / binsize)
+            n_y = np.ceil((y_lims[1] - y_lims[0]) / binsize)
+            _x = np.linspace(x_lims[0], x_lims[1], int(n_x))
+            _y = np.linspace(y_lims[0], y_lims[1], int(n_y))
+            self.binedges = _y, _x
+        self._calcBinDims()
+        return self.binedges
 
     def getMap(self, spkWeights,
                varType=VariableToBin.XY,
@@ -307,18 +326,16 @@ class RateMap(object):
             for respectively
 
         """
-        sample = getattr(self, varType, "xy")
+        if varType == VariableToBin.DIR:
+            sample = self.dir
+        elif varType == VariableToBin.SPEED:
+            sample = self.speed
+        else:  # VariabelToBin.Xy
+            sample = self.xy
         assert sample is not None
         # might happen if head direction not supplied for example
 
-        if "xy" in varType:
-            if self.binsize is None:
-                self._binedges = self._calcBinEdges(self.cmsPerBin)
-        elif "dir" in varType:
-            if self.binsize is None:
-                self._binedges = np.arange(0, 360 + self.cmsPerBin, self.cmsPerBin)
-        elif "speed" in varType:
-            self._binedges = np.arange(0, 50, 1)
+        self.var2Bin = varType
 
         binned_pos, binned_pos_edges = self._binData(
                                                      sample,
@@ -326,9 +343,9 @@ class RateMap(object):
                                                      self.pos_weights)
         nanIdx = binned_pos == 0
 
-        if "pos" in mapType:  # return just binned up position
+        if mapType == MapType.POS:  # return just binned up position
             if smoothing:
-                if "dir" in varType:
+                if varType == VariableToBin.DIR:
                     binned_pos = self._circPadSmooth(
                         binned_pos, n=self.smooth_sz)
                 else:
@@ -337,12 +354,12 @@ class RateMap(object):
                     )
             return binned_pos, binned_pos_edges
 
-        binned_spk, _ = self._binData(sample, self.binsize, spkWeights)
+        binned_spk, _ = self._binData(sample, self._binedges, spkWeights)
         # binned_spk is returned as a tuple of the binned data and the bin
         # edges
         if "after" in self.whenToSmooth:
             rmap = binned_spk / binned_pos
-            if "dir" in varType:
+            if varType == VariableToBin.DIR:
                 rmap = self._circPadSmooth(rmap, self.smooth_sz)
             else:
                 rmap = blurImage(
@@ -350,7 +367,7 @@ class RateMap(object):
         else:  # default case
             if not smoothing:
                 return binned_spk / binned_pos, binned_pos_edges
-            if "dir" in varType:
+            if varType == VariableToBin.DIR:
                 binned_pos = self._circPadSmooth(binned_pos, self.smooth_sz)
                 binned_spk = self._circPadSmooth(binned_spk, self.smooth_sz)
                 rmap = binned_spk / binned_pos

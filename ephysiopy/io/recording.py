@@ -109,6 +109,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self._pname = pname
         self._settings = None
         self._PosCalcs = None
+        self._RateMap = None
         self._pos_data_type = None
         self._sync_message_file = None
         self._clusterData = None  # Kilosort or .cut / .clu file
@@ -160,6 +161,14 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     @PosCalcs.setter
     def PosCalcs(self, val):
         self._PosCalcs = val
+
+    @property
+    def RateMap(self):
+        return self._RateMap
+
+    @RateMap.setter
+    def RateMap(self, value):
+        self._RateMap = value
 
     @property
     def pos_data_type(self):
@@ -260,7 +269,11 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_spike_times(self, cluster: int, tetrode: int = None, *args, **kwargs):
+    def get_spike_times(self,
+                        cluster: int,
+                        tetrode: int = None,
+                        *args,
+                        **kwargs):
         """Returns the times of an individual cluster"""
         raise NotImplementedError
 
@@ -349,7 +362,7 @@ class OpenEphysBase(TrialInterface):
             self.rec_kind = Xml2RecordingKind[tmp_rec_method]
         else:
             self.rec_kind = Xml2RecordingKind[rec_method]
-        
+
         # Attempt to find the files contained in the parent directory
         # related to the recording with the default experiment and
         # recording name
@@ -455,19 +468,18 @@ class OpenEphysBase(TrialInterface):
                     os.path.join(self.path2PosData, "data_array.npy")
                 )
             pos_ts = np.load(os.path.join(self.path2PosData, "timestamps.npy"))
+            # pos_ts in seconds
             pos_ts = np.ravel(pos_ts)
             if pos_data_type == "TrackMe":
                 print("Loading TrackMe data...")
                 pos_data = loadTrackMePluginData(
                     Path(os.path.join(self.path2PosData, "continuous.dat")))
-                # pos_ts = loadTrackMeTTLTimestamps(self.path2EventsData)
                 pos_ts = loadTrackMeTimestamps(
                     Path(self.path2PosData))
                 pos_ts = pos_ts[0:len(pos_data)]
-            pos_timebase = getattr(self, "pos_timebase", 3e4)
-            sample_rate = np.floor(1 / np.mean(np.diff(pos_ts) / pos_timebase))
+            sample_rate = self.settings.processors[pos_data_type].sample_rate
+            sample_rate = float(sample_rate)
             xyTS = pos_ts - recording_start_time
-            # xyTS = xyTS / pos_timebase  # convert to seconds
             if self.sync_message_file is not None:
                 recording_start_time = xyTS[0]
 
