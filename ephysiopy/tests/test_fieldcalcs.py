@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 from ephysiopy.common import fieldcalcs
-
+from ephysiopy.tests.test_binning import standard_Ratemap
 
 def test_limit_to_one(basic_ratemap):
     _, middle_field, _ = fieldcalcs.limit_to_one(basic_ratemap)
@@ -117,8 +117,7 @@ def test_grid_field_measures(basic_ratemap):
 
 
 def test_deform_SAC(basic_ratemap):
-    from ephysiopy.common.binning import RateMap
-    R = RateMap()
+    R = standard_Ratemap
     sac = R.autoCorr2D(
         basic_ratemap, ~np.isfinite(basic_ratemap))
     from skimage import transform
@@ -137,17 +136,16 @@ def test_deform_SAC(basic_ratemap):
 
 
 def test_get_grid_orientation(basic_ratemap):
-    from ephysiopy.common.gridcell import SAC
-    S = SAC()
+    R = standard_Ratemap
     nodwell = ~np.isfinite(basic_ratemap)
-    sac = S.autoCorr2D(basic_ratemap, nodwell)
+    sac = R.autoCorr2D(basic_ratemap, nodwell)
     measures = fieldcalcs.grid_field_props(sac, allProps=True)
     peak_coords = measures['closest_peak_coords']
     fieldcalcs.grid_orientation(peak_coords, np.arange(len(peak_coords)))
     A = np.zeros_like(basic_ratemap)
     A[3:10, 3:8] = 10
     nodwell = ~np.isfinite(A)
-    sac = S.autoCorr2D(A, nodwell)
+    sac = R.autoCorr2D(A, nodwell)
     measures = fieldcalcs.grid_field_props(sac, allProps=True)
     peak_coords = measures['closest_peak_coords']
     fieldcalcs.grid_orientation(peak_coords, np.arange(len(peak_coords)))

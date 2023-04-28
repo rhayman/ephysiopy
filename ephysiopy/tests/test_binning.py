@@ -27,11 +27,11 @@ def test_calc_bin_size(standard_Ratemap):
 def test_bin_data(standard_Ratemap):
     R = standard_Ratemap
     xy = getattr(R, "xy")
-    xy_bins = R.binsize
+    xy_bins = R.binedges
     hd = getattr(R, "dir")
     R.inCms
     R.inCms = True
-    hd_bins = np.arange(0, 360 + R.cmsPerBin, R.cmsPerBin)
+    hd_bins = np.arange(0, 360 + R.binsize, R.binsize)
     samples = [xy, hd]
     bins = [xy_bins, hd_bins]
     pw2d = np.zeros(shape=[2, len(hd)])

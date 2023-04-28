@@ -119,7 +119,7 @@ class RateMap(object):
     @ppm.setter
     def ppm(self, value):
         self._ppm = value
-        self._binedges = self._calcBinEdges(self.cmsPerBin)
+        # self._binedges = self._calcBinEdges(self.binsize)
 
     @property
     def var2Bin(self):
@@ -128,7 +128,7 @@ class RateMap(object):
     @var2Bin.setter
     def var2Bin(self, value):
         self._var2Bin = value
-        self._calcBinEdges()
+        # self._calcBinEdges()
 
     @property
     def mapType(self):

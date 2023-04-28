@@ -1,4 +1,5 @@
 import matplotlib
+import matplotlib.cm
 import matplotlib.pyplot as plt
 import numpy as np
 from ephysiopy.common.binning import RateMap
@@ -146,8 +147,8 @@ class phasePrecession2D(object):
         )
         P.postprocesspos(tracker_params={"AxonaBadValue": 1023})
         # ... do the ratemap creation here once
-        R = RateMap(P.xy, P.dir, P.speed)
-        R.cmsPerBin = self.cms_per_bin
+        R = RateMap(P.xy, P.dir, P.speed, xyInCms=True)
+        R.binsize = self.cms_per_bin
         R.smooth_sz = self.field_smoothing_kernel_len
         R.ppm = self.ppm
         spk_times_in_pos_samples = self.getSpikePosIndices(spike_ts)
@@ -304,7 +305,7 @@ class phasePrecession2D(object):
         if plot:
             fig = plt.figure()
             ax = fig.add_subplot(211)
-            ax.pcolormesh(ye, xe, rmap, cmap=matplotlib.colormaps["jet"],
+            ax.pcolormesh(ye, xe, rmap, cmap=matplotlib.cm.get_cmap("jet"),
                           edgecolors="face")
             ax.set_title("Smoothed ratemap + peaks")
             ax.xaxis.set_visible(False)
@@ -625,7 +626,7 @@ class phasePrecession2D(object):
             # add a custom colorbar for colors in runVals
 
             # create a custom colormap for the plot
-            cmap = matplotlib.colormaps["hsv"]
+            cmap = matplotlib.cm.get_cmap("hsv")
             cmaplist = [cmap(i) for i in range(cmap.N)]
             cmaplist[0] = (1, 1, 1, 1)
             cmap = cmap.from_list("Perim cmap", cmaplist, cmap.N)
