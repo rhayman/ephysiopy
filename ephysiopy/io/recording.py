@@ -69,8 +69,8 @@ def loadTrackingPluginData(pname: Path) -> np.ndarray:
     return pos_data
 
 
-def loadTrackMePluginData(pname: Path) -> np.ndarray:
-    mmap = memmapBinaryFile(str(pname), n_channels=4)
+def loadTrackMePluginData(pname: Path, n_channels: int = 4) -> np.ndarray:
+    mmap = memmapBinaryFile(str(pname), n_channels)
     return np.array(mmap[0:2, :]).T
 
 
@@ -83,6 +83,12 @@ def loadTrackMeTTLTimestamps(pname: Path) -> np.ndarray:
 def loadTrackMeTimestamps(pname: Path) -> np.ndarray:
     ts = np.load(os.path.join(pname, "timestamps.npy"))
     return ts
+
+
+def loadTrackMeFrameCount(pname: Path, n_channels: int = 4) -> np.ndarray:
+    data = memmapBinaryFile(str(pname), n_channels)
+    # framecount data is always last column in continuous.dat file
+    return np.array(data[-1, :]).T
 
 
 class RecordingKind(Enum):
@@ -372,23 +378,22 @@ class OpenEphysBase(TrialInterface):
         if self.sample_rate is None:
             if self.rec_kind == RecordingKind.NEUROPIXELS:
                 self.sample_rate = 30000
+        else:  # rubbish fix - many strs need casting to int/float
+            self.sample_rate = float(self.sample_rate)
         self.channel_count = self.settings.processors[rec_method].channel_count
         if self.channel_count is None:
             if self.rec_kind == RecordingKind.NEUROPIXELS:
                 self.channel_count = 384
         self.kilodata = None
 
-    def __load_kilo__(self):
-        """Loads KiloSort data"""
-        self.kilodata = KiloSortSession(self.pname)
-        self.kilodata.load()
-        self.kilodata.removeNoiseClusters()
-
     def get_spike_times(self, cluster: int, tetrode: int = None,
                         *args, **kwargs):
-        ts = self.kilodata.spk_times
-        times = ts[self.kilodata.spk_clusters == cluster]
-        return times.astype(np.int64) / self.sample_rate
+        ts = self.clusterData.spk_times
+        if cluster in self.clusterData.spk_clusters:
+            times = ts[self.clusterData.spk_clusters == cluster]
+            return times.astype(np.int64) / self.sample_rate
+        else:
+            warnings.warn("Cluster not present")
 
     def load_lfp(self, pname: Path, *args, **kwargs):
         '''
