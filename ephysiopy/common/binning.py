@@ -221,7 +221,7 @@ class RateMap(object):
     @binsize.setter
     def binsize(self, value):
         self._binsize = value
-        self._binedges = self._calcBinEdges(self.binsize)
+        self._binedges = self._calcBinEdges(value)
 
     @property
     def smooth_sz(self):
