@@ -330,12 +330,14 @@ class RateMap(object):
             sample = self.dir
         elif varType == VariableToBin.SPEED:
             sample = self.speed
-        else:  # VariabelToBin.Xy
+        elif varType == VariableToBin.XY:
             sample = self.xy
+        else:
+            raise ValueError("Unrecognized variable to bin.")
         assert sample is not None
-        # might happen if head direction not supplied for example
 
         self.var2Bin = varType
+        self._calcBinEdges(self.binsize)
 
         binned_pos, binned_pos_edges = self._binData(
                                                      sample,
@@ -449,6 +451,8 @@ class RateMap(object):
         dims = weights.ndim
         if dims == 1 and var.ndim == 1:
             var = var[np.newaxis, :]
+            # if self.var2Bin != VariableToBin.XY and len(bin_edges) != 1:
+            #     bin_edges = self._calcBinEdges(self.binsize)
             bin_edges = bin_edges[np.newaxis, :]
         elif dims > 1 and var.ndim == 1:
             var = var[np.newaxis, :]

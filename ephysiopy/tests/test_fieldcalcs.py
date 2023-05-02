@@ -3,6 +3,7 @@ import pytest
 from ephysiopy.common import fieldcalcs
 from ephysiopy.tests.test_binning import standard_Ratemap
 
+
 def test_limit_to_one(basic_ratemap):
     _, middle_field, _ = fieldcalcs.limit_to_one(basic_ratemap)
     assert isinstance(middle_field, np.ndarray)
@@ -116,8 +117,12 @@ def test_grid_field_measures(basic_ratemap):
         step=15)
 
 
-def test_deform_SAC(basic_ratemap):
+def test_deform_SAC(standard_Ratemap):
     R = standard_Ratemap
+    n_pos = len(R.pos_weights)
+    spk_weights = np.random.rand(n_pos)
+    spk_weights[spk_weights >= 0.95] = 1
+    basic_ratemap, _ = R.getMap(spk_weights)
     sac = R.autoCorr2D(
         basic_ratemap, ~np.isfinite(basic_ratemap))
     from skimage import transform
@@ -135,17 +140,20 @@ def test_deform_SAC(basic_ratemap):
         sac, np.array([[3, 9], [10, 2]]), np.array([[1, 9], [10, 2]]))
 
 
-def test_get_grid_orientation(basic_ratemap):
-    R = standard_Ratemap
-    nodwell = ~np.isfinite(basic_ratemap)
-    sac = R.autoCorr2D(basic_ratemap, nodwell)
+def test_get_grid_orientation(standard_Ratemap):
+    n_pos = len(standard_Ratemap.pos_weights)
+    spk_weights = np.random.rand(n_pos)
+    spk_weights[spk_weights >= 0.95] = 1
+    basic_ratemap, _ = standard_Ratemap.getMap(spk_weights)
+    sac = standard_Ratemap.autoCorr2D(
+        basic_ratemap, ~np.isfinite(basic_ratemap))
     measures = fieldcalcs.grid_field_props(sac, allProps=True)
     peak_coords = measures['closest_peak_coords']
     fieldcalcs.grid_orientation(peak_coords, np.arange(len(peak_coords)))
     A = np.zeros_like(basic_ratemap)
     A[3:10, 3:8] = 10
     nodwell = ~np.isfinite(A)
-    sac = R.autoCorr2D(A, nodwell)
+    sac = standard_Ratemap.autoCorr2D(A, nodwell)
     measures = fieldcalcs.grid_field_props(sac, allProps=True)
     peak_coords = measures['closest_peak_coords']
     fieldcalcs.grid_orientation(peak_coords, np.arange(len(peak_coords)))

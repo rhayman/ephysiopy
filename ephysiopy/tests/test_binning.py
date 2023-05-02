@@ -2,7 +2,7 @@ from typing import Sequence
 
 import numpy as np
 import pytest
-from ephysiopy.common.binning import RateMap
+from ephysiopy.common.binning import RateMap, VariableToBin, MapType
 
 
 @pytest.fixture
@@ -57,8 +57,8 @@ def test_get_map(standard_Ratemap):
     spk_weights[spk_weights >= 0.99] = 3
     spk_weights[spk_weights < 0.95] = 0
 
-    vars_2_bin = ["xy", "dir", "speed"]
-    map_types = ["rate", "pos"]
+    vars_2_bin = [VariableToBin.XY, VariableToBin.DIR, VariableToBin.SPEED]
+    map_types = [MapType.RATE, MapType.POS]
     smoothing_when = ["after", "before"]
     do_smooth = [True, False]
     # There is a member variable to smooth before or after dividing
