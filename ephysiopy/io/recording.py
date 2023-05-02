@@ -477,8 +477,11 @@ class OpenEphysBase(TrialInterface):
             pos_ts = np.ravel(pos_ts)
             if pos_data_type == "TrackMe":
                 print("Loading TrackMe data...")
+                n_pos_chans = int(
+                    self.settings.processors['TrackMe'].channel_count)
                 pos_data = loadTrackMePluginData(
-                    Path(os.path.join(self.path2PosData, "continuous.dat")))
+                    Path(os.path.join(self.path2PosData, "continuous.dat")),
+                    n_channels=n_pos_chans)
                 pos_ts = loadTrackMeTimestamps(
                     Path(self.path2PosData))
                 pos_ts = pos_ts[0:len(pos_data)]
