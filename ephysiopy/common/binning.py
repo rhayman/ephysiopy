@@ -128,7 +128,6 @@ class RateMap(object):
     @var2Bin.setter
     def var2Bin(self, value):
         self._var2Bin = value
-        # self._calcBinEdges()
 
     @property
     def mapType(self):
@@ -156,24 +155,41 @@ class RateMap(object):
         if self.var2Bin == VariableToBin.XY:
             x_lims, y_lims = self._getXYLimits()
             if len(value) == 1:
-                _x = np.linspace(x_lims[0], x_lims[1], int(value[0]))
-                _y = np.linspace(y_lims[0], y_lims[1], int(value[0]))
+                _x, bs_x = np.linspace(x_lims[0],
+                                       x_lims[1],
+                                       int(value[0]),
+                                       retstep=True)
+                _y, bs_y = np.linspace(y_lims[0],
+                                       y_lims[1],
+                                       int(value[0]),
+                                       retstep=True)
             elif len(value) == 2:
-                _x = np.linspace(x_lims[0], x_lims[1], int(value[0]))
-                _y = np.linspace(y_lims[0], y_lims[1], int(value[1]))
+                _x, bs_x = np.linspace(x_lims[0],
+                                       x_lims[1],
+                                       int(value[0]),
+                                       retstep=True)
+                _y, bs_y = np.linspace(y_lims[0],
+                                       y_lims[1],
+                                       int(value[1]),
+                                       retstep=True)
             self._binedges = _y, _x
+            self.binsize = np.mean([bs_x, bs_y])
         elif self.var2Bin == VariableToBin.DIR:
-            self._binedges = [np.linspace(0, 360 + self.binsize, value[0])]
+            self._binedges, binsize = np.linspace(0,
+                                                  360 + self.binsize,
+                                                  value[0],
+                                                  retstep=True)
+            self.binsize = binsize
         elif self.var2Bin == VariableToBin.SPEED:
             maxspeed = np.max(self.speed)
-            self._binedges = [np.linspace(0, maxspeed, value[0])]
-        self._calcBinDims()
+            self._binedges, binsize = np.linspace(0,
+                                                  maxspeed,
+                                                  value[0],
+                                                  retstep=True)
+            self.binsize = binsize
 
     @property
     def binedges(self):
-        # Returns binedges calculated in _calcBinEdges and based on cmsPerBin
-        # if self._binedges is None:
-        #     self._binedges = self._calcBinEdges(self.binsize)
         return self._binedges
 
     @binedges.setter
@@ -285,10 +301,8 @@ class RateMap(object):
             self.binedges = np.arange(0, maxspeed, binsize)
         else:  # self.var2Bin == VariableToBin.XY:
             x_lims, y_lims = self._getXYLimits()
-            n_x = np.ceil((x_lims[1] - x_lims[0]) / binsize)
-            n_y = np.ceil((y_lims[1] - y_lims[0]) / binsize)
-            _x = np.linspace(x_lims[0], x_lims[1], int(n_x))
-            _y = np.linspace(y_lims[0], y_lims[1], int(n_y))
+            _x = np.arange(x_lims[0], x_lims[1], binsize)
+            _y = np.arange(y_lims[0], y_lims[1], binsize)
             self.binedges = _y, _x
         self._calcBinDims()
         return self.binedges

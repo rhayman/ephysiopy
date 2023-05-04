@@ -49,7 +49,6 @@ class FigureMaker(object):
         hdir = getattr(self.PosCalcs, "dir")
         speed = getattr(self.PosCalcs, "speed")
         ppm = getattr(self.PosCalcs, "ppm")
-        binsize = getattr(self.PosCalcs, "binsize", 3)
         setattr(self, "npos", xy.shape[1])
         pos_weights = None
         if hdir is not None:
@@ -59,7 +58,7 @@ class FigureMaker(object):
                 pos_weights = np.ones_like(hdir)
         self.RateMap = RateMap(
             xy=xy, hdir=hdir, speed=speed, pos_weights=pos_weights, ppm=ppm,
-            xyInCms=True, binsize=binsize)
+            xyInCms=True)
         self.RateMap.x_lims = getattr(self, 'x_lims', None)  # 2-tuple
         self.RateMap.y_lims = getattr(self, 'y_lims', None)
 
