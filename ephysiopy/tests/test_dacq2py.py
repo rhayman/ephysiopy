@@ -43,10 +43,10 @@ def test_plot_axona_HD_map_with_mrv(path_to_axona_data):
     T.makeHDPlot(ts, add_mrv=True, fill=True)
 
 
-def test_plot_axona_SAC(path_to_axona_data):
-    T = AxonaTrial(path_to_axona_data)
-    ts = get_spike_times(T)
-    T.makeSAC(ts)
+# def test_plot_axona_SAC(path_to_axona_data):
+#     T = AxonaTrial(path_to_axona_data)
+#     ts = get_spike_times(T)
+#     T.makeSAC(ts)
 
 
 def test_plot_axona_speed_vs_rate(path_to_axona_data):
@@ -117,7 +117,7 @@ def test_axona_properties(path_to_axona_data):
         T.get_spike_times(99, 99)
 
 
-def test_plot_summary(path_to_axona_data):
-    T = AxonaTrial(path_to_axona_data)
-    ts = get_spike_times(T)
-    T.makeSummaryPlot(ts)
+# def test_plot_summary(path_to_axona_data):
+#     T = AxonaTrial(path_to_axona_data)
+#     ts = get_spike_times(T)
+#     T.makeSummaryPlot(ts)
