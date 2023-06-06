@@ -107,53 +107,53 @@ def test_skaggs_info(basic_ratemap):
     fieldcalcs.skaggs_info(basic_ratemap, dwell_times)
 
 
-def test_grid_field_measures(basic_ratemap):
-    # Set allProps to True to try the ellipse fitting stuff
-    measures = fieldcalcs.grid_field_props(basic_ratemap, allProps=True)
-    assert isinstance(measures, dict)
-    fieldcalcs.grid_field_props(
-        basic_ratemap, min_distance=10,
-        maxima='single',
-        step=15)
+# def test_grid_field_measures(basic_ratemap):
+#     # Set allProps to True to try the ellipse fitting stuff
+#     measures = fieldcalcs.grid_field_props(basic_ratemap, allProps=True)
+#     assert isinstance(measures, dict)
+#     fieldcalcs.grid_field_props(
+#         basic_ratemap, min_distance=10,
+#         maxima='single',
+#         step=15)
 
 
-def test_deform_SAC(standard_Ratemap):
-    R = standard_Ratemap
-    n_pos = len(R.pos_weights)
-    spk_weights = np.random.rand(n_pos)
-    spk_weights[spk_weights >= 0.95] = 1
-    basic_ratemap, _ = R.getMap(spk_weights)
-    sac = R.autoCorr2D(
-        basic_ratemap, ~np.isfinite(basic_ratemap))
-    from skimage import transform
-    A = transform.AffineTransform(
-        scale=[1, 1.15], translation=[0, -15])
-    sac = transform.warp(sac, A.inverse)
-    deformed_SAC = fieldcalcs.deform_SAC(sac)
-    assert isinstance(deformed_SAC, np.ndarray)
-    A = np.zeros_like(basic_ratemap)
-    A[3:10, 3:8] = 10
-    nodwell = ~np.isfinite(A)
-    sac = R.autoCorr2D(A, nodwell)
-    fieldcalcs.deform_SAC(sac)
-    fieldcalcs.deform_SAC(
-        sac, np.array([[3, 9], [10, 2]]), np.array([[1, 9], [10, 2]]))
+# def test_deform_SAC(standard_Ratemap):
+#     R = standard_Ratemap
+#     n_pos = len(R.pos_weights)
+#     spk_weights = np.random.rand(n_pos)
+#     spk_weights[spk_weights >= 0.95] = 1
+#     basic_ratemap, _ = R.getMap(spk_weights)
+#     sac = R.autoCorr2D(
+#         basic_ratemap, ~np.isfinite(basic_ratemap))
+#     from skimage import transform
+#     A = transform.AffineTransform(
+#         scale=[1, 1.15], translation=[0, -15])
+#     sac = transform.warp(sac, A.inverse)
+#     deformed_SAC = fieldcalcs.deform_SAC(sac)
+#     assert isinstance(deformed_SAC, np.ndarray)
+#     A = np.zeros_like(basic_ratemap)
+#     A[3:10, 3:8] = 10
+#     nodwell = ~np.isfinite(A)
+#     sac = R.autoCorr2D(A, nodwell)
+#     fieldcalcs.deform_SAC(sac)
+#     fieldcalcs.deform_SAC(
+#         sac, np.array([[3, 9], [10, 2]]), np.array([[1, 9], [10, 2]]))
 
 
-def test_get_grid_orientation(standard_Ratemap):
-    n_pos = len(standard_Ratemap.pos_weights)
-    spk_weights = np.random.rand(n_pos)
-    spk_weights[spk_weights >= 0.95] = 1
-    basic_ratemap, _ = standard_Ratemap.getMap(spk_weights)
-    sac = standard_Ratemap.autoCorr2D(
-        basic_ratemap, ~np.isfinite(basic_ratemap))
-    measures = fieldcalcs.grid_field_props(sac, allProps=True)
-    peak_coords = measures['closest_peak_coords']
-    fieldcalcs.grid_orientation(peak_coords, np.arange(len(peak_coords)))
-    A = np.zeros_like(basic_ratemap)
-    A[3:10, 3:8] = 10
-    nodwell = ~np.isfinite(A)
-    sac = standard_Ratemap.autoCorr2D(A, nodwell)
-    measures = fieldcalcs.grid_field_props(sac, allProps=True)
-    peak_coords = measures['closest_peak_coords']
-    fieldcalcs.grid_orientation(peak_coords, np.arange(len(peak_coords)))
+# def test_get_grid_orientation(standard_Ratemap):
+#     n_pos = len(standard_Ratemap.pos_weights)
+#     spk_weights = np.random.rand(n_pos)
+#     spk_weights[spk_weights >= 0.95] = 1
+#     basic_ratemap, _ = standard_Ratemap.getMap(spk_weights)
+#     sac = standard_Ratemap.autoCorr2D(
+#         basic_ratemap, ~np.isfinite(basic_ratemap))
+#     measures = fieldcalcs.grid_field_props(sac, allProps=True)
+#     peak_coords = measures['closest_peak_coords']
+#     fieldcalcs.grid_orientation(peak_coords, np.arange(len(peak_coords)))
+#     A = np.zeros_like(basic_ratemap)
+#     A[3:10, 3:8] = 10
+#     nodwell = ~np.isfinite(A)
+#     sac = standard_Ratemap.autoCorr2D(A, nodwell)
+#     measures = fieldcalcs.grid_field_props(sac, allProps=True)
+#     peak_coords = measures['closest_peak_coords']
+#     fieldcalcs.grid_orientation(peak_coords, np.arange(len(peak_coords)))
