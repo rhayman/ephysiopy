@@ -483,7 +483,7 @@ class OpenEphysBase(TrialInterface):
                     Path(os.path.join(self.path2PosData, "continuous.dat")),
                     n_channels=n_pos_chans)
                 pos_ts = loadTrackMeTTLTimestamps(
-                    Path(self.path2PosData))
+                    Path(self.path2EventsData))
                 pos_ts = pos_ts[0:len(pos_data)]
             sample_rate = self.settings.processors[pos_data_type].sample_rate
             sample_rate = float(sample_rate)
