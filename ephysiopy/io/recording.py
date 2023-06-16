@@ -487,7 +487,10 @@ class OpenEphysBase(TrialInterface):
                 pos_ts = pos_ts[0:len(pos_data)]
             sample_rate = self.settings.processors[pos_data_type].sample_rate
             sample_rate = float(sample_rate)
-            xyTS = pos_ts - recording_start_time
+            if pos_data_type != "TrackMe":
+                xyTS = pos_ts - recording_start_time
+            else:
+                xyTS = pos_ts
             if self.sync_message_file is not None:
                 recording_start_time = xyTS[0]
 
