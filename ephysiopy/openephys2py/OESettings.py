@@ -203,6 +203,7 @@ class PosTracker(OEPlugin):
     BottomBorder: int = field(default=600)
     AutoExposure: bool = field(default=False)
     OverlayPath: bool = field(default=False)
+    sample_rate: int = field(default=30)
 
 
 @dataclass
@@ -288,8 +289,8 @@ class OEStructure(object):
     def __init__(self, pname: str):
         self.filename = []
         self.data = []
-        import os
         import json
+        import os
 
         for d, _, f in os.walk(pname):
             for ff in f:
@@ -326,6 +327,7 @@ class Settings(object):
         """
         self.possible_processors = OrderedDict([
             ("Pos Tracker", PosTracker()),
+            ("PosTracker", PosTracker()),
             ("Rhythm FPGA", RhythmFPGA()),
             ("Neuropix-PXI", NeuropixPXI()),
             ("Acquisition Board", AcquisitionBoard()),
@@ -359,10 +361,15 @@ class Settings(object):
         if self.tree is not None:
             for elem in self.tree.iter("PROCESSOR"):
                 i_proc = elem.get("name")
+                if "/" in i_proc:
+                    i_proc = i_proc.split("/")[-1]
                 if i_proc == "Record Node":  # special as could be > 1
                     recNode = RecordNode()
                     recurseNode(elem, addValues2Class, recNode)
-                    self.record_nodes[i_proc + " " + recNode.nodeId] = recNode
+                    if recNode.nodeId is not None:
+                        self.record_nodes[i_proc + " " + recNode.nodeId] = recNode
+                    else:
+                        self.record_nodes[i_proc] = recNode
                 elif i_proc in self.possible_processors.keys():
                     self.processors[i_proc] = self.possible_processors[i_proc]
                     recurseNode(elem, addValues2Class, self.processors[i_proc])
