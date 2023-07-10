@@ -468,7 +468,7 @@ class OpenEphysBase(TrialInterface):
                     recording_start_time = start_time / sample_rate
         if self.path2PosData is not None:
             pos_data_type = getattr(self, "pos_data_type", "PosTracker")
-            if pos_data_type == "PosTracker":
+            if pos_data_type == "PosTracker" or pos_data_type == "Pos Tracker":
                 print("Loading PosTracker data...")
                 pos_data = np.load(os.path.join(
                     self.path2PosData, "data_array.npy"))
@@ -585,7 +585,7 @@ class OpenEphysBase(TrialInterface):
                         if PurePath(d).match(str(PosTracker_match)):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
-                                setattr(self, "pos_data_type", "PosTracker")
+                                setattr(self, "pos_data_type", "Pos Tracker")
                                 print(f"Pos data at: {self.path2PosData}")
                             self.path2PosOEBin = Path(d).parents[1]
                         if PurePath(d).match("*pos_data*"):
@@ -602,11 +602,11 @@ class OpenEphysBase(TrialInterface):
                     if "continuous.dat" in ff:
                         if PurePath(d).match(str(APdata_match)):
                             self.path2APdata = os.path.join(d)
-                            print(f"Continuous data at: {self.path2APdata}")
+                            print(f"Continuous AP data at: {self.path2APdata}")
                             self.path2APOEBin = Path(d).parents[1]
                         if PurePath(d).match(str(LFPdata_match)):
                             self.path2LFPdata = os.path.join(d)
-                            print(f"Continuous data at: {self.path2LFPdata}")
+                            print(f"Continuous LFP data at: {self.path2LFPdata}")
                         if PurePath(d).match(str(Rawdata_match)):
                             self.path2APdata = os.path.join(d)
                             self.path2LFPdata = os.path.join(d)
