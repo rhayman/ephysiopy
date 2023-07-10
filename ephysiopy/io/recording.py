@@ -37,13 +37,18 @@ def memmapBinaryFile(path2file: str, n_channels=384, **kwargs) -> np.ndarray:
     """
     import os
 
+    if("data_type" in kwargs.keys()):
+        data_type = kwargs["data_type"]
+    else:
+        data_type = np.int16
+
     if os.path.exists(path2file):
         # make sure n_channels is int as could be str
         n_channels = int(n_channels)
         status = os.stat(path2file)
         n_samples = int(status.st_size / (2.0 * n_channels))
         mmap = np.memmap(
-            path2file, np.int16, "r", 0, (n_channels, n_samples), order="F"
+            path2file, data_type, "r", 0, (n_channels, n_samples), order="F"
         )
         return mmap
     else:

@@ -278,25 +278,20 @@ def addValues2Class(node: xml.etree.ElementTree.Element, cls: dataclass):
             cls.stream = Stream()
         recurseNode(node, addValues2Class, cls.stream)
 
-
 class OEStructure(object):
     """
     Loads up the structure.oebin file for openephys flat binary
     format recordings
     """
 
-    def __init__(self, pname: str):
+    def __init__(self, fname: str):
         self.filename = []
         self.data = []
-        import os
         import json
 
-        for d, _, f in os.walk(pname):
-            for ff in f:
-                if "structure.oebin" in ff:
-                    self.filename.append(os.path.join(d, ff))
-                    with open(os.path.join(d, ff), "r") as f:
-                        self.data.append(json.load(f))
+        self.filename.append(fname)
+        with open(fname, "r") as f:
+            self.data.append(json.load(f))
 
 
 class Settings(object):
@@ -331,7 +326,8 @@ class Settings(object):
             ("Acquisition Board", AcquisitionBoard()),
             ("Spike Sorter", SpikeSorter()),
             ("TrackMe", TrackMe()),
-            ("Record Node", RecordNode())
+            ("Record Node", RecordNode()),
+            ("StimControl", StimControl())
         ])
         self.processors = OrderedDict()
         self.record_nodes = OrderedDict()

@@ -232,15 +232,16 @@ class SpikeCalcsGeneric(object):
             self, x1: np.ndarray, x2=None,
             Trange=None, **kwargs) -> np.ndarray:
         """
-        Calculates the histogram of the ISIs in x1 or x1 vs x2
+        Calculates the ISIs in x1 or x1 vs x2 within a 
+        given range
 
         Parameters
         ----------
         x1, x2 : array_like
             The times of the spikes emitted by the cluster(s)
-            NB must be signed int to accomodate negative times
+            Assumed to be in milliseconds
         Trange : array_like
-            Range of times to bin up. Defaults to [-500, +500] in ms
+            Range of times to bin up in ms. Defaults to [-500, +500]
 
         Returns
         -------
