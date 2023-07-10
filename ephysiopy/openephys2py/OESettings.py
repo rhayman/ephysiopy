@@ -249,6 +249,51 @@ class Electrode(object):
     postPeakSamples: int = field(default=32)
 
 
+class AbstractProcessorFactory():
+    def create_pos_tracker(self):
+        return PosTracker()
+    def create_rhythm_fpga(self):
+        return RhythmFPGA()
+    def create_neuropix_pxi(self):
+        return NeuropixPXI()
+    def create_acquisition_board(self):
+        return AcquisitionBoard()
+    def create_spike_sorter(self):
+        return SpikeSorter()
+    def create_track_me(self):
+        return TrackMe()
+    def create_record_node(self):
+        return RecordNode()
+    def create_stim_control(self):
+        return StimControl()
+    def create_oe_plugin(self):
+        return OEPlugin()
+    
+
+class ProcessorFactory():
+    factory = AbstractProcessorFactory()
+    def create_processor(self, proc_name: str):
+        if "Pos Tracker" in proc_name or "PosTracker" in proc_name:
+            return self.factory.create_pos_tracker()
+        elif "Rhythm" in proc_name:
+            return self.factory.create_rhythm_fpga()
+        elif "Neuropix-PXI" in proc_name:
+            return self.factory.create_neuropix_pxi()
+        elif "Acquisition Board" in proc_name:
+            return self.factory.create_acquisition_board()
+        elif "Spike Sorter" in proc_name:
+            return self.factory.create_spike_sorter()
+        elif "TrackMe" in proc_name:
+            return self.factory.create_track_me()
+        elif "Record Node" in proc_name:
+            return self.factory.create_record_node()
+        elif "StimControl" in proc_name:
+            return self.factory.create_stim_control()
+        else:
+            return self.factory.create_oe_plugin()
+    
+        
+
 def recurseNode(
                 node: xml.etree.ElementTree.Element,
                 func: Callable,
@@ -268,6 +313,8 @@ def addValues2Class(node: xml.etree.ElementTree.Element, cls: dataclass):
     for i in node.items():
         if hasattr(cls, i[0]):
             setattr(cls, i[0], i[1])
+        if i == "GLOBAL_PARAMETERS":
+            print(i)
     if hasattr(cls, "channel_info") and node.tag == "CHANNEL":
         if cls.channel_info is None:
             cls.channel_info = list()
@@ -278,6 +325,7 @@ def addValues2Class(node: xml.etree.ElementTree.Element, cls: dataclass):
         if cls.stream is None:
             cls.stream = Stream()
         recurseNode(node, addValues2Class, cls.stream)
+    
 
 class OEStructure(object):
     """
@@ -354,25 +402,26 @@ class Settings(object):
         """
         if self.tree is None:
             self.load()
+        processor_factory = ProcessorFactory()
         # quick hack to deal with flat binary format that has no settings.xml
         if self.tree is not None:
             for elem in self.tree.iter("PROCESSOR"):
                 i_proc = elem.get("name")
                 if "/" in i_proc:
                     i_proc = i_proc.split("/")[-1]
-                if i_proc == "Record Node":  # special as could be > 1
-                    recNode = RecordNode()
-                    recurseNode(elem, addValues2Class, recNode)
-                    if recNode.nodeId is not None:
-                        self.record_nodes[i_proc + " " + recNode.nodeId] = recNode
+                new_processor = processor_factory.create_processor(i_proc)
+                recurseNode(elem, addValues2Class, new_processor)
+                if i_proc == "Record Node":
+                    if new_processor.nodeId is not None:
+                        self.record_nodes[i_proc + " " + new_processor.nodeId] = new_processor
                     else:
-                        self.record_nodes[i_proc] = recNode
-                elif i_proc in self.possible_processors.keys():
-                    self.processors[i_proc] = self.possible_processors[i_proc]
-                    recurseNode(elem, addValues2Class, self.processors[i_proc])
+                        self.record_nodes[i_proc] = new_processor
                 else:
-                    self.processors[i_proc] = OEPlugin()
-                    recurseNode(elem, addValues2Class, self.processors[i_proc])
+                    if new_processor.nodeId is not None:
+                        self.processors[i_proc + " " + new_processor.nodeId] = new_processor
+                    else:
+                        self.processors[i_proc] = new_processor
+                
 
     def parseStimControl(self):
         """

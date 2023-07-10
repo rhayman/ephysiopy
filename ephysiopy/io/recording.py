@@ -1,5 +1,6 @@
 import abc
 import os
+import re
 import warnings
 from enum import Enum
 from pathlib import Path, PurePath
@@ -363,16 +364,19 @@ class OpenEphysBase(TrialInterface):
         super().__init__(pname, **kwargs)
         setattr(self, "sync_message_file", None)
         self.load_settings()
-        record_methods = ["Acquisition Board",
-                          "Neuropix-PXI", "Sources/Neuropix-PXI",
-                          "Rhythm FPGA", "Sources/Rhythm FPGA"]
-        rec_method = [i for i in self.settings.processors.keys()
-                      if i in record_methods][0]
+        # The numbers after the strings in this list are the node id's 
+        # in openephys
+        record_methods = ["Acquisition Board [0-9][0-9][0-9]",
+                          "Neuropix-PXI [0-9][0-9][0-9]",
+                          "Sources/Neuropix-PXI [0-9][0-9][0-9]",
+                          "Rhythm FPGA [0-9][0-9][0-9]",
+                          "Sources/Rhythm FPGA [0-9][0-9][0-9]"]
+        rec_method = [re.search(m,k).string for k in self.settings.processors.keys() 
+                       for m in record_methods if re.search(m,k) is not None][0]
         if 'Sources/' in rec_method:
-            tmp_rec_method = rec_method.lstrip('Sources/')
-            self.rec_kind = Xml2RecordingKind[tmp_rec_method]
-        else:
-            self.rec_kind = Xml2RecordingKind[rec_method]
+            rec_method = rec_method.lstrip('Sources/')
+        
+        self.rec_kind = Xml2RecordingKind[rec_method.rpartition(" ")[0]]
 
         # Attempt to find the files contained in the parent directory
         # related to the recording with the default experiment and
@@ -520,7 +524,18 @@ class OpenEphysBase(TrialInterface):
         self.recording_start_time = recording_start_time
 
     def load_ttl(self, *args, **kwargs):
-        pass
+        ttl_ts = np.load(os.path.join(self.path2EventsData, "timestamps.npy"))
+        states = np.load(os.path.join(self.path2EventsData, "states.npy"))
+        if "StimControl_id" in kwargs.keys():
+            stim_id = kwargs['StimControl_id']
+            duration = getattr(self.settings.processors[stim_id], "Duration")
+            setattr(self, "stim_duration", int(duration))
+        if "TTL_channel_number" in kwargs.keys():
+            chan = kwargs["TTL_channel_number"]
+            high_ttl = ttl_ts[states==chan]
+            # get into ms
+            high_ttl = high_ttl * 1000.
+            setattr(self, "ttl_timestamps", high_ttl)
 
     def find_files(
         self,

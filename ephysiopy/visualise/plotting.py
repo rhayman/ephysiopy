@@ -375,20 +375,23 @@ class FigureMaker(object):
                                       transform=axScatter.transAxes)
         scattTrans = transforms.blended_transform_factory(axScatter.transData,
                                                           axScatter.transAxes)
-        stim_pwidth = int(self.settings['stim_pwidth'])
+        stim_pwidth = getattr(self, "stim_duration", None)
+        if stim_pwidth is None:
+            raise ValueError("stim duration is None")
+
         axScatter.add_patch(
             Rectangle(
-                (0, 0), width=stim_pwidth/1000., height=1,
+                (0, 0), width=stim_pwidth, height=1,
                 transform=scattTrans,
                 color=[0, 0, 1], alpha=0.5))
         histTrans = transforms.blended_transform_factory(axHistx.transData,
                                                          axHistx.transAxes)
-        axHistx.add_patch(Rectangle((0, 0), width=stim_pwidth/1000., height=1,
+        axHistx.add_patch(Rectangle((0, 0), width=stim_pwidth, height=1,
                           transform=histTrans,
                           color=[0, 0, 1], alpha=0.5))
         axScatter.set_ylabel('Laser stimulation events', labelpad=-18.5)
         axScatter.set_xlabel('Time to stimulus onset(ms)')
-        nStms = int(self.STM['num_stm_samples'])
+        nStms = len(on_good)
         axScatter.set_ylim(0, nStms)
         # Label only the min and max of the y-axis
         ylabels = axScatter.get_yticklabels()
