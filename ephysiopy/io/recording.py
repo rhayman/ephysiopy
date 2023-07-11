@@ -83,7 +83,7 @@ def loadTrackMePluginData(pname: Path, n_channels: int = 4) -> np.ndarray:
 def loadTrackMeTTLTimestamps(pname: Path) -> np.ndarray:
     ts = np.load(os.path.join(pname, "timestamps.npy"))
     states = np.load(os.path.join(pname, "states.npy"))
-    return ts[states > 0]
+    return ts[states == 2]
 
 
 def loadTrackMeTimestamps(pname: Path) -> np.ndarray:
@@ -435,17 +435,18 @@ class OpenEphysBase(TrialInterface):
             # correct location of settings.xml
             self.settings = Settings(self.pname)
 
-    def load_cluster_data(self, *args, **kwargs):
+    def load_cluster_data(self, removeNoiseClusters=True, *args, **kwargs):
         if self.path2KiloSortData is not None:
             clusterData = KiloSortSession(self.pname)
         if clusterData is not None:
             if clusterData.load():
                 print("Loaded KiloSort data")
-                try:
-                    clusterData.removeKSNoiseClusters()
-                    print("Removed noise clusters")
-                except Exception:
-                    pass
+                if removeNoiseClusters:
+                    try:
+                        clusterData.removeKSNoiseClusters()
+                        print("Removed noise clusters")
+                    except Exception:
+                        pass
         self.clusterData = clusterData
 
     def load_pos_data(self, ppm: int = 300, jumpmax: int = 100,
@@ -471,6 +472,14 @@ class OpenEphysBase(TrialInterface):
                                       [-1].strip().split()[0])
                     recording_start_time = start_time / sample_rate
         if self.path2PosData is not None:
+            pos_method = ["Pos Tracker [0-9][0-9][0-9]",
+                          "PosTracker [0-9][0-9][0-9]",
+                          "TrackMe [0-9][0-9][0-9]"]
+            pos_kind = [re.search(m,k).string for k in self.settings.processors.keys() 
+                       for m in pos_method if re.search(m,k) is not None][0]
+            if 'Sources/' in pos_method:
+                pos_method = pos_method.lstrip('Sources/')
+
             pos_data_type = getattr(self, "pos_data_type", "PosTracker")
             if pos_data_type == "PosTracker" or pos_data_type == "Pos Tracker":
                 print("Loading PosTracker data...")
@@ -487,14 +496,14 @@ class OpenEphysBase(TrialInterface):
             if pos_data_type == "TrackMe":
                 print("Loading TrackMe data...")
                 n_pos_chans = int(
-                    self.settings.processors['TrackMe'].channel_count)
+                    self.settings.processors[pos_kind].channel_count)
                 pos_data = loadTrackMePluginData(
                     Path(os.path.join(self.path2PosData, "continuous.dat")),
                     n_channels=n_pos_chans)
                 pos_ts = loadTrackMeTTLTimestamps(
                     Path(self.path2EventsData))
                 pos_ts = pos_ts[0:len(pos_data)]
-            sample_rate = self.settings.processors[pos_data_type].sample_rate
+            sample_rate = self.settings.processors[pos_kind].sample_rate
             sample_rate = float(sample_rate)
             if pos_data_type != "TrackMe":
                 xyTS = pos_ts - recording_start_time
@@ -524,6 +533,18 @@ class OpenEphysBase(TrialInterface):
         self.recording_start_time = recording_start_time
 
     def load_ttl(self, *args, **kwargs):
+        '''
+        Valid kwargs are:
+        StimControl_id: str
+            This is the string "StimControl [0-9][0-9][0-9]" where the numbers
+            are the node id in the openephys signal chain
+        TTL_channel_number: int
+            The integer value in the "states.npy" file that corresponds to the 
+            identity of the TTL input on the Digital I/O board on the 
+            openephys recording system. i.e. if there is input to BNC port 3 on
+            the digital I/O board then values of 3 in the states.npy file are high
+            TTL values on this input and -3 are low TTL values (I think)
+        '''
         ttl_ts = np.load(os.path.join(self.path2EventsData, "timestamps.npy"))
         states = np.load(os.path.join(self.path2EventsData, "states.npy"))
         if "StimControl_id" in kwargs.keys():

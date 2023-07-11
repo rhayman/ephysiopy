@@ -313,8 +313,6 @@ def addValues2Class(node: xml.etree.ElementTree.Element, cls: dataclass):
     for i in node.items():
         if hasattr(cls, i[0]):
             setattr(cls, i[0], i[1])
-        if i == "GLOBAL_PARAMETERS":
-            print(i)
     if hasattr(cls, "channel_info") and node.tag == "CHANNEL":
         if cls.channel_info is None:
             cls.channel_info = list()
