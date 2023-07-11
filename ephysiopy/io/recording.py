@@ -474,11 +474,12 @@ class OpenEphysBase(TrialInterface):
         if self.path2PosData is not None:
             pos_method = ["Pos Tracker [0-9][0-9][0-9]",
                           "PosTracker [0-9][0-9][0-9]",
-                          "TrackMe [0-9][0-9][0-9]"]
-            pos_kind = [re.search(m,k).string for k in self.settings.processors.keys() 
+                          "TrackMe [0-9][0-9][0-9]",
+                          "TrackingPlugin [0-9][0-9][0-9]"]
+            pos_plugin_name = [re.search(m,k).string for k in self.settings.processors.keys() 
                        for m in pos_method if re.search(m,k) is not None][0]
-            if 'Sources/' in pos_method:
-                pos_method = pos_method.lstrip('Sources/')
+            if 'Sources/' in pos_plugin_name:
+                pos_plugin_name = pos_plugin_name.lstrip('Sources/')
 
             pos_data_type = getattr(self, "pos_data_type", "PosTracker")
             if pos_data_type == "PosTracker" or pos_data_type == "Pos Tracker":
@@ -496,14 +497,14 @@ class OpenEphysBase(TrialInterface):
             if pos_data_type == "TrackMe":
                 print("Loading TrackMe data...")
                 n_pos_chans = int(
-                    self.settings.processors[pos_kind].channel_count)
+                    self.settings.processors[pos_plugin_name].channel_count)
                 pos_data = loadTrackMePluginData(
                     Path(os.path.join(self.path2PosData, "continuous.dat")),
                     n_channels=n_pos_chans)
                 pos_ts = loadTrackMeTTLTimestamps(
                     Path(self.path2EventsData))
                 pos_ts = pos_ts[0:len(pos_data)]
-            sample_rate = self.settings.processors[pos_kind].sample_rate
+            sample_rate = self.settings.processors[pos_plugin_name].sample_rate
             sample_rate = float(sample_rate)
             if pos_data_type != "TrackMe":
                 xyTS = pos_ts - recording_start_time
