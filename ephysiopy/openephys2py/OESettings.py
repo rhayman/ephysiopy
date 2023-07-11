@@ -363,21 +363,6 @@ class Settings(object):
                 if "settings.xml" in ff:
                     self.filename = os.path.join(d, "settings.xml")
         self.tree = None
-        """
-        It's not uncommon to have > 1 of the same type of processor, i.e.
-        2 x bandpass filter to look at LFP and APs. This deals with that...
-        """
-        self.possible_processors = OrderedDict([
-            ("Pos Tracker", PosTracker()),
-            ("PosTracker", PosTracker()),
-            ("Rhythm FPGA", RhythmFPGA()),
-            ("Neuropix-PXI", NeuropixPXI()),
-            ("Acquisition Board", AcquisitionBoard()),
-            ("Spike Sorter", SpikeSorter()),
-            ("TrackMe", TrackMe()),
-            ("Record Node", RecordNode()),
-            ("StimControl", StimControl())
-        ])
         self.processors = OrderedDict()
         self.record_nodes = OrderedDict()
         self.tracker_params = {}
