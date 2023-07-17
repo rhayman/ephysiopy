@@ -398,6 +398,23 @@ class OpenEphysBase(TrialInterface):
                 self.channel_count = 384
         self.kilodata = None
 
+    def _get_recording_start_time(self) -> float:
+        """
+        Get the recording start time from the sync_messages.txt file
+        """
+        recording_start_time = 0.0
+        if self.sync_message_file is not None:
+            with open(self.sync_message_file, "r") as f:
+                sync_strs = f.read()
+            sync_lines = sync_strs.split("\n")
+            for line in sync_lines:
+                if "Start Time" in line:
+                    tokens = line.split(":")
+                    start_time = int(tokens[-1])
+                    sample_rate = int(tokens[0].split("@")[-1].strip().split()[0])
+                    recording_start_time = start_time / float(sample_rate)
+        return recording_start_time
+
     def get_spike_times(self, cluster: int, tetrode: int = None, *args, **kwargs):
         ts = self.clusterData.spk_times
         if cluster in self.clusterData.spk_clusters:
@@ -465,17 +482,9 @@ class OpenEphysBase(TrialInterface):
             cm = kwargs["cm"]
         else:
             cm = True
-        recording_start_time = 0
-        if self.sync_message_file is not None:
-            with open(self.sync_message_file, "r") as f:
-                sync_strs = f.read()
-            sync_lines = sync_strs.split("\n")
-            for line in sync_lines:
-                if "Start Time" in line:
-                    tokens = line.split(":")
-                    start_time = int(tokens[-1])
-                    sample_rate = int(tokens[0].split("@")[-1].strip().split()[0])
-                    recording_start_time = start_time / sample_rate
+
+        recording_start_time = self._get_recording_start_time()
+
         if self.path2PosData is not None:
             pos_method = [
                 "Pos Tracker [0-9][0-9][0-9]",
@@ -559,6 +568,7 @@ class OpenEphysBase(TrialInterface):
         """
         ttl_ts = np.load(os.path.join(self.path2EventsData, "timestamps.npy"))
         states = np.load(os.path.join(self.path2EventsData, "states.npy"))
+        recording_start_time = self._get_recording_start_time()
         if "StimControl_id" in kwargs.keys():
             stim_id = kwargs["StimControl_id"]
             duration = getattr(self.settings.processors[stim_id], "Duration")
@@ -567,7 +577,7 @@ class OpenEphysBase(TrialInterface):
             chan = kwargs["TTL_channel_number"]
             high_ttl = ttl_ts[states == chan]
             # get into ms
-            high_ttl = high_ttl * 1000.0
+            high_ttl = (high_ttl * 1000.0) - recording_start_time
             setattr(self, "ttl_timestamps", high_ttl)
 
     def find_files(
