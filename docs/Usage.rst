@@ -1,7 +1,9 @@
 Usage examples
 ==============
 
-There should be shared functionality between both the openephys and Axona interfaces as ideally they both use the code in the ephysiopy.common sub-package (I don't think this is 100% true for the Axona interface).
+There is shared functionality between both the openephys and Axona analysis as there is a common interface. There are 3 concrete classes, AxonaTrial, OpenEphysBase and OpenEphysNWB that inherit from a super class called TrialInterface. TrialInterface itself has a mixin class called FigureMaker which has methods to produce most common plots associated with the analysis of ephys data.
+
+
 
 openephys
 ---------

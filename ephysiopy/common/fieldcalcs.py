@@ -900,8 +900,7 @@ def grid_field_props(
 
             # get the min containing circle given the eliipse minor axis
             from skimage.measure import CircleModel
-            _params = im_centre
-            _params.append(np.min(ellipse_axes))
+            _params = [im_centre, np.min(ellipse_axes)]
             circleXY = CircleModel().predict_xy(
                 np.linspace(0, 2*np.pi, 50), params=_params)
         except (TypeError, ValueError):  # non-iterable x and y
@@ -1085,3 +1084,40 @@ def deform_SAC(A, circleXY=None, ellipseXY=None):
         AA / np.nanmax(AA.flatten()), inverse_map=tform.inverse, cval=0)
     return skimage.exposure.rescale_intensity(
         deformedSAC, out_range=(SACmin, SACmax))
+
+def get_circular_regions(A: np.ndarray, **kwargs) -> list:
+    '''
+    Returns a list of images which are expanding circular
+    regions centred on the middle of the image out to the 
+    image edge. Used for calculating the grid score of each
+    image to find the one with the max grid score. Based on
+    some Moser paper I can't recall.
+
+    Parameters
+    ----------
+    A: np.ndarray - the SAC
+    
+    Valid kwargs
+    ------------
+    min_radius: int - the smallest radius circle to start with
+    '''
+    from skimage.measure import CircleModel, grid_points_in_poly
+
+    min_radius = 5
+    if 'min_radius' in kwargs.keys():
+        min_radius = kwargs['min_radius']
+        
+    centre = tuple([d//2 for d in np.shape(A)])
+    max_radius = min(tuple(np.subtract(np.shape(A), centre)))
+    t = np.linspace(0, 2*np.pi, 51)
+    circle = CircleModel()
+
+    result = []
+    for radius in range(min_radius, max_radius):
+        circle.params = [*centre, radius]
+        xy = circle.predict_xy(t)
+        mask = grid_points_in_poly(np.shape(A), xy)
+        im = A.copy()
+        im[~mask] = np.nan
+        result.append(im)
+    return result
