@@ -317,7 +317,7 @@ class AxonaTrial(TrialInterface):
         if lfp is not None:
             self.EEGCalcs = EEGCalcsGeneric(lfp.sig, lfp.sample_rate)
 
-    def load_neural_data(self, pname: Path, *args, **kwargs) -> None:
+    def load_neural_data(self, pname: Path, *args, **kwargs):
         pass
 
     def load_cluster_data(self, *args, **kwargs):
