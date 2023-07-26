@@ -1,3 +1,4 @@
+import numpy as np
 from ephysiopy.common import fieldcalcs
 
 
@@ -54,6 +55,40 @@ class SAC(object):
         """
         return fieldcalcs.grid_field_props(
             A, maxima, allProps, **kwargs)
+    
+    def get_basic_gridscore(self, A: np.ndarray, step: int=30, **kwargs):
+        '''
+        Rotates the image A in step amounts, correlated each rotated image
+        with the original. The maximum of the values at 30, 90 and 150 degrees
+        is the subtracted from the minimum of the values at 60, 120
+        and 180 degrees to give the grid score.
+        '''
+        from ephysiopy.common.fieldcalcs import gridness
+        return gridness(A, step)[0]
+    
+    def get_expanding_circle_gridscore(self, A: np.ndarray, **kwargs):
+        '''
+        Calculates the gridscore for each circular sub-region of image A
+        where the circles are centred on the image centre and expanded to
+        the edge of the image. The maximum of the get_basic_gridscore() for
+        each of these circular sub-regions is returned as the gridscore
+        '''
+
+        from ephysiopy.common.fieldcalcs import get_circular_regions
+        images = get_circular_regions(A, **kwargs)
+        gridscores = [self.get_basic_gridscore(im) for im in images]
+        return max(gridscores)
+    
+    def get_deformed_sac_gridscore(self, A: np.ndarray, **kwargs):
+        '''
+        Deforms a non-circular SAC into a circular SAC (circular meaning
+        the ellipse drawn around the edges of the 6 nearest peaks to the
+        SAC centre) and returns get_basic_griscore() calculated on the 
+        deformed (or re-formed?!) SAC
+        '''
+        from ephysiopy.common.fieldcalcs import deform_SAC
+        deformed_SAC, _ = deform_SAC(A)
+        return self.get_basic_gridscore(deformed_SAC)
 
     def show(self, A, inDict, ax=None, **kwargs):
         """

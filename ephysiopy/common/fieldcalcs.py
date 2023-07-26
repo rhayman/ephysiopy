@@ -1066,6 +1066,7 @@ def deform_SAC(A, circleXY=None, ellipseXY=None):
         # The ellipse detection stuff might have failed, if so
         # return the original SAC
         if circleXY is None:
+            warnings.warn("Ellipse detection failed. Returning original SAC")
             return A
 
     tform = skimage.transform.AffineTransform()
