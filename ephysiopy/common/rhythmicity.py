@@ -1,7 +1,9 @@
 import matplotlib.pylab as plt
 import numpy as np
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
+from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
+from ephysiopy.openephys2py.KiloSort import KiloSortSession
 from scipy import signal
 
 
@@ -702,3 +704,31 @@ class LFPOscillations(object):
             sig = self.sig
         fx = filtfilt(taps, [1.0], sig)
         return fx
+    
+
+    def spike_phase_plot(self, cluster: int,
+                         pos_data: PosCalcsGeneric,
+                         cluster_data: KiloSortSession,
+                         lfp_data: EEGCalcsGeneric) -> None:
+        '''
+        Produces a plot of the phase of theta at which each spike was
+        emitted. Each spike is plotted according to the x-y location the
+        animal was in when it was fired and the colour of the marker 
+        corresponds to the phase of theta at which it fired.
+        '''
+        _, phase, _, _ = self.getFreqPhase(
+            lfp_data.sig, [6, 12])
+        cluster_times = cluster_data.spk_times[cluster_data.spk_clusters==cluster]
+        # cluster_times in samples (@30000Hz)
+        # get indices into the phase vector
+        phase_idx = np.array(cluster_times/(3e4/self.fs), dtype=int)
+        # It's possible that there are indices higher than the length of 
+        # the phase vector so lets set them to the last index
+        bad_idx = np.nonzero(phase_idx > len(phase))[0]
+        phase_idx[bad_idx] = len(phase) - 1
+        # get indices into the position data
+        pos_idx = np.array(cluster_times/(3e4/pos_data.sample_rate), dtype=int)
+        bad_idx = np.nonzero(pos_idx >= len(pos_data.xyTS))[0]
+        pos_idx[bad_idx] = len(pos_data.xyTS) - 1
+        # add PI to phases to remove negativity
+        phase_idx = phase_idx + np.pi

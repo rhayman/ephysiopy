@@ -1122,3 +1122,4 @@ def get_circular_regions(A: np.ndarray, **kwargs) -> list:
         im[~mask] = np.nan
         result.append(im)
     return result
+
