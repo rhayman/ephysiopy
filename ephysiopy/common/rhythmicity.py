@@ -731,4 +731,4 @@ class LFPOscillations(object):
         bad_idx = np.nonzero(pos_idx >= len(pos_data.xyTS))[0]
         pos_idx[bad_idx] = len(pos_data.xyTS) - 1
         # add PI to phases to remove negativity
-        phase_idx = phase_idx + np.pi
+        cluster_phases = phase[phase_idx]
