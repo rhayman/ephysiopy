@@ -110,7 +110,7 @@ class KiloSortSession(object):
         # load cluster_info file and add X co-ordinate to it
         if fileExists(self.fname_root, "cluster_info.tsv"):
             self.cluster_info = pd.read_csv(
-                os.path.join(self.fname_root, "cluster_info.tsv"), "\t"
+                os.path.join(self.fname_root, "cluster_info.tsv"), sep="\t"
             )
             if fileExists(
                 self.fname_root, "channel_positions.npy") and fileExists(

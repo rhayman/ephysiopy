@@ -184,8 +184,8 @@ class BandpassFilter(OEPlugin):
     libraryName = "Bandpass Filter"
 
     channels: List[int] = field(default_factory=List)
-    lowcuts: List[int] = field(default_factory=List)
-    highcuts: List[int] = field(default_factory=List)
+    lowcut: List[int] = field(default_factory=List)
+    highcut: List[int] = field(default_factory=List)
 
 
 @dataclass

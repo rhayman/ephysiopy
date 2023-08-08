@@ -3,7 +3,9 @@ import numpy as np
 from scipy import signal
 from scipy import stats
 import matplotlib.pylab as plt
-
+from pathlib import Path
+import os
+from ephysiopy.openephys2py.KiloSort import KiloSortSession
 
 class SpikeCalcsGeneric(object):
     """
@@ -777,6 +779,63 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         plt.setp([a.get_yticklabels() for a in grid], visible=False)
         return fig
 
+
+class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
+    def __init__(self, spike_times, waveforms=None, **kwargs):
+        super().__init__(spike_times, waveforms, **kwargs)
+        self.n_samples = [-40, 41]
+    
+    def get_waveforms(self, pname: Path,
+                      cluster: int,
+                      cluster_data: KiloSortSession,
+                      **kwargs) -> np.ndarray:
+        ''''
+        Returns the waveforms for the given cluster
+
+        Parameters
+        ----------
+        pname: Path - the location of the numpy files resulting from KiloSort
+        cluster: int - the cluster to return the waveforms for
+
+        kwargs:
+            n_waveforms: int - the number of waveforms to return. Default 2000
+        '''
+        # Process kwargs
+        n_waveforms = 2000
+        if "n_waveforms" in kwargs.keys():
+            n_waveforms = kwargs["n_waveforms"]
+            
+        # load the channel map
+        chan_map = np.load(os.path.join(pname, "channel_map.npy"))
+        cluster_spk_times = cluster_data.spk_times[cluster_data.spk_clusters == cluster]
+        n_spikes = len(cluster_spk_times)
+        rng = np.random.default_rng()
+        spk_times_subset = np.sort(rng.choice(cluster_spk_times, n_waveforms))
+
+    def get_channel_depth_from_templates(self, pname: Path):
+        '''
+        Determine depth of template as well as closest channel. Adopted from
+        'templatePositionsAmplitudes' by N. Steinmetz (https://github.com/cortex-lab/spikes)
+        '''
+        # Load inverse whitening matrix
+        Winv = np.load(os.path.join(pname, "whitening_mat_inv.npy"))
+        # Load templates
+        templates = np.load(os.path.join(pname, "templates.npy"))
+        # Load channel_map and positions
+        channel_map = np.load(os.path.join(pname, "channel_map.npy"))
+        channel_positions = np.load(os.path.join(pname, "channel_positions.npy"))
+        map_and_pos = np.array([np.squeeze(channel_map), channel_positions[:,1]])
+        # unwhiten all the templates
+        tempsUnW = np.zeros(np.shape(templates))
+        for i in np.shape(templates)[0]:
+            tempsUnW[i,:,:] = np.squeeze(templates[i,:,:]) @ Winv
+        
+        tempAmp = np.squeeze(np.max(tempsUnW,1)) - np.squeeze(np.min(tempsUnW,1))
+        tempAmpsUnscaled = np.max(tempAmp, 1)
+        # need to zero-out the potentially-many low values on distant channels ...
+        threshVals = tempAmpsUnscaled*0.3; 
+        tempAmp[tempAmp < threshVals[:,None]] = 0
+        
 
 '''
 class SpikeCalcsProbe(SpikeCalcsGeneric):
