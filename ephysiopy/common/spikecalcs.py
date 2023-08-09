@@ -5,6 +5,7 @@ from scipy import stats
 import matplotlib.pylab as plt
 from pathlib import Path
 import os
+import h5py
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 
 class SpikeCalcsGeneric(object):
@@ -835,9 +836,31 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
         # need to zero-out the potentially-many low values on distant channels ...
         threshVals = tempAmpsUnscaled*0.3; 
         tempAmp[tempAmp < threshVals[:,None]] = 0
-        
+        # Compute the depth as a centre of mass
+        templateDepths = np.sum(tempAmp * map_and_pos[1,:], -1) / np.sum(tempAmp, 1)
+        maxChanIdx = np.argmin(np.abs((templateDepths[:,None] - map_and_pos[1,:].T)),1)
+        return templateDepths, maxChanIdx
+    
+    def get_template_id_for_cluster(self, pname: Path, cluster: int):
+        '''
+        Determine the best channel (one with highest amplitude spikes)
+        for a given cluster.
+        '''
+        spike_templates = np.load(os.path.join(pname, "spike_templates.npy"))
+        spike_times = np.load(os.path.join(pname, "spike_times.npy"))
+        spike_clusters = np.load(os.path.join(pname, "spike_clusters.npy"))
+        cluster_times = spike_times[spike_clusters == cluster]
+        rez_mat = h5py.File(os.path.join(pname, "rez.mat"), "r")
+        st3 = rez_mat["rez"]["st3"]
+        st_spike_times = st3[0,:]
+        idx = np.searchsorted(st_spike_times, cluster_times)
+        template_idx, counts = np.unique(spike_templates[idx], return_counts=True)
+        ind = np.argmax(counts)
+        return template_idx[ind]
 
-'''
+
+
+
 class SpikeCalcsProbe(SpikeCalcsGeneric):
     """
     Encapsulates methods specific to probe-based recordings
