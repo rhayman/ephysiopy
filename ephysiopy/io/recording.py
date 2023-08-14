@@ -474,6 +474,9 @@ class OpenEphysBase(TrialInterface):
     def load_pos_data(
         self, ppm: int = 300, jumpmax: int = 100, *args, **kwargs
     ) -> None:
+        # kwargs valid keys = "loadTTLPos" - if present loads the ttl
+        # timestamps not the ones in the plugin folder
+        
         # Only sub-class that doesn't use this is OpenEphysNWB
         # which needs updating
         # TODO: Update / overhaul OpenEphysNWB
@@ -522,7 +525,10 @@ class OpenEphysBase(TrialInterface):
                     Path(os.path.join(self.path2PosData, "continuous.dat")),
                     n_channels=n_pos_chans,
                 )
-                pos_ts = loadTrackMeTTLTimestamps(Path(self.path2EventsData))
+                if "loadTTLPos" in kwargs.keys():
+                    pos_ts = loadTrackMeTTLTimestamps(Path(self.path2EventsData))
+                else:
+                    pos_ts = loadTrackMeTimestamps(Path(self.path2PosData))
                 pos_ts = pos_ts[0 : len(pos_data)]
             sample_rate = self.settings.processors[pos_plugin_name].sample_rate
             sample_rate = float(sample_rate)
