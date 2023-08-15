@@ -7,6 +7,7 @@ from pathlib import Path
 import os
 import h5py
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
+from phylib.io.model import TemplateModel
 
 class SpikeCalcsGeneric(object):
     """
@@ -786,32 +787,37 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
         super().__init__(spike_times, waveforms, **kwargs)
         self.n_samples = [-40, 41]
     
-    def get_waveforms(self, pname: Path,
-                      cluster: int,
+    def get_waveforms(self, cluster: int,
                       cluster_data: KiloSortSession,
+                      n_waveforms: int=2000,
+                      n_channels: int=64,
                       **kwargs) -> np.ndarray:
         ''''
-        Returns the waveforms for the given cluster
+        Returns waveforms for a cluster
 
         Parameters
         ----------
-        pname: Path - the location of the numpy files resulting from KiloSort
         cluster: int - the cluster to return the waveforms for
-
-        kwargs:
-            n_waveforms: int - the number of waveforms to return. Default 2000
-        '''
-        # Process kwargs
-        n_waveforms = 2000
-        if "n_waveforms" in kwargs.keys():
-            n_waveforms = kwargs["n_waveforms"]
-            
-        # load the channel map
-        chan_map = np.load(os.path.join(pname, "channel_map.npy"))
-        cluster_spk_times = cluster_data.spk_times[cluster_data.spk_clusters == cluster]
-        n_spikes = len(cluster_spk_times)
+        cluster_data: KiloSortSession - the KiloSortSession object for the
+            session that contains the cluster
+        n_waveforms: int - the number of waveforms to return. Default 2000
+        n_channels: int - the number of channels in the recording. Default 64
+        '''            
+        # instantiate the TemplateModel - this is used to get the waveforms
+        # for the cluster. TemplateModel encapsulates the results of KiloSort
+        template_model = TemplateModel(dir_path=os.path.join(cluster_data.fname_root),
+                                       sample_rate=3e4,
+                                       dat_path=os.path.join(cluster_data.fname_root,"continuous.dat"),
+                                       n_channels_dat=n_channels)
+        # get the waveforms for the given cluster on the best channel only
+        waveforms = template_model.get_cluster_spike_waveforms(cluster)
+        # get a random subset of the waveforms
         rng = np.random.default_rng()
-        spk_times_subset = np.sort(rng.choice(cluster_spk_times, n_waveforms))
+        total_waveforms = waveforms.shape[0]
+        n_waveforms = (n_waveforms if n_waveforms < total_waveforms else total_waveforms)
+        waveforms_subset = rng.choice(waveforms, n_waveforms)
+        # return the waveforms
+        return np.squeeze(waveforms_subset[:,:,0])
 
     def get_channel_depth_from_templates(self, pname: Path):
         '''

@@ -118,7 +118,7 @@ class TrackingKind(Enum):
 
 class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     def __init__(self, pname: Path, **kwargs) -> None:
-        assert os.path.exists(pname)
+        assert pname.exists()
         self._pname = pname
         self._settings = None
         self._PosCalcs = None
@@ -240,12 +240,12 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self._path2PosData = val
 
     @abc.abstractmethod
-    def load_lfp(self, pname: Path, *args, **kwargs) -> NoReturn:
+    def load_lfp(self, *args, **kwargs) -> NoReturn:
         """Load the LFP data"""
         raise NotImplementedError
 
     @abc.abstractmethod
-    def load_neural_data(self, pname: Path, *args, **kwargs) -> NoReturn:
+    def load_neural_data(self, *args, **kwargs) -> NoReturn:
         """Load the neural data"""
         raise NotImplementedError
 
@@ -290,24 +290,11 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 class AxonaTrial(TrialInterface):
     def __init__(self, pname: Path, **kwargs) -> None:
         super().__init__(pname, **kwargs)
-        self.__settings = None
+        self._settings = None
         self.TETRODE = TetrodeDict(self.pname, volts=True)
+        self.load_settings()
 
-    @property
-    def settings(self) -> None:
-        if self.__settings is None:
-            try:
-                settings_io = IO()
-                self._settings = settings_io.getHeader(self.pname)
-            except IOError:
-                print(".set file not loaded")
-                self._settings = None
-
-    @settings.setter
-    def settings(self, value) -> None:
-        self.__settings = value
-
-    def load_lfp(self, pname: Path, *args, **kwargs):
+    def load_lfp(self, *args, **kwargs):
         from ephysiopy.axona.axonaIO import EEG
 
         if "egf" in args:
@@ -317,14 +304,21 @@ class AxonaTrial(TrialInterface):
         if lfp is not None:
             self.EEGCalcs = EEGCalcsGeneric(lfp.sig, lfp.sample_rate)
 
-    def load_neural_data(self, pname: Path, *args, **kwargs):
-        pass
+    def load_neural_data(self, *args, **kwargs):
+        if "tetrode" in kwargs.keys():
+            self.TETRODE[kwargs["tetrode"]] # lazy load
 
     def load_cluster_data(self, *args, **kwargs):
         pass
 
     def load_settings(self, *args, **kwargs):
-        return self.settings
+        if self._settings is None:
+            try:
+                settings_io = IO()
+                self.settings = settings_io.getHeader(self.pname)
+            except IOError:
+                print(".set file not loaded")
+                self.settings = None
 
     def load_pos_data(
         self, pname: Path, ppm: int = 300, jumpmax: int = 100, *args, **kwargs
@@ -423,7 +417,7 @@ class OpenEphysBase(TrialInterface):
         else:
             warnings.warn("Cluster not present")
 
-    def load_lfp(self, pname: Path, *args, **kwargs):
+    def load_lfp(self, *args, **kwargs):
         """
         Valid kwargs are:
         'target_sample_rate' - int
@@ -448,7 +442,7 @@ class OpenEphysBase(TrialInterface):
             )
             self.EEGCalcs = EEGCalcsGeneric(sig, target_sample_rate)
 
-    def load_neural_data(self, pname: Path, *args, **kwargs) -> None:
+    def load_neural_data(self, *args, **kwargs) -> None:
         pass
 
     def load_settings(self, *args, **kwargs):
@@ -571,6 +565,13 @@ class OpenEphysBase(TrialInterface):
             openephys recording system. i.e. if there is input to BNC port 3 on
             the digital I/O board then values of 3 in the states.npy file are high
             TTL values on this input and -3 are low TTL values (I think)
+
+        Returns
+        -------
+        Nothing but sets some properties on 'self' namely:
+
+        ttl_timestamps: list - the times of high ttl pulses in ms
+        stim_duration: int - the duration of the ttl pulse in ms
         """
         ttl_ts = np.load(os.path.join(self.path2EventsData, "timestamps.npy"))
         states = np.load(os.path.join(self.path2EventsData, "states.npy"))
@@ -700,7 +701,7 @@ class OpenEphysNWB(OpenEphysBase):
     def __init__(self, pname: Path, **kwargs) -> None:
         super().__init__(pname, **kwargs)
 
-    def load_neural_data(self, pname: Path, *args, **kwargs) -> None:
+    def load_neural_data(self, *args, **kwargs) -> None:
         pass
 
     def load_settings(self, *args, **kwargs):
