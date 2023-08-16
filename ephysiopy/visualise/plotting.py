@@ -370,7 +370,7 @@ class FigureMaker(object):
         prc_max: float = 0.5,
         ax: matplotlib.axes = None,
         ms_per_bin: int = 1,
-        histtype: str = "count",
+        sample_rate: float = 3e4, # OE=3e4, Axona=96000
         **kwargs
     ) -> matplotlib.axes:
         """
@@ -390,14 +390,11 @@ class FigureMaker(object):
             the axes to plot into. If not provided a new figure is created
         ms_per_bin : int
             The number of milliseconds in each bin of the raster plot
-        histtype : str
-            either 'count' or 'rate' - the resulting histogram plotted above
-            the raster plot will consist of either the counts of spikes in
-            ms_per_bin or the mean rate in ms_per_bin
         """
-        x1 = spk_times / 3e4 * 1000.0  # get into ms
+        assert hasattr(self, "ttl_data")
+        x1 = spk_times / sample_rate * 1000.0  # get into ms
         x1.sort()
-        on_good = getattr(self, "ttl_timestamps")
+        on_good = self.ttl_data["ttl_timestamps"]
         dt = np.array(dt)
         irange = on_good[:, np.newaxis] + dt[np.newaxis, :]
         dts = np.searchsorted(x1, irange)
@@ -422,7 +419,7 @@ class FigureMaker(object):
         scattTrans = transforms.blended_transform_factory(
             axScatter.transData, axScatter.transAxes
         )
-        stim_pwidth = getattr(self, "stim_duration", None)
+        stim_pwidth = self.ttl_data["stim_duration"]
         if stim_pwidth is None:
             raise ValueError("stim duration is None")
 
@@ -471,21 +468,7 @@ class FigureMaker(object):
             rasterized=True,
             histtype="stepfilled",
         )
-        if "rate" in histtype:
-            axHistx.set_ylabel("Rate")
-            # mn_rate_pre_stim = np.mean(vals[bins[1:] < 0])
-            # idx = np.logical_and(bins[1:] > 0, bins[1:] < 10).nonzero()[0]
-            # mn_rate_post_stim = np.mean(vals[idx])
-            # above_half_idx = idx[(
-            # vals[idx] < mn_rate_pre_stim * prc_max).nonzero()[0]]
-            # half_pre_rate_ms = bins[above_half_idx[0]]
-            # print('\ntime to {0}% of pre-stimulus rate = {1}ms'.format(*(
-            # prc_max * 100, half_pre_rate_ms)))
-            # print('mean pre-laser rate = {0}Hz'.format(mn_rate_pre_stim))
-            # print('mean 10ms post-laser rate = {0}'.format(
-            # mn_rate_post_stim))
-        else:
-            axHistx.set_ylabel("Spike count", labelpad=-2.5)
+        axHistx.set_ylabel("Spike count", labelpad=-2.5)
         plt.setp(axHistx.get_xticklabels(), visible=False)
         # Label only the min and max of the y-axis
         ylabels = axHistx.get_yticklabels()

@@ -548,12 +548,20 @@ class Stim(dict, IO):
         filename_root = Path(os.path.splitext(filename_root)[0])
         self.filename_root = filename_root
         stmData = self.getData(filename_root.with_suffix(".stm"))
-        self.__setitem__("on", stmData["ts"])
+        self.__setitem__("ttl_timestamps", stmData["ts"])
         stmHdr = self.getHeader(filename_root.with_suffix(".stm"))
         for k, v in stmHdr.items():
             self.__setitem__(k, v)
         tb = int(self["timebase"].split(" ")[0])
         self.timebase = tb
+        # the 'duration' value in the header of the .stm file
+        # is not correct so we need to read this from the .set
+        # file and update
+        setHdr = self.getHeader(filename_root.with_suffix(".set"))
+        stim_duration = [setHdr[k] for k in setHdr.keys() if 'stim_pwidth' in k][0]
+        stim_duration = int(stim_duration)
+        stim_duration = stim_duration / self.timebase # in ms now
+        self.__setitem__('stim_duration', stim_duration)
 
     def update(self, *args, **kwargs):
         for k, v in dict(*args, **kwargs).items():
@@ -570,25 +578,25 @@ class Stim(dict, IO):
         """
         Gets the timestamps of the on events
         """
-        return self["on"] / int(self.timebase / 1000)  # in ms
+        return self["ttl_timestamps"] / int(self.timebase / 1000)  # in ms
 
     def getPosIdx(self):
         """
         Gets the position indices of the on events
         """
         scale = self.timebase / getattr(self, "posSampRate", 50)
-        return self["on"] / scale
+        return self["ttl_timestamps"] / scale
 
     def getEEGIdx(self):
         """
         Gets the EEG indices of the on events
         """
         scale = self.timebase / getattr(self, "eegSampRate", 250)
-        return (self["on"] / scale).astype(int)
+        return (self["ttl_timestamps"] / scale).astype(int)
 
     def getEGFIdx(self):
         """
         Gets the EGF indices of the on events
         """
         scale = self.timebase / getattr(self, "egfSampRate", 4800)
-        return (self["on"] / scale).astype(int)
+        return (self["ttl_timestamps"] / scale).astype(int)

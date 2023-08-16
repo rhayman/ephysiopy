@@ -88,7 +88,7 @@ def loadTrackMeTTLTimestamps(pname: Path) -> np.ndarray:
 
 def loadTrackMeTimestamps(pname: Path) -> np.ndarray:
     ts = np.load(os.path.join(pname, "timestamps.npy"))
-    return ts
+    return ts-ts[0]
 
 
 def loadTrackMeFrameCount(pname: Path, n_channels: int = 4) -> np.ndarray:
@@ -123,13 +123,13 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self._settings = None
         self._PosCalcs = None
         self._RateMap = None
-        self._pos_data_type = None
+        self._pos_data_type = None 
         self._sync_message_file = None
         self._clusterData = None  # Kilosort or .cut / .clu file
-        self._recording_start_time = None
-        self._ttl_data = None
+        self._recording_start_time = None # float
+        self._ttl_data = None # dict
         self._accelerometer_data = None
-        self._path2PosData = None
+        self._path2PosData = None # Path or str
 
     @classmethod
     def __subclasshook__(cls, subclass):
@@ -568,7 +568,8 @@ class OpenEphysBase(TrialInterface):
 
         Returns
         -------
-        Nothing but sets some properties on 'self' namely:
+        Nothing but sets some keys/values in a dict on 'self'
+        called ttl_data, namely:
 
         ttl_timestamps: list - the times of high ttl pulses in ms
         stim_duration: int - the duration of the ttl pulse in ms
@@ -576,16 +577,17 @@ class OpenEphysBase(TrialInterface):
         ttl_ts = np.load(os.path.join(self.path2EventsData, "timestamps.npy"))
         states = np.load(os.path.join(self.path2EventsData, "states.npy"))
         recording_start_time = self._get_recording_start_time()
+        self.ttl_data = {}
         if "StimControl_id" in kwargs.keys():
             stim_id = kwargs["StimControl_id"]
             duration = getattr(self.settings.processors[stim_id], "Duration")
-            setattr(self, "stim_duration", int(duration))
+            self.ttl_data['stim_duration'] = int(duration)
         if "TTL_channel_number" in kwargs.keys():
             chan = kwargs["TTL_channel_number"]
             high_ttl = ttl_ts[states == chan]
             # get into ms
             high_ttl = (high_ttl * 1000.0) - recording_start_time
-            setattr(self, "ttl_timestamps", high_ttl)
+            self.ttl_data['ttl_timestamps'] = high_ttl
 
     def find_files(
         self,

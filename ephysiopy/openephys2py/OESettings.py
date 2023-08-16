@@ -365,8 +365,6 @@ class Settings(object):
         self.tree = None
         self.processors = OrderedDict()
         self.record_nodes = OrderedDict()
-        self.tracker_params = {}
-        self.stimcontrol_params = {}
         self.load()
         self.parse()
 
@@ -386,7 +384,6 @@ class Settings(object):
         if self.tree is None:
             self.load()
         processor_factory = ProcessorFactory()
-        # quick hack to deal with flat binary format that has no settings.xml
         if self.tree is not None:
             for elem in self.tree.iter("PROCESSOR"):
                 i_proc = elem.get("name")
@@ -404,19 +401,3 @@ class Settings(object):
                         self.processors[i_proc + " " + new_processor.nodeId] = new_processor
                     else:
                         self.processors[i_proc] = new_processor
-                
-
-    def parseStimControl(self):
-        """
-        Parses information attached to the StimControl module I wrote
-        """
-        if len(self.processors) == 0:
-            self.parse()
-        children = self.processors["StimControl"][0].iter()
-        for child in children:
-            if "Parameters" in child.tag:
-                self.stimcontrol_params = child.attrib
-        # convert string values to ints
-        self.stimcontrol_params = dict(
-            [k, int(v)] for k, v in self.stimcontrol_params.items()
-        )
