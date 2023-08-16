@@ -118,7 +118,7 @@ class TrackingKind(Enum):
 
 class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     def __init__(self, pname: Path, **kwargs) -> None:
-        assert pname.exists()
+        assert Path(pname).exists()
         self._pname = pname
         self._settings = None
         self._PosCalcs = None
