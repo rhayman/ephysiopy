@@ -111,11 +111,6 @@ Xml2RecordingKind = {
 }
 
 
-class TrackingKind(Enum):
-    POSTRACKER = 1
-    TRACKINGPLUGIN = 2
-
-
 class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     def __init__(self, pname: Path, **kwargs) -> None:
         assert Path(pname).exists()
