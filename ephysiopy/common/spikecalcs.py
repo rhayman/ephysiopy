@@ -366,9 +366,11 @@ class SpikeCalcsGeneric(object):
 
         Returns
         -------
-        x, y : list
-            The list of time differences between the spikes of the cluster
-            and the events (x) and the trials (y)
+        result: np.ndarray
+            Where rows are counts of spikes per bin_width_secs and
+            size of columns ranges from self.event_window[0] to 
+            self.event_window[1] with bin_width_secs steps
+            So x is count, y is "event" 
         """
         if self._event_ts is None:
             raise Exception("Need some event timestamps! Aborting")
@@ -383,12 +385,12 @@ class SpikeCalcsGeneric(object):
         irange = event_ts[:, np.newaxis] + self.event_window[np.newaxis, :]
         dts = np.searchsorted(spike_times, irange)
         bins = np.arange(self.event_window[0], self.event_window[1], bin_width_secs)
-        result = np.zeros(shape=(len(bins), len(event_ts)))
+        result = np.zeros(shape=(len(bins)-1, len(event_ts)))
         for i, t in enumerate(dts):
             tmp = spike_times[t[0] : t[1]] - event_ts[i]
             indices = np.digitize(tmp, bins=bins)
             counts = np.bincount(indices, minlength=len(bins))
-            result[:, i] = counts
+            result[:, i] = counts[1:]
         return result
 
     def clusterQuality(self, cluster, fet=1):
