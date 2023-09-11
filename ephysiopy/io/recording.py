@@ -88,7 +88,7 @@ def loadTrackMeTTLTimestamps(pname: Path) -> np.ndarray:
 
 def loadTrackMeTimestamps(pname: Path) -> np.ndarray:
     ts = np.load(os.path.join(pname, "timestamps.npy"))
-    return ts-ts[0]
+    return ts - ts[0]
 
 
 def loadTrackMeFrameCount(pname: Path, n_channels: int = 4) -> np.ndarray:
@@ -123,13 +123,13 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self._settings = None
         self._PosCalcs = None
         self._RateMap = None
-        self._pos_data_type = None 
+        self._pos_data_type = None
         self._sync_message_file = None
         self._clusterData = None  # Kilosort or .cut / .clu file
-        self._recording_start_time = None # float
-        self._ttl_data = None # dict
+        self._recording_start_time = None  # float
+        self._ttl_data = None  # dict
         self._accelerometer_data = None
-        self._path2PosData = None # Path or str
+        self._path2PosData = None  # Path or str
 
     @classmethod
     def __subclasshook__(cls, subclass):
@@ -306,7 +306,7 @@ class AxonaTrial(TrialInterface):
 
     def load_neural_data(self, *args, **kwargs):
         if "tetrode" in kwargs.keys():
-            self.TETRODE[kwargs["tetrode"]] # lazy load
+            self.TETRODE[kwargs["tetrode"]]  # lazy load
 
     def load_cluster_data(self, *args, **kwargs):
         return False
@@ -315,7 +315,7 @@ class AxonaTrial(TrialInterface):
         if self._settings is None:
             try:
                 settings_io = IO()
-                self.settings = settings_io.getHeader(self.pname)
+                self.settings = settings_io.getHeader(str(self.pname))
             except IOError:
                 print(".set file not loaded")
                 self.settings = None
@@ -333,7 +333,8 @@ class AxonaTrial(TrialInterface):
                 jumpmax=jumpmax,
             )
             P.xyTS = AxonaPos.ts
-            P.sample_rate = AxonaPos.getHeaderVal(AxonaPos.header, "sample_rate")
+            P.sample_rate = AxonaPos.getHeaderVal(
+                AxonaPos.header, "sample_rate")
             P.postprocesspos()
             print("Loaded pos data")
             self.PosCalcs = P
@@ -479,7 +480,7 @@ class OpenEphysBase(TrialInterface):
     ) -> None:
         # kwargs valid keys = "loadTTLPos" - if present loads the ttl
         # timestamps not the ones in the plugin folder
-        
+
         # Only sub-class that doesn't use this is OpenEphysNWB
         # which needs updating
         # TODO: Update / overhaul OpenEphysNWB
@@ -592,7 +593,7 @@ class OpenEphysBase(TrialInterface):
         if "StimControl_id" in kwargs.keys():
             stim_id = kwargs["StimControl_id"]
             duration = getattr(self.settings.processors[stim_id], "Duration")
-            self.ttl_data['stim_duration'] = int(duration)
+            self.ttl_data["stim_duration"] = int(duration)
         if "TTL_channel_number" in kwargs.keys():
             chan = kwargs["TTL_channel_number"]
             high_ttl = ttl_ts[states == chan]
