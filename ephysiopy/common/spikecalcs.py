@@ -115,6 +115,8 @@ class SpikeCalcsGeneric(object):
         self._duration = None
         self._pre_spike_samples = 18
         self._post_spike_samples = 32
+        # update the __dict__ attribute with the kwargs
+        self.__dict__.update(kwargs)
 
     @property
     def sample_rate(self):
@@ -191,12 +193,12 @@ class SpikeCalcsGeneric(object):
         self._stim_width = value
 
     @property
-    def _secs_per_bin(self):
-        return self.__secs_per_bin
+    def secs_per_bin(self):
+        return self._secs_per_bin
 
-    @_secs_per_bin.setter
-    def _secs_per_bin(self, value):
-        self.__secs_per_bin = value
+    @secs_per_bin.setter
+    def secs_per_bin(self, value):
+        self._secs_per_bin = value
 
     def trial_mean_fr(self, cluster: int) -> float:
         # Returns the trial mean firing rate for the cluster
@@ -352,6 +354,43 @@ class SpikeCalcsGeneric(object):
             x.extend(tmp)
             y.extend(np.repeat(i, len(tmp)))
         return x, y
+
+    def calculatePSCH(self,
+                      cluster_id: int,
+                      bin_interval_seconds: float,
+                      **kwargs) -> np.ndarray:
+        '''
+        Calculate the peri-stimulus count histogram. Given some
+        events calculate the number of spikes emitted by a cell
+        in some period of time surrounding that event.
+        This is similar to calculatePSTH above, but where that 
+        function calculates the times at which a cell fired this 
+        just calculates the spike counts in some period, binned up
+        within some range
+        '''
+        if self._event_ts is None:
+            raise Exception("Need some event timestamps! Aborting")
+        if self._spk_clusters is None:
+            raise Exception("Need cluster identities! Aborting")
+        event_ts = self.event_ts
+        event_ts.sort()
+        if type(event_ts) == list:
+            event_ts = np.array(event_ts)
+
+        spike_times = self.spike_times[self.spk_clusters == cluster_id]
+        irange = event_ts[:, np.newaxis] + self.event_window[np.newaxis, :]
+        dts = np.searchsorted(spike_times, irange)
+        bins = np.arange(self.event_window[0], self.event_window[1], bin_interval_seconds)
+        result = np.zeros(shape=(len(event_ts), len(bins)))
+        for i, t in enumerate(dts):
+            tmp = spike_times[t[0]:t[1]] - event_ts[i]
+            bin_indices = np.digitize(
+                tmp,
+                bins=bins)
+            counts = np.bincount(bin_indices, minlength=len(bins))
+            result[i, :] = counts
+
+        return result
 
     def clusterQuality(self, cluster, fet=1):
         """

@@ -446,7 +446,7 @@ class FigureMaker(object):
                 alpha=0.5,
             )
         )
-        axScatter.set_ylabel("Laser stimulation events", labelpad=-18.5)
+        axScatter.set_ylabel("Laser stimulation events", labelpad=-2.5)
         axScatter.set_xlabel("Time to stimulus onset(ms)")
         nStms = len(on_good)
         axScatter.set_ylim(0, nStms)

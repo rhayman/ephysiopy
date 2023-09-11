@@ -268,7 +268,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def load_cluster_data(self, *args, **kwargs) -> NoReturn:
+    def load_cluster_data(self, *args, **kwargs) -> bool:
         """Load the cluster data (Kilosort/ Axona cut/ whatever else"""
         raise NotImplementedError
 
@@ -278,7 +278,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def load_ttl(self, *args, **kwargs):
+    def load_ttl(self, *args, **kwargs) -> bool:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -309,7 +309,7 @@ class AxonaTrial(TrialInterface):
             self.TETRODE[kwargs["tetrode"]] # lazy load
 
     def load_cluster_data(self, *args, **kwargs):
-        pass
+        return False
 
     def load_settings(self, *args, **kwargs):
         if self._settings is None:
@@ -340,10 +340,13 @@ class AxonaTrial(TrialInterface):
         except IOError:
             print("Couldn't load the pos data")
 
-    def load_ttl(self, *args, **kwargs):
+    def load_ttl(self, *args, **kwargs) -> bool:
         from ephysiopy.axona.axonaIO import Stim
-
-        self.ttl_data = Stim(self.pname)
+        try:
+            self.ttl_data = Stim(self.pname)
+        except IOError:
+            return False
+        return True
 
     def get_spike_times(self, cluster: int, tetrode: int = None, *args, **kwargs):
         if tetrode is not None:
@@ -352,6 +355,7 @@ class AxonaTrial(TrialInterface):
 
 class OpenEphysBase(TrialInterface):
     def __init__(self, pname: Path, **kwargs) -> None:
+        pname = Path(pname)
         super().__init__(pname, **kwargs)
         setattr(self, "sync_message_file", None)
         self.load_settings()
@@ -451,9 +455,11 @@ class OpenEphysBase(TrialInterface):
             # correct location of settings.xml
             self.settings = Settings(self.pname)
 
-    def load_cluster_data(self, removeNoiseClusters=True, *args, **kwargs):
+    def load_cluster_data(self, removeNoiseClusters=True, *args, **kwargs) -> bool:
         if self.path2KiloSortData is not None:
             clusterData = KiloSortSession(self.pname)
+        else:
+            return False
         if clusterData is not None:
             if clusterData.load():
                 print("Loaded KiloSort data")
@@ -463,7 +469,10 @@ class OpenEphysBase(TrialInterface):
                         print("Removed noise clusters")
                     except Exception:
                         pass
+        else:
+            return False
         self.clusterData = clusterData
+        return True
 
     def load_pos_data(
         self, ppm: int = 300, jumpmax: int = 100, *args, **kwargs
@@ -553,7 +562,7 @@ class OpenEphysBase(TrialInterface):
             )
         self.recording_start_time = recording_start_time
 
-    def load_ttl(self, *args, **kwargs):
+    def load_ttl(self, *args, **kwargs) -> bool:
         """
         Valid kwargs are:
         StimControl_id: str
@@ -574,6 +583,8 @@ class OpenEphysBase(TrialInterface):
         ttl_timestamps: list - the times of high ttl pulses in ms
         stim_duration: int - the duration of the ttl pulse in ms
         """
+        if not Path(self.path2EventsData).exists:
+            return False
         ttl_ts = np.load(os.path.join(self.path2EventsData, "timestamps.npy"))
         states = np.load(os.path.join(self.path2EventsData, "states.npy"))
         recording_start_time = self._get_recording_start_time()
@@ -588,6 +599,7 @@ class OpenEphysBase(TrialInterface):
             # get into ms
             high_ttl = (high_ttl * 1000.0) - recording_start_time
             self.ttl_data['ttl_timestamps'] = high_ttl
+        return True
 
     def find_files(
         self,
