@@ -76,7 +76,7 @@ class KiloSortSession(object):
 
         import pandas as pd
 
-        dtype = {'names': ('cluster_id', 'group'), 'formats': ('i4', 'S10')}
+        dtype = {'names': ('cluster_id', 'group'), 'formats': ('i4', '<U10')}
         # One of these (cluster_groups.csv or cluster_group.tsv) is from
         # kilosort and the other from kilosort2
         # and is updated by the user when doing cluster assignment in phy
@@ -127,7 +127,7 @@ class KiloSortSession(object):
                 self.cluster_info["chanX"] = chXZ[chID, 0]
                 self.cluster_info["chanY"] = chXZ[chID, 1]
 
-        dtype = {"names": ("cluster_id", "KSLabel"), "formats": ("i4", "S10")}
+        dtype = {"names": ("cluster_id", "KSLabel"), "formats": ("i4", "<U10")}
         # 'Raw' labels from a kilosort session
         if fileExists(self.fname_root, "cluster_KSLabel.tsv"):
             self.ks_cluster_id, self.ks_group = np.loadtxt(
