@@ -76,7 +76,7 @@ class KiloSortSession(object):
 
         import pandas as pd
 
-        dtype = {'names': ('cluster_id', 'group'), 'formats': ('i4', 'S10')}
+        dtype = {'names': ('cluster_id', 'group'), 'formats': ('i4', '<U10')}
         # One of these (cluster_groups.csv or cluster_group.tsv) is from
         # kilosort and the other from kilosort2
         # and is updated by the user when doing cluster assignment in phy
@@ -127,7 +127,7 @@ class KiloSortSession(object):
                 self.cluster_info["chanX"] = chXZ[chID, 0]
                 self.cluster_info["chanY"] = chXZ[chID, 1]
 
-        dtype = {"names": ("cluster_id", "KSLabel"), "formats": ("i4", "S10")}
+        dtype = {"names": ("cluster_id", "KSLabel"), "formats": ("i4", "<U10")}
         # 'Raw' labels from a kilosort session
         if fileExists(self.fname_root, "cluster_KSLabel.tsv"):
             self.ks_cluster_id, self.ks_group = np.loadtxt(
@@ -160,8 +160,8 @@ class KiloSortSession(object):
             self.good_clusters = []
             for id_group in zip(self.cluster_id, self.group):
                 if (
-                    "noise" not in id_group[1].decode()
-                    and "mua" not in id_group[1].decode()
+                    "noise" not in id_group[1]
+                    and "mua" not in id_group[1]
                 ):
                     self.good_clusters.append(id_group[0])
 
@@ -170,7 +170,7 @@ class KiloSortSession(object):
         Removes "noise" and "mua" clusters from the kilosort labelled stuff
         """
         for cluster_id, kslabel in zip(self.ks_cluster_id, self.ks_group):
-            if "good" in kslabel.decode():
+            if "good" in kslabel:
                 self.good_clusters.append(cluster_id)
 
     def get_cluster_spike_times(self, cluster: int):
