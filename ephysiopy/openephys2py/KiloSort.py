@@ -160,8 +160,8 @@ class KiloSortSession(object):
             self.good_clusters = []
             for id_group in zip(self.cluster_id, self.group):
                 if (
-                    "noise" not in id_group[1].decode()
-                    and "mua" not in id_group[1].decode()
+                    "noise" not in id_group[1]
+                    and "mua" not in id_group[1]
                 ):
                     self.good_clusters.append(id_group[0])
 
@@ -170,7 +170,7 @@ class KiloSortSession(object):
         Removes "noise" and "mua" clusters from the kilosort labelled stuff
         """
         for cluster_id, kslabel in zip(self.ks_cluster_id, self.ks_group):
-            if "good" in kslabel.decode():
+            if "good" in kslabel:
                 self.good_clusters.append(cluster_id)
 
     def get_cluster_spike_times(self, cluster: int):
