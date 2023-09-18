@@ -284,6 +284,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 
 class AxonaTrial(TrialInterface):
     def __init__(self, pname: Path, **kwargs) -> None:
+        pname = Path(pname)
         super().__init__(pname, **kwargs)
         self._settings = None
         self.TETRODE = TetrodeDict(self.pname, volts=True)
@@ -709,6 +710,7 @@ class OpenEphysBase(TrialInterface):
 
 class OpenEphysNWB(OpenEphysBase):
     def __init__(self, pname: Path, **kwargs) -> None:
+        pname = Path(pname)
         super().__init__(pname, **kwargs)
 
     def load_neural_data(self, *args, **kwargs) -> None:

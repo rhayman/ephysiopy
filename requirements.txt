@@ -5,6 +5,7 @@ astropy
 scikit-image
 mahotas
 h5py
+phylib
 scikit-learn
 phylib
 pytest
