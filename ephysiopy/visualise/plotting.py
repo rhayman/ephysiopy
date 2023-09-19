@@ -261,11 +261,11 @@ class FigureMaker(object):
             self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         idx = np.array(spk_times_in_pos_samples, dtype=int)
+        w = np.bincount(idx, minlength=self.PosCalcs.speed.shape[0])
         if np.ma.is_masked(self.PosCalcs.speed):
-            w = self.PosCalcs.speed.mask
-            w = np.array(~w, dtype=int)
-        else:
-            w = np.bincount(idx, minlength=self.PosCalcs.speed.shape[0])
+            m = self.PosCalcs.speed.mask
+            w = np.ma.MaskedArray(w, m)
+            
         dir_bins = np.arange(0, 360, 6)
         spd_bins = np.arange(0, 30, 1)
         h = np.histogram2d(
