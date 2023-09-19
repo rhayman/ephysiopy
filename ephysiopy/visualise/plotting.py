@@ -209,7 +209,8 @@ class FigureMaker(object):
         Pearsons correlation and the depth of modulation (dom) - see below for
         details
         """
-        self.initialise()
+        if not self.RateMap:
+            self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
 
         speed = np.ravel(self.PosCalcs.speed)
@@ -256,11 +257,12 @@ class FigureMaker(object):
     def makeSpeedVsHeadDirectionPlot(
         self, spk_times: np.array, ax: matplotlib.axes = None, **kwargs
     ) -> matplotlib.axes:
-        self.initialise()
+        if not self.RateMap:
+            self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         idx = np.array(spk_times_in_pos_samples, dtype=int)
         if np.ma.is_masked(self.PosCalcs.speed):
-            w = self.speed.mask
+            w = self.PosCalcs.speed.mask
             w = np.array(~w, dtype=int)
         else:
             w = np.bincount(idx, minlength=self.PosCalcs.speed.shape[0])

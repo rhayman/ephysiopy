@@ -1007,7 +1007,7 @@ def gridness(image, step=30):
     out_range = (0, 1)
     import skimage
     autoCorrMiddleRescaled = skimage.exposure.rescale_intensity(
-        image, in_range, out_range)
+        image, in_range=in_range, out_range=out_range)
     origNanIdx = np.isnan(autoCorrMiddleRescaled.ravel())
     for idx, angle in enumerate(rotationalCorrVals.keys()):
         rotatedA = skimage.transform.rotate(
