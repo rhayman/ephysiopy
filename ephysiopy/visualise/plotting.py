@@ -239,15 +239,15 @@ class FigureMaker(object):
         ax = fig.add_subplot(111)
         ax.errorbar(spd_bins, mn_rate * self.PosCalcs.sample_rate, yerr=var, color="k")
         ax.set_xlim(spd_bins[0], spd_bins[-1])
-        plt.xticks(
+        ax.set_xticks(
             [spd_bins[0], spd_bins[-1]],
-            ["0", "{:.2g}".format(spd_bins[-1])],
+            labels=["0", "{:.2g}".format(spd_bins[-1])],
             fontweight="normal",
             size=6,
         )
-        plt.yticks(
+        ax.set_yticks(
             [0, np.nanmax(mn_rate) * self.PosCalcs.sample_rate],
-            ["0", "{:.2f}".format(np.nanmax(mn_rate))],
+            labels=["0", "{:.2f}".format(np.nanmax(mn_rate))],
             fontweight="normal",
             size=6,
         )
@@ -264,7 +264,7 @@ class FigureMaker(object):
         w = np.bincount(idx, minlength=self.PosCalcs.speed.shape[0])
         if np.ma.is_masked(self.PosCalcs.speed):
             m = self.PosCalcs.speed.mask
-            w = np.ma.MaskedArray(w, m)
+            w[m==True] = 0
             
         dir_bins = np.arange(0, 360, 6)
         spd_bins = np.arange(0, 30, 1)
@@ -286,9 +286,9 @@ class FigureMaker(object):
         ax.pcolormesh(
             x, y, im.T, cmap=jet_cmap, edgecolors="face", vmax=vmax, shading="auto"
         )
-        plt.xticks([90, 180, 270], fontweight="normal", size=6)
-        plt.yticks([10, 20], fontweight="normal", size=6)
-        plt.xlabel("Heading", fontweight="normal", size=6)
+        ax.set_xticks([90, 180, 270], labels=['90', '180', '270'], fontweight="normal", size=6)
+        ax.set_yticks([10, 20], labels=['10', '20'], fontweight="normal", size=6)
+        ax.set_xlabel("Heading", fontweight="normal", size=6)
         return ax
 
     def makePowerSpectrum(

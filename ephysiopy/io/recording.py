@@ -16,6 +16,8 @@ from ephysiopy.openephys2py.KiloSort import KiloSortSession
 from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.visualise.plotting import FigureMaker
 
+from phylib.io.model import TemplateModel
+
 
 def fileContainsString(pname: str, searchStr: str) -> bool:
     if os.path.exists(pname):
@@ -392,6 +394,7 @@ class OpenEphysBase(TrialInterface):
             if self.rec_kind == RecordingKind.NEUROPIXELS:
                 self.channel_count = 384
         self.kilodata = None
+        self.template_model = None
 
     def _get_recording_start_time(self) -> float:
         """
@@ -444,13 +447,23 @@ class OpenEphysBase(TrialInterface):
             self.EEGCalcs = EEGCalcsGeneric(sig, target_sample_rate)
 
     def load_neural_data(self, *args, **kwargs) -> None:
-        pass
+        if self.path2APdata:
+            self.template_model = TemplateModel(
+                dir_path=self.path2APdata,
+                sample_rate=3e4,
+                dat_path=Path(self.path2APdata) / Path("continuous.dat"),
+                n_channels_dat=int(self.channel_count),
+            )
+            print("Loaded neural data")
+        else:
+            warnings.warn("Could not find raw data file")
 
     def load_settings(self, *args, **kwargs):
         if self._settings is None:
             # pname_root gets walked through and over-written with
             # correct location of settings.xml
             self.settings = Settings(self.pname)
+            print("Loaded settings data")
 
     def load_cluster_data(self, removeNoiseClusters=True, *args, **kwargs) -> bool:
         if self.path2KiloSortData is not None:
@@ -596,6 +609,7 @@ class OpenEphysBase(TrialInterface):
             # get into ms
             high_ttl = (high_ttl * 1000.0) - recording_start_time
             self.ttl_data['ttl_timestamps'] = high_ttl
+        print("Loaded ttl data")
         return True
 
     def find_files(
