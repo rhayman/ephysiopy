@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 import h5py
 import numpy as np
@@ -15,24 +16,26 @@ class OE2Axona(object):
     Converts openephys data recorded in the nwb format into Axona files
     """
 
-    def __init__(self, filename_root: str):
-        # '/home/robin/Data/experiment_1.nwb' or whatever
-        self.filename_root = filename_root
-        # '/home/robin/Data'
-        self.dirname = os.path.dirname(filename_root)
+    def __init__(self, pname: Path, **kwargs):
+        '''
+        pname: Path
+            the base directory of the openephys recording
+            e.g. '/home/robin/Data/M4643_2023-07-21_11-52-02'
+        '''
+        pname = Path(pname)
+        assert pname.exists()
+        self.pname = pname
         # 'experiment_1.nwb'
-        self.experiment_name = os.path.basename(self.filename_root)
+        self.experiment_name = Path('experiment_1') or Path(kwargs['experiment_name'])
         self.recording_name = None  # will become 'recording1' etc
         self.OE_data = None  # becomes instance of io.recording.OpenEphysBase
         self._settings = None  # will become an instance of OESettings.Settings
         # Create a basename for Axona file names
         # e.g.'/home/robin/Data/experiment_1'
         # that we can append '.pos' or '.eeg' or whatever onto
-        self.axona_root_name = os.path.join(
-            self.dirname, os.path.splitext(self.experiment_name)[0]
-        )
+        self.axona_root_name = self.pname / self.experiment_name
         # need to instantiated now for later
-        self.AxonaData = axonaIO.IO(self.axona_root_name + ".pos")
+        self.AxonaData = axonaIO.IO(self.axona_root_name.name + ".pos")
         # THIS IS TEMPORARY AND WILL BE MORE USER-SPECIFIABLE IN THE FUTURE
         # it is used to scale the spikes
         self.hp_gain = 500
@@ -51,10 +54,11 @@ class OE2Axona(object):
         # set the tetrodes to record from
         # defaults to 1 through 4 - see self.makeSetData below
         self.tetrodes = ["1", "2", "3", "4"]
+        self.channel_count = 0
 
     def resample(self, data, src_rate=30, dst_rate=50, axis=0):
         """
-        Upsamples data using FFT
+        Resamples data using FFT
         """
         denom = np.gcd(dst_rate, src_rate)
         new_data = signal.resample_poly(
@@ -67,7 +71,7 @@ class OE2Axona(object):
         Loads the settings data from the settings.xml file
         """
         if self._settings is None:
-            self._settings = OESettings.Settings(self.dirname)
+            self._settings = OESettings.Settings(self.pname)
         return self._settings
 
     @settings.setter
@@ -90,17 +94,9 @@ class OE2Axona(object):
         default has changed in different versions of OE from 'recording0'
         to 'recording1'
         """
-        if os.path.isfile(filename_root):
-            OE_data = OpenEphysBase(self.dirname)
-            print("Loading nwb data...")
-            OE_data.load(
-                pname_root=self.dirname,
-                session_name=self.experiment_name,
-                recording_name=recording_name,
-                loadspikes=True,
-                loadraw=False,
-            )
-            print("Loaded nwb data from: {}".format(filename_root))
+        if Path(filename_root).exists():
+            OE_data = OpenEphysBase(self.pname)
+            OE_data.load_pos_data()
             # It's likely that spikes have been collected after the last
             # position sample
             # due to buffering issues I can't be bothered to resolve.
@@ -115,12 +111,16 @@ class OE2Axona(object):
             # here with a view to subtracting this from everything (including
             # the spike data)
             # and figuring out what to keep later
-            first_pos_ts = OE_data.xyTS[0]
-            last_pos_ts = OE_data.xyTS[-1]
+            first_pos_ts = OE_data.PosCalcs.xyTS[0]
+            last_pos_ts = OE_data.PosCalcs.xyTS[-1]
             self.first_pos_ts = first_pos_ts
             self.last_pos_ts = last_pos_ts
             self.recording_name = recording_name
             self.OE_data = OE_data
+            # extract number of channels from settings
+            for item in self.settings.record_nodes.items():
+                if "Rhythm Data" in item[1].name:
+                    self.channel_count = int(item[1].channel_count)
             return OE_data
 
     def exportSetFile(self, **kwargs):
@@ -139,22 +139,22 @@ class OE2Axona(object):
         # on the position
         # data (discard jumpy data, do some smoothing etc)
         self.settings.parse()
-        posProcessor = PosCalcsGeneric(
-            self.OE_data.xy[:, 0], self.OE_data.xy[:, 1], ppm, True, jumpmax
-        )
         print("Post-processing position data...")
-        self.settings.tracker_params["AxonaBadValue"] = 1023
-        posProcessor.postprocesspos(self.settings.tracker_params)
-        xy = posProcessor.xy.T
+        self.OE_data.PosCalcs.jumpmax = jumpmax
+        self.OE_data.PosCalcs.tracker_params["AxonaBadValue"] = 1023
+        self.OE_data.PosCalcs.postprocesspos(
+            self.OE_data.PosCalcs.tracker_params)
+        xy = self.OE_data.PosCalcs.xy.T
+        xyTS = self.OE_data.PosCalcs.xyTS
         if as_text is True:
             print("Beginning export of position data to text format...")
             pos_file_name = self.axona_root_name + ".txt"
-            np.savetxt(pos_file_name, self.OE_data.xy, fmt="%1.u")
+            np.savetxt(pos_file_name, xy, fmt="%1.u")
             print("Completed export of position data")
             return
         # Do the upsampling of both xy and the timestamps
         print("Beginning export of position data to Axona format...")
-        axona_pos_data = self.convertPosData(xy, self.OE_data.xyTS)
+        axona_pos_data = self.convertPosData(xy, xyTS)
         # make sure pos data length is same as duration * num_samples
         axona_pos_data = axona_pos_data[
             0: int(self.last_pos_ts - self.first_pos_ts) * 50
@@ -163,14 +163,21 @@ class OE2Axona(object):
         from ephysiopy.axona.file_headers import PosHeader
 
         pos_header = PosHeader()
+        tracker_params = self.OE_data.PosCalcs.tracker_params
+        min_xy = np.floor(np.min(xy, 0)).astype(int).data
+        max_xy = np.ceil(np.max(xy, 0)).astype(int).data
         pos_header.pos["min_x"] = str(
-            self.settings.tracker_params["LeftBorder"])
-        pos_header.pos[".min_y"] = str(
-            self.settings.tracker_params["TopBorder"])
-        pos_header.pos[".max_x"] = str(
-            self.settings.tracker_params["RightBorder"])
-        pos_header.pos[".max_y"] = str(
-            self.settings.tracker_params["BottomBorder"])
+            tracker_params["LeftBorder"]) if "LeftBorder" in \
+            tracker_params.keys() else str(min_xy[0])
+        pos_header.pos["min_y"] = str(
+            tracker_params["TopBorder"]) if "TopBorder" in \
+            tracker_params.keys() else str(max_xy[1])
+        pos_header.pos["max_x"] = str(
+            tracker_params["RightBorder"]) if "RightBorder" in \
+            tracker_params.keys() else str(max_xy[0])
+        pos_header.pos["max_y"] = str(
+            tracker_params["BottomBorder"]) if "BottomBorder" in \
+            tracker_params.keys() else str(min_xy[1])
         pos_header.common["duration"] = str(
             int(self.last_pos_ts - self.first_pos_ts))
         pos_header.pos["pixels_per_metre"] = str(ppm)
@@ -190,7 +197,7 @@ class OE2Axona(object):
         )
         print("Completed exporting spiking data")
 
-    def exportLFP(self, channel: int, lfp_type: str, gain: int):
+    def exportLFP(self, channel: int=0, lfp_type: str='eeg', gain: int=5000):
         """
         Export LFP data to file
 
@@ -203,27 +210,19 @@ class OE2Axona(object):
         print("Beginning conversion and exporting of LFP data...")
         if not self.settings.processors:
             self.settings.parse()
-        fpga_id = self.settings.processors["Sources/Rhythm FPGA"].NodeId
-        fpgaNode = "processor" + fpga_id + "_" + fpga_id
-        data = self.OE_data.nwbData["acquisition"][
-            "\
-            timeseries"
-        ][self.recording_name][
-            "\
-                continuous"
-        ][
-            fpgaNode
-        ][
-            "data"
-        ][
-            :, channel
-        ]
-        self.makeLFPData(data, eeg_type=lfp_type, gain=gain)
-        # if the set file has been created then update which channel contains
-        #  the eeg record so
-        # that the gain can be loaded correctly when using axona_util
+        if self.OE_data.path2APdata:
+            from ephysiopy.io.recording import memmapBinaryFile
+            data = memmapBinaryFile(
+                Path(self.OE_data.path2APdata) / Path("continuous.dat"),
+                n_channels=self.channel_count)
+            self.makeLFPData(data[channel, :], eeg_type=lfp_type, gain=gain)
+            # if the set file has been created then update which channel
+            # contains the eeg record so
+            # that the gain can be loaded correctly when using axona_util
 
-        print("Completed exporting LFP data to " + lfp_type + " format")
+            print("Completed exporting LFP data to " + lfp_type + " format")
+        else:
+            print("Couldn't load raw data")
 
     def convertPosData(self, xy: np.array, xy_ts: np.array) -> np.array:
         """
@@ -256,6 +255,86 @@ class OE2Axona(object):
         new_data["ts"] = new_ts * 50
         new_data["pos"] = new_pos
         return new_data
+
+    def convertTemplateDataToAxonaTetrode(self, max_n_waves=2000, **kwargs):
+        '''
+        Converts the data held in a TemplateModel instance into tetrode
+        format Axona data files
+
+        Notes
+        -----
+        For each cluster there'll be a channel that 
+        has a peak amplitude and this contains that peak channel.
+        Whilst the other channels with a large signal in might be 
+        on the same tetrode, KiloSort (or whatever) might find
+        channels *not* within the same tetrode. For a given cluster
+        we can extract from the TemplateModel the 12 channels across
+        which the signal is strongest using Model.get_cluster_channels()
+        If a channel from a tetrode is missing from this list then the
+        spikes for that channel(s) will be zeroed when saved to Axona
+        format. For example, if cluster 3 has a peak channel of 1 then 
+        get_cluster_channels() might look like:
+
+            [ 1,  2,  0,  6, 10, 11,  4,  12,  7,  5,  8,  9]
+
+        Here the cluster has the best signal on 1, then 2, 0 etc, but 
+        note that channel 3 isn't in the list. In this case the data for
+        channel 3 will be zeroed when saved to Axona format.
+
+        References
+        -----------
+
+        1) https://phy.readthedocs.io/en/latest/api/#phyappstemplatetemplatemodel)
+
+        '''
+        self.OE_data.load_neural_data()  # loads the TemplateModel
+        model = self.OE_data.template_model
+        clusts = model.cluster_ids
+        clust_channels = model.clusters_channels
+
+        for i_tet in range(0, self.channel_count, 4):
+            i_tet_clusts = [cl for cl in clusts
+                            if clust_channels[cl] < i_tet+4
+                            and clust_channels[cl] > i_tet]
+            for clust in i_tet_clusts:
+                clust_chans = model.get_cluster_channels(clust)
+                idx = np.logical_and(clust_chans >= i_tet,
+                                     clust_chans < i_tet+4)
+                # clust_chans is an ordered list of the channels
+                # the cluster was most active on. idx has True
+                # where there is overlap between that and the
+                # currently active tetrode channel numbers (0:4, 4:8
+                # or whatever)
+                spike_idx = model.get_cluster_spikes(clust)
+                # limit the number of spikes to max_n_waves in the
+                # interests of speed. Randomly select spikes across
+                # the period they fire
+                rng = np.random.default_rng()
+                total_n_waves = len(spike_idx)
+                max_n_waves = max_n_waves if max_n_waves < total_n_waves else \
+                    total_n_waves
+                spike_idx_subset = rng.choice(
+                    spike_idx, max_n_waves, replace=False)
+                ordered_chans = np.argsort(clust_chans[idx])
+                waves = model.get_waveforms(spike_idx_subset, ordered_chans)
+                # Take the central 30 samples which corresponds to a 1ms sample
+                # if the data is sampled at 30kHz. Then interpolate this so the
+                # length is 50 samples as with Axona
+                waves = waves[:, 26:56, :]
+                waves = self.resample(waves, axis=1)
+                # check the shape of waves to make sure it has 4
+                # channels, if not add some to make it so and make
+                # sure they are in the correct order for the tetrode
+                if waves.shape[-1] != 4:
+                    z = np.zeros(shape=(waves.shape[0], waves.shape[1], 4))
+                    z[:, :, ordered_chans] = waves
+                    waves = z
+                else:
+                    waves = waves[:, :, ordered_chans]
+                # times are in seconds
+                times = model.spike_times[model.spike_clusters == clust]
+
+
 
     def convertSpikeData(self, hdf5_tetrode_data: h5py._hl.group.Group):
         """
@@ -390,7 +469,7 @@ class OE2Axona(object):
 
         header = SetHeader()
         # set some reasonable default values
-        from ephysiopy import __version__
+        from ephysiopy.__about__ import __version__
 
         header.sw_version = __version__
         header.ADC_fullscale_mv = "0.195"
@@ -416,10 +495,9 @@ class OE2Axona(object):
         # instance (self.settings - see __init__)
         # determine which tetrodes we can let Tint load
         # make sure we've parsed the electrodes
-        self.settings.parseSpikeSorter()
-        if self.settings.electrodes:
-            for k, v in self.settings.electrodes.items():
-                header.set_entries["collectMask_" + str(k)] = "1"
+        tetrode_count = int(self.channel_count / 4)
+        for i in range(1, tetrode_count+1):
+            header.set_entries["collectMask_" + str(i)] = "1"
         if self.lfp_channel is not None:
             for chan in self.tetrodes:
                 key = "collectMask_" + str(chan)
@@ -465,16 +543,16 @@ class OE2Axona(object):
                              header: dataclass,
                              data: np.array,
                              eeg_type="eeg"):
-        self.AxonaData.setHeader(self.axona_root_name + "." + eeg_type, header)
-        self.AxonaData.setData(self.axona_root_name + "." + eeg_type, data)
+        self.AxonaData.setHeader(self.axona_root_name.name + "." + eeg_type, header)
+        self.AxonaData.setData(self.axona_root_name.name + "." + eeg_type, data)
 
     def writePos2AxonaFormat(self, header: dataclass, data: np.array):
-        self.AxonaData.setHeader(self.axona_root_name + ".pos", header)
-        self.AxonaData.setData(self.axona_root_name + ".pos", data)
+        self.AxonaData.setHeader(self.axona_root_name.name + ".pos", header)
+        self.AxonaData.setData(self.axona_root_name.name + ".pos", data)
 
     def writeTetrodeData(self, tetnum: str, header: dataclass, data: np.array):
-        self.AxonaData.setHeader(self.axona_root_name + "." + tetnum, header)
-        self.AxonaData.setData(self.axona_root_name + "." + tetnum, data)
+        self.AxonaData.setHeader(self.axona_root_name.name + "." + tetnum, header)
+        self.AxonaData.setData(self.axona_root_name.name + "." + tetnum, data)
 
     def writeSetData(self, header: dataclass):
-        self.AxonaData.setHeader(self.axona_root_name + ".set", header)
+        self.AxonaData.setHeader(self.axona_root_name.name + ".set", header)

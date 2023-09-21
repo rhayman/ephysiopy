@@ -209,7 +209,8 @@ class FigureMaker(object):
         Pearsons correlation and the depth of modulation (dom) - see below for
         details
         """
-        self.initialise()
+        if not self.RateMap:
+            self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
 
         speed = np.ravel(self.PosCalcs.speed)
@@ -238,15 +239,15 @@ class FigureMaker(object):
         ax = fig.add_subplot(111)
         ax.errorbar(spd_bins, mn_rate * self.PosCalcs.sample_rate, yerr=var, color="k")
         ax.set_xlim(spd_bins[0], spd_bins[-1])
-        plt.xticks(
+        ax.set_xticks(
             [spd_bins[0], spd_bins[-1]],
-            ["0", "{:.2g}".format(spd_bins[-1])],
+            labels=["0", "{:.2g}".format(spd_bins[-1])],
             fontweight="normal",
             size=6,
         )
-        plt.yticks(
+        ax.set_yticks(
             [0, np.nanmax(mn_rate) * self.PosCalcs.sample_rate],
-            ["0", "{:.2f}".format(np.nanmax(mn_rate))],
+            labels=["0", "{:.2f}".format(np.nanmax(mn_rate))],
             fontweight="normal",
             size=6,
         )
@@ -256,14 +257,15 @@ class FigureMaker(object):
     def makeSpeedVsHeadDirectionPlot(
         self, spk_times: np.array, ax: matplotlib.axes = None, **kwargs
     ) -> matplotlib.axes:
-        self.initialise()
+        if not self.RateMap:
+            self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         idx = np.array(spk_times_in_pos_samples, dtype=int)
+        w = np.bincount(idx, minlength=self.PosCalcs.speed.shape[0])
         if np.ma.is_masked(self.PosCalcs.speed):
-            w = self.speed.mask
-            w = np.array(~w, dtype=int)
-        else:
-            w = np.bincount(idx, minlength=self.PosCalcs.speed.shape[0])
+            m = self.PosCalcs.speed.mask
+            w[m==True] = 0
+            
         dir_bins = np.arange(0, 360, 6)
         spd_bins = np.arange(0, 30, 1)
         h = np.histogram2d(
@@ -284,9 +286,9 @@ class FigureMaker(object):
         ax.pcolormesh(
             x, y, im.T, cmap=jet_cmap, edgecolors="face", vmax=vmax, shading="auto"
         )
-        plt.xticks([90, 180, 270], fontweight="normal", size=6)
-        plt.yticks([10, 20], fontweight="normal", size=6)
-        plt.xlabel("Heading", fontweight="normal", size=6)
+        ax.set_xticks([90, 180, 270], labels=['90', '180', '270'], fontweight="normal", size=6)
+        ax.set_yticks([10, 20], labels=['10', '20'], fontweight="normal", size=6)
+        ax.set_xlabel("Heading", fontweight="normal", size=6)
         return ax
 
     def makePowerSpectrum(

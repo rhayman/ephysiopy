@@ -850,6 +850,7 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
     def __init__(self, spike_times, waveforms=None, **kwargs):
         super().__init__(spike_times, waveforms, **kwargs)
         self.n_samples = [-40, 41]
+        self.TemplateModel = None
 
     def get_waveforms(
         self,
@@ -872,14 +873,15 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
         """
         # instantiate the TemplateModel - this is used to get the waveforms
         # for the cluster. TemplateModel encapsulates the results of KiloSort
-        template_model = TemplateModel(
-            dir_path=os.path.join(cluster_data.fname_root),
-            sample_rate=3e4,
-            dat_path=os.path.join(cluster_data.fname_root, "continuous.dat"),
-            n_channels_dat=n_channels,
-        )
+        if self.TemplateModel is None:
+            self.TemplateModel = TemplateModel(
+                dir_path=os.path.join(cluster_data.fname_root),
+                sample_rate=3e4,
+                dat_path=os.path.join(cluster_data.fname_root, "continuous.dat"),
+                n_channels_dat=n_channels,
+            )
         # get the waveforms for the given cluster on the best channel only
-        waveforms = template_model.get_cluster_spike_waveforms(cluster)
+        waveforms = self.TemplateModel.get_cluster_spike_waveforms(cluster)
         # get a random subset of the waveforms
         rng = np.random.default_rng()
         total_waveforms = waveforms.shape[0]
