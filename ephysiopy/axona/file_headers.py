@@ -1,6 +1,45 @@
 from dataclasses import dataclass, field, fields
 from abc import ABC
 
+'''
+The only exception to lots of the common headers etc in 
+the Axona file collection is the cut file, dealt with here
+
+When converting data from KiloSort/ OE to Axona format there
+might be a problem with the number of clusters. Axona limits 
+you to 31 (including the 0 cluster), where KS can go into the
+hundreds
+
+If we're dealing with tetrode data though it's unlikely that
+nclusters in reality will go much above 30. It might be 
+necessary to rename the clusters on a per tetrode basis to
+limit the range of cluster values within a tetrode to 0-30
+'''
+
+
+def make_cut_header(n_clusters: int = 31,
+                    n_channels: int = 4,
+                    n_params: int = 2):
+    cut_header = [('n_clusters', n_clusters),
+                  ('n_channels', n_channels),
+                  ('n_params', n_params),
+                  ('times_used_in_Vt', '    0'*n_channels)]
+    return dict(cut_header)
+
+
+def make_cluster_cut_entries(n_clusters: int = 31,
+                             n_channels: int = 4,
+                             n_params: int = 2):
+    n_zeros = n_channels * n_params
+    output = ""
+    for c in range(n_clusters):
+        output = \
+               output + " cluster: " + str(c) + " center:" + "   0"*n_zeros + \
+               "\n" + ' '*15 + "min:" + "   0"*n_zeros + \
+               "\n" + ' '*15 + "max:" + "   0"*n_zeros + "\n"
+    return output
+
+
 common_entries = [
     ('trial_date', None), ('trial_time', None),
     ('experimenter', None), ('comments', None), ('duration', None)
@@ -63,6 +102,11 @@ class PosHeader(AxonaHeader):
     Empty .pos header class for Axona
     '''
     pos: dict = field(default_factory=make_pos_entries)
+
+
+@dataclass
+class CutHeader(AxonaHeader):
+    common: dict = field(default_factory=make_cut_header)
 
 # --------------------- eeg/ egf headers --------------------
 

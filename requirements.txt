@@ -8,5 +8,6 @@ h5py
 phylib
 scikit-learn
 phylib
+tqdm
 pytest
 pytest-mpl

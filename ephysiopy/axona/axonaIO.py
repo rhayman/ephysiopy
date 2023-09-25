@@ -4,6 +4,7 @@ from contextlib import redirect_stdout
 from dataclasses import dataclass
 import numpy as np
 from pathlib import Path
+from ephysiopy.axona.file_headers import make_cluster_cut_entries
 
 
 MAXSPEED = 4.0  # pos data speed filter in m/s
@@ -22,6 +23,8 @@ class IO(object):
 
     tetrode_files = dict.fromkeys(
         ["." + str(i) for i in range(1, 17)],
+        # ts is a big-endian 32-bit integer
+        # waveform is 50 signed 8-bit ints (a signed byte)
         [("ts", ">i"), ("waveform", "50b")]
     )
     other_files = {
@@ -155,6 +158,22 @@ class IO(object):
             f.write("\r\n")
             f.write("data_end")
             f.write("\r\n")
+
+    def setCut(self, filename_root: str,
+               cut_header: dataclass,
+               cut_data: np.array):
+        fpath = Path(filename_root)
+        n_clusters = len(np.unique(cut_data))
+        cluster_entries = make_cluster_cut_entries(n_clusters)
+        with open(filename_root, "w") as f:
+            with redirect_stdout(f):
+                cut_header.print()
+            print(cluster_entries, file=f)
+            print(f"Exact_cut_for: {fpath.stem}    spikes: {len(cut_data)}",
+                  file=f)
+            for num in cut_data:
+                f.write(str(num))
+                f.write(" ")
 
     def setData(self, filename_root: str, data: np.array):
         """

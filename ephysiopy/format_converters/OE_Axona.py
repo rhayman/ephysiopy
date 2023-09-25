@@ -5,11 +5,13 @@ from pathlib import Path
 import h5py
 import numpy as np
 from scipy import signal
+from tqdm.auto import trange
+from tqdm import tqdm
 
 from ephysiopy.axona import axonaIO
-from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.io.recording import OpenEphysBase
 from ephysiopy.openephys2py import OESettings
+from ephysiopy.axona.file_headers import TetrodeHeader, CutHeader
 
 
 class OE2Axona(object):
@@ -80,9 +82,7 @@ class OE2Axona(object):
         self._settings = value
 
     def getOEData(
-            self,
-            filename_root: str,
-            recording_name="recording1") -> dict:
+            self) -> dict:
         """
         Loads the nwb file names in filename_root and returns a dict
         containing some of the nwb data
@@ -95,34 +95,32 @@ class OE2Axona(object):
         default has changed in different versions of OE from 'recording0'
         to 'recording1'
         """
-        if Path(filename_root).exists():
-            OE_data = OpenEphysBase(self.pname)
-            OE_data.load_pos_data()
-            # It's likely that spikes have been collected after the last
-            # position sample
-            # due to buffering issues I can't be bothered to resolve.
-            # Get the last pos
-            # timestamps here and check that spikes don't go beyond
-            #  this when writing data
-            # out later
-            # Also the pos and spike data timestamps almost never start at
-            #  0 as the user
-            # usually acquires data for a while before recording.
-            # Grab the first timestamp
-            # here with a view to subtracting this from everything (including
-            # the spike data)
-            # and figuring out what to keep later
-            first_pos_ts = OE_data.PosCalcs.xyTS[0]
-            last_pos_ts = OE_data.PosCalcs.xyTS[-1]
-            self.first_pos_ts = first_pos_ts
-            self.last_pos_ts = last_pos_ts
-            self.recording_name = recording_name
-            self.OE_data = OE_data
-            # extract number of channels from settings
-            for item in self.settings.record_nodes.items():
-                if "Rhythm Data" in item[1].name:
-                    self.channel_count = int(item[1].channel_count)
-            return OE_data
+        OE_data = OpenEphysBase(self.pname)
+        OE_data.load_pos_data()
+        # It's likely that spikes have been collected after the last
+        # position sample
+        # due to buffering issues I can't be bothered to resolve.
+        # Get the last pos
+        # timestamps here and check that spikes don't go beyond
+        #  this when writing data
+        # out later
+        # Also the pos and spike data timestamps almost never start at
+        #  0 as the user
+        # usually acquires data for a while before recording.
+        # Grab the first timestamp
+        # here with a view to subtracting this from everything (including
+        # the spike data)
+        # and figuring out what to keep later
+        first_pos_ts = OE_data.PosCalcs.xyTS[0]
+        last_pos_ts = OE_data.PosCalcs.xyTS[-1]
+        self.first_pos_ts = first_pos_ts
+        self.last_pos_ts = last_pos_ts
+        self.OE_data = OE_data
+        # extract number of channels from settings
+        for item in self.settings.record_nodes.items():
+            if "Rhythm Data" in item[1].name:
+                self.channel_count = int(item[1].channel_count)
+        return OE_data
 
     def exportSetFile(self, **kwargs):
         """
@@ -198,7 +196,9 @@ class OE2Axona(object):
         )
         print("Completed exporting spiking data")
 
-    def exportLFP(self, channel: int=0, lfp_type: str='eeg', gain: int=5000):
+    def exportLFP(self, channel: int = 0,
+                  lfp_type: str = 'eeg',
+                  gain: int = 5000):
         """
         Export LFP data to file
 
@@ -257,7 +257,9 @@ class OE2Axona(object):
         new_data["pos"] = new_pos
         return new_data
 
-    def convertTemplateDataToAxonaTetrode(self, max_n_waves=2000, **kwargs):
+    def convertTemplateDataToAxonaTetrode(self,
+                                          max_n_waves=2000,
+                                          **kwargs) -> list:
         '''
         Converts the data held in a TemplateModel instance into tetrode
         format Axona data files
@@ -288,16 +290,23 @@ class OE2Axona(object):
         1) https://phy.readthedocs.io/en/latest/api/#phyappstemplatetemplatemodel)
 
         '''
-        self.OE_data.load_neural_data()  # loads the TemplateModel
+        # First lets get the datatype for tetrode files as this will be the
+        # same for all tetrodes...
+        dt = self.AxonaData.axona_files[".1"]
+        # Load the TemplateModel
+        self.OE_data.load_neural_data()
         model = self.OE_data.template_model
         clusts = model.cluster_ids
         clust_channels = model.clusters_channels
 
-        for i_tet in range(0, self.channel_count, 4):
+        for i_tet in trange(0, self.channel_count, 4, desc="Tetrode"):
             i_tet_clusts = [cl for cl in clusts
                             if clust_channels[cl] < i_tet+4
                             and clust_channels[cl] > i_tet]
-            for clust in i_tet_clusts:
+            times_to_sort = []
+            new_clusters = []
+            new_waves = []
+            for clust in tqdm(i_tet_clusts, desc="Cluster"):
                 clust_chans = model.get_cluster_channels(clust)
                 idx = np.logical_and(clust_chans >= i_tet,
                                      clust_chans < i_tet+4)
@@ -314,15 +323,26 @@ class OE2Axona(object):
                 total_n_waves = len(spike_idx)
                 max_n_waves = max_n_waves if max_n_waves < total_n_waves else \
                     total_n_waves
-                spike_idx_subset = rng.choice(
-                    spike_idx, max_n_waves, replace=False)
+                # grab spike times (in seconds) so the random sampling of
+                # spikes matches their times
+                times = model.spike_times[model.spike_clusters == clust]
+                spike_idx_times_subset = rng.choice(
+                    (spike_idx, times), max_n_waves, axis=1, replace=False)
+                # spike_idx_times_subset is unsorted as it's just been drawn
+                # from a random distribution, so sort it now
+                spike_idx_times_subset = np.sort(spike_idx_times_subset, 1)
+                # split out into spikes and times
+                spike_idx_subset = spike_idx_times_subset[0, :].astype(int)
+                times = spike_idx_times_subset[1, :]
                 ordered_chans = np.argsort(clust_chans[idx])
                 waves = model.get_waveforms(spike_idx_subset, ordered_chans)
-                # Take the central 30 samples which corresponds to a 1ms sample
-                # if the data is sampled at 30kHz. Then interpolate this so the
+                # Given a spike at time T, Axona takes T-200us and T+800us
+                # from the buffer to make up a waveform. From OE
+                # take 30 samples which corresponds to a 1ms sample 
+                # if the data is sampled at 30kHz. Interpolate this so the
                 # length is 50 samples as with Axona
-                waves = waves[:, 26:56, :]
-                # note that waves go from int16 to float as a result of the resampling here
+                waves = waves[:, 30:60, :]
+                # waves go from int16 to float as a result of the resampling
                 waves = self.resample(waves.astype(float), axis=1)
                 # multiply by bitvolts to get microvolts
                 waves = waves * self.bitvolts
@@ -340,11 +360,42 @@ class OE2Axona(object):
                     waves = waves[:, :, ordered_chans]
                 # Axona format tetrode waveforms are nSpikes x 4 x 50
                 waves = np.transpose(waves, (0, 2, 1))
-                # times are in seconds
-                times = model.spike_times[model.spike_clusters == clust]
-                # Axona format times are in sampled at 96kHz
+                # Append clusters to a list to sort later for saving a
+                # cluster/ cut file
+                new_clusters.append(np.repeat(clust, len(times)))
+                # Axona times are sampled at 96KHz
+                times = times * 96000
+                # There is a time for each spike despite the repetition
+                # get the indices for sorting
+                times_to_sort.append(times)
+                # i_clust_data = np.zeros(len(new_times), dtype=dt)
+                new_waves.append(waves)
+            # Concatenate, order and reshape some of the lists/ arrays
+            _times = np.concatenate(times_to_sort)
+            _waves = np.concatenate(new_waves)
+            _clusters = np.concatenate(new_clusters)
+            indices = np.argsort(_times)
+            sorted_times = _times[indices]
+            sorted_waves = _waves[indices]
+            sorted_clusts = _clusters[indices]
+            output_times = np.repeat(sorted_times, 4)
+            output_waves = np.reshape(sorted_waves, [
+                sorted_waves.shape[0] * sorted_waves.shape[1],
+                sorted_waves.shape[2]
+            ])
+            new_tetrode_data = np.zeros(len(output_times), dtype=dt)
+            new_tetrode_data["ts"] = output_times
+            new_tetrode_data["waveform"] = output_waves
+            header = TetrodeHeader()
+            header.common["duration"] = str(int(model.duration))
+            header.tetrode_entries["num_spikes"] = str(
+                len(_clusters))
+            i_tetnum = str(i_tet + 1)
+            self.writeTetrodeData(i_tetnum, header, new_tetrode_data)
+            cut_header = CutHeader()
+            self.writeCutData(i_tetnum, cut_header, sorted_clusts)
 
-
+        return sorted_clusts
 
     def convertSpikeData(self, hdf5_tetrode_data: h5py._hl.group.Group):
         """
@@ -363,8 +414,6 @@ class OE2Axona(object):
         dt = self.AxonaData.axona_files[".1"]
         # ... and a basic header for the tetrode file that use for each
         # tetrode file, changing only the num_spikes value
-        from ephysiopy.axona.file_headers import TetrodeHeader
-
         header = TetrodeHeader()
         header.common["duration"] = str(
             int(self.last_pos_ts - self.first_pos_ts))
@@ -566,3 +615,7 @@ class OE2Axona(object):
 
     def writeSetData(self, header: dataclass):
         self.AxonaData.setHeader(self.axona_root_name.name + ".set", header)
+
+    def writeCutData(self, tetnum: str, header: dataclass, data: np.array):
+        self.AxonaData.setCut(self.axona_root_name.name + "_" + str(tetnum) + ".cut",
+                              header, data)
