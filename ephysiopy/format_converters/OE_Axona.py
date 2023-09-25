@@ -4,11 +4,12 @@ from pathlib import Path
 
 import h5py
 import numpy as np
-from ephysiopy.common.ephys_generic import PosCalcsGeneric
-from ephysiopy.axona import axonaIO
-from ephysiopy.openephys2py import OESettings
-from ephysiopy.io.recording import OpenEphysBase
 from scipy import signal
+
+from ephysiopy.axona import axonaIO
+from ephysiopy.common.ephys_generic import PosCalcsGeneric
+from ephysiopy.io.recording import OpenEphysBase
+from ephysiopy.openephys2py import OESettings
 
 
 class OE2Axona(object):
@@ -321,7 +322,13 @@ class OE2Axona(object):
                 # if the data is sampled at 30kHz. Then interpolate this so the
                 # length is 50 samples as with Axona
                 waves = waves[:, 26:56, :]
-                waves = self.resample(waves, axis=1)
+                # note that waves go from int16 to float as a result of the resampling here
+                waves = self.resample(waves.astype(float), axis=1)
+                # multiply by bitvolts to get microvolts
+                waves = waves * self.bitvolts
+                # scale appropriately for Axona and invert as
+                # OE seems to be inverted wrt Axona
+                waves = waves / (self.hp_gain / 4 / 128.0) * (-1)
                 # check the shape of waves to make sure it has 4
                 # channels, if not add some to make it so and make
                 # sure they are in the correct order for the tetrode
@@ -331,8 +338,11 @@ class OE2Axona(object):
                     waves = z
                 else:
                     waves = waves[:, :, ordered_chans]
+                # Axona format tetrode waveforms are nSpikes x 4 x 50
+                waves = np.transpose(waves, (0, 2, 1))
                 # times are in seconds
                 times = model.spike_times[model.spike_clusters == clust]
+                # Axona format times are in sampled at 96kHz
 
 
 
