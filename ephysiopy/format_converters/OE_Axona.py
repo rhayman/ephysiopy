@@ -29,14 +29,14 @@ class OE2Axona(object):
         assert pname.exists()
         self.pname = pname
         # 'experiment_1.nwb'
-        self.experiment_name = Path('experiment_1') or Path(kwargs['experiment_name'])
+        self.experiment_name = self.pname or Path(kwargs['experiment_name'])
         self.recording_name = None  # will become 'recording1' etc
         self.OE_data = None  # becomes instance of io.recording.OpenEphysBase
         self._settings = None  # will become an instance of OESettings.Settings
         # Create a basename for Axona file names
         # e.g.'/home/robin/Data/experiment_1'
         # that we can append '.pos' or '.eeg' or whatever onto
-        self.axona_root_name = self.pname / self.experiment_name
+        self.axona_root_name = self.experiment_name
         # need to instantiated now for later
         self.AxonaData = axonaIO.IO(self.axona_root_name.name + ".pos")
         # THIS IS TEMPORARY AND WILL BE MORE USER-SPECIFIABLE IN THE FUTURE
@@ -51,7 +51,7 @@ class OE2Axona(object):
         # if lfp_channel is set to None then the .set file will reflect that
         #  no EEG was recorded
         # this should mean that you can load data into Tint without a .eeg file
-        self.lfp_channel = 1
+        self.lfp_channel = 1 or kwargs["lfp_channel"]
         self.lfp_lowcut = None
         self.lfp_highcut = None
         # set the tetrodes to record from
@@ -130,7 +130,7 @@ class OE2Axona(object):
         self.makeSetData(kwargs)
         print("Done exporting set file.")
 
-    def exportPos(self, ppm=300, jumpmax=100, as_text=False):
+    def exportPos(self, ppm=300, jumpmax=100, as_text=False, **kwargs):
         #
         # Step 1) Deal with the position data first:
         #
@@ -145,6 +145,10 @@ class OE2Axona(object):
             self.OE_data.PosCalcs.tracker_params)
         xy = self.OE_data.PosCalcs.xy.T
         xyTS = self.OE_data.PosCalcs.xyTS
+        # extract some values from PosCalcs or overrides given
+        # when calling this method
+        ppm = self.OE_data.PosCalcs.ppm or ppm
+        sample_rate = self.OE_data.PosCalcs.sample_rate or kwargs["sample_rate"]
         if as_text is True:
             print("Beginning export of position data to text format...")
             pos_file_name = self.axona_root_name + ".txt"
@@ -165,16 +169,16 @@ class OE2Axona(object):
         tracker_params = self.OE_data.PosCalcs.tracker_params
         min_xy = np.floor(np.min(xy, 0)).astype(int).data
         max_xy = np.ceil(np.max(xy, 0)).astype(int).data
-        pos_header.pos["min_x"] = str(
+        pos_header.pos["min_x"] = pos_header.pos["window_min_x"] = str(
             tracker_params["LeftBorder"]) if "LeftBorder" in \
             tracker_params.keys() else str(min_xy[0])
-        pos_header.pos["min_y"] = str(
+        pos_header.pos["min_y"] = pos_header.pos["window_min_y"] = str(
             tracker_params["TopBorder"]) if "TopBorder" in \
             tracker_params.keys() else str(max_xy[1])
-        pos_header.pos["max_x"] = str(
+        pos_header.pos["max_x"] = pos_header.pos["window_max_x"] = str(
             tracker_params["RightBorder"]) if "RightBorder" in \
             tracker_params.keys() else str(max_xy[0])
-        pos_header.pos["max_y"] = str(
+        pos_header.pos["max_y"] = pos_header.pos["window_max_y"] = str(
             tracker_params["BottomBorder"]) if "BottomBorder" in \
             tracker_params.keys() else str(min_xy[1])
         pos_header.common["duration"] = str(
@@ -182,6 +186,7 @@ class OE2Axona(object):
         pos_header.pos["pixels_per_metre"] = str(ppm)
         pos_header.pos["num_pos_samples"] = str(len(axona_pos_data))
         pos_header.pos["pixels_per_metre"] = str(ppm)
+        pos_header.pos["sample_rate"] = str(sample_rate)
 
         self.writePos2AxonaFormat(pos_header, axona_pos_data)
         print("Exported position data to Axona format")
@@ -259,7 +264,7 @@ class OE2Axona(object):
 
     def convertTemplateDataToAxonaTetrode(self,
                                           max_n_waves=2000,
-                                          **kwargs) -> list:
+                                          **kwargs):
         '''
         Converts the data held in a TemplateModel instance into tetrode
         format Axona data files
@@ -298,15 +303,19 @@ class OE2Axona(object):
         model = self.OE_data.template_model
         clusts = model.cluster_ids
         clust_channels = model.clusters_channels
+        # limit the number of spikes to max_n_waves in the
+        # interests of speed. Randomly select spikes across
+        # the period they fire
+        rng = np.random.default_rng()
 
-        for i_tet in trange(0, self.channel_count, 4, desc="Tetrode"):
+        for i, i_tet in enumerate(range(0, self.channel_count, 4)):
             i_tet_clusts = [cl for cl in clusts
                             if clust_channels[cl] < i_tet+4
-                            and clust_channels[cl] > i_tet]
+                            and clust_channels[cl] >= i_tet]
             times_to_sort = []
             new_clusters = []
             new_waves = []
-            for clust in tqdm(i_tet_clusts, desc="Cluster"):
+            for clust in tqdm(i_tet_clusts, desc="Tetrode " + str(i+1)):
                 clust_chans = model.get_cluster_channels(clust)
                 idx = np.logical_and(clust_chans >= i_tet,
                                      clust_chans < i_tet+4)
@@ -319,23 +328,22 @@ class OE2Axona(object):
                 # limit the number of spikes to max_n_waves in the
                 # interests of speed. Randomly select spikes across
                 # the period they fire
-                rng = np.random.default_rng()
                 total_n_waves = len(spike_idx)
-                max_n_waves = max_n_waves if max_n_waves < total_n_waves else \
+                max_num_waves = max_n_waves if max_n_waves < \
+                    total_n_waves else \
                     total_n_waves
                 # grab spike times (in seconds) so the random sampling of
                 # spikes matches their times
                 times = model.spike_times[model.spike_clusters == clust]
                 spike_idx_times_subset = rng.choice(
-                    (spike_idx, times), max_n_waves, axis=1, replace=False)
+                    (spike_idx, times), max_num_waves, axis=1, replace=False)
                 # spike_idx_times_subset is unsorted as it's just been drawn
                 # from a random distribution, so sort it now
                 spike_idx_times_subset = np.sort(spike_idx_times_subset, 1)
                 # split out into spikes and times
                 spike_idx_subset = spike_idx_times_subset[0, :].astype(int)
                 times = spike_idx_times_subset[1, :]
-                ordered_chans = np.argsort(clust_chans[idx])
-                waves = model.get_waveforms(spike_idx_subset, ordered_chans)
+                waves = model.get_waveforms(spike_idx_subset, clust_chans[idx])
                 # Given a spike at time T, Axona takes T-200us and T+800us
                 # from the buffer to make up a waveform. From OE
                 # take 30 samples which corresponds to a 1ms sample 
@@ -352,6 +360,7 @@ class OE2Axona(object):
                 # check the shape of waves to make sure it has 4
                 # channels, if not add some to make it so and make
                 # sure they are in the correct order for the tetrode
+                ordered_chans = np.argsort(clust_chans[idx])
                 if waves.shape[-1] != 4:
                     z = np.zeros(shape=(waves.shape[0], waves.shape[1], 4))
                     z[:, :, ordered_chans] = waves
@@ -371,31 +380,29 @@ class OE2Axona(object):
                 # i_clust_data = np.zeros(len(new_times), dtype=dt)
                 new_waves.append(waves)
             # Concatenate, order and reshape some of the lists/ arrays
-            _times = np.concatenate(times_to_sort)
-            _waves = np.concatenate(new_waves)
-            _clusters = np.concatenate(new_clusters)
-            indices = np.argsort(_times)
-            sorted_times = _times[indices]
-            sorted_waves = _waves[indices]
-            sorted_clusts = _clusters[indices]
-            output_times = np.repeat(sorted_times, 4)
-            output_waves = np.reshape(sorted_waves, [
-                sorted_waves.shape[0] * sorted_waves.shape[1],
-                sorted_waves.shape[2]
-            ])
-            new_tetrode_data = np.zeros(len(output_times), dtype=dt)
-            new_tetrode_data["ts"] = output_times
-            new_tetrode_data["waveform"] = output_waves
-            header = TetrodeHeader()
-            header.common["duration"] = str(int(model.duration))
-            header.tetrode_entries["num_spikes"] = str(
-                len(_clusters))
-            i_tetnum = str(i_tet + 1)
-            self.writeTetrodeData(i_tetnum, header, new_tetrode_data)
-            cut_header = CutHeader()
-            self.writeCutData(i_tetnum, cut_header, sorted_clusts)
-
-        return sorted_clusts
+            if times_to_sort:  # apparently can be empty sometimes
+                _times = np.concatenate(times_to_sort)
+                _waves = np.concatenate(new_waves)
+                _clusters = np.concatenate(new_clusters)
+                indices = np.argsort(_times)
+                sorted_times = _times[indices]
+                sorted_waves = _waves[indices]
+                sorted_clusts = _clusters[indices]
+                output_times = np.repeat(sorted_times, 4)
+                output_waves = np.reshape(sorted_waves, [
+                    sorted_waves.shape[0] * sorted_waves.shape[1],
+                    sorted_waves.shape[2]
+                ])
+                new_tetrode_data = np.zeros(len(output_times), dtype=dt)
+                new_tetrode_data["ts"] = output_times
+                new_tetrode_data["waveform"] = output_waves
+                header = TetrodeHeader()
+                header.common["duration"] = str(int(model.duration))
+                header.tetrode_entries["num_spikes"] = str(
+                    len(_clusters))
+                self.writeTetrodeData(str(i+1), header, new_tetrode_data)
+                cut_header = CutHeader()
+                self.writeCutData(str(i+1), cut_header, sorted_clusts)
 
     def convertSpikeData(self, hdf5_tetrode_data: h5py._hl.group.Group):
         """
@@ -530,9 +537,15 @@ class OE2Axona(object):
         # set some reasonable default values
         from ephysiopy.__about__ import __version__
 
-        header.sw_version = __version__
-        header.ADC_fullscale_mv = "0.195"
-        header.tracker_version = "1.1.0"
+        header.meta_info["sw_version"] = str(__version__)
+        # ADC fullscale mv is 1500 in Axona and 0.195 in OE
+        # there is a division by 1000 that happens when processing
+        # spike data in Axona that looks like that has already
+        # happened in OE. So here the OE 0.195 value is multiplied
+        # by 1000 as it will get divided by 1000 later on to get
+        # the correct scaling of waveforms/ gains -> mv values
+        header.meta_info["ADC_fullscale_mv"] = "195"
+        header.meta_info["tracker_version"] = "1.1.0"
 
         for k, v in header.set_entries.items():
             if "gain" in k:
@@ -602,20 +615,20 @@ class OE2Axona(object):
                              header: dataclass,
                              data: np.array,
                              eeg_type="eeg"):
-        self.AxonaData.setHeader(self.axona_root_name.name + "." + eeg_type, header)
-        self.AxonaData.setData(self.axona_root_name.name + "." + eeg_type, data)
+        self.AxonaData.setHeader(str(self.axona_root_name) + "." + eeg_type, header)
+        self.AxonaData.setData(str(self.axona_root_name) + "." + eeg_type, data)
 
     def writePos2AxonaFormat(self, header: dataclass, data: np.array):
-        self.AxonaData.setHeader(self.axona_root_name.name + ".pos", header)
-        self.AxonaData.setData(self.axona_root_name.name + ".pos", data)
+        self.AxonaData.setHeader(str(self.axona_root_name) + ".pos", header)
+        self.AxonaData.setData(str(self.axona_root_name) + ".pos", data)
 
-    def writeTetrodeData(self, tetnum: str, header: dataclass, data: np.array):
-        self.AxonaData.setHeader(self.axona_root_name.name + "." + tetnum, header)
-        self.AxonaData.setData(self.axona_root_name.name + "." + tetnum, data)
+    def writeTetrodeData(self, itet: str, header: dataclass, data: np.array):
+        self.AxonaData.setHeader(str(self.axona_root_name) + "." + itet, header)
+        self.AxonaData.setData(str(self.axona_root_name) + "." + itet, data)
 
     def writeSetData(self, header: dataclass):
-        self.AxonaData.setHeader(self.axona_root_name.name + ".set", header)
+        self.AxonaData.setHeader(str(self.axona_root_name) + ".set", header)
 
-    def writeCutData(self, tetnum: str, header: dataclass, data: np.array):
-        self.AxonaData.setCut(self.axona_root_name.name + "_" + str(tetnum) + ".cut",
+    def writeCutData(self, itet: str, header: dataclass, data: np.array):
+        self.AxonaData.setCut(str(self.axona_root_name) + "_" + str(itet) + ".cut",
                               header, data)

@@ -289,7 +289,9 @@ class AxonaTrial(TrialInterface):
         pname = Path(pname)
         super().__init__(pname, **kwargs)
         self._settings = None
-        self.TETRODE = TetrodeDict(self.pname, volts=True)
+        use_volts = kwargs.get("volts", True)
+        self.TETRODE = TetrodeDict(
+            str(self.pname.with_suffix("")), volts=use_volts)
         self.load_settings()
 
     def load_lfp(self, *args, **kwargs):
@@ -304,7 +306,8 @@ class AxonaTrial(TrialInterface):
 
     def load_neural_data(self, *args, **kwargs):
         if "tetrode" in kwargs.keys():
-            self.TETRODE[kwargs["tetrode"]]  # lazy load
+            use_volts = kwargs.get("volts", True)
+            self.TETRODE[kwargs["tetrode"], use_volts]  # lazy load
 
     def load_cluster_data(self, *args, **kwargs):
         return False

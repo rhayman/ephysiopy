@@ -6,6 +6,7 @@ class TetrodeDict(dict):
         self.filename_root = filename_root
         self.valid_keys = range(1, 33)
         self.update(*args, **kwargs)
+        self.use_volts = kwargs.get("volts", True)
 
     def update(self, *args, **kwargs):
         for k, v in dict(*args, **kwargs).items():
@@ -20,7 +21,7 @@ class TetrodeDict(dict):
                 if key in self.valid_keys:
                     try:
                         val = axonaIO.Tetrode(
-                            self.filename_root, key, volts=True)
+                            self.filename_root, key, volts=self.use_volts)
                         self[key] = val
                         return val
                     except Exception:

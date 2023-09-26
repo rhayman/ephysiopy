@@ -88,6 +88,7 @@ class RateMap(object):
         self.dir = hdir
         self.speed = speed
         self._pos_weights = pos_weights
+        self._spike_weights = None
         self._ppm = ppm  # pixels per metre
         self._binsize = binsize
         self._inCms = xyInCms
@@ -232,6 +233,14 @@ class RateMap(object):
         self._pos_weights = value
 
     @property
+    def spike_weights(self):
+        return self._spike_weights
+    
+    @spike_weights.setter
+    def spike_weights(self, value):
+        self._spike_weights = value
+
+    @property
     def binsize(self):
         # The number of cms per bin of the binned up map
         return self._binsize
@@ -353,6 +362,7 @@ class RateMap(object):
         assert sample is not None
 
         self.var2Bin = varType
+        self._spike_weights = spkWeights
         self._calcBinEdges(self.binsize)
 
         binned_pos, binned_pos_edges = self._binData(

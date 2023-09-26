@@ -495,12 +495,20 @@ def make_set_entries():
         **_entries_groups}
 
 
+set_meta_info = [
+    ("sw_version", None),
+    ("ADC_fullscale_mv", None),
+    ("tracker_version", None),
+    ("stim_version", None),
+    ("audio_version", None),
+]
+
+
+def make_set_meta():
+    return dict(set_meta_info)
+
+
 @dataclass
 class SetHeader(AxonaHeader):
-    sw_version: str = None
-    ADC_fullscale_mv: str = None
-    tracker_version: str = None
-    stim_version: str = None
-    audio_version: str = None
-
+    meta_info: dict = field(default_factory=make_set_meta)
     set_entries: dict = field(default_factory=make_set_entries)

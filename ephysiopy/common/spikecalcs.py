@@ -774,6 +774,7 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
 
     def plotClusterSpace(self, waveforms, param="Amp", clusts=None, bins=256, **kwargs):
         """
+        Assumes the waveform data is signed 8-bit ints
         TODO: aspect of plot boxes in ImageGrid not right as scaled by range of
         values now
         """
@@ -799,11 +800,8 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
             fig = kwargs["fig"]
         else:
             fig = plt.figure(figsize=(8, 6))
-        grid = ImageGrid(fig, 111, nrows_ncols=(2, 3), axes_pad=0.1, aspect=False)
-        if "Amp" in param:
-            myRange = np.vstack((self.scaling * 0, self.scaling * 2))
-        else:
-            myRange = None
+        grid = ImageGrid(fig, 111, nrows_ncols=(2, 3),
+                         axes_pad=0.1, aspect=False)
         clustCMap0 = np.tile(tcols[0], (bins, 1))
         clustCMap0[0] = (1, 1, 1)
         clustCMap0 = colors.ListedColormap(clustCMap0)
@@ -811,14 +809,16 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         clustCMap0._lut[:, -1] = alpha_vals
         for i, c in enumerate(cmb):
             h, ye, xe = np.histogram2d(
-                amps[:, c[0]], amps[:, c[1]], range=myRange[:, c].T, bins=bins
+                amps[:, c[0]], amps[:, c[1]],
+                range=((-128, 127), (-128, 127)), bins=bins
             )
             x, y = np.meshgrid(xe[0:-1], ye[0:-1])
             grid[i].pcolormesh(
                 x, y, h, cmap=clustCMap0, shading="nearest", edgecolors="face"
             )
             h, ye, xe = np.histogram2d(
-                amps[:, c[0]], amps[:, c[1]], range=myRange[:, c].T, bins=bins
+                amps[:, c[0]], amps[:, c[1]],
+                range=((-128, 127), (-128, 127)), bins=bins
             )
             clustCMap = np.tile(tcols[1], (bins, 1))
             clustCMap[0] = (1, 1, 1)
