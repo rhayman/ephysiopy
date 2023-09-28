@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from collections import OrderedDict
 
 import h5py
 import numpy as np
@@ -96,25 +97,30 @@ class OE2Axona(object):
         to 'recording1'
         """
         OE_data = OpenEphysBase(self.pname)
-        OE_data.load_pos_data()
-        # It's likely that spikes have been collected after the last
-        # position sample
-        # due to buffering issues I can't be bothered to resolve.
-        # Get the last pos
-        # timestamps here and check that spikes don't go beyond
-        #  this when writing data
-        # out later
-        # Also the pos and spike data timestamps almost never start at
-        #  0 as the user
-        # usually acquires data for a while before recording.
-        # Grab the first timestamp
-        # here with a view to subtracting this from everything (including
-        # the spike data)
-        # and figuring out what to keep later
-        first_pos_ts = OE_data.PosCalcs.xyTS[0]
-        last_pos_ts = OE_data.PosCalcs.xyTS[-1]
-        self.first_pos_ts = first_pos_ts
-        self.last_pos_ts = last_pos_ts
+        try:
+            OE_data.load_pos_data()
+            # It's likely that spikes have been collected after the last
+            # position sample
+            # due to buffering issues I can't be bothered to resolve.
+            # Get the last pos
+            # timestamps here and check that spikes don't go beyond
+            #  this when writing data
+            # out later
+            # Also the pos and spike data timestamps almost never start at
+            #  0 as the user
+            # usually acquires data for a while before recording.
+            # Grab the first timestamp
+            # here with a view to subtracting this from everything (including
+            # the spike data)
+            # and figuring out what to keep later
+            first_pos_ts = OE_data.PosCalcs.xyTS[0]
+            last_pos_ts = OE_data.PosCalcs.xyTS[-1]
+            self.first_pos_ts = first_pos_ts
+            self.last_pos_ts = last_pos_ts
+        except Exception:
+            OE_data.load_neural_data()  # will create TemplateModel instance
+            self.first_pos_ts = 0
+            self.last_pos_ts = self.OE_data.template_model.duration
         self.OE_data = OE_data
         # extract number of channels from settings
         for item in self.settings.record_nodes.items():
@@ -302,23 +308,34 @@ class OE2Axona(object):
         self.OE_data.load_neural_data()
         model = self.OE_data.template_model
         clusts = model.cluster_ids
-        clust_channels = model.clusters_channels
+        # have to pre-process the channels / clusters to determine
+        # which tetrodes clusters belong to - this is based on
+        # the 'best' channel for a given cluster
+        clusters_channels = OrderedDict(dict.fromkeys(clusts, np.ndarray))
+        for c in clusts:
+            clusters_channels[c] = model.get_cluster_channels(c)
+        tetrodes_clusters = OrderedDict(dict.fromkeys(
+            range(0, int(self.channel_count/4)), []))
+        for t in tetrodes_clusters.items():
+            this_tetrodes_clusters = []
+            for c in clusters_channels.items():
+                if int(c[1][0]/4) == t[0]:
+                    this_tetrodes_clusters.append(c[0])
+            tetrodes_clusters[t[0]] = this_tetrodes_clusters
         # limit the number of spikes to max_n_waves in the
         # interests of speed. Randomly select spikes across
         # the period they fire
         rng = np.random.default_rng()
 
-        for i, i_tet in enumerate(range(0, self.channel_count, 4)):
-            i_tet_clusts = [cl for cl in clusts
-                            if clust_channels[cl] < i_tet+4
-                            and clust_channels[cl] >= i_tet]
+        for i, i_tet_item in enumerate(tetrodes_clusters.items()):
+            this_tetrode = i_tet_item[0]
             times_to_sort = []
             new_clusters = []
             new_waves = []
-            for clust in tqdm(i_tet_clusts, desc="Tetrode " + str(i+1)):
+            for clust in tqdm(i_tet_item[1], desc="Tetrode " + str(i+1)):
                 clust_chans = model.get_cluster_channels(clust)
-                idx = np.logical_and(clust_chans >= i_tet,
-                                     clust_chans < i_tet+4)
+                idx = np.logical_and(clust_chans >= this_tetrode,
+                                     clust_chans < this_tetrode+4)
                 # clust_chans is an ordered list of the channels
                 # the cluster was most active on. idx has True
                 # where there is overlap between that and the
