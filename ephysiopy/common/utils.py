@@ -2,6 +2,36 @@ import numpy as np
 from astropy.convolution import convolve
 
 
+def get_z_score(x: np.ndarray,
+                mean=None,
+                sd=None,
+                axis=0) -> np.ndarray:
+    '''
+    Calculate the z-scores for array x based on the mean
+    and standard deviation in that sample, unless stated
+    '''
+    if mean is None:
+        mean = np.mean(x, axis=axis)
+    if sd is None:
+        sd = np.std(x, axis=axis)
+    return (x - mean) / sd
+
+
+def mean_norm(x: np.ndarray, mn=None, axis=0) -> np.ndarray:
+    if mn is None:
+        mn = np.mean(x, axis)
+    x = (x - mn) / (np.max(x, axis) - np.min(x, axis))
+    return x
+
+
+def min_max_norm(x: np.ndarray, min=None, max=None, axis=0) -> np.ndarray:
+    if min is None:
+        min = np.min(x, axis)
+    if max is None:
+        max = np.max(x, axis)
+    return (x - min) / (max - min)
+
+
 def smooth(x, window_len=9, window='hanning'):
     """
     Smooth the data using a window with requested size.

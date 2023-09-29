@@ -1,5 +1,6 @@
 import fnmatch
 import os
+import re
 from contextlib import redirect_stdout
 from dataclasses import dataclass
 import numpy as np
@@ -567,7 +568,7 @@ class Stim(dict, IO):
         filename_root = Path(os.path.splitext(filename_root)[0])
         self.filename_root = filename_root
         stmData = self.getData(filename_root.with_suffix(".stm"))
-        self.__setitem__("ttl_timestamps", stmData["ts"])
+        self.__setitem__("ttl_timestamps", stmData["ts"])  # already in ms
         stmHdr = self.getHeader(filename_root.with_suffix(".stm"))
         for k, v in stmHdr.items():
             self.__setitem__(k, v)
@@ -579,7 +580,7 @@ class Stim(dict, IO):
         setHdr = self.getHeader(filename_root.with_suffix(".set"))
         stim_duration = [setHdr[k] for k in setHdr.keys() if 'stim_pwidth' in k][0]
         stim_duration = int(stim_duration)
-        stim_duration = stim_duration / self.timebase # in ms now
+        stim_duration = stim_duration / self.timebase  # in ms now
         self.__setitem__('stim_duration', stim_duration)
 
     def update(self, *args, **kwargs):
@@ -593,29 +594,33 @@ class Stim(dict, IO):
     def __setitem__(self, key, val):
         dict.__setitem__(self, key, val)
 
-    def getTS(self):
-        """
-        Gets the timestamps of the on events
-        """
-        return self["ttl_timestamps"] / int(self.timebase / 1000)  # in ms
 
-    def getPosIdx(self):
-        """
-        Gets the position indices of the on events
-        """
-        scale = self.timebase / getattr(self, "posSampRate", 50)
-        return self["ttl_timestamps"] / scale
+class ClusterSession(object):
+    '''
+    Loads all the cut file data and timestamps from the data 
+    associated with the *.set filename given to __init__
 
-    def getEEGIdx(self):
-        """
-        Gets the EEG indices of the on events
-        """
-        scale = self.timebase / getattr(self, "eegSampRate", 250)
-        return (self["ttl_timestamps"] / scale).astype(int)
+    Meant to be a method-replica of the KiloSortSession class
+    but really both should inherit from the same meta-class
+    '''
+    def __init__(self, fname_root) -> None:
+        fname_root = Path(fname_root)
+        assert fname_root.suffix == ".set"
+        assert fname_root.exists()
+        self.fname_root = fname_root
 
-    def getEGFIdx(self):
-        """
-        Gets the EGF indices of the on events
-        """
-        scale = self.timebase / getattr(self, "egfSampRate", 4800)
-        return (self["ttl_timestamps"] / scale).astype(int)
+        self.cluster_id = None
+        self.spk_clusters = None
+        self.spk_times = None
+        self.good_clusters = []
+
+    def load(self):
+        pname = self.fname_root.parent
+        pattern = re.compile(r'^'+str(self.fname_root.with_suffix(""))+r'.*[1-9][0-9]$')
+        pattern1 = re.compile(r'^'+str(self.fname_root.with_suffix(""))+r'.*[1-9]$')
+        tetrode_files = sorted(list(f for f in pname.iterdir()
+             if pattern.search(str(f)) or pattern1.search(str(f))))
+        # load each tetrode file and the cut and save
+        for t, c in zip(tetrode_files, cut_files):
+            T = Tetrode(self.fname_root / Path(t))
+            C = 

@@ -7,6 +7,7 @@ import matplotlib.pylab as plt
 import numpy as np
 from phylib.io.model import TemplateModel
 from scipy import signal, stats
+from ephysiopy.common.utils import smooth, min_max_norm
 
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 
@@ -354,7 +355,8 @@ class SpikeCalcsGeneric(object):
             y.extend(np.repeat(i, len(tmp)))
         return x, y
 
-    def calculatePSCH(self, cluster_id: int, bin_width_secs: float) -> np.ndarray:
+    def calculatePSCH(
+            self, cluster_id: int, bin_width_secs: float) -> np.ndarray:
         """
         Calculate the peri-stimulus *count* histogram of a cells spiking
         against event times
@@ -392,6 +394,70 @@ class SpikeCalcsGeneric(object):
             counts = np.bincount(indices, minlength=len(bins))
             result[:, i] = counts[1:]
         return result
+    
+    def respondsToStimulus(self, cluster: int,
+                           threshold: float,
+                           min_contiguous: int,
+                           return_activity: bool = False) -> bool:
+        '''
+        Checks whether a cluster responds to a laser stimulus
+
+        Parameters
+        ----------
+        cluster: int
+            The cluster to check
+        threshold: float
+            The amount of activity the cluster needs to go beyond to
+            be classified as a responder (1.5 = 50% more or less than
+            the baseline activity)
+        min_contiguous: int
+            The number of contiguous samples in the post-stimulus
+            period for which the cluster needs to be active beyond
+            the threshold value to be classed as a responder
+        return_activity: bool
+            Whether to return the mean reponse curve
+
+        Returns
+        -------
+        reponds: bool
+            Whether the cell responds or not
+        OR
+        tuple: responds (bool), normed_response_curve (np.ndarray)
+
+        '''
+        spk_count_by_trial = self.calculatePSCH(cluster, self._secs_per_bin)
+        mean_count = np.mean(spk_count_by_trial, 1)
+        # smooth with a moving average
+        smoothed_binned_spikes = smooth(mean_count,
+                                        window_len=9,
+                                        window='flat')
+        bins = np.arange(self.event_window[0],
+                         self.event_window[1],
+                         self._secs_per_bin)
+        # normalize all activity by activity in the time before
+        # the laser onset
+        idx = bins[1:] < 0
+        normd = min_max_norm(smoothed_binned_spikes,
+                             np.min(smoothed_binned_spikes[idx]),
+                             np.max(smoothed_binned_spikes[idx]))
+        # mask the array outside of a threshold value
+        normd_masked = np.ma.masked_inside(normd,
+                                           -threshold,
+                                           threshold)
+        # find the contiguous runs in the masked array
+        # and add the clusters that make it to results dict
+        slices = np.ma.notmasked_contiguous(normd_masked)
+        if slices:
+            max_runlength = max([len(normd_masked[s]) for s in slices])
+            if max_runlength > min_contiguous:
+                if not return_activity:
+                    return True
+                else:
+                    return True, normd
+        if not return_activity:
+            return False
+        else:
+            return False, np.empty(shape=0)
 
     def clusterQuality(self, cluster, fet=1):
         """

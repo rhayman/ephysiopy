@@ -94,13 +94,5 @@ def test_stim_io(path_to_axona_data):
     fname_root = os.path.splitext(path_to_axona_data)[0]
     stim = Stim(fname_root)
     stim.update(foo=2)
-    ts = stim.getTS()
-    assert isinstance(ts, np.ndarray)
-    pos_idx = stim.getPosIdx()
-    assert isinstance(pos_idx, np.ndarray)
-    eeg_idx = stim.getEEGIdx()
-    assert isinstance(eeg_idx, np.ndarray)
-    egf_idx = stim.getEGFIdx()
-    assert isinstance(egf_idx, np.ndarray)
     with pytest.raises(KeyError):
         stim['blurt']

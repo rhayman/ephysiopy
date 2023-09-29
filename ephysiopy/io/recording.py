@@ -346,11 +346,14 @@ class AxonaTrial(TrialInterface):
         from ephysiopy.axona.axonaIO import Stim
         try:
             self.ttl_data = Stim(self.pname)
+            # ttl times in Stim are in ms
         except IOError:
             return False
         return True
 
-    def get_spike_times(self, cluster: int, tetrode: int = None, *args, **kwargs):
+    def get_spike_times(
+            self, cluster: int, tetrode: int = None,
+            *args, **kwargs):
         if tetrode is not None:
             return self.TETRODE.get_spike_samples(tetrode, cluster)
 
@@ -468,7 +471,8 @@ class OpenEphysBase(TrialInterface):
             self.settings = Settings(self.pname)
             print("Loaded settings data")
 
-    def load_cluster_data(self, removeNoiseClusters=True, *args, **kwargs) -> bool:
+    def load_cluster_data(
+            self, removeNoiseClusters=True, *args, **kwargs) -> bool:
         if self.path2KiloSortData is not None:
             clusterData = KiloSortSession(self.pname)
         else:
@@ -585,8 +589,8 @@ class OpenEphysBase(TrialInterface):
             The integer value in the "states.npy" file that corresponds to the
             identity of the TTL input on the Digital I/O board on the
             openephys recording system. i.e. if there is input to BNC port 3 on
-            the digital I/O board then values of 3 in the states.npy file are high
-            TTL values on this input and -3 are low TTL values (I think)
+            the digital I/O board then values of 3 in the states.npy file are
+            high TTL values on this input and -3 are low TTL values (I think)
 
         Returns
         -------
@@ -612,6 +616,8 @@ class OpenEphysBase(TrialInterface):
             # get into ms
             high_ttl = (high_ttl * 1000.0) - recording_start_time
             self.ttl_data['ttl_timestamps'] = high_ttl
+        if not self.ttl_data:
+            return False
         print("Loaded ttl data")
         return True
 
