@@ -309,6 +309,10 @@ class OE2Axona(object):
             self.OE_data.load_neural_data(**kwargs)
         else:
             self.OE_data.load_neural_data()
+        if "nChannels" in kwargs.keys():
+            channel_count = kwargs["nChannels"]
+        else:
+            channel_count = self.channel_count
         model = self.OE_data.template_model
         clusts = model.cluster_ids
         # have to pre-process the channels / clusters to determine
@@ -318,7 +322,7 @@ class OE2Axona(object):
         for c in clusts:
             clusters_channels[c] = model.get_cluster_channels(c)
         tetrodes_clusters = OrderedDict(dict.fromkeys(
-            range(0, int(self.channel_count/4)), []))
+            range(0, int(channel_count/4)), []))
         for t in tetrodes_clusters.items():
             this_tetrodes_clusters = []
             for c in clusters_channels.items():
