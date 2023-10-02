@@ -123,7 +123,6 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self._settings = None
         self._PosCalcs = None
         self._RateMap = None
-        self._pos_data_type = None
         self._sync_message_file = None
         self._clusterData = None  # Kilosort or .cut / .clu file
         self._recording_start_time = None  # float
@@ -182,14 +181,6 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     @RateMap.setter
     def RateMap(self, value):
         self._RateMap = value
-
-    @property
-    def pos_data_type(self):
-        return self._pos_data_type
-
-    @pos_data_type.setter
-    def pos_data_type(self, val):
-        self._pos_data_type = val
 
     @property
     def clusterData(self):
@@ -520,6 +511,7 @@ class OpenEphysBase(TrialInterface):
                 "PosTracker [0-9][0-9][0-9]",
                 "TrackMe [0-9][0-9][0-9]",
                 "TrackingPlugin [0-9][0-9][0-9]",
+                "Tracking Port"
             ]
             pos_plugin_name = [
                 re.search(m, k).string
@@ -530,19 +522,25 @@ class OpenEphysBase(TrialInterface):
             if "Sources/" in pos_plugin_name:
                 pos_plugin_name = pos_plugin_name.lstrip("Sources/")
 
-            pos_data_type = getattr(self, "pos_data_type", "PosTracker")
-            if pos_data_type == "PosTracker" or pos_data_type == "Pos Tracker":
+            self.pos_plugin_name = pos_plugin_name
+
+            if "Tracker" in pos_plugin_name:
                 print("Loading PosTracker data...")
                 pos_data = np.load(os.path.join(self.path2PosData, "data_array.npy"))
-            if pos_data_type == "TrackingPlugin":
+            if "Tracking Port" in pos_plugin_name:
+                print("Loading PosTracker data...")
+                pos_data = loadTrackingPluginData(
+                    os.path.join(self.path2PosData, "data_array.npy"))
+            if "TrackingPlugin" in pos_plugin_name:
                 print("Loading Tracking Plugin data...")
                 pos_data = loadTrackingPluginData(
                     os.path.join(self.path2PosData, "data_array.npy")
                 )
+            
             pos_ts = np.load(os.path.join(self.path2PosData, "timestamps.npy"))
             # pos_ts in seconds
             pos_ts = np.ravel(pos_ts)
-            if pos_data_type == "TrackMe":
+            if "TrackMe" in pos_plugin_name:
                 print("Loading TrackMe data...")
                 n_pos_chans = int(
                     self.settings.processors[pos_plugin_name].channel_count
@@ -555,10 +553,10 @@ class OpenEphysBase(TrialInterface):
                     pos_ts = loadTrackMeTTLTimestamps(Path(self.path2EventsData))
                 else:
                     pos_ts = loadTrackMeTimestamps(Path(self.path2PosData))
-                pos_ts = pos_ts[0 : len(pos_data)]
+                pos_ts = pos_ts[0:len(pos_data)]
             sample_rate = self.settings.processors[pos_plugin_name].sample_rate
-            sample_rate = float(sample_rate)
-            if pos_data_type != "TrackMe":
+            sample_rate = float(sample_rate) if sample_rate is not None else 50
+            if pos_plugin_name != "TrackMe":
                 xyTS = pos_ts - recording_start_time
             else:
                 xyTS = pos_ts
@@ -692,7 +690,6 @@ class OpenEphysBase(TrialInterface):
                         if PurePath(d).match(str(PosTracker_match)):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
-                                setattr(self, "pos_data_type", "Pos Tracker")
                                 print(f"Pos data at: {self.path2PosData}")
                             self.path2PosOEBin = Path(d).parents[1]
                         if PurePath(d).match("*pos_data*"):
@@ -702,7 +699,6 @@ class OpenEphysBase(TrialInterface):
                         if PurePath(d).match(str(TrackingPlugin_match)):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
-                                setattr(self, "pos_data_type", "TrackingPlugin")
                                 print(f"Pos data at: {self.path2PosData}")
                     if "continuous.dat" in ff:
                         if PurePath(d).match(str(APdata_match)):
@@ -717,7 +713,6 @@ class OpenEphysBase(TrialInterface):
                             self.path2LFPdata = os.path.join(d)
                         if PurePath(d).match(str(TrackMe_match)):
                             self.path2PosData = os.path.join(d)
-                            setattr(self, "pos_data_type", "TrackMe")
                             print(f"TrackMe posdata at: {self.path2PosData}")
                     if "sync_messages.txt" in ff:
                         if PurePath(d).match(str(sync_file_match)):
