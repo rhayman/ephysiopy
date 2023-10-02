@@ -612,15 +612,27 @@ class ClusterSession(object):
         self.cluster_id = None
         self.spk_clusters = None
         self.spk_times = None
-        self.good_clusters = []
+        self.good_clusters = {}
 
     def load(self):
         pname = self.fname_root.parent
-        pattern = re.compile(r'^'+str(self.fname_root.with_suffix(""))+r'.*[1-9][0-9]$')
-        pattern1 = re.compile(r'^'+str(self.fname_root.with_suffix(""))+r'.*[1-9]$')
-        tetrode_files = sorted(list(f for f in pname.iterdir()
-             if pattern.search(str(f)) or pattern1.search(str(f))))
-        # load each tetrode file and the cut and save
-        for t, c in zip(tetrode_files, cut_files):
-            T = Tetrode(self.fname_root / Path(t))
-            C = 
+        pattern = re.compile(r'^'+str(
+            self.fname_root.with_suffix(""))+r'_[1-9][0-9].cut')
+        pattern1 = re.compile(r'^'+str(
+            self.fname_root.with_suffix(""))+r'_[1-9]$.cut')
+        cut_files = sorted(list(f for f in pname.iterdir()
+                           if pattern.search(str(f)) or
+                           pattern1.search(str(f))))
+        # extract the clusters from each cut file
+        # get the corresponding tetrode files
+        tet_files = [str(c.with_suffix("")) for c in cut_files]
+        tet_files = [t[::-1].replace("_", ".", 1)[::-1] for t in tet_files]
+        tetrode_clusters = {}
+        for fname in tet_files:
+            T = IO(fname)
+            idx = fname.rfind(".")
+            tetnum = int(fname[idx+1:])
+            cut = T.getCut(tetnum)
+            tetrode_clusters[tetnum] = cut
+
+        self.good_clusters = tetrode_clusters

@@ -110,6 +110,9 @@ Xml2RecordingKind = {
     "Acquisition Board": RecordingKind.ACQUISITIONBOARD,
     "Neuropix-PXI": RecordingKind.NEUROPIXELS,
     "Rhythm FPGA": RecordingKind.FPGA,
+    "Rhythm": RecordingKind.FPGA,
+    "Acquistion": RecordingKind.ACQUISITIONBOARD,
+    "Neuropix": RecordingKind.NEUROPIXELS
 }
 
 
@@ -368,9 +371,12 @@ class OpenEphysBase(TrialInterface):
         # in openephys
         record_methods = [
             "Acquisition Board [0-9][0-9][0-9]",
+            "Acquisition Board",
             "Neuropix-PXI [0-9][0-9][0-9]",
+            "Neuropix-PXI",
             "Sources/Neuropix-PXI [0-9][0-9][0-9]",
             "Rhythm FPGA [0-9][0-9][0-9]",
+            "Rhythm",
             "Sources/Rhythm FPGA [0-9][0-9][0-9]",
         ]
         rec_method = [
