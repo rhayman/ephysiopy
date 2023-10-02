@@ -305,7 +305,10 @@ class OE2Axona(object):
         # same for all tetrodes...
         dt = self.AxonaData.axona_files[".1"]
         # Load the TemplateModel
-        self.OE_data.load_neural_data()
+        if "path2APdata" in kwargs.keys():
+            self.OE_data.load_neural_data(path2APdata=kwargs["path2APdata"])
+        else:
+            self.OE_data.load_neural_data()
         model = self.OE_data.template_model
         clusts = model.cluster_ids
         # have to pre-process the channels / clusters to determine
