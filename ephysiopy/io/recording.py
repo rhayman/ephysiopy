@@ -451,11 +451,15 @@ class OpenEphysBase(TrialInterface):
 
     def load_neural_data(self, *args, **kwargs) -> None:
         if "path2APdata" in kwargs.keys():
+            if "nChannels" in kwargs.keys():
+                n_channels = kwargs["nChannels"]
+            else:
+                n_channels = self.channel_count
             self.template_model = TemplateModel(
                 dir_path=kwargs["path2APdata"],
                 sample_rate=3e4,
                 dat_path=Path(kwargs["path2APdata"]) / Path("continuous.dat"),
-                n_channels_dat=int(self.channel_count),
+                n_channels_dat=int(n_channels),
             )
             print("Loaded neural data")
         elif self.path2APdata:

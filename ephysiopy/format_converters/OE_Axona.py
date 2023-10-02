@@ -286,7 +286,7 @@ class OE2Axona(object):
         which the signal is strongest using Model.get_cluster_channels()
         If a channel from a tetrode is missing from this list then the
         spikes for that channel(s) will be zeroed when saved to Axona
-        format. For example, if cluster 3 has a peak channel of 1 then 
+        format. For example, if cluster 3 has a peak channel of 1 then
         get_cluster_channels() might look like:
 
             [ 1,  2,  0,  6, 10, 11,  4,  12,  7,  5,  8,  9]
@@ -306,7 +306,7 @@ class OE2Axona(object):
         dt = self.AxonaData.axona_files[".1"]
         # Load the TemplateModel
         if "path2APdata" in kwargs.keys():
-            self.OE_data.load_neural_data(path2APdata=kwargs["path2APdata"])
+            self.OE_data.load_neural_data(**kwargs)
         else:
             self.OE_data.load_neural_data()
         model = self.OE_data.template_model
