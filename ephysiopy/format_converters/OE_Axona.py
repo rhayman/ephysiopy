@@ -211,7 +211,8 @@ class OE2Axona(object):
 
     def exportLFP(self, channel: int = 0,
                   lfp_type: str = 'eeg',
-                  gain: int = 5000):
+                  gain: int = 5000,
+                  **kwargs):
         """
         Export LFP data to file
 
@@ -224,8 +225,14 @@ class OE2Axona(object):
         print("Beginning conversion and exporting of LFP data...")
         if not self.settings.processors:
             self.settings.parse()
-        if self.OE_data.path2APdata:
-            from ephysiopy.io.recording import memmapBinaryFile
+        from ephysiopy.io.recording import memmapBinaryFile
+        if "path2APdata" in kwargs.keys():
+            data = memmapBinaryFile(
+                Path(kwargs["path2APdata"]) / Path("continuous.dat"),
+                n_channels=self.channel_count)
+            self.makeLFPData(data[channel, :], eeg_type=lfp_type, gain=gain)
+            print("Completed exporting LFP data to " + lfp_type + " format")
+        elif self.OE_data.path2APdata:
             data = memmapBinaryFile(
                 Path(self.OE_data.path2APdata) / Path("continuous.dat"),
                 n_channels=self.channel_count)
@@ -233,7 +240,6 @@ class OE2Axona(object):
             # if the set file has been created then update which channel
             # contains the eeg record so
             # that the gain can be loaded correctly when using axona_util
-
             print("Completed exporting LFP data to " + lfp_type + " format")
         else:
             print("Couldn't load raw data")
