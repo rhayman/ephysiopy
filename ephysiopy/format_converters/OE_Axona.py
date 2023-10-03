@@ -144,6 +144,8 @@ class OE2Axona(object):
         # on the position
         # data (discard jumpy data, do some smoothing etc)
         self.settings.parse()
+        if not self.OE_data.PosCalcs:
+            self.OE_data.load_pos_data()
         print("Post-processing position data...")
         self.OE_data.PosCalcs.jumpmax = jumpmax
         self.OE_data.PosCalcs.tracker_params["AxonaBadValue"] = 1023
