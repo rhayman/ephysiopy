@@ -1,18 +1,18 @@
 import os
+from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
-from collections import OrderedDict
 
 import h5py
 import numpy as np
 from scipy import signal
-from tqdm.auto import trange
 from tqdm import tqdm
+from tqdm.auto import trange
 
 from ephysiopy.axona import axonaIO
+from ephysiopy.axona.file_headers import CutHeader, TetrodeHeader
 from ephysiopy.io.recording import OpenEphysBase
 from ephysiopy.openephys2py import OESettings
-from ephysiopy.axona.file_headers import TetrodeHeader, CutHeader
 
 
 class OE2Axona(object):
@@ -310,9 +310,7 @@ class OE2Axona(object):
         else:
             self.OE_data.load_neural_data()
         if "nChannels" in kwargs.keys():
-            channel_count = kwargs["nChannels"]
-        else:
-            channel_count = self.channel_count
+            self.channel_count = kwargs["nChannels"]
         model = self.OE_data.template_model
         clusts = model.cluster_ids
         # have to pre-process the channels / clusters to determine
@@ -322,7 +320,7 @@ class OE2Axona(object):
         for c in clusts:
             clusters_channels[c] = model.get_cluster_channels(c)
         tetrodes_clusters = OrderedDict(dict.fromkeys(
-            range(0, int(channel_count/4)), []))
+            range(0, int(self.channel_count/4)), []))
         for t in tetrodes_clusters.items():
             this_tetrodes_clusters = []
             for c in clusters_channels.items():
@@ -594,10 +592,10 @@ class OE2Axona(object):
         tetrode_count = int(self.channel_count / 4)
         for i in range(1, tetrode_count+1):
             header.set_entries["collectMask_" + str(i)] = "1"
-        if self.lfp_channel is not None:
-            for chan in self.tetrodes:
-                key = "collectMask_" + str(chan)
-                header.set_entries[key] = "1"
+        # if self.lfp_channel is not None:
+        #     for chan in self.tetrodes:
+        #         key = "collectMask_" + str(chan)
+        #         header.set_entries[key] = "1"
         header.set_entries["colactive_1"] = "1"
         header.set_entries["colactive_2"] = "0"
         header.set_entries["colactive_3"] = "0"
