@@ -28,9 +28,11 @@ class OE2Axona(object):
         '''
         pname = Path(pname)
         assert pname.exists()
-        self.pname = pname
+        self.pname: Path = pname
+        self.path2APdata: Path = None or Path(kwargs["path2APdata"])
+        self.pos_sample_rate: int = None or kwargs["sample_rate"]
         # 'experiment_1.nwb'
-        self.experiment_name = self.pname or Path(kwargs['experiment_name'])
+        self.experiment_name: Path = self.pname or Path(kwargs['experiment_name'])
         self.recording_name = None  # will become 'recording1' etc
         self.OE_data = None  # becomes instance of io.recording.OpenEphysBase
         self._settings = None  # will become an instance of OESettings.Settings
@@ -83,7 +85,7 @@ class OE2Axona(object):
         self._settings = value
 
     def getOEData(
-            self) -> dict:
+            self) -> OpenEphysBase:
         """
         Loads the nwb file names in filename_root and returns a dict
         containing some of the nwb data
@@ -98,7 +100,7 @@ class OE2Axona(object):
         """
         OE_data = OpenEphysBase(self.pname)
         try:
-            OE_data.load_pos_data()
+            OE_data.load_pos_data(sample_rate=self.pos_sample_rate)
             # It's likely that spikes have been collected after the last
             # position sample
             # due to buffering issues I can't be bothered to resolve.
@@ -145,7 +147,7 @@ class OE2Axona(object):
         # data (discard jumpy data, do some smoothing etc)
         self.settings.parse()
         if not self.OE_data.PosCalcs:
-            self.OE_data.load_pos_data()
+            self.OE_data.load_pos_data(self.pos_sample_rate)
         print("Post-processing position data...")
         self.OE_data.PosCalcs.jumpmax = jumpmax
         self.OE_data.PosCalcs.tracker_params["AxonaBadValue"] = 1023

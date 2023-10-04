@@ -8,6 +8,7 @@ from typing import NoReturn
 
 import h5py
 import numpy as np
+from phylib.io.model import TemplateModel
 
 from ephysiopy.axona.axonaIO import IO, Pos
 from ephysiopy.axona.tetrode_dict import TetrodeDict
@@ -15,8 +16,6 @@ from ephysiopy.common.ephys_generic import EEGCalcsGeneric, PosCalcsGeneric
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.visualise.plotting import FigureMaker
-
-from phylib.io.model import TemplateModel
 
 
 def fileContainsString(pname: str, searchStr: str) -> bool:
@@ -346,7 +345,7 @@ class AxonaTrial(TrialInterface):
         return True
 
     def get_spike_times(
-            self, cluster: int, tetrode: int = None,
+            self, cluster: int, tetrode = None,
             *args, **kwargs):
         if tetrode is not None:
             return self.TETRODE.get_spike_samples(tetrode, cluster)
@@ -451,26 +450,17 @@ class OpenEphysBase(TrialInterface):
 
     def load_neural_data(self, *args, **kwargs) -> None:
         if "path2APdata" in kwargs.keys():
-            if "nChannels" in kwargs.keys():
-                n_channels = kwargs["nChannels"]
-            else:
-                n_channels = self.channel_count
-            self.template_model = TemplateModel(
-                dir_path=kwargs["path2APdata"],
-                sample_rate=3e4,
-                dat_path=Path(kwargs["path2APdata"]) / Path("continuous.dat"),
-                n_channels_dat=int(n_channels),
-            )
-            print("Loaded neural data")
-        elif self.path2APdata:
+            self.path2APdata: Path = Path(kwargs["path2APdata"])
+        n_channels: int = self.channel_count or kwargs["nChannels"]
+        try:
             self.template_model = TemplateModel(
                 dir_path=self.path2APdata,
                 sample_rate=3e4,
                 dat_path=Path(self.path2APdata) / Path("continuous.dat"),
-                n_channels_dat=int(self.channel_count),
+                n_channels_dat=int(n_channels),
             )
             print("Loaded neural data")
-        else:
+        except Exception:
             warnings.warn("Could not find raw data file")
 
     def load_settings(self, *args, **kwargs):
@@ -568,6 +558,13 @@ class OpenEphysBase(TrialInterface):
                 pos_ts = pos_ts[0:len(pos_data)]
             sample_rate = self.settings.processors[pos_plugin_name].sample_rate
             sample_rate = float(sample_rate) if sample_rate is not None else 50
+            # the timestamps for the Tracker Port plugin are fucked so 
+            # we have to infer from the shape of the position data
+            if "Tracker" in pos_plugin_name:
+                sample_rate = kwargs["sample_rate"] or 50
+                # pos_ts in seconds
+                pos_ts = np.arange(
+                    0, pos_data.shape[0]/sample_rate, 1.0/sample_rate)
             if pos_plugin_name != "TrackMe":
                 xyTS = pos_ts - recording_start_time
             else:
