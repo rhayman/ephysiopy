@@ -252,26 +252,35 @@ class Electrode(object):
 class AbstractProcessorFactory():
     def create_pos_tracker(self):
         return PosTracker()
+
     def create_rhythm_fpga(self):
         return RhythmFPGA()
+
     def create_neuropix_pxi(self):
         return NeuropixPXI()
+
     def create_acquisition_board(self):
         return AcquisitionBoard()
+
     def create_spike_sorter(self):
         return SpikeSorter()
+
     def create_track_me(self):
         return TrackMe()
+
     def create_record_node(self):
         return RecordNode()
+
     def create_stim_control(self):
         return StimControl()
+
     def create_oe_plugin(self):
         return OEPlugin()
-    
+
 
 class ProcessorFactory():
     factory = AbstractProcessorFactory()
+
     def create_processor(self, proc_name: str):
         if "Pos Tracker" in proc_name or "PosTracker" in proc_name:
             return self.factory.create_pos_tracker()
@@ -291,8 +300,7 @@ class ProcessorFactory():
             return self.factory.create_stim_control()
         else:
             return self.factory.create_oe_plugin()
-    
-        
+
 
 def recurseNode(
                 node: xml.etree.ElementTree.Element,
@@ -335,7 +343,6 @@ class OEStructure(object):
         self.filename = []
         self.data = []
         import json
-        import os
 
         self.filename.append(fname)
         with open(fname, "r") as f:

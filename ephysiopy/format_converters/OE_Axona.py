@@ -20,7 +20,11 @@ class OE2Axona(object):
     Converts openephys data recorded in the nwb format into Axona files
     """
 
-    def __init__(self, pname: Path, **kwargs):
+    def __init__(self, pname: Path,
+                 path2APData: Path = None,
+                 pos_sample_rate: int = None,
+                 channels: int = 0,
+                 **kwargs):
         '''
         pname: Path
             the base directory of the openephys recording
@@ -29,8 +33,8 @@ class OE2Axona(object):
         pname = Path(pname)
         assert pname.exists()
         self.pname: Path = pname
-        self.path2APdata: Path = None or Path(kwargs["path2APdata"])
-        self.pos_sample_rate: int = None or kwargs["sample_rate"]
+        self.path2APdata: Path = path2APData
+        self.pos_sample_rate: int = pos_sample_rate
         # 'experiment_1.nwb'
         self.experiment_name: Path = self.pname or Path(kwargs['experiment_name'])
         self.recording_name = None  # will become 'recording1' etc
@@ -60,7 +64,7 @@ class OE2Axona(object):
         # set the tetrodes to record from
         # defaults to 1 through 4 - see self.makeSetData below
         self.tetrodes = ["1", "2", "3", "4"]
-        self.channel_count = 0
+        self.channel_count = channels
 
     def resample(self, data, src_rate=30, dst_rate=50, axis=0):
         """
@@ -124,6 +128,8 @@ class OE2Axona(object):
             self.first_pos_ts = 0
             self.last_pos_ts = self.OE_data.template_model.duration
         self.OE_data = OE_data
+        if self.path2APdata is None:
+            self.path2APdata = self.OE_data.path2APdata
         # extract number of channels from settings
         for item in self.settings.record_nodes.items():
             if "Rhythm Data" in item[1].name:
@@ -228,23 +234,14 @@ class OE2Axona(object):
         if not self.settings.processors:
             self.settings.parse()
         from ephysiopy.io.recording import memmapBinaryFile
-        if "path2APdata" in kwargs.keys():
+        try:
             data = memmapBinaryFile(
-                Path(kwargs["path2APdata"]) / Path("continuous.dat"),
+                Path(self.path2APdata) / Path("continuous.dat"),
                 n_channels=self.channel_count)
             self.makeLFPData(data[channel, :], eeg_type=lfp_type, gain=gain)
             print("Completed exporting LFP data to " + lfp_type + " format")
-        elif self.OE_data.path2APdata:
-            data = memmapBinaryFile(
-                Path(self.OE_data.path2APdata) / Path("continuous.dat"),
-                n_channels=self.channel_count)
-            self.makeLFPData(data[channel, :], eeg_type=lfp_type, gain=gain)
-            # if the set file has been created then update which channel
-            # contains the eeg record so
-            # that the gain can be loaded correctly when using axona_util
-            print("Completed exporting LFP data to " + lfp_type + " format")
-        else:
-            print("Couldn't load raw data")
+        except Exception as e:
+            print(f"Couldn't load raw data:\n{e}")
 
     def convertPosData(self, xy: np.array, xy_ts: np.array) -> np.array:
         """
@@ -319,8 +316,6 @@ class OE2Axona(object):
             self.OE_data.load_neural_data(**kwargs)
         else:
             self.OE_data.load_neural_data()
-        if "nChannels" in kwargs.keys():
-            self.channel_count = kwargs["nChannels"]
         model = self.OE_data.template_model
         clusts = model.cluster_ids
         # have to pre-process the channels / clusters to determine
@@ -505,11 +500,11 @@ class OE2Axona(object):
 
     def makeLFPData(
                     self,
-                    hdf5_continuous_data: np.array,
+                    data: np.array,
                     eeg_type="eeg",
                     gain=5000):
         """
-        Downsamples the data in hdf5_continuous_data and saves the result
+        Downsamples the data in data and saves the result
         as either an egf or eeg file depending on the choice of
         either eeg_type which can
         take a value of either 'egf' or 'eeg'
@@ -517,7 +512,7 @@ class OE2Axona(object):
 
         Parameters
         ----------
-        hdf5_continuous_data - np.array with dtype as np.int16
+        data - np.array with dtype as np.int16
         """
         if eeg_type == "eeg":
             from ephysiopy.axona.file_headers import EEGHeader
@@ -532,7 +527,7 @@ class OE2Axona(object):
         header.common["duration"] = str(
             int(self.last_pos_ts - self.first_pos_ts))
 
-        lfp_data = self.resample(hdf5_continuous_data, 30000, dst_rate, -1)
+        lfp_data = self.resample(data, 30000, dst_rate, -1)
         # make sure data is same length as sample_rate * duration
         nsamples = int(dst_rate * int(header.common["duration"]))
         lfp_data = lfp_data[0:nsamples]
