@@ -1086,6 +1086,7 @@ def deform_SAC(A, circleXY=None, ellipseXY=None):
     return skimage.exposure.rescale_intensity(
         deformedSAC, out_range=(SACmin, SACmax))
 
+
 def get_circular_regions(A: np.ndarray, **kwargs) -> list:
     '''
     Returns a list of images which are expanding circular
@@ -1097,7 +1098,7 @@ def get_circular_regions(A: np.ndarray, **kwargs) -> list:
     Parameters
     ----------
     A: np.ndarray - the SAC
-    
+
     Valid kwargs
     ------------
     min_radius: int - the smallest radius circle to start with
@@ -1107,7 +1108,7 @@ def get_circular_regions(A: np.ndarray, **kwargs) -> list:
     min_radius = 5
     if 'min_radius' in kwargs.keys():
         min_radius = kwargs['min_radius']
-        
+
     centre = tuple([d//2 for d in np.shape(A)])
     max_radius = min(tuple(np.subtract(np.shape(A), centre)))
     t = np.linspace(0, 2*np.pi, 51)
@@ -1122,4 +1123,3 @@ def get_circular_regions(A: np.ndarray, **kwargs) -> list:
         im[~mask] = np.nan
         result.append(im)
     return result
-
