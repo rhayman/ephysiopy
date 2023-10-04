@@ -456,7 +456,7 @@ class OpenEphysBase(TrialInterface):
             self.template_model = TemplateModel(
                 dir_path=self.path2APdata,
                 sample_rate=3e4,
-                dat_path=Path(self.path2APdata) / Path("continuous.dat"),
+                dat_path=Path(self.path2APdata).joinpath("continuous.dat"),
                 n_channels_dat=int(n_channels),
             )
             print("Loaded neural data")

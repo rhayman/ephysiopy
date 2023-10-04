@@ -236,7 +236,7 @@ class OE2Axona(object):
         from ephysiopy.io.recording import memmapBinaryFile
         try:
             data = memmapBinaryFile(
-                Path(self.path2APdata) / Path("continuous.dat"),
+                Path(self.path2APdata).joinpath("continuous.dat"),
                 n_channels=self.channel_count)
             self.makeLFPData(data[channel, :], eeg_type=lfp_type, gain=gain)
             print("Completed exporting LFP data to " + lfp_type + " format")
