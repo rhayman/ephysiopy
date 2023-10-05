@@ -88,8 +88,7 @@ class OE2Axona(object):
     def settings(self, value):
         self._settings = value
 
-    def getOEData(
-            self) -> OpenEphysBase:
+    def getOEData(self) -> OpenEphysBase:
         """
         Loads the nwb file names in filename_root and returns a dict
         containing some of the nwb data
@@ -127,6 +126,8 @@ class OE2Axona(object):
             OE_data.load_neural_data()  # will create TemplateModel instance
             self.first_pos_ts = 0
             self.last_pos_ts = self.OE_data.template_model.duration
+        print(f"First pos ts: {self.first_pos_ts}")
+        print(f"Last pos ts: {self.last_pos_ts}")
         self.OE_data = OE_data
         if self.path2APdata is None:
             self.path2APdata = self.OE_data.path2APdata
@@ -152,6 +153,8 @@ class OE2Axona(object):
         # on the position
         # data (discard jumpy data, do some smoothing etc)
         self.settings.parse()
+        if not self.OE_data:
+            self.getOEData()
         if not self.OE_data.PosCalcs:
             self.OE_data.load_pos_data(self.pos_sample_rate)
         print("Post-processing position data...")
