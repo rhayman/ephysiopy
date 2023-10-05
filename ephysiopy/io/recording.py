@@ -345,7 +345,7 @@ class AxonaTrial(TrialInterface):
         return True
 
     def get_spike_times(
-            self, cluster: int, tetrode = None,
+            self, cluster: int, tetrode=None,
             *args, **kwargs):
         if tetrode is not None:
             return self.TETRODE.get_spike_samples(tetrode, cluster)
@@ -527,14 +527,14 @@ class OpenEphysBase(TrialInterface):
             self.pos_plugin_name = pos_plugin_name
 
             if "Tracker" in pos_plugin_name:
-                print("Loading PosTracker data...")
+                print("Loading Tracker data...")
                 pos_data = np.load(os.path.join(self.path2PosData, "data_array.npy"))
             if "Tracking Port" in pos_plugin_name:
-                print("Loading PosTracker data...")
+                print("Loading Tracking Port data...")
                 pos_data = loadTrackingPluginData(
                     os.path.join(self.path2PosData, "data_array.npy"))
             if "TrackingPlugin" in pos_plugin_name:
-                print("Loading Tracking Plugin data...")
+                print("Loading TrackingPlugin data...")
                 pos_data = loadTrackingPluginData(
                     os.path.join(self.path2PosData, "data_array.npy")
                 )
@@ -565,13 +565,14 @@ class OpenEphysBase(TrialInterface):
                 # pos_ts in seconds
                 pos_ts = np.arange(
                     0, pos_data.shape[0]/sample_rate, 1.0/sample_rate)
+                print(f"Tracker first and last ts: {pos_ts[0]} & {pos_ts[-1]}")
             if pos_plugin_name != "TrackMe":
                 xyTS = pos_ts - recording_start_time
             else:
                 xyTS = pos_ts
             if self.sync_message_file is not None:
                 recording_start_time = xyTS[0]
-
+            print(f"First and last ts before PosCalcs: {pos_ts[0]} & {pos_ts[-1]}")
             P = PosCalcsGeneric(
                 pos_data[:, 0],
                 pos_data[:, 1],

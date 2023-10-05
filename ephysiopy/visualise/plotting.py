@@ -6,6 +6,7 @@ import matplotlib.transforms as transforms
 import numpy as np
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import seaborn as sns
 
 from ephysiopy.axona import tintcolours as tcols
 from ephysiopy.common.binning import RateMap, VariableToBin
@@ -125,14 +126,50 @@ class FigureMaker(object):
             fig = plt.figure()
             ax = fig.add_subplot(111)
         ax.plot(
-            self.PosCalcs.xy[0, :], self.PosCalcs.xy[1, :], c=tcols.colours[0], zorder=1
+            self.PosCalcs.xy[0, :],
+            self.PosCalcs.xy[1, :],
+            c=tcols.colours[0], zorder=1
         )
         ax.set_aspect("equal")
         if spk_times is not None:
             idx = self.getSpikePosIndices(spk_times)
             ax.plot(
-                self.PosCalcs.xy[0, idx], self.PosCalcs.xy[1, idx], "s", c=col, **kwargs
+                self.PosCalcs.xy[0, idx],
+                self.PosCalcs.xy[1, idx],
+                "s", c=col, **kwargs
             )
+        return ax
+
+    @stripAxes
+    def makeEgoCentricBoundarySpikePlot(
+                                        self, spk_times: np.ndarray,
+                                        ax: matplotlib.axes = None,
+                                        **kwargs) -> matplotlib.axes:
+        # get the index into a circular colormap based
+        # on directional heading, then create a LineCollection
+        num_dir_bins = 60
+        if "dir_bins" in kwargs.keys():
+            num_dir_bins = kwargs["num_dir_bins"]
+        dir_colours = sns.color_palette('hls', num_dir_bins)
+        # need to create line colours and line widths for the collection
+        idx = self.getSpikePosIndices(spk_times)
+        dir_spike_fired_at = self.RateMap.dir[idx]
+        idx_of_dir_to_colour = np.floor(dir_spike_fired_at / (360 / num_dir_bins)).astype(int)
+        rects = [Rectangle(self.RateMap.xy[:, i], width=1, height=1)
+                 for i in idx]
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+        # plot the path
+        ax.plot(self.RateMap.xy[0],
+                self.RateMap.xy[1],
+                c=tcols.colours[0],
+                zorder=1,
+                alpha=0.3)
+        for col_idx, r in zip(idx_of_dir_to_colour, rects):
+            ax.add_artist(r)
+            r.set_clip_box(ax.bbox)
+            r.set_facecolor(dir_colours[col_idx])
         return ax
 
     @stripAxes

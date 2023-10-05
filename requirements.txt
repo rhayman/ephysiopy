@@ -1,6 +1,7 @@
 numpy
 scipy
 matplotlib
+seaborn
 astropy
 scikit-image
 mahotas
