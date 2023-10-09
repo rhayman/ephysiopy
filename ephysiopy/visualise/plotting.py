@@ -154,7 +154,8 @@ class FigureMaker(object):
         # need to create line colours and line widths for the collection
         idx = self.getSpikePosIndices(spk_times)
         dir_spike_fired_at = self.RateMap.dir[idx]
-        idx_of_dir_to_colour = np.floor(dir_spike_fired_at / (360 / num_dir_bins)).astype(int)
+        idx_of_dir_to_colour = np.floor(
+            dir_spike_fired_at / (360 / num_dir_bins)).astype(int)
         rects = [Rectangle(self.RateMap.xy[:, i], width=1, height=1)
                  for i in idx]
         if ax is None:

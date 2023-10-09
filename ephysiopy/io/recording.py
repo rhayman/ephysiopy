@@ -560,7 +560,7 @@ class OpenEphysBase(TrialInterface):
             sample_rate = float(sample_rate) if sample_rate is not None else 50
             # the timestamps for the Tracker Port plugin are fucked so 
             # we have to infer from the shape of the position data
-            if "Tracker" in pos_plugin_name:
+            if "Tracking Port" in pos_plugin_name:
                 sample_rate = kwargs["sample_rate"] or 50
                 # pos_ts in seconds
                 pos_ts = np.arange(

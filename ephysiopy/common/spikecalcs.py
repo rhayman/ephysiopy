@@ -262,7 +262,7 @@ class SpikeCalcsGeneric(object):
             x2 = x1.copy()
         if Trange is None:
             Trange = np.array([-500, 500])
-        if type(Trange) == list:
+        if isinstance(Trange, list):
             Trange = np.array(Trange)
         y = []
         irange = x1[:, np.newaxis] + Trange[np.newaxis, :]
@@ -341,7 +341,7 @@ class SpikeCalcsGeneric(object):
             raise Exception("Need cluster identities! Aborting")
         event_ts = self.event_ts
         event_ts.sort()
-        if type(event_ts) == list:
+        if isinstance(event_ts, list):
             event_ts = np.array(event_ts)
 
         spike_times = self.spike_times[self.spk_clusters == cluster_id]
