@@ -535,8 +535,11 @@ class OE2Axona(object):
         lfp_data = self.resample(data, 30000, dst_rate, -1)
         # make sure data is same length as sample_rate * duration
         nsamples = int(dst_rate * int(header.common["duration"]))
+        print(f"nsamples calculated before filtering: {nsamples}")
+        print(f"lfp_data len before filtering: {len(lfp_data)}")
         lfp_data = lfp_data[0:nsamples]
         lfp_data = self.__filterLFP__(lfp_data, dst_rate)
+        print(f"lfp_data len after filtering: {len(lfp_data)}")
         # convert the data format
         # lfp_data = lfp_data * self.bitvolts # in microvolts
 
