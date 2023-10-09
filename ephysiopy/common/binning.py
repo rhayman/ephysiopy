@@ -993,5 +993,13 @@ def box_boundary_intersection(xy: np.ndarray,
     maps wrt boundaries at given egocentric directions
     and distances
     '''
+    from shapely.geometry import LineString, Point
+    # def create_lines(pt):
+
     # Get the boundaries as defined by the xy position
     # unless supplied already
+    length = 101
+    for point, angle in zip(xy.T, direction):
+        startpoint = Point(point)
+        endpoint = Point(startpoint.x + length,
+                         startpoint.y + length)

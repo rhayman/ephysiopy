@@ -261,6 +261,8 @@ class OE2Axona(object):
         new_ts = np.linspace(t[0], t[-1], n_new_pts)
         new_x = np.interp(new_ts, t, xy[:, 0])
         new_y = np.interp(new_ts, t, xy[:, 1])
+        new_x[np.isnan(new_x)] = 1023
+        new_y[np.isnan(new_y)] = 1023
         # Expand the pos bit of the data to make it look like Axona data
         new_pos = np.vstack([new_x, new_y]).T
         new_pos = np.c_[
@@ -274,8 +276,8 @@ class OE2Axona(object):
         # Squeeze this data into Axona pos format array
         dt = self.AxonaData.axona_files[".pos"]
         new_data = np.zeros(n_new_pts, dtype=dt)
-        # Timestamps in Axona are time in seconds * sample_rate
-        new_data["ts"] = new_ts * self.pos_sample_rate
+        # Timestamps in Axona are pos_samples (monotonic, linear integer)
+        new_data["ts"] = new_ts
         new_data["pos"] = new_pos
         return new_data
 
