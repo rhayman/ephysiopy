@@ -992,14 +992,32 @@ def box_boundary_intersection(xy: np.ndarray,
     Supposed to help construct dwell time/spike counts
     maps wrt boundaries at given egocentric directions
     and distances
+    NB: for the directional input
+    the 0 degree reference is horiztonal pointing
+    East and moves counter-clockwise
     '''
     from shapely.geometry import LineString, Point
+    from shapely import MultiLineString
+    from shapely.affinity import rotate, translate
     # def create_lines(pt):
-
+    # longest_line = np.ceil(np.sum(np.ptp(xy)))
+    longest_line = 50
+    angles = np.arange(0, 360, degs_per_bin)
+    circle_centre = Point(np.min(xy[0])+50, np.min(xy[1])+50)
+    startpoint = Point((0, 0))
+    endpoint = Point([longest_line, 0])
+    lines = MultiLineString(
+        [rotate(LineString([startpoint, endpoint]), ang, origin=startpoint)
+         for ang in angles])
     # Get the boundaries as defined by the xy position
     # unless supplied already
-    length = 101
+    
+    # make radius a bit bigger than reality as we always should
+    # intersect the edge of the environment
+    radius = 51
     for point, angle in zip(xy.T, direction):
-        startpoint = Point(point)
-        endpoint = Point(startpoint.x + length,
-                         startpoint.y + length)
+        this_point = Point(point)
+        t_lines = rotate(lines, -angle, origin=Point((0, 0)))
+        t_lines = translate(t_lines, this_point.x, this_point.y)
+        intersection_points = t_lines.intersection(
+            circle_centre.buffer(radius))
