@@ -983,3 +983,15 @@ class RateMap(object):
         H[Hp < Pthresh] = np.nan
 
         return H
+
+
+def box_boundary_intersection(xy: np.ndarray,
+                              direction: np.ndarray,
+                              degs_per_bin: int = 3):
+    '''
+    Supposed to help construct dwell time/spike counts
+    maps wrt boundaries at given egocentric directions
+    and distances
+    '''
+    # Get the boundaries as defined by the xy position
+    # unless supplied already
