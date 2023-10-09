@@ -22,7 +22,7 @@ class OE2Axona(object):
 
     def __init__(self, pname: Path,
                  path2APData: Path = None,
-                 pos_sample_rate: int = None,
+                 pos_sample_rate: int = 50,
                  channels: int = 0,
                  **kwargs):
         '''
@@ -179,7 +179,7 @@ class OE2Axona(object):
         axona_pos_data = self.convertPosData(xy, xyTS)
         # make sure pos data length is same as duration * num_samples
         axona_pos_data = axona_pos_data[
-            0: int(self.last_pos_ts - self.first_pos_ts) * 50
+            0: int(self.last_pos_ts - self.first_pos_ts) * self.pos_sample_rate
         ]
         # Create an empty header for the pos data
         from ephysiopy.axona.file_headers import PosHeader
@@ -255,7 +255,8 @@ class OE2Axona(object):
         pos_format: t,x1,y1,x2,y2,numpix1,numpix2
         We can make up some of the info and ignore other bits
         """
-        n_new_pts = int(np.floor((self.last_pos_ts - self.first_pos_ts) * 50))
+        n_new_pts = int(np.floor((
+            self.last_pos_ts - self.first_pos_ts) * self.pos_sample_rate))
         t = xy_ts - self.first_pos_ts
         new_ts = np.linspace(t[0], t[-1], n_new_pts)
         new_x = np.interp(new_ts, t, xy[:, 0])
@@ -274,7 +275,7 @@ class OE2Axona(object):
         dt = self.AxonaData.axona_files[".pos"]
         new_data = np.zeros(n_new_pts, dtype=dt)
         # Timestamps in Axona are time in seconds * sample_rate
-        new_data["ts"] = new_ts * 50
+        new_data["ts"] = new_ts * self.pos_sample_rate
         new_data["pos"] = new_pos
         return new_data
 
@@ -529,6 +530,7 @@ class OE2Axona(object):
             dst_rate = 4800
         header.common["duration"] = str(
             int(self.last_pos_ts - self.first_pos_ts))
+        print(f"header.common[duration] = {header.common['duration']}")
 
         lfp_data = self.resample(data, 30000, dst_rate, -1)
         # make sure data is same length as sample_rate * duration

@@ -155,7 +155,7 @@ class RateMap(object):
         '''
         if self.var2Bin == VariableToBin.XY:
             x_lims, y_lims = self._getXYLimits()
-            if type(value) == int: # bad python :(
+            if isinstance(value, int):
                 value = [value]
             if len(value) == 1:
                 _x, bs_x = np.linspace(x_lims[0],
