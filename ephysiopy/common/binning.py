@@ -2,12 +2,13 @@
 # autocorrelogram
 # see autoCorr2D and crossCorr2D
 import warnings
+from enum import Enum
 
 import numpy as np
 from astropy import convolution  # deals with nans unlike other convs
-from ephysiopy.common.utils import blurImage
 from scipy import signal
-from enum import Enum
+
+from ephysiopy.common.utils import blurImage
 
 warnings.filterwarnings(
     "ignore", message="invalid value encountered in sqrt")
@@ -983,41 +984,51 @@ class RateMap(object):
         H[Hp < Pthresh] = np.nan
 
         return H
-
-
-def box_boundary_intersection(xy: np.ndarray,
-                              direction: np.ndarray,
-                              degs_per_bin: int = 3):
-    '''
-    Supposed to help construct dwell time/spike counts
-    maps wrt boundaries at given egocentric directions
-    and distances
-    NB: for the directional input
-    the 0 degree reference is horiztonal pointing
-    East and moves counter-clockwise
-    '''
-    from shapely.geometry import LineString, Point
-    from shapely import MultiLineString
-    from shapely.affinity import rotate, translate
-    # def create_lines(pt):
-    # longest_line = np.ceil(np.sum(np.ptp(xy)))
-    longest_line = 50
-    angles = np.arange(0, 360, degs_per_bin)
-    circle_centre = Point(np.min(xy[0])+50, np.min(xy[1])+50)
-    startpoint = Point((0, 0))
-    endpoint = Point([longest_line, 0])
-    lines = MultiLineString(
-        [rotate(LineString([startpoint, endpoint]), ang, origin=startpoint)
-         for ang in angles])
-    # Get the boundaries as defined by the xy position
-    # unless supplied already
     
-    # make radius a bit bigger than reality as we always should
-    # intersect the edge of the environment
-    radius = 51
-    for point, angle in zip(xy.T, direction):
-        this_point = Point(point)
-        t_lines = rotate(lines, -angle, origin=Point((0, 0)))
-        t_lines = translate(t_lines, this_point.x, this_point.y)
-        intersection_points = t_lines.intersection(
-            circle_centre.buffer(radius))
+
+    def box_boundary_intersection(self, degs_per_bin: int = 3) -> dict:
+        '''
+        Supposed to help construct dwell time/spike counts
+        maps wrt boundaries at given egocentric directions
+        and distances
+        NB: for the directional input
+        the 0 degree reference is horiztonal pointing
+        East and moves counter-clockwise
+        '''
+        from shapely import MultiLineString
+        from shapely.affinity import rotate, translate
+        from shapely.geometry import LineString, Point
+
+        assert self.dir is not None, "No direction data available"
+        # digitize the x and y positions
+        xinds = np.digitize(self.xy[0], self.binedges[1])
+        yinds = np.digitize(self.xy[1], self.binedges[0])
+        longest_line = 50
+        angles = np.arange(0, 360, degs_per_bin)
+        circle_centre = Point(np.min(xy[0])+50, np.min(xy[1])+50)
+        radius = 51
+        circle = circle_centre.buffer(radius).boundary
+        startpoint = Point((0, 0))
+        endpoint = Point([longest_line, 0])
+        lines = MultiLineString(
+            [rotate(LineString([startpoint, endpoint]), ang, origin=startpoint)
+            for ang in angles])
+        # Create a dictionary to hold all the egocentric distances (values) at 
+        # each egocentric direction (keys)
+        ego_distancemap = {angle: [] for angle in angles}
+        # make radius a bit bigger than reality as we always should
+        # intersect the edge of the environment
+        for point, angle in zip(xy.T, direction):
+            this_point = Point(point)
+            t_lines = rotate(lines, -angle, origin=Point((0, 0)))
+            t_lines = translate(t_lines, this_point.x, this_point.y)
+            # get the points at which the fan of lines intersect the circle
+            intersection_points = t_lines.intersection(circle)
+            for idx, line in enumerate(list(t_lines.geoms)):
+                for ip in list(intersection_points.geoms):
+                    if line.distance(ip) < 1e-8:
+                        current_vals = ego_distancemap[angles[idx]]
+                        current_vals.append(line.project(ip))
+                        ego_distancemap[angles[idx]] = current_vals
+        return ego_distancemap
+            

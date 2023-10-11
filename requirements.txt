@@ -8,6 +8,7 @@ mahotas
 h5py
 phylib
 scikit-learn
+shapely
 phylib
 tqdm
 pytest
