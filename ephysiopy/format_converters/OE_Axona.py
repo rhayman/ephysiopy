@@ -142,7 +142,7 @@ class OE2Axona(object):
         Wrapper for makeSetData below
         """
         print("Exporting set file data...")
-        self.makeSetData(kwargs)
+        self.makeSetData(**kwargs)
         print("Done exporting set file.")
 
     def exportPos(self, ppm=300, jumpmax=100, as_text=False, **kwargs):
@@ -163,7 +163,8 @@ class OE2Axona(object):
         self.OE_data.PosCalcs.postprocesspos(
             self.OE_data.PosCalcs.tracker_params)
         xy = self.OE_data.PosCalcs.xy.T
-        xyTS = self.OE_data.PosCalcs.xyTS
+        xyTS = self.OE_data.PosCalcs.xyTS  # in seconds
+        xyTS = xyTS * self.pos_sample_rate
         # extract some values from PosCalcs or overrides given
         # when calling this method
         ppm = self.OE_data.PosCalcs.ppm or ppm
@@ -193,13 +194,13 @@ class OE2Axona(object):
             tracker_params.keys() else str(min_xy[0])
         pos_header.pos["min_y"] = pos_header.pos["window_min_y"] = str(
             tracker_params["TopBorder"]) if "TopBorder" in \
-            tracker_params.keys() else str(max_xy[1])
+            tracker_params.keys() else str(min_xy[1])
         pos_header.pos["max_x"] = pos_header.pos["window_max_x"] = str(
             tracker_params["RightBorder"]) if "RightBorder" in \
             tracker_params.keys() else str(max_xy[0])
         pos_header.pos["max_y"] = pos_header.pos["window_max_y"] = str(
             tracker_params["BottomBorder"]) if "BottomBorder" in \
-            tracker_params.keys() else str(min_xy[1])
+            tracker_params.keys() else str(max_xy[1])
         pos_header.common["duration"] = str(
             int(self.last_pos_ts - self.first_pos_ts))
         pos_header.pos["pixels_per_metre"] = str(ppm)
@@ -533,8 +534,7 @@ class OE2Axona(object):
         header.common["duration"] = str(
             int(self.last_pos_ts - self.first_pos_ts))
         print(f"header.common[duration] = {header.common['duration']}")
-
-        _lfp_data = self.resample(data, 30000, dst_rate, -1)
+        _lfp_data = self.resample(data.astype(float), 30000, dst_rate, -1)
         # make sure data is same length as sample_rate * duration
         nsamples = int(dst_rate * int(header.common["duration"]))
         # lfp_data might be shorter than nsamples. If so, fill the 
@@ -543,7 +543,7 @@ class OE2Axona(object):
             lfp_data = np.zeros(nsamples)
             lfp_data[0:len(_lfp_data)] = _lfp_data
         else:
-            lfp_data = lfp_data[0:nsamples]
+            lfp_data = _lfp_data[0:nsamples]
         lfp_data = self.__filterLFP__(lfp_data, dst_rate)
         # convert the data format
         # lfp_data = lfp_data * self.bitvolts # in microvolts
@@ -551,6 +551,8 @@ class OE2Axona(object):
         if eeg_type == "eeg":
             # probably BROKEN
             # lfp_data starts out as int16 (see Parameters above)
+            # but gets converted into float64 as part of the
+            # resampling/ filtering process
             lfp_data = lfp_data / 32768.0
             lfp_data = lfp_data * gain
             # cap the values at either end...
@@ -567,7 +569,7 @@ class OE2Axona(object):
         header.n_samples = str(len(lfp_data))
         self.writeLFP2AxonaFormat(header, lfp_data, eeg_type)
 
-    def makeSetData(self, lfp_channel=1, **kwargs):
+    def makeSetData(self, lfp_channel=4, **kwargs):
         if self.OE_data is None:
             # to get the timestamps for duration key
             self.getOEData(self.filename_root)
@@ -594,7 +596,7 @@ class OE2Axona(object):
                 header.set_entries[k] = "0"
             if "EEG_ch_1" in k:
                 if lfp_channel is not None:
-                    header.set_entries[k] = str(lfp_channel)
+                    header.set_entries[k] = str(int(lfp_channel))
             if "mode_ch_" in k:
                 header.set_entries[k] = "0"
         # iterate again to make sure lfp gain set correctly

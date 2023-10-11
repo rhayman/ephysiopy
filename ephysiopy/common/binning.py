@@ -1003,22 +1003,22 @@ class RateMap(object):
         # digitize the x and y positions
         xinds = np.digitize(self.xy[0], self.binedges[1])
         yinds = np.digitize(self.xy[1], self.binedges[0])
-        longest_line = 50
+        radius = 50
         angles = np.arange(0, 360, degs_per_bin)
-        circle_centre = Point(np.min(xy[0])+50, np.min(xy[1])+50)
-        radius = 51
+        circle_centre = Point(
+            np.min(self.xy[0])+radius, np.min(self.xy[1])+radius)
         circle = circle_centre.buffer(radius).boundary
         startpoint = Point((0, 0))
-        endpoint = Point([longest_line, 0])
+        endpoint = Point([radius, 0])
         lines = MultiLineString(
             [rotate(LineString([startpoint, endpoint]), ang, origin=startpoint)
-            for ang in angles])
-        # Create a dictionary to hold all the egocentric distances (values) at 
+             for ang in angles])
+        # Create a dictionary to hold all the egocentric distances (values) at
         # each egocentric direction (keys)
         ego_distancemap = {angle: [] for angle in angles}
         # make radius a bit bigger than reality as we always should
         # intersect the edge of the environment
-        for point, angle in zip(xy.T, direction):
+        for point, angle in zip(self.xy.T, self.dir):
             this_point = Point(point)
             t_lines = rotate(lines, -angle, origin=Point((0, 0)))
             t_lines = translate(t_lines, this_point.x, this_point.y)
@@ -1031,4 +1031,3 @@ class RateMap(object):
                         current_vals.append(line.project(ip))
                         ego_distancemap[angles[idx]] = current_vals
         return ego_distancemap
-            
