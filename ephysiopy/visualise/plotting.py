@@ -71,6 +71,21 @@ class FigureMaker(object):
         self.RateMap.y_lims = getattr(self, "y_lims", None)
 
     def getSpikePosIndices(self, spk_times: np.ndarray):
+        '''
+        Returns the indices into the position data
+        at which some spike times occurred.
+
+        Parameters
+        ----------
+        spk_times: np.ndarray
+            The spike times in seconds
+
+        Returns
+        -------
+        idx: np.ndarray
+            The indices into the position data at which the
+            spikes occurred
+        '''
         pos_times = getattr(self.PosCalcs, "xyTS")
         idx = np.searchsorted(pos_times, spk_times)
         idx[idx == len(pos_times)] = idx[idx == len(pos_times)] - 1
@@ -341,6 +356,23 @@ class FigureMaker(object):
         ax: matplotlib.axes = None,
         **kwargs
     ) -> matplotlib.axes:
+        '''
+        Plots the power spectrum
+
+        The parameters can be obtained from
+        calcEEGPowerSpectrum() in the EEGCalcsGeneric class
+
+        Parameters
+        ----------
+        freqs: np.array
+        power: np.array
+        sm_power: np.array
+        band_at_max_power: float
+        freq_at_band_max_power: float
+        max_freq: int (default 50)
+        theta_range: tuple (default [6, 12])
+        ax: matplotlib.axes
+        '''
         # downsample frequencies and power
         freqs = freqs[0::50]
         power = power[0::50]
@@ -379,6 +411,17 @@ class FigureMaker(object):
     def makeXCorr(
         self, spk_times: np.array, ax: matplotlib.axes = None, **kwargs
     ) -> matplotlib.axes:
+        '''
+        Returns an axis containing the autocorrelogram of the spike
+        times provided over the range +/-500ms
+
+        Parameters
+        ----------
+        spk_times: np.array
+            spike times in samples
+        ax: matplotlib.axes
+            the axes to plot into (default None)
+        '''
         # spk_times in samples provided in seconds but convert to
         # ms for a more display friendly scale
         spk_times = spk_times / 3e4 * 1000.0
