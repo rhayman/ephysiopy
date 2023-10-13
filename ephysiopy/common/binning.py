@@ -7,8 +7,11 @@ from enum import Enum
 import numpy as np
 from astropy import convolution  # deals with nans unlike other convs
 from scipy import signal
-
-from ephysiopy.common.utils import blurImage
+from shapely import MultiLineString
+from shapely.affinity import rotate, translate
+from shapely.geometry import LineString, Point
+import matplotlib.pyplot as plt
+from ephysiopy.common.utils import blurImage, memoized
 
 warnings.filterwarnings(
     "ignore", message="invalid value encountered in sqrt")
@@ -984,9 +987,52 @@ class RateMap(object):
         H[Hp < Pthresh] = np.nan
 
         return H
-    
 
-    def box_boundary_intersection(self, degs_per_bin: int = 3) -> dict:
+    @memoized
+    def _create_boundary_distance_lookup(self,
+                                             arena_boundary: MultiLineString,
+                                             degs_per_bin: float, **kwargs):
+        # Now we generate lines radiating out from a point as a 
+        # multilinestring geometry collection - this looks like a 360/degs_per_bin
+        # star. We will move this to each valid location in the position map
+        # and then calculate the distance to the nearest intersection with the
+        # arena boundary.
+        # get the arena boundaries to figure out the radius of the arena,
+        # regardless of its actual shape
+        x1, y1, x2, y2 = arena_boundary.bounds
+        radius = max(x2-x1, y2-y1)/2
+        startpoint = Point((0, 0))
+        endpoint = Point([radius, 0])
+        angles = np.arange(0, 360, degs_per_bin)
+        lines = MultiLineString(
+            [rotate(LineString([startpoint, endpoint]), ang, origin=startpoint)
+             for ang in angles])
+         # get the position map and the valid locations within it
+        pos_map, _ = self.getMap(np.ones_like(self.dir))
+        xvalid, yvalid = np.nonzero(~np.isnan(pos_map))
+        
+        # preallocate the array to hold distances
+        distances = np.full(
+            (len(self.binedges[1]), len(self.binedges[0]), len(angles)), np.nan)
+
+        # Now iterate through valid locations in the pos map and calculate the
+        # distances and the indices of the lines that intersect with the
+        # arena boundary. The indices are equivalent to the angle of the
+        # line in the lines geometry collection. This iteration is a bit slow
+        # but it will only need to be done once per session as it's creating
+        # a lookup table for the distances
+        for xi, yi in zip(xvalid, yvalid):
+            i_point = Point((self.binedges[1][xi],self.binedges[0][yi]))
+            t_lines = translate(lines, i_point.x, i_point.y)
+            di = [(i_point.distance(arena_boundary.intersection(line)), idx) for idx, line in enumerate(t_lines.geoms) if arena_boundary.intersects(line)]
+            d, i = zip(*di)
+            distances[xi, yi, i] = d
+        return distances
+
+    def get_egocentric_boundary_map(self,
+                                    degs_per_bin: float = 3,
+                                    xy_binsize: float = 2.5,
+                                    arena_type: str = "circle") -> np.ndarray:
         '''
         Supposed to help construct dwell time/spike counts
         maps wrt boundaries at given egocentric directions
@@ -995,39 +1041,65 @@ class RateMap(object):
         the 0 degree reference is horiztonal pointing
         East and moves counter-clockwise
         '''
-        from shapely import MultiLineString
-        from shapely.affinity import rotate, translate
-        from shapely.geometry import LineString, Point
-
         assert self.dir is not None, "No direction data available"
-        # digitize the x and y positions
-        xinds = np.digitize(self.xy[0], self.binedges[1])
-        yinds = np.digitize(self.xy[1], self.binedges[0])
-        radius = 50
+        # initially do some binning to get valid locations (some might be nans due to 
+        # arena shape and/or poor sampling) and then digitize the x and y positions
+        # and the angular positions
+        self.binsize = xy_binsize  # this will trigger a re-calculation of the bin edges
+       
+        # digitize the x and y positions and the angular positions
+        x_binedges = self.binedges[1]
+        y_binedges = self.binedges[0]
+        xinds = np.digitize(self.xy[0], x_binedges)
+        yinds = np.digitize(self.xy[1], y_binedges)
+        binned_hd = np.digitize(self.dir, np.arange(0, 360, degs_per_bin))
         angles = np.arange(0, 360, degs_per_bin)
-        circle_centre = Point(
-            np.min(self.xy[0])+radius, np.min(self.xy[1])+radius)
-        circle = circle_centre.buffer(radius).boundary
-        startpoint = Point((0, 0))
-        endpoint = Point([radius, 0])
-        lines = MultiLineString(
-            [rotate(LineString([startpoint, endpoint]), ang, origin=startpoint)
-             for ang in angles])
-        # Create a dictionary to hold all the egocentric distances (values) at
-        # each egocentric direction (keys)
-        ego_distancemap = {angle: [] for angle in angles}
-        # make radius a bit bigger than reality as we always should
-        # intersect the edge of the environment
-        for point, angle in zip(self.xy.T, self.dir):
-            this_point = Point(point)
-            t_lines = rotate(lines, -angle, origin=Point((0, 0)))
-            t_lines = translate(t_lines, this_point.x, this_point.y)
-            # get the points at which the fan of lines intersect the circle
-            intersection_points = t_lines.intersection(circle)
-            for idx, line in enumerate(list(t_lines.geoms)):
-                for ip in list(intersection_points.geoms):
-                    if line.distance(ip) < 1e-8:
-                        current_vals = ego_distancemap[angles[idx]]
-                        current_vals.append(line.project(ip))
-                        ego_distancemap[angles[idx]] = current_vals
-        return ego_distancemap
+        # Use the shaeply package to specify some geometry for the arena
+        # boundary and the lines radiating out
+        # from the current location of the animal. The geometry for the 
+        # arena should be user specified but for now I'll just use a circle
+        if arena_type == "circle":
+            radius = 50
+            circle_centre = Point(
+                np.min(self.xy[0])+radius, np.min(self.xy[1])+radius)
+            arena_boundary = circle_centre.buffer(radius).boundary
+        # now we have a circle with its centre at the centre of the arena
+        # i.e. the circle defines the arena edges. Calling .boundary on the 
+        # circle geometry actually gives us a 65-gon polygon
+
+        distances = self._create_boundary_distance_lookup(arena_boundary, degs_per_bin)
+        # pre-allocate the egocentric boundary map - made a bit bigger to
+        # capture  the half open bin at the end
+        ego_boundary_map = np.full([int(radius / xy_binsize)+1, len(angles)], 0)
+        # iterate through the digitized locations (x/y and angular), using the
+        # lookup table to get the distances to the arena boundary and then
+        # increment the appropriate bin in the egocentric boundary map
+        for xi, yi, ai in zip(xinds-1, yinds-1, binned_hd-1):
+            dists = distances[xi, yi]
+            current_heading = binned_hd[ai]
+            valid_idx = np.isfinite(dists)
+            walls_at_these_angles = np.roll(angles, int(current_heading/degs_per_bin))[valid_idx]
+            dists_to_walls = dists[valid_idx]
+            dist_idx_to_map = np.floor(dists_to_walls/xy_binsize).astype(int)
+            ang_idx_to_map = np.floor(walls_at_these_angles/degs_per_bin).astype(int)
+            ego_boundary_map[dist_idx_to_map, ang_idx_to_map] += 1
+        return ego_boundary_map
+
+    def plot_egocentric_boundary_map(self, ego_map: np.ndarray, ax=None, **kwargs):
+        '''
+        Plots the egocentric boundary map
+        '''
+        if ax is None:
+            fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+        theta = np.arange(0, 2*np.pi, 2*np.pi/ego_map.shape[1])
+        phi = np.arange(0, ego_map.shape[0]*2.5, 2.5)
+        X, Y = np.meshgrid(theta, phi)
+        ego_map = blurImage(ego_map, 5, 3)
+        ax.pcolormesh(X, Y, ego_map, **kwargs)
+        ax.set_xticks(np.arange(0, 2*np.pi, np.pi/4))
+        # ax.set_xticklabels(np.arange(0, 2*np.pi, np.pi/4))
+        ax.set_yticks(np.arange(0, 50, 10))
+        ax.set_yticklabels(np.arange(0, 50, 10))
+        ax.set_xlabel('Angle (deg)')
+        ax.set_ylabel('Distance (cm)')
+        return ax
