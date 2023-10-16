@@ -7,7 +7,7 @@ from enum import Enum
 import numpy as np
 from astropy import convolution  # deals with nans unlike other convs
 from scipy import signal
-from shapely import MultiLineString
+from shapely import MultiLineString, prepare
 from shapely.affinity import rotate, translate
 from shapely.geometry import LineString, Point
 import matplotlib.pyplot as plt
@@ -1009,6 +1009,7 @@ class RateMap(object):
         lines = MultiLineString(
             [rotate(LineString([startpoint, endpoint]), ang, origin=startpoint)
              for ang in angles])
+        prepare(lines)
         # arena centre
         cx = x1 + radius
         cy = y1 + radius
@@ -1031,6 +1032,7 @@ class RateMap(object):
             ipx, ipy = i_point.xy
             new_point = Point(cx-ipx[0], cy-ipy[0])
             t_arena = translate(arena_boundary, -new_point.x, -new_point.y)
+            prepare(t_arena)
             di = [(startpoint.distance(t_arena.intersection(line)), idx) for idx, line in enumerate(lines.geoms) if t_arena.intersects(line)]
             d, i = zip(*di)
             distances[xi, yi, i] = d
@@ -1056,7 +1058,6 @@ class RateMap(object):
                                     degs_per_bin: float = 3,
                                     xy_binsize: float = 2.5,
                                     arena_type: str = "circle",
-                                    method: int = 1,
                                     pos_weights=None) -> np.ndarray:
         '''
         Supposed to help construct dwell time/spike counts
@@ -1107,41 +1108,18 @@ class RateMap(object):
         # lookup table to get the distances to the arena boundary and then
         # increment the appropriate bin in the egocentric boundary map
         start = time.time()
-        if method == 1:
-            for xi, yi, head_direction in zip(xinds-1, yinds-1, self.dir):
-                dists = distances[xi, yi]
-                valid_idx = np.isfinite(dists)
-                walls_at_these_angles = np.roll(angles, int(head_direction/degs_per_bin))[valid_idx]
-                dists_to_walls = dists[valid_idx]
-                dist_idx_to_map = np.floor(dists_to_walls/xy_binsize).astype(int)
-                ang_idx_to_map = np.floor(walls_at_these_angles/degs_per_bin).astype(int)
-                linear_idx = np.ravel_multi_index([yi, xi], self.nBins)
-                ego_boundary_map[dist_idx_to_map, ang_idx_to_map] += pos_weights[linear_idx]
-            end = time.time()
-            print(f"Time to get egocentric boundary map with method 1: {end-start}")
-        elif method == 2:
-            angs = []
-            dist = []
-            binning_pos = np.all(pos_weights) == 1
-            if binning_pos:
-                h_spk, _ = np.histogramdd([self.xy[0], self.xy[1], self.dir],
-                                       weights=pos_weights,
-                                       bins=[self.binedges[1],
-                                             self.binedges[0],
-                                             np.arange(0, 360+degs_per_bin, degs_per_bin)])
-            for i in range(len(angles)):
-                if binning_pos:
-                    d = distances[:, :, i][np.isfinite(distances[:, :, i])]
-                else:
-                    pass
-                dist.append(d)
-                angs.append([i*degs_per_bin] * len(d))
-            a = flatten_list(angs)
-            d = flatten_list(dist)
-            ego_boundary_map, _ = np.histogram2d(x=d, y=a,
-                                                 bins=[np.arange(0, xy_binsize, radius),
-                                                       angles])
-        return ego_boundary_map
+        for xi, yi, head_direction in zip(xinds-1, yinds-1, self.dir):
+            dists = distances[xi, yi]
+            valid_idx = np.isfinite(dists)
+            walls_at_these_angles = np.roll(angles, int(head_direction/degs_per_bin))[valid_idx]
+            dists_to_walls = dists[valid_idx]
+            dist_idx_to_map = np.floor(dists_to_walls/xy_binsize).astype(int)
+            ang_idx_to_map = np.floor(walls_at_these_angles/degs_per_bin).astype(int)
+            linear_idx = np.ravel_multi_index([yi, xi], self.nBins)
+            ego_boundary_map[dist_idx_to_map, ang_idx_to_map] += pos_weights[linear_idx]
+        end = time.time()
+        print(f"Time to get egocentric boundary map: {end-start}")
+        return ego_boundary_map, distances
 
     def plot_egocentric_boundary_map(self, ego_map: np.ndarray, ax=None, **kwargs):
         '''
