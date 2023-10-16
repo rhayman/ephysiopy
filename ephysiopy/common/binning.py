@@ -11,7 +11,7 @@ from shapely import MultiLineString
 from shapely.affinity import rotate, translate
 from shapely.geometry import LineString, Point
 import matplotlib.pyplot as plt
-from ephysiopy.common.utils import blurImage, memoized
+from ephysiopy.common.utils import blurImage, memoized, flatten_list
 
 warnings.filterwarnings(
     "ignore", message="invalid value encountered in sqrt")
@@ -1003,15 +1003,18 @@ class RateMap(object):
         # regardless of its actual shape
         x1, y1, x2, y2 = arena_boundary.bounds
         radius = max(x2-x1, y2-y1)/2
-        startpoint = Point((0, 0))
-        endpoint = Point([radius, 0])
+        startpoint = Point((x1+radius, y1+radius))
+        endpoint = Point([x2, y1+radius])
         angles = np.arange(0, 360, degs_per_bin)
         lines = MultiLineString(
             [rotate(LineString([startpoint, endpoint]), ang, origin=startpoint)
              for ang in angles])
+        # arena centre
+        cx = x1 + radius
+        cy = y1 + radius
         # get the position map and the valid locations within it
         pos_map, (ybin_edges, xbin_edges) = self.getMap(np.ones_like(self.dir))
-        xvalid, yvalid = np.nonzero(~np.isnan(pos_map))
+        yvalid, xvalid = np.nonzero(~np.isnan(pos_map))
 
         # preallocate the array to hold distances
         distances = np.full(
@@ -1024,18 +1027,37 @@ class RateMap(object):
         # but it will only need to be done once per session as it's creating
         # a lookup table for the distances
         for xi, yi in zip(xvalid, yvalid):
-            i_point = Point((xbin_edges[xi]-xy_binsize, ybin_edges[yi]-xy_binsize))
-            t_lines = translate(lines, i_point.x, i_point.y)
-            di = [(i_point.distance(arena_boundary.intersection(line)), idx) for idx, line in enumerate(t_lines.geoms) if arena_boundary.intersects(line)]
+            i_point = Point((xbin_edges[xi]+xy_binsize, ybin_edges[yi]+xy_binsize))
+            ipx, ipy = i_point.xy
+            new_point = Point(cx-ipx[0], cy-ipy[0])
+            t_arena = translate(arena_boundary, -new_point.x, -new_point.y)
+            di = [(startpoint.distance(t_arena.intersection(line)), idx) for idx, line in enumerate(lines.geoms) if t_arena.intersects(line)]
             d, i = zip(*di)
             distances[xi, yi, i] = d
         return distances
+
+    def plot_geometries(self, arena, point=None, lines=None):
+        fig, ax = plt.subplots()
+        arena_x, arena_y = arena.xy
+        ax.plot(arena_x, arena_y, 'r')
+        if point is not None:
+            px, py = point.xy
+            ax.plot(px, py, 'go')
+        if lines is not None:
+            ips = list(arena.intersection(lines).geoms)
+            for line in list(lines.geoms):
+                lx, ly = line.xy
+                ax.plot(lx, ly, 'k')
+            for ip in ips:
+                ax.plot(ip.x, ip.y, 'ro')
+        plt.show()
 
     def get_egocentric_boundary_map(self,
                                     degs_per_bin: float = 3,
                                     xy_binsize: float = 2.5,
                                     arena_type: str = "circle",
-                                    pos_weights: np.array = None) -> np.ndarray:
+                                    method: int = 1,
+                                    pos_weights=None) -> np.ndarray:
         '''
         Supposed to help construct dwell time/spike counts
         maps wrt boundaries at given egocentric directions
@@ -1071,7 +1093,7 @@ class RateMap(object):
                 np.min(self.xy[0])+radius, np.min(self.xy[1])+radius)
             arena_boundary = circle_centre.buffer(radius).boundary
         # now we have a circle with its centre at the centre of the arena
-        # i.e. the circle defines the arena edges. Calling .boundary on the 
+        # i.e. the circle defines the arena edges. Calling .boundary on the
         # circle geometry actually gives us a 65-gon polygon
         start = time.time()
         distances = self._create_boundary_distance_lookup(
@@ -1085,20 +1107,40 @@ class RateMap(object):
         # lookup table to get the distances to the arena boundary and then
         # increment the appropriate bin in the egocentric boundary map
         start = time.time()
-        for xi, yi, head_direction in zip(xinds-1, yinds-1, self.dir):
-            dists = distances[xi, yi]
-            valid_idx = np.isfinite(dists)
-            walls_at_these_angles = np.roll(angles, int(head_direction/degs_per_bin))[valid_idx]
-            dists_to_walls = dists[valid_idx]
-            dist_idx_to_map = np.floor(dists_to_walls/xy_binsize).astype(int)
-            ang_idx_to_map = np.floor(walls_at_these_angles/degs_per_bin).astype(int)
-            linear_idx = np.ravel_multi_index([yi, xi], self.nBins)
-            if pos_weights is None:  # i.e generate the occupancy map
-                ego_boundary_map[dist_idx_to_map, ang_idx_to_map] += 1
-            else:  # generate the spike map
-                ego_boundary_map[dist_idx_to_map, int(head_direction/degs_per_bin)] += pos_weights[linear_idx]
-        end = time.time()
-        print(f"Time to get egocentric boundary map: {end-start}")
+        if method == 1:
+            for xi, yi, head_direction in zip(xinds-1, yinds-1, self.dir):
+                dists = distances[xi, yi]
+                valid_idx = np.isfinite(dists)
+                walls_at_these_angles = np.roll(angles, int(head_direction/degs_per_bin))[valid_idx]
+                dists_to_walls = dists[valid_idx]
+                dist_idx_to_map = np.floor(dists_to_walls/xy_binsize).astype(int)
+                ang_idx_to_map = np.floor(walls_at_these_angles/degs_per_bin).astype(int)
+                linear_idx = np.ravel_multi_index([yi, xi], self.nBins)
+                ego_boundary_map[dist_idx_to_map, ang_idx_to_map] += pos_weights[linear_idx]
+            end = time.time()
+            print(f"Time to get egocentric boundary map with method 1: {end-start}")
+        elif method == 2:
+            angs = []
+            dist = []
+            binning_pos = np.all(pos_weights) == 1
+            if binning_pos:
+                h_spk, _ = np.histogramdd([self.xy[0], self.xy[1], self.dir],
+                                       weights=pos_weights,
+                                       bins=[self.binedges[1],
+                                             self.binedges[0],
+                                             np.arange(0, 360+degs_per_bin, degs_per_bin)])
+            for i in range(len(angles)):
+                if binning_pos:
+                    d = distances[:, :, i][np.isfinite(distances[:, :, i])]
+                else:
+                    pass
+                dist.append(d)
+                angs.append([i*degs_per_bin] * len(d))
+            a = flatten_list(angs)
+            d = flatten_list(dist)
+            ego_boundary_map, _ = np.histogram2d(x=d, y=a,
+                                                 bins=[np.arange(0, xy_binsize, radius),
+                                                       angles])
         return ego_boundary_map
 
     def plot_egocentric_boundary_map(self, ego_map: np.ndarray, ax=None, **kwargs):

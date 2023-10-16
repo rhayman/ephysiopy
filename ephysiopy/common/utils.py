@@ -66,6 +66,10 @@ def min_max_norm(x: np.ndarray, min=None, max=None, axis=0) -> np.ndarray:
     return (x - min) / (max - min)
 
 
+def flatten_list(list_to_flatten: list) -> list:
+    return [item for sublist in list_to_flatten for item in sublist]
+
+
 def smooth(x, window_len=9, window='hanning'):
     """
     Smooth the data using a window with requested size.
