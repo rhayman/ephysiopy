@@ -158,8 +158,11 @@ class FigureMaker(object):
     @stripAxes
     def makeEgoCentricBoundarySpikePlot(
                                         self, spk_times: np.ndarray,
+                                        add_colour_wheel: bool = False,
                                         ax: matplotlib.axes = None,
                                         **kwargs) -> matplotlib.axes:
+        if not self.RateMap:
+            self.initialise()
         # get the index into a circular colormap based
         # on directional heading, then create a LineCollection
         num_dir_bins = 60
@@ -175,7 +178,8 @@ class FigureMaker(object):
                  for i in idx]
         if ax is None:
             fig = plt.figure()
-            ax = fig.add_subplot(111)
+            ax = fig.add_subplot()
+                
         # plot the path
         ax.plot(self.RateMap.xy[0],
                 self.RateMap.xy[1],
@@ -186,6 +190,19 @@ class FigureMaker(object):
             ax.add_artist(r)
             r.set_clip_box(ax.bbox)
             r.set_facecolor(dir_colours[col_idx])
+        if add_colour_wheel:
+            ax_col = ax.inset_axes(bounds=[0.75, 0.75, 0.15, 0.15],
+                                   projection='polar',
+                                   transform=fig.transFigure)
+            theta = np.linspace(0, 2*np.pi, 1000)
+            phi = np.linspace(0, 1, 2)
+            X, Y = np.meshgrid(phi, theta)
+            norm = matplotlib.colors.Normalize(0, 2*np.pi)
+            col_map = sns.color_palette('hls', as_cmap=True)
+            ax_col.pcolormesh(theta, phi, Y.T, norm=norm, cmap=col_map)
+            ax_col.set_yticklabels([])
+            ax_col.spines['polar'].set_visible(False)
+            ax_col.set_thetagrids([0, 90])
         return ax
 
     @stripAxes

@@ -308,9 +308,9 @@ class RateMap(object):
         -------
         tuple: each member an array of bin edges
         """
-        if self.var2Bin == VariableToBin.DIR:
+        if self.var2Bin.value == VariableToBin.DIR.value:
             self.binedges = np.arange(0, 360 + binsize, binsize)
-        elif self.var2Bin == VariableToBin.SPEED:
+        elif self.var2Bin.value == VariableToBin.SPEED.value:
             maxspeed = np.max(self.speed)
             # assume min speed = 0
             self.binedges = np.arange(0, maxspeed, binsize)
@@ -355,11 +355,11 @@ class RateMap(object):
             for respectively
 
         """
-        if varType == VariableToBin.DIR:
+        if varType.value == VariableToBin.DIR.value:
             sample = self.dir
-        elif varType == VariableToBin.SPEED:
+        elif varType.value == VariableToBin.SPEED.value:
             sample = self.speed
-        elif varType == VariableToBin.XY:
+        elif varType.value == VariableToBin.XY.value:
             sample = self.xy
         else:
             raise ValueError("Unrecognized variable to bin.")
@@ -375,9 +375,9 @@ class RateMap(object):
                                                      self.pos_weights)
         nanIdx = binned_pos == 0
 
-        if mapType == MapType.POS:  # return just binned up position
+        if mapType.value == MapType.POS.value:  # return just binned up position
             if smoothing:
-                if varType == VariableToBin.DIR:
+                if varType.value == VariableToBin.DIR.value:
                     binned_pos = self._circPadSmooth(
                         binned_pos, n=self.smooth_sz)
                 else:
@@ -391,7 +391,7 @@ class RateMap(object):
         # edges
         if "after" in self.whenToSmooth:
             rmap = binned_spk / binned_pos
-            if varType == VariableToBin.DIR:
+            if varType.value == VariableToBin.DIR.value:
                 rmap = self._circPadSmooth(rmap, self.smooth_sz)
             else:
                 rmap = blurImage(
@@ -399,7 +399,7 @@ class RateMap(object):
         else:  # default case
             if not smoothing:
                 return binned_spk / binned_pos, binned_pos_edges
-            if varType == VariableToBin.DIR:
+            if varType.value == VariableToBin.DIR.value:
                 binned_pos = self._circPadSmooth(binned_pos, self.smooth_sz)
                 binned_spk = self._circPadSmooth(binned_spk, self.smooth_sz)
                 rmap = binned_spk / binned_pos
@@ -1102,14 +1102,14 @@ class RateMap(object):
             arena_boundary, degs_per_bin, xy_binsize)
         end = time.time()
         print(f"Time to create lookup map: {end-start}")
-        # pre-allocate the egocentric boundary map - made a bit bigger to
-        # capture  the half open bin at the end
-        ego_boundary_map = np.zeros([int(radius / xy_binsize)+1, len(angles)])
         # iterate through the digitized locations (x/y and angular), using the
         # lookup table to get the distances to the arena boundary and then
         # increment the appropriate bin in the egocentric boundary map
         start = time.time()
         if method == 1:
+            # pre-allocate the egocentric boundary map - made a bit bigger to
+            # capture  the half open bin at the end
+            ego_boundary_map = np.zeros([int(radius / xy_binsize)+1, len(angles)])
             for xi, yi, head_direction in zip(xinds-1, yinds-1, self.dir):
                 dists = distances[xi, yi]
                 valid_idx = np.isfinite(dists)
@@ -1120,45 +1120,43 @@ class RateMap(object):
                 linear_idx = np.ravel_multi_index([yi, xi], self.nBins)
                 ego_boundary_map[dist_idx_to_map, ang_idx_to_map] += pos_weights[linear_idx]
         elif method == 2:
-            xy_by_heading_occ, _ = np.histogramdd([self.xy[0], self.xy[1], self.dir], bins=[x_binedges, y_binedges, np.arange(0, 360+degs_per_bin, degs_per_bin)])
-            assert np.allclose(np.sum(xy_by_heading_occ), len(self.dir))
-            assert(xy_by_heading_occ.shape == distances.shape)
+            xy_by_heading, _ = np.histogramdd([self.xy[0], self.xy[1], self.dir], bins=distances.shape, weights=pos_weights)
+            assert xy_by_heading.shape == distances.shape
             distlist = []
             anglist = []
             for i_bin in np.ndindex(distances.shape[:2]):
-                angs = distances[i_bin]
-
-
-            weightlist = []
-            for xi, yi, head_direction, weight in zip(xinds-1, yinds-1, self.dir, pos_weights):
-                dists = distances[xi, yi]
-                valid_idx = np.isfinite(dists)
-                walls_at_these_angles = np.roll(angles, int(head_direction/degs_per_bin))[valid_idx]
-                dists_to_walls = dists[valid_idx]
-                anglist.append(walls_at_these_angles)
-                distlist.append(dists_to_walls)
-                weightlist.append([weight] * len(walls_at_these_angles))
+                i_distances = distances[i_bin]
+                valid_distances = np.isfinite(i_distances)
+                nonzero_bincounts = np.nonzero(xy_by_heading[i_bin])[0]
+                for i_angle in nonzero_bincounts:
+                    ego_angles = np.roll(angles, i_angle)[valid_distances]
+                    n_repeats = xy_by_heading[i_bin][i_angle]
+                    ego_angles_repeats = np.repeat(ego_angles, n_repeats)
+                    distances_repeats = np.repeat(i_distances[valid_distances], n_repeats)
+                    distlist.append(distances_repeats)
+                    anglist.append(ego_angles_repeats)
             flat_angles = flatten_list(anglist)
             flat_dists = flatten_list(distlist)
-            flat_weights = flatten_list(weightlist)
-            ego_boundary_map, _ = np.histogramdd(
-                [flat_dists, flat_angles],
-                bins=[np.arange(0, 50+xy_binsize, xy_binsize), np.arange(0, 360+degs_per_bin, degs_per_bin)],
-                weights=flat_weights)
+            ego_boundary_map, _, _ = np.histogram2d(x=flat_dists, y=flat_angles,
+                                                 bins=[int(radius/xy_binsize), len(angles)])
         end = time.time()
         print(f"Time to get egocentric boundary map: {end-start}")
         return ego_boundary_map, distances
 
-    def plot_egocentric_boundary_map(self, ego_map: np.ndarray, ax=None, **kwargs):
+    def plot_egocentric_boundary_map(self, ego_map_occ: np.ndarray,
+                                     ego_map_spk: np.ndarray,
+                                     ax=None, **kwargs):
         '''
         Plots the egocentric boundary map
         '''
         if ax is None:
             fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
-        theta = np.arange(0, 2*np.pi, 2*np.pi/ego_map.shape[1])
-        phi = np.arange(0, ego_map.shape[0]*2.5, 2.5)
+        theta = np.arange(0, 2*np.pi, 2*np.pi/ego_map_occ.shape[1])
+        phi = np.arange(0, ego_map_occ.shape[0]*2.5, 2.5)
         X, Y = np.meshgrid(theta, phi)
-        ax.pcolormesh(X, Y, ego_map, **kwargs)
+        occ_sm = blurImage(ego_map_occ, 5, 3, ftype='gaussian')
+        spk_sm = blurImage(ego_map_spk, 5, 3, ftype='gaussian')
+        ax.pcolormesh(X, Y, spk_sm/occ_sm, **kwargs)
         ax.set_xticks(np.arange(0, 2*np.pi, np.pi/4))
         # ax.set_xticklabels(np.arange(0, 2*np.pi, np.pi/4))
         ax.set_yticks(np.arange(0, 50, 10))
