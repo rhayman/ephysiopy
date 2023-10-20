@@ -88,7 +88,7 @@ def test_get_adaptive_map(standard_Ratemap):
     spk_weights[spk_weights < 0.95] = 0
 
     rmap = standard_Ratemap.getMap(spk_weights)
-    pos_binned, _ = standard_Ratemap.getMap(spk_weights, mapType="pos")
+    pos_binned, _ = standard_Ratemap.getMap(spk_weights, mapType=MapType.POS)
     pos_binned[~np.isfinite(pos_binned)] = 0
     smthdRate, _, _ = standard_Ratemap.getAdaptiveMap(rmap[0], pos_binned)
     assert isinstance(smthdRate, np.ndarray)
