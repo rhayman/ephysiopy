@@ -315,10 +315,10 @@ class AxonaTrial(TrialInterface):
                 self.settings = None
 
     def load_pos_data(
-        self, pname: Path, ppm: int = 300, jumpmax: int = 100, *args, **kwargs
+        self, ppm: int = 300, jumpmax: int = 100, *args, **kwargs
     ) -> None:
         try:
-            AxonaPos = Pos(Path(pname))
+            AxonaPos = Pos(Path(self.pname))
             P = PosCalcsGeneric(
                 AxonaPos.led_pos[:, 0],
                 AxonaPos.led_pos[:, 1],
