@@ -11,6 +11,7 @@ import seaborn as sns
 from ephysiopy.axona import tintcolours as tcols
 from ephysiopy.common.binning import RateMap, VariableToBin
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
+from ephysiopy.common.utils import blurImage
 
 
 # Decorators
@@ -153,6 +154,54 @@ class FigureMaker(object):
                 self.PosCalcs.xy[1, idx],
                 "s", c=col, **kwargs
             )
+        return ax
+
+    def makeEgoCentricBoundaryMap(self, spk_times: np.ndarray,
+                                  ax: matplotlib.axes = None,
+                                  **kwargs) -> matplotlib.axes:
+        if not self.RateMap:
+            self.initialise()
+
+        degs_per_bin = 3
+        xy_binsize = 2.5
+        arena_type = "circle"
+        method = 2
+        # parse kwargs
+        if "degs_per_bin" in kwargs.keys():
+            degs_per_bin = kwargs["degs_per_bin"]
+        if "xy_binsize" in kwargs.keys():
+            xy_binsize = kwargs["xy_binsize"]
+        if "arena_type" in kwargs.keys():
+            arena_type = kwargs["arena_type"]
+        if "method" in kwargs.keys():
+            method = kwargs["method"]
+
+        idx = self.getSpikePosIndices(spk_times)
+        spk_weights = np.bincount(idx, minlength=len(self.RateMap.dir))
+        occ_map, _ = self.RateMap.get_egocentric_boundary_map(degs_per_bin,
+                                                              xy_binsize,
+                                                              arena_type,
+                                                              method)
+        spk_map, _ = self.RateMap.get_egocentric_boundary_map(degs_per_bin,
+                                                              xy_binsize,
+                                                              arena_type,
+                                                              method,
+                                                              spk_weights)
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(projection='polar')
+        theta = np.arange(0, 2*np.pi, 2*np.pi/occ_map.shape[1])
+        phi = np.arange(0, occ_map.shape[0]*2.5, 2.5)
+        X, Y = np.meshgrid(theta, phi)
+        occ_sm = blurImage(occ_map, 5, 3, ftype='gaussian')
+        spk_sm = blurImage(spk_map, 5, 3, ftype='gaussian')
+        ax.pcolormesh(X, Y, spk_sm/occ_sm, **kwargs)
+        ax.set_xticks(np.arange(0, 2*np.pi, np.pi/4))
+        # ax.set_xticklabels(np.arange(0, 2*np.pi, np.pi/4))
+        ax.set_yticks(np.arange(0, 50, 10))
+        ax.set_yticklabels(np.arange(0, 50, 10))
+        ax.set_xlabel('Angle (deg)')
+        ax.set_ylabel('Distance (cm)')
         return ax
 
     @stripAxes

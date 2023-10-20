@@ -1059,7 +1059,7 @@ class RateMap(object):
                                     xy_binsize: float = 2.5,
                                     arena_type: str = "circle",
                                     method: int = 1,
-                                    pos_weights=None) -> np.ndarray:
+                                    pos_weights=None) -> tuple:
         '''
         Supposed to help construct dwell time/spike counts
         maps wrt boundaries at given egocentric directions
@@ -1142,25 +1142,3 @@ class RateMap(object):
         end = time.time()
         print(f"Time to get egocentric boundary map: {end-start}")
         return ego_boundary_map, distances
-
-    def plot_egocentric_boundary_map(self, ego_map_occ: np.ndarray,
-                                     ego_map_spk: np.ndarray,
-                                     ax=None, **kwargs):
-        '''
-        Plots the egocentric boundary map
-        '''
-        if ax is None:
-            fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
-        theta = np.arange(0, 2*np.pi, 2*np.pi/ego_map_occ.shape[1])
-        phi = np.arange(0, ego_map_occ.shape[0]*2.5, 2.5)
-        X, Y = np.meshgrid(theta, phi)
-        occ_sm = blurImage(ego_map_occ, 5, 3, ftype='gaussian')
-        spk_sm = blurImage(ego_map_spk, 5, 3, ftype='gaussian')
-        ax.pcolormesh(X, Y, spk_sm/occ_sm, **kwargs)
-        ax.set_xticks(np.arange(0, 2*np.pi, np.pi/4))
-        # ax.set_xticklabels(np.arange(0, 2*np.pi, np.pi/4))
-        ax.set_yticks(np.arange(0, 50, 10))
-        ax.set_yticklabels(np.arange(0, 50, 10))
-        ax.set_xlabel('Angle (deg)')
-        ax.set_ylabel('Distance (cm)')
-        return ax
