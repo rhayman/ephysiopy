@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 def get_spike_times(T: AxonaTrial):
-    T.load_pos_data(Path(T.pname))
+    T.load_pos_data()
     return T.get_spike_times(1, 1)
 
 
