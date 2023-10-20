@@ -7,7 +7,7 @@ from ephysiopy.io.recording import AxonaTrial
 
 def get_spikecalcs_instance(path_to_axona_data) -> SpikeCalcsGeneric:
     T = AxonaTrial(path_to_axona_data)
-    T.load_pos_data(path_to_axona_data)
+    T.load_pos_data()
     spk_ts = T.TETRODE[1].spk_ts
     S = SpikeCalcsGeneric(spk_ts)
     S.getClusterWaveforms(1, 1)
@@ -86,7 +86,7 @@ def test_cluster_quality(path_to_axona_data):
 
 def test_get_param(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
-    T.load_pos_data(path_to_axona_data)
+    T.load_pos_data()
     waveforms = T.TETRODE[1].waveforms
     waveforms = waveforms[T.TETRODE[1].cut == 1, :, :]
     spk_ts = T.TETRODE.get_spike_samples(1, 1)
@@ -98,7 +98,7 @@ def test_get_param(path_to_axona_data):
 
 def test_half_amp_duration(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
-    T.load_pos_data(path_to_axona_data)
+    T.load_pos_data()
     waveforms = T.TETRODE[1].waveforms
     waveforms = waveforms[T.TETRODE[1].cut == 1, :, :]
     spk_ts = T.TETRODE.get_spike_samples(1, 1)
@@ -108,7 +108,7 @@ def test_half_amp_duration(path_to_axona_data):
 
 def test_p2t_time(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
-    T.load_pos_data(path_to_axona_data)
+    T.load_pos_data()
     waveforms = T.TETRODE[1].waveforms
     waveforms = waveforms[T.TETRODE[1].cut == 1, :, :]
     spk_ts = T.TETRODE.get_spike_samples(1, 1)
@@ -118,7 +118,7 @@ def test_p2t_time(path_to_axona_data):
 
 def test_plot_cluster_space(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
-    T.load_pos_data(path_to_axona_data)
+    T.load_pos_data()
     waveforms = T.TETRODE[1].waveforms
     waveforms = waveforms[T.TETRODE[1].cut == 1, :, :]
     spk_ts = T.TETRODE.get_spike_samples(1, 1)

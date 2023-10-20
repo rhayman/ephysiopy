@@ -6,7 +6,7 @@ from ephysiopy.common.rhythmicity import LFPOscillations
 
 def test_cosine_init(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
-    T.load_pos_data(path_to_axona_data)
+    T.load_pos_data()
     C = CosineDirectionalTuning(
         T.TETRODE[1].spk_ts,
         T.PosCalcs.xyTS,
@@ -41,7 +41,7 @@ def test_cosine_init(path_to_axona_data):
 
 def test_the_rest_of_CDT(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
-    T.load_pos_data(path_to_axona_data)
+    T.load_pos_data()
     C = CosineDirectionalTuning(
         T.TETRODE[1].spk_ts,
         T.PosCalcs.xyTS,
@@ -58,7 +58,7 @@ def test_the_rest_of_CDT(path_to_axona_data):
 
 def test_LFP_oscillations(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
-    T.load_pos_data(path_to_axona_data)
+    T.load_pos_data()
     T.load_lfp(path_to_axona_data)
     sig = T.EEGCalcs.sig
     fs = T.EEGCalcs.fs
