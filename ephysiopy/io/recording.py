@@ -117,7 +117,7 @@ Xml2RecordingKind = {
 
 class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     def __init__(self, pname: Path, **kwargs) -> None:
-        assert Path(pname).exists()
+        assert Path(pname).exists(), f"Path provided doesnt exist: {pname}"
         self._pname = pname
         self._settings = None
         self._PosCalcs = None
