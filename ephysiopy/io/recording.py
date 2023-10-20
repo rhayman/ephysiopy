@@ -5,6 +5,7 @@ import warnings
 from enum import Enum
 from pathlib import Path, PurePath
 from typing import NoReturn
+from functools import cache
 
 import h5py
 import numpy as np
@@ -415,6 +416,7 @@ class OpenEphysBase(TrialInterface):
                     recording_start_time = start_time / float(sample_rate)
         return recording_start_time
 
+    @cache
     def get_spike_times(self, cluster: int, tetrode: int = None, *args, **kwargs):
         ts = self.clusterData.spk_times
         if cluster in self.clusterData.spk_clusters:
@@ -423,6 +425,7 @@ class OpenEphysBase(TrialInterface):
         else:
             warnings.warn("Cluster not present")
 
+    @cache
     def load_lfp(self, *args, **kwargs):
         """
         Valid kwargs are:
@@ -448,6 +451,7 @@ class OpenEphysBase(TrialInterface):
             )
             self.EEGCalcs = EEGCalcsGeneric(sig, target_sample_rate)
 
+    @cache
     def load_neural_data(self, *args, **kwargs) -> None:
         if "path2APdata" in kwargs.keys():
             self.path2APdata: Path = Path(kwargs["path2APdata"])
@@ -463,6 +467,7 @@ class OpenEphysBase(TrialInterface):
         except Exception:
             warnings.warn("Could not find raw data file")
 
+    @cache
     def load_settings(self, *args, **kwargs):
         if self._settings is None:
             # pname_root gets walked through and over-written with
@@ -470,6 +475,7 @@ class OpenEphysBase(TrialInterface):
             self.settings = Settings(self.pname)
             print("Loaded settings data")
 
+    @cache
     def load_cluster_data(
             self, removeNoiseClusters=True, *args, **kwargs) -> bool:
         if self.path2KiloSortData is not None:
@@ -490,6 +496,7 @@ class OpenEphysBase(TrialInterface):
         self.clusterData = clusterData
         return True
 
+    @cache
     def load_pos_data(
         self, ppm: int = 300, jumpmax: int = 100, *args, **kwargs
     ) -> None:
@@ -593,6 +600,7 @@ class OpenEphysBase(TrialInterface):
             )
         self.recording_start_time = recording_start_time
 
+    @cache
     def load_ttl(self, *args, **kwargs) -> bool:
         """
         Valid kwargs are:
@@ -635,6 +643,7 @@ class OpenEphysBase(TrialInterface):
         print("Loaded ttl data")
         return True
 
+    @cache
     def find_files(
         self,
         pname_root: str,
