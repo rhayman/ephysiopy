@@ -630,7 +630,10 @@ class OpenEphysBase(TrialInterface):
         self.ttl_data = {}
         if "StimControl_id" in kwargs.keys():
             stim_id = kwargs["StimControl_id"]
-            duration = getattr(self.settings.processors[stim_id], "Duration")
+            if stim_id in self.settings.processors.keys():
+                duration = getattr(self.settings.processors[stim_id], "Duration")
+            else:
+                return False
             self.ttl_data["stim_duration"] = int(duration)
         if "TTL_channel_number" in kwargs.keys():
             chan = kwargs["TTL_channel_number"]
