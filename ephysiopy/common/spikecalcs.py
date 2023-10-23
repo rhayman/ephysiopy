@@ -398,7 +398,8 @@ class SpikeCalcsGeneric(object):
     def respondsToStimulus(self, cluster: int,
                            threshold: float,
                            min_contiguous: int,
-                           return_activity: bool = False) -> bool:
+                           return_activity: bool = False,
+                           **kwargs) -> bool:
         '''
         Checks whether a cluster responds to a laser stimulus
 
@@ -428,9 +429,18 @@ class SpikeCalcsGeneric(object):
         spk_count_by_trial = self.calculatePSCH(cluster, self._secs_per_bin)
         mean_count = np.mean(spk_count_by_trial, 1)
         # smooth with a moving average
+        # check nothing in kwargs first
+        if "window_len" in kwargs.keys():
+            window_len = kwargs["window_len"]
+        else:
+            window_len = 5
+        if "window" in kwargs.keys():
+            window = kwargs["window"]
+        else:
+            window = "flat"
         smoothed_binned_spikes = smooth(mean_count,
-                                        window_len=9,
-                                        window='flat')
+                                        window_len=window_len,
+                                        window=window)
         bins = np.arange(self.event_window[0],
                          self.event_window[1],
                          self._secs_per_bin)
