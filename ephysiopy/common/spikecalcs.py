@@ -1,6 +1,7 @@
 import os
 import warnings
 from pathlib import Path
+from astropy.convolution import convolve, Box1DKernel, Gaussian1DKernel
 
 import h5py
 import matplotlib.pylab as plt
@@ -380,7 +381,7 @@ class SpikeCalcsGeneric(object):
             raise Exception("Need cluster identities! Aborting")
         event_ts = self.event_ts
         event_ts.sort()
-        if type(event_ts) == list:
+        if isinstance(event_ts, list):
             event_ts = np.array(event_ts)
 
         spike_times = self.spike_times[self.spk_clusters == cluster_id]
@@ -399,6 +400,7 @@ class SpikeCalcsGeneric(object):
                            threshold: float,
                            min_contiguous: int,
                            return_activity: bool = False,
+                           do_smooth: bool = False,
                            **kwargs) -> bool:
         '''
         Checks whether a cluster responds to a laser stimulus
@@ -427,7 +429,8 @@ class SpikeCalcsGeneric(object):
 
         '''
         spk_count_by_trial = self.calculatePSCH(cluster, self._secs_per_bin)
-        mean_count = np.mean(spk_count_by_trial, 1)
+        firing_rate_by_trial = spk_count_by_trial / self.secs_per_bin
+        mean_firing_rate = np.mean(firing_rate_by_trial, 1)
         # smooth with a moving average
         # check nothing in kwargs first
         if "window_len" in kwargs.keys():
@@ -438,9 +441,15 @@ class SpikeCalcsGeneric(object):
             window = kwargs["window"]
         else:
             window = "flat"
-        smoothed_binned_spikes = smooth(mean_count,
-                                        window_len=window_len,
-                                        window=window)
+        if 'flat' in window:
+            kernel = Box1DKernel(window_len)
+        if 'gauss' in window:
+            kernel = Gaussian1DKernel(1, window_len)
+
+        if do_smooth:
+            smoothed_binned_spikes = convolve(mean_firing_rate, kernel)
+        else:
+            smoothed_binned_spikes = mean_firing_rate
         bins = np.arange(self.event_window[0],
                          self.event_window[1],
                          self._secs_per_bin)

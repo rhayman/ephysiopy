@@ -3,6 +3,7 @@
 # see autoCorr2D and crossCorr2D
 import warnings
 from enum import Enum
+from functools import cache
 
 import numpy as np
 from astropy import convolution  # deals with nans unlike other convs
@@ -11,7 +12,7 @@ from shapely import MultiLineString, prepare
 from shapely.affinity import rotate, translate
 from shapely.geometry import LineString, Point
 import matplotlib.pyplot as plt
-from ephysiopy.common.utils import blurImage, memoized, flatten_list
+from ephysiopy.common.utils import blurImage, flatten_list
 
 warnings.filterwarnings(
     "ignore", message="invalid value encountered in sqrt")
@@ -988,7 +989,7 @@ class RateMap(object):
 
         return H
 
-    @memoized
+    @cache
     def _create_boundary_distance_lookup(self,
                                          arena_boundary: MultiLineString,
                                          degs_per_bin: float,
