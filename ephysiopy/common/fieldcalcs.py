@@ -309,7 +309,7 @@ def border_score(
 
     fieldAngularCoverage = np.zeros([1, nFields]) * np.nan
     fractionOfPixelsOnBorder = np.zeros([1, nFields]) * np.nan
-    fieldsToKeep = np.zeros_like(A)
+    fieldsToKeep = np.zeros_like(A).astype(bool)
     for i in range(1, nFields+1):
         fieldMask = np.logical_and(labels == i, borderMask)
 
@@ -707,7 +707,7 @@ def skaggs_info(ratemap, dwelltimes, **kwargs):
     Notes
     -----
     THIS DATA SHOULD UNDERGO ADAPTIVE BINNING
-    See adaptiveBin in binning class above
+    See getAdaptiveMap() in binning class
 
     Returns Skaggs et al's estimate of spatial information
     in bits per spike:

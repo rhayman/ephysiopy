@@ -355,6 +355,7 @@ class Tetrode(IO):
         self.nChans = self.getHeaderVal(self.header, "num_chans")
         self.samples = self.getHeaderVal(self.header, "samples_per_spike")
         self.nSpikes = self.getHeaderVal(self.header, "num_spikes")
+        self.duration = self.getHeaderVal(self.header, "duration")
         self.posSampleRate = self.getHeaderVal(
             self.getHeader(
                 self.filename_root.with_suffix(".pos")), "sample_rate"

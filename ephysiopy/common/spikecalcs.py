@@ -462,12 +462,13 @@ class SpikeCalcsGeneric(object):
                                               boundary='wrap')
         else:
             smoothed_binned_spikes = mean_firing_rate
-        bins = np.arange(self.event_window[0],
-                         self.event_window[1],
-                         self._secs_per_bin)
+        nbins = np.floor(np.sum(np.abs(self.event_window)) / self.secs_per_bin)
+        bins = np.linspace(self.event_window[0],
+                           self.event_window[1],
+                           int(nbins))
         # normalize all activity by activity in the time before
         # the laser onset
-        idx = bins[1:] < 0
+        idx = bins < 0
         normd = min_max_norm(smoothed_binned_spikes,
                              np.min(smoothed_binned_spikes[idx]),
                              np.max(smoothed_binned_spikes[idx]))
@@ -490,10 +491,7 @@ class SpikeCalcsGeneric(object):
                     if not return_magnitude:
                         return True, normd
                     else:
-                        pre = np.mean(mean_firing_rate[idx])
-                        post = np.mean(mean_firing_rate[~idx][0:50])
-                        mag = (post+pre) / (post-pre)
-                        return True, normd, mag
+                        return True, normd
         if not return_activity:
             return False
         else:

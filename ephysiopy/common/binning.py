@@ -36,6 +36,7 @@ class VariableToBin(Enum):
 class MapType(Enum):
     RATE = 1
     POS = 2
+    SPK = 3
 
 
 class RateMap(object):
@@ -388,6 +389,8 @@ class RateMap(object):
             return binned_pos, binned_pos_edges
 
         binned_spk, _ = self._binData(sample, self._binedges, spkWeights)
+        if mapType.value == MapType.SPK:
+            return binned_spk
         # binned_spk is returned as a tuple of the binned data and the bin
         # edges
         if "after" in self.whenToSmooth:
