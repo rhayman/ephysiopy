@@ -269,7 +269,7 @@ class SpikeCalcsGeneric(object):
         irange = x1[:, np.newaxis] + Trange[np.newaxis, :]
         dts = np.searchsorted(x2, irange)
         for i, t in enumerate(dts):
-            y.extend(x2[t[0] : t[1]] - x1[i])
+            y.extend(x2[t[0]: t[1]] - x1[i])
         y = np.array(y, dtype=float)
         return y
 
@@ -400,8 +400,8 @@ class SpikeCalcsGeneric(object):
                            threshold: float,
                            min_contiguous: int,
                            return_activity: bool = False,
-                           do_smooth: bool = False,
-                           **kwargs) -> bool:
+                           return_magnitude: bool = False,
+                           **kwargs) -> tuple:
         '''
         Checks whether a cluster responds to a laser stimulus
 
@@ -419,6 +419,9 @@ class SpikeCalcsGeneric(object):
             the threshold value to be classed as a responder
         return_activity: bool
             Whether to return the mean reponse curve
+        return_magnitude: bool
+            Whether to return the magnitude of the response
+            NB this is the magnitude of the min-max normed response
 
         Returns
         -------
@@ -426,6 +429,9 @@ class SpikeCalcsGeneric(object):
             Whether the cell responds or not
         OR
         tuple: responds (bool), normed_response_curve (np.ndarray)
+        OR
+        tuple: responds (bool), normed_response_curve (np.ndarray),
+               response_magnitude (np.ndarray)
 
         '''
         spk_count_by_trial = self.calculatePSCH(cluster, self._secs_per_bin)
@@ -445,9 +451,15 @@ class SpikeCalcsGeneric(object):
             kernel = Box1DKernel(window_len)
         if 'gauss' in window:
             kernel = Gaussian1DKernel(1, window_len)
+        if 'do_smooth' in kwargs.keys():
+            do_smooth = kwargs.get('do_smooth')
+        else:
+            do_smooth = False
 
         if do_smooth:
-            smoothed_binned_spikes = convolve(mean_firing_rate, kernel)
+            smoothed_binned_spikes = convolve(mean_firing_rate,
+                                              kernel,
+                                              boundary='wrap')
         else:
             smoothed_binned_spikes = mean_firing_rate
         bins = np.arange(self.event_window[0],
@@ -459,12 +471,15 @@ class SpikeCalcsGeneric(object):
         normd = min_max_norm(smoothed_binned_spikes,
                              np.min(smoothed_binned_spikes[idx]),
                              np.max(smoothed_binned_spikes[idx]))
-        # mask the array outside of a threshold value
+        # mask the array outside of a threshold value so that
+        # only True values in the masked array are those that
+        # exceed the threshold (positively or negatively)
         normd_masked = np.ma.masked_inside(normd,
                                            -threshold,
                                            threshold)
         # find the contiguous runs in the masked array
-        # and add the clusters that make it to results dict
+        # that are at least as long as the min_contiguous value
+        # and classify this as a True response
         slices = np.ma.notmasked_contiguous(normd_masked)
         if slices:
             max_runlength = max([len(normd_masked[s]) for s in slices])
@@ -472,11 +487,17 @@ class SpikeCalcsGeneric(object):
                 if not return_activity:
                     return True
                 else:
-                    return True, normd
+                    if not return_magnitude:
+                        return True, normd
+                    else:
+                        pre = np.mean(mean_firing_rate[idx])
+                        post = np.mean(mean_firing_rate[~idx][0:50])
+                        mag = (post+pre) / (post-pre)
+                        return True, normd, mag
         if not return_activity:
             return False
         else:
-            return False, np.empty(shape=0)
+            return False, normd
 
     def clusterQuality(self, cluster, fet=1):
         """

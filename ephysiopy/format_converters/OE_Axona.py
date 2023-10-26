@@ -7,7 +7,6 @@ import h5py
 import numpy as np
 from scipy import signal
 from tqdm import tqdm
-from tqdm.auto import trange
 
 from ephysiopy.axona import axonaIO
 from ephysiopy.axona.file_headers import CutHeader, TetrodeHeader
@@ -17,7 +16,132 @@ from ephysiopy.openephys2py import OESettings
 
 class OE2Axona(object):
     """
-    Converts openephys data recorded in the nwb format into Axona files
+    Converts openephys data into Axona files
+
+    Example workflow:
+
+    You have recorded some openephys data using the binary
+    format leading to a directory structure something like this:
+
+    M4643_2023-07-21_11-52-02
+    ├── Record Node 101
+    │ ├── experiment1
+    │ │ └── recording1
+    │ │     ├── continuous
+    │ │     │ └── Acquisition_Board-100.Rhythm Data
+    │ │     │     ├── amplitudes.npy
+    │ │     │     ├── channel_map.npy
+    │ │     │     ├── channel_positions.npy
+    │ │     │     ├── cluster_Amplitude.tsv
+    │ │     │     ├── cluster_ContamPct.tsv
+    │ │     │     ├── cluster_KSLabel.tsv
+    │ │     │     ├── continuous.dat
+    │ │     │     ├── params.py
+    │ │     │     ├── pc_feature_ind.npy
+    │ │     │     ├── pc_features.npy
+    │ │     │     ├── phy.log
+    │ │     │     ├── rez.mat
+    │ │     │     ├── similar_templates.npy
+    │ │     │     ├── spike_clusters.npy
+    │ │     │     ├── spike_templates.npy
+    │ │     │     ├── spike_times.npy
+    │ │     │     ├── template_feature_ind.npy
+    │ │     │     ├── template_features.npy
+    │ │     │     ├── templates_ind.npy
+    │ │     │     ├── templates.npy
+    │ │     │     ├── whitening_mat_inv.npy
+    │ │     │     └── whitening_mat.npy
+    │ │     ├── events
+    │ │     │ ├── Acquisition_Board-100.Rhythm Data
+    │ │     │ │ └── TTL
+    │ │     │ │     ├── full_words.npy
+    │ │     │ │     ├── sample_numbers.npy
+    │ │     │ │     ├── states.npy
+    │ │     │ │     └── timestamps.npy
+    │ │     │ └── MessageCenter
+    │ │     │     ├── sample_numbers.npy
+    │ │     │     ├── text.npy
+    │ │     │     └── timestamps.npy
+    │ │     ├── structure.oebin
+    │ │     └── sync_messages.txt
+    │ └── settings.xml
+    └── Record Node 104
+        ├── experiment1
+        │ └── recording1
+        │     ├── continuous
+        │     │ └── TrackMe-103.TrackingNode
+        │     │     ├── continuous.dat
+        │     │     ├── sample_numbers.npy
+        │     │     └── timestamps.npy
+        │     ├── events
+        │     │ ├── MessageCenter
+        │     │ │ ├── sample_numbers.npy
+        │     │ │ ├── text.npy
+        │     │ │ └── timestamps.npy
+        │     │ └── TrackMe-103.TrackingNode
+        │     │     └── TTL
+        │     │         ├── full_words.npy
+        │     │         ├── sample_numbers.npy
+        │     │         ├── states.npy
+        │     │         └── timestamps.npy
+        │     ├── structure.oebin
+        │     └── sync_messages.txt
+        └── settings.xml
+
+    The binary data file is called "continuous.dat" in the
+    continuous/Acquisition_Board-100.Rhythm Data folder. There
+    is also a collection of files resulting from a KiloSort session
+    in that directory.
+
+    Run the conversion code like so:
+
+    >>> from ephysiopy.format_converters.OE_Axona import OE2Axona
+    >>> from pathlib import Path
+    >>> nChannels = 64
+    >>> apData = Path("M4643_2023-07-21_11-52-02/Record Node 101/experiment1/recording1/continuous/Acquisition_Board-100.Rhythm Data")
+    >>> OE = OE2Axona(Path("M4643_2023-07-21_11-52-02"), path2APData=apData, channels=nChannels)
+    >>> OE.getOEData()
+    
+    The last command will attempt to load position data and also load up
+    something called a TemplateModel (from the package phylib) which
+    should grab a handle to the neural data. If that doesn't throw
+    out errors then try:
+
+    >>> OE.exportPos()
+
+    There are a few arguments you can provide the exportPos() function - see
+    the docstring for it below. Basically, it calls a function called
+    convertPosData(xy, xyts) where xy is the xy data with shape nsamples x 2
+    and xyts is a vector of timestamps. So if the call to exportPos() fails, you
+    could try calling convertPosData() directly which returns axona formatted 
+    position data. If the variable returned from convertPosData() is called axona_pos_data
+    then you can call the function:
+
+    writePos2AxonaFormat(pos_header, axona_pos_data)
+
+    Providing the pos_header to it - see the last half of the exportPos function
+    for how to create and modify the pos_header as that will need to have
+    user-specific information added to it.
+
+    >>> OE.convertTemplateDataToAxonaTetrode()
+
+    This is the main function for creating the tetrode files. It has an optional
+    argument called max_n_waves which is used to limit the maximum number of spikes
+    that make up a cluster. This defaults to 2000 which means that if a cluster has 
+    12000 spikes, it will have 2000 spikes randomly drawn from those 12000 (without
+    replacement), that will then be saved to a tetrode file. This is mostly a time-saving
+    device as if you have 250 clusters and many consist of 10,000's of spikes,
+    processing that data will take a long time.
+
+    >>> OE.exportLFP()
+
+    This will save either a .eeg or .egf file depending on the arguments. Check the
+    docstring for how to change what channel is chosen for the LFP etc.
+
+    >>> OE.exportSetFile()
+
+    This should save the .set file with all the metadata for the trial.
+
     """
 
     def __init__(self, pname: Path,

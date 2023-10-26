@@ -109,7 +109,7 @@ class FigureMaker(object):
 
     @stripAxes
     def makeRateMap(
-        self, spk_times: np.ndarray, ax: matplotlib.axes = None
+        self, spk_times: np.ndarray, ax: matplotlib.axes = None, **kwargs
     ) -> matplotlib.axes:
         if not self.RateMap:
             self.initialise()
@@ -123,7 +123,12 @@ class FigureMaker(object):
             fig = plt.figure()
             ax = fig.add_subplot(111)
         ax.pcolormesh(
-            x, y, ratemap, cmap=jet_cmap, edgecolors="face", vmax=vmax, shading="auto"
+            x, y, ratemap,
+            cmap=jet_cmap,
+            edgecolors="face",
+            vmax=vmax,
+            shading="auto",
+            **kwargs
         )
         ax.set_aspect("equal")
         return ax
@@ -175,6 +180,10 @@ class FigureMaker(object):
             arena_type = kwargs["arena_type"]
         if "method" in kwargs.keys():
             method = kwargs["method"]
+        if "strip_axes" in kwargs.keys():
+            strip_axes = kwargs.pop("strip_axes")
+        else:
+            strip_axes = False
 
         idx = self.getSpikePosIndices(spk_times)
         spk_weights = np.bincount(idx, minlength=len(self.RateMap.dir))
@@ -202,6 +211,8 @@ class FigureMaker(object):
         ax.set_yticklabels(np.arange(0, 50, 10))
         ax.set_xlabel('Angle (deg)')
         ax.set_ylabel('Distance (cm)')
+        if strip_axes:
+            return stripAxes(ax)
         return ax
 
     @stripAxes
@@ -217,13 +228,21 @@ class FigureMaker(object):
         num_dir_bins = 60
         if "dir_bins" in kwargs.keys():
             num_dir_bins = kwargs["num_dir_bins"]
+        if "strip_axes" in kwargs.keys():
+            strip_axes = kwargs.pop("strip_axes")
+        else:
+            strip_axes = False
+        if "rect_size" in kwargs.keys():
+            rect_size = kwargs.pop("rect_size")
+        else:
+            rect_size = 1
         dir_colours = sns.color_palette('hls', num_dir_bins)
         # need to create line colours and line widths for the collection
         idx = self.getSpikePosIndices(spk_times)
         dir_spike_fired_at = self.RateMap.dir[idx]
         idx_of_dir_to_colour = np.floor(
             dir_spike_fired_at / (360 / num_dir_bins)).astype(int)
-        rects = [Rectangle(self.RateMap.xy[:, i], width=1, height=1)
+        rects = [Rectangle(self.RateMap.xy[:, i], width=rect_size, height=rect_size)
                  for i in idx]
         if ax is None:
             fig = plt.figure()
@@ -235,10 +254,12 @@ class FigureMaker(object):
                 c=tcols.colours[0],
                 zorder=1,
                 alpha=0.3)
+        ax.axis('equal')
         for col_idx, r in zip(idx_of_dir_to_colour, rects):
             ax.add_artist(r)
             r.set_clip_box(ax.bbox)
             r.set_facecolor(dir_colours[col_idx])
+            r.set_rasterized(True)
         if add_colour_wheel:
             ax_col = ax.inset_axes(bounds=[0.75, 0.75, 0.15, 0.15],
                                    projection='polar',
@@ -252,6 +273,8 @@ class FigureMaker(object):
             ax_col.set_yticklabels([])
             ax_col.spines['polar'].set_visible(False)
             ax_col.set_thetagrids([0, 90])
+        if strip_axes:
+            return stripAxes(ax)
         return ax
 
     @stripAxes
@@ -312,7 +335,6 @@ class FigureMaker(object):
             ax.set_thetagrids([0, 90, 180, 270])
         return ax
 
-    # @stripAxes
     def makeSpeedVsRatePlot(
         self,
         spk_times: np.array,
@@ -328,6 +350,10 @@ class FigureMaker(object):
         Pearsons correlation and the depth of modulation (dom) - see below for
         details
         """
+        if "strip_axes" in kwargs.keys():
+            strip_axes = kwargs.pop("strip_axes")
+        else:
+            strip_axes = False
         if not self.RateMap:
             self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
@@ -354,8 +380,9 @@ class FigureMaker(object):
             [np.ma.std(spk_sm[spd_dig == i]) for i in range(0, len(spd_bins))]
         )
         np.array([np.ma.sum(spk_sm[spd_dig == i]) for i in range(0, len(spd_bins))])
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
         ax.errorbar(spd_bins, mn_rate * self.PosCalcs.sample_rate, yerr=var, color="k")
         ax.set_xlim(spd_bins[0], spd_bins[-1])
         ax.set_xticks(
@@ -370,12 +397,17 @@ class FigureMaker(object):
             fontweight="normal",
             size=6,
         )
+        if strip_axes:
+            return stripAxes(ax)
         return ax
 
-    # @stripAxes
     def makeSpeedVsHeadDirectionPlot(
         self, spk_times: np.array, ax: matplotlib.axes = None, **kwargs
     ) -> matplotlib.axes:
+        if "strip_axes" in kwargs.keys():
+            strip_axes = kwargs.pop("strip_axes")
+        else:
+            strip_axes = False
         if not self.RateMap:
             self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
@@ -408,6 +440,8 @@ class FigureMaker(object):
         ax.set_xticks([90, 180, 270], labels=['90', '180', '270'], fontweight="normal", size=6)
         ax.set_yticks([10, 20], labels=['10', '20'], fontweight="normal", size=6)
         ax.set_xlabel("Heading", fontweight="normal", size=6)
+        if strip_axes:
+            stripAxes(ax)
         return ax
 
     def makePowerSpectrum(
@@ -439,6 +473,10 @@ class FigureMaker(object):
         theta_range: tuple (default [6, 12])
         ax: matplotlib.axes
         '''
+        if "strip_axes" in kwargs.keys():
+            strip_axes = kwargs.pop("strip_axes")
+        else:
+            strip_axes = False
         # downsample frequencies and power
         freqs = freqs[0::50]
         power = power[0::50]
@@ -472,6 +510,8 @@ class FigureMaker(object):
             ec="none",
         )
         ax.add_patch(r)
+        if strip_axes:
+            return stripAxes(ax)
         return ax
 
     def makeXCorr(
@@ -488,6 +528,10 @@ class FigureMaker(object):
         ax: matplotlib.axes
             the axes to plot into (default None)
         '''
+        if "strip_axes" in kwargs.keys():
+            strip_axes = kwargs.pop("strip_axes")
+        else:
+            strip_axes = False
         # spk_times in samples provided in seconds but convert to
         # ms for a more display friendly scale
         spk_times = spk_times / 3e4 * 1000.0
@@ -510,6 +554,8 @@ class FigureMaker(object):
         ax.spines["top"].set_visible(False)
         ax.spines["left"].set_visible(False)
         ax.xaxis.set_ticks_position("bottom")
+        if strip_axes:
+            return stripAxes(ax)
         return ax
 
     def makeRaster(
@@ -541,6 +587,11 @@ class FigureMaker(object):
             The number of milliseconds in each bin of the raster plot
         """
         assert hasattr(self, "ttl_data")
+
+        if "strip_axes" in kwargs.keys():
+            strip_axes = kwargs.pop("strip_axes")
+        else:
+            strip_axes = False
         x1 = spk_times / sample_rate * 1000.0  # get into ms
         x1.sort()
         on_good = self.ttl_data["ttl_timestamps"]
@@ -558,7 +609,8 @@ class FigureMaker(object):
             axScatter = fig.add_subplot(111)
         else:
             axScatter = ax
-        axScatter.scatter(x, y, marker=".", s=2, rasterized=False)
+        histColor = [1 / 255.0, 1 / 255.0, 1 / 255.0]
+        axScatter.scatter(x, y, marker=".", s=2, rasterized=False, color=histColor)
         divider = make_axes_locatable(axScatter)
         axScatter.set_xticks((dt[0], 0, dt[1]))
         axScatter.set_xticklabels((str(dt[0]), "0", str(dt[1])))
@@ -579,7 +631,7 @@ class FigureMaker(object):
                 height=1,
                 transform=scattTrans,
                 color=[0, 0, 1],
-                alpha=0.5,
+                alpha=0.3,
             )
         )
         histTrans = transforms.blended_transform_factory(
@@ -592,7 +644,7 @@ class FigureMaker(object):
                 height=1,
                 transform=histTrans,
                 color=[0, 0, 1],
-                alpha=0.5,
+                alpha=0.3,
             )
         )
         axScatter.set_ylabel("Laser stimulation events", labelpad=-2.5)
@@ -607,12 +659,11 @@ class FigureMaker(object):
         for i in range(1, len(yticks) - 1):
             yticks[i].set_visible(False)
 
-        histColor = [192 / 255.0, 192 / 255.0, 192 / 255.0]
+        
         axHistx.hist(
             x,
             bins=np.arange(dt[0], dt[1] + ms_per_bin, ms_per_bin),
             color=histColor,
-            alpha=0.6,
             range=dt,
             rasterized=True,
             histtype="stepfilled",
@@ -628,6 +679,8 @@ class FigureMaker(object):
             yticks[i].set_visible(False)
         axHistx.set_xlim(dt)
         axScatter.set_xlim(dt)
+        if strip_axes:
+            return stripAxes(axScatter)
         return axScatter
 
     '''
