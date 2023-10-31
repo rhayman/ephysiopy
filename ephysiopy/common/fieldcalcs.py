@@ -7,13 +7,20 @@ import skimage
 import warnings
 from skimage.segmentation import watershed
 from ephysiopy.common.utils import blurImage
-
+from ephysiopy.common.binning import RateMap
+from ephysiopy.common.ephys_generic import PosCalcsGeneric
+from ephysiopy.common.spikecalcs import smoothSpikePosCount
 """
 These methods differ from MapCalcsGeneric in that they are mostly
 concerned with treating rate maps as images as opposed to using
 the spiking information contained within them. They therefore mostly
 deals with spatial rate maps of place and grid cells.
 """
+
+
+def getCentreBearingCurve(rmap: RateMap, pos: PosCalcsGeneric) -> np.ndarray:
+    pass
+
 
 
 def field_lims(A):

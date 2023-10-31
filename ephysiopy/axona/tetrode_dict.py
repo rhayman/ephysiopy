@@ -36,6 +36,6 @@ class TetrodeDict(dict):
         '''
         try:
             this_tet = self[tetrode]
-            return this_tet.getClustIdx(cluster)
+            return this_tet.getClustTS(cluster)
         except Exception:
             raise Exception(f'Could not get timestamps for cluster: {cluster}')
