@@ -1059,11 +1059,11 @@ class RateMap(object):
         plt.show()
 
     def get_egocentric_boundary_map(self,
+                                    pos_weights=None,
                                     degs_per_bin: float = 3,
                                     xy_binsize: float = 2.5,
                                     arena_type: str = "circle",
-                                    method: int = 1,
-                                    pos_weights=None) -> tuple:
+                                    method: int = 2) -> tuple:
         '''
         Supposed to help construct dwell time/spike counts
         maps wrt boundaries at given egocentric directions

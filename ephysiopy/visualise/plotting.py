@@ -184,18 +184,23 @@ class FigureMaker(object):
             strip_axes = kwargs.pop("strip_axes")
         else:
             strip_axes = False
+        if 'return_ratemap' in kwargs.keys():
+            return_ratemap = kwargs.pop('return_ratemap') 
+        else:
+            return_ratemap = False
 
         idx = self.getSpikePosIndices(spk_times)
         spk_weights = np.bincount(idx, minlength=len(self.RateMap.dir))
-        occ_map, _ = self.RateMap.get_egocentric_boundary_map(degs_per_bin,
+        occ_map, _ = self.RateMap.get_egocentric_boundary_map(None,
+                                                              degs_per_bin,
                                                               xy_binsize,
                                                               arena_type,
                                                               method)
-        spk_map, _ = self.RateMap.get_egocentric_boundary_map(degs_per_bin,
+        spk_map, _ = self.RateMap.get_egocentric_boundary_map(spk_weights,
+                                                              degs_per_bin,
                                                               xy_binsize,
                                                               arena_type,
-                                                              method,
-                                                              spk_weights)
+                                                              method)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(projection='polar')
@@ -213,6 +218,8 @@ class FigureMaker(object):
         ax.set_ylabel('Distance (cm)')
         if strip_axes:
             return stripAxes(ax)
+        if return_ratemap:
+            return ax, spk_sm/occ_sm
         return ax
 
     @stripAxes

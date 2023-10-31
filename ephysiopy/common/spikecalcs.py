@@ -475,9 +475,15 @@ class SpikeCalcsGeneric(object):
         # mask the array outside of a threshold value so that
         # only True values in the masked array are those that
         # exceed the threshold (positively or negatively)
-        normd_masked = np.ma.masked_inside(normd,
-                                           -threshold,
-                                           threshold)
+        # the threshold provided to this function is expressed
+        # as a % above / below unit normality so adjust that now
+        # so it is expressed as a pre-stimulus firing rate mean
+        pre_stim_mean = np.mean(smoothed_binned_spikes[idx])
+        pre_stim_max = pre_stim_mean * threshold
+        pre_stim_min = pre_stim_mean * (threshold-1.0)
+        normd_masked = np.ma.masked_inside(smoothed_binned_spikes,
+                                           pre_stim_min,
+                                           pre_stim_max)
         # find the contiguous runs in the masked array
         # that are at least as long as the min_contiguous value
         # and classify this as a True response
