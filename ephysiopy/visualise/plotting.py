@@ -35,8 +35,8 @@ def stripAxes(func):
     return wrapper
 
 
-jet_cmap = matplotlib.cm.get_cmap("jet")
-grey_cmap = matplotlib.cm.get_cmap("gray_r")
+jet_cmap = matplotlib.colormaps["jet"]
+grey_cmap = matplotlib.colormaps["gray_r"]
 
 
 class FigureMaker(object):

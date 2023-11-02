@@ -133,17 +133,17 @@ def blurImage(im, n, ny=None, ftype='boxcar'):
     #  keep track of nans
     nan_idx = np.isnan(im)
     im[nan_idx] = 0
-    g = signal.boxcar(n) / float(n)
+    g = signal.windows.boxcar(n) / float(n)
     if 'box' in ftype:
         if im.ndim == 1:
-            g = signal.boxcar(n) / float(n)
+            g = signal.windows.boxcar(n) / float(n)
         elif im.ndim == 2:
-            g = signal.boxcar(n) / float(n)
+            g = signal.windows.boxcar(n) / float(n)
             g = np.tile(g, (1, ny, 1))
             g = g / g.sum()
             g = np.squeeze(g)  # extra dim introduced in np.tile above
         elif im.ndim == 3:  # mutlidimensional binning
-            g = signal.boxcar(n) / float(n)
+            g = signal.windows.boxcar(n) / float(n)
             g = np.tile(g, (1, ny, 1))
             g = g / g.sum()
     elif 'gaussian' in ftype:

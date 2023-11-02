@@ -52,6 +52,7 @@ def test_the_rest_of_CDT(path_to_axona_data):
     runs = C.getRunsOfMinLength()
     C.speedFilterRuns(runs)
     spk_ts = T.TETRODE.get_spike_samples(1, 1)
+    spk_ts = spk_ts / T.TETRODE[1].timebase
     pos_mask = np.ones_like(spk_ts).astype(bool)
     C.intrinsic_freq_autoCorr(spk_ts, pos_mask)
 

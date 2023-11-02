@@ -587,7 +587,7 @@ class SpikeCalcsGeneric(object):
 
         freqs, power = periodogram(corr, fs=200, return_onesided=True)
         # Smooth the power over +/- 1Hz
-        b = signal.boxcar(3)
+        b = signal.windows.boxcar(3)
         h = signal.filtfilt(b, 3, power)
 
         # Square the amplitude first
@@ -668,7 +668,7 @@ class SpikeCalcsGeneric(object):
             spk_hist = np.roll(spk_hist, int(shuffle * 50))
         # smooth the spk_hist (which is a temporal histogram) with a 250ms
         # gaussian as with Kropff et al., 2015
-        h = signal.gaussian(13, sigma)
+        h = signal.windows.gaussian(13, sigma)
         h = h / float(np.sum(h))
         return signal.filtfilt(h.ravel(), 1, spk_hist)
 
@@ -711,7 +711,7 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
         spk_hist = np.bincount(x1, minlength=nSamples)
         # smooth the spk_hist (which is a temporal histogram) with a 250ms
         # gaussian as with Kropff et al., 2015
-        h = signal.gaussian(13, sigma)
+        h = signal.windows.gaussian(13, sigma)
         h = h / float(np.sum(h))
         # filter for low speeds
         lowSpeedIdx = speed < minSpeed

@@ -441,7 +441,7 @@ class CosineDirectionalTuning(object):
         kernelSig = self.smthKernelSigma * binsPerHz
         from scipy import signal
 
-        k = signal.gaussian(kernelLen, kernelSig) / (kernelLen / 2 / 2)
+        k = signal.windows.gaussian(kernelLen, kernelSig) / (kernelLen / 2 / 2)
         power_sm = signal.fftconvolve(power, k[::-1], mode="same")
 
         # calculate some metrics
