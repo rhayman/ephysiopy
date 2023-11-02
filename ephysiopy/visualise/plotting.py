@@ -170,7 +170,6 @@ class FigureMaker(object):
         degs_per_bin = 3
         xy_binsize = 2.5
         arena_type = "circle"
-        method = 2
         # parse kwargs
         if "degs_per_bin" in kwargs.keys():
             degs_per_bin = kwargs["degs_per_bin"]
@@ -178,8 +177,6 @@ class FigureMaker(object):
             xy_binsize = kwargs["xy_binsize"]
         if "arena_type" in kwargs.keys():
             arena_type = kwargs["arena_type"]
-        if "method" in kwargs.keys():
-            method = kwargs["method"]
         if "strip_axes" in kwargs.keys():
             strip_axes = kwargs.pop("strip_axes")
         else:
@@ -191,25 +188,17 @@ class FigureMaker(object):
 
         idx = self.getSpikePosIndices(spk_times)
         spk_weights = np.bincount(idx, minlength=len(self.RateMap.dir))
-        occ_map, _ = self.RateMap.get_egocentric_boundary_map(None,
-                                                              degs_per_bin,
-                                                              xy_binsize,
-                                                              arena_type,
-                                                              method)
-        spk_map, _ = self.RateMap.get_egocentric_boundary_map(spk_weights,
-                                                              degs_per_bin,
-                                                              xy_binsize,
-                                                              arena_type,
-                                                              method)
+        rmap, _ = self.RateMap.get_egocentric_boundary_map(spk_weights,
+                                                           degs_per_bin,
+                                                           xy_binsize,
+                                                           arena_type)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(projection='polar')
-        theta = np.arange(0, 2*np.pi, 2*np.pi/occ_map.shape[1])
-        phi = np.arange(0, occ_map.shape[0]*2.5, 2.5)
+        theta = np.arange(0, 2*np.pi, 2*np.pi/rmap.shape[1])
+        phi = np.arange(0, rmap.shape[0]*2.5, 2.5)
         X, Y = np.meshgrid(theta, phi)
-        occ_sm = blurImage(occ_map, 5, 3, ftype='gaussian')
-        spk_sm = blurImage(spk_map, 5, 3, ftype='gaussian')
-        ax.pcolormesh(X, Y, spk_sm/occ_sm, **kwargs)
+        ax.pcolormesh(X, Y, rmap, **kwargs)
         ax.set_xticks(np.arange(0, 2*np.pi, np.pi/4))
         # ax.set_xticklabels(np.arange(0, 2*np.pi, np.pi/4))
         ax.set_yticks(np.arange(0, 50, 10))
@@ -219,7 +208,7 @@ class FigureMaker(object):
         if strip_axes:
             return stripAxes(ax)
         if return_ratemap:
-            return ax, spk_sm/occ_sm
+            return ax, rmap
         return ax
 
     @stripAxes
@@ -305,12 +294,15 @@ class FigureMaker(object):
         ax = self.show_SAC(sac, measures, ax)
         return ax
 
-    @stripAxes
     def makeHDPlot(
         self, spk_times: np.array = None, ax: matplotlib.axes = None, **kwargs
     ) -> matplotlib.axes:
         if not self.RateMap:
             self.initialise()
+        if "strip_axes" in kwargs.keys():
+            strip_axes = kwargs.pop("strip_axes")
+        else:
+            strip_axes = True
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         spk_weights = np.bincount(spk_times_in_pos_samples, minlength=self.npos)
         rmap = self.RateMap.getMap(spk_weights, varType=VariableToBin.DIR)
@@ -340,6 +332,8 @@ class FigureMaker(object):
             ax.plot([th, th], [0, r * np.max(rmap[0])], "r")
         if "polar" in ax.name:
             ax.set_thetagrids([0, 90, 180, 270])
+        if strip_axes:
+            return stripAxes(ax)
         return ax
 
     def makeSpeedVsRatePlot(
