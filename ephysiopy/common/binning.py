@@ -503,6 +503,7 @@ class RateMap(object):
             return ndhist[0][0], ndhist[0][1]
         else:
             tmp = [d[0] for d in ndhist]
+            tmp = np.array(tmp)
             return tmp, ndhist[1]
 
     def _circPadSmooth(self, var, n=3, ny=None):
