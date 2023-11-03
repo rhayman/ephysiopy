@@ -188,10 +188,10 @@ class FigureMaker(object):
 
         idx = self.getSpikePosIndices(spk_times)
         spk_weights = np.bincount(idx, minlength=len(self.RateMap.dir))
-        rmap, _ = self.RateMap.get_egocentric_boundary_map(spk_weights,
-                                                           degs_per_bin,
-                                                           xy_binsize,
-                                                           arena_type)
+        rmap = self.RateMap.get_egocentric_boundary_map(spk_weights,
+                                                        degs_per_bin,
+                                                        xy_binsize,
+                                                        arena_type)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(projection='polar')
@@ -243,14 +243,13 @@ class FigureMaker(object):
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot()
-                
         # plot the path
         ax.plot(self.RateMap.xy[0],
                 self.RateMap.xy[1],
                 c=tcols.colours[0],
                 zorder=1,
                 alpha=0.3)
-        ax.axis('equal')
+        ax.set_aspect('equal')
         for col_idx, r in zip(idx_of_dir_to_colour, rects):
             ax.add_artist(r)
             r.set_clip_box(ax.bbox)
