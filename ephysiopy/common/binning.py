@@ -4,6 +4,7 @@
 import warnings
 from enum import Enum
 from functools import cache
+from collections import namedtuple
 
 import numpy as np
 from astropy import convolution  # deals with nans unlike other convs
@@ -1055,7 +1056,9 @@ class RateMap(object):
                                     degs_per_bin: float = 3,
                                     xy_binsize: float = 2.5,
                                     arena_type: str = "circle",
-                                    return_dists: bool = False) -> np.ndarray:
+                                    return_dists: bool = False,
+                                    return_raw_spk: bool = False,
+                                    return_raw_occ: bool = False) -> namedtuple:
         '''
         Supposed to help construct dwell time/spike counts
         maps wrt boundaries at given egocentric directions
@@ -1132,16 +1135,22 @@ class RateMap(object):
         ego_boundary_spk, _, _ = np.histogram2d(x=flat_spk_dists,
                                                 y=flat_spk_angs,
                                                 bins=bins)
-        # kernel = convolution.Gaussian2DKernel(5, 5, x_size=5, y_size=5)
-        # sm_occ = convolution.convolve(ego_boundary_occ.T,
-        #                               kernel,
-        #                               boundary='wrap')
-        # sm_spk = convolution.convolve(ego_boundary_spk.T,
-                                    #   kernel,
-                                    #   boundary='wrap')
-        sm_occ = blurImage(ego_boundary_occ, 3, 5, ftype='gaussian')
-        sm_spk = blurImage(ego_boundary_spk, 3, 5, ftype='gaussian')
+        kernel = convolution.Gaussian2DKernel(5, x_size=3, y_size=5)
+        sm_occ = convolution.convolve(ego_boundary_occ,
+                                      kernel,
+                                      boundary='extend')
+        sm_spk = convolution.convolve(ego_boundary_spk,
+                                      kernel,
+                                      boundary='extend')
         ego_boundary_map = sm_spk / sm_occ
+        EgoMap = namedtuple("EgoMap", ['rmap', 'occ', 'spk', 'dists'],
+                            defaults=None)
+        em = EgoMap(None, None, None, None)
+        em = em._replace(rmap=ego_boundary_map)
         if return_dists:
-            return ego_boundary_map, distances
-        return ego_boundary_map
+            em = em._replace(dists=distances)
+        if return_raw_occ:
+            em = em._replace(occ=ego_boundary_occ)
+        if return_raw_spk:
+            em = em._replace(spk=ego_boundary_spk)
+        return em
