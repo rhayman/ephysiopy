@@ -260,6 +260,7 @@ class FigureMaker(object):
             ax_col = ax.inset_axes(bounds=[0.75, 0.75, 0.15, 0.15],
                                    projection='polar',
                                    transform=fig.transFigure)
+            ax_col.set_theta_zero_location("N")
             theta = np.linspace(0, 2*np.pi, 1000)
             phi = np.linspace(0, 1, 2)
             X, Y = np.meshgrid(phi, theta)
@@ -309,6 +310,7 @@ class FigureMaker(object):
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111, projection="polar")
+        ax.set_theta_zero_location("N")
         # need to deal with the case where the axis is supplied but
         # is not polar. deal with polar first
         theta = np.deg2rad(rmap[1][0])

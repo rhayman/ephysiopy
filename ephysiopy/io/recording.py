@@ -349,7 +349,7 @@ class AxonaTrial(TrialInterface):
             self, cluster: int, tetrode=None,
             *args, **kwargs):
         if tetrode is not None:
-            return self.TETRODE.get_spike_samples(tetrode, cluster)
+            return self.TETRODE.get_spike_samples(int(tetrode), int(cluster))
 
 
 class OpenEphysBase(TrialInterface):

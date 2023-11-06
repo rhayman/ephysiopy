@@ -328,7 +328,8 @@ class RateMap(object):
     def getMap(self, spkWeights,
                varType=VariableToBin.XY,
                mapType=MapType.RATE,
-               smoothing=True):
+               smoothing=True,
+               **kwargs):
         """
         Bins up the variable type varType and returns a tuple of
         (rmap, binnedPositionDir) or
@@ -384,9 +385,10 @@ class RateMap(object):
                     binned_pos = self._circPadSmooth(
                         binned_pos, n=self.smooth_sz)
                 else:
-                    binned_pos = blurImage(
-                        binned_pos, self.smooth_sz, ftype=self.smoothingType
-                    )
+                    binned_pos = blurImage(binned_pos,
+                                           self.smooth_sz,
+                                           ftype=self.smoothingType,
+                                           **kwargs)
             return binned_pos, binned_pos_edges
 
         binned_spk, _ = self._binData(sample, self._binedges, spkWeights)
@@ -399,8 +401,10 @@ class RateMap(object):
             if varType.value == VariableToBin.DIR.value:
                 rmap = self._circPadSmooth(rmap, self.smooth_sz)
             else:
-                rmap = blurImage(
-                    rmap, self.smooth_sz, ftype=self.smoothingType)
+                rmap = blurImage(rmap,
+                                 self.smooth_sz,
+                                 ftype=self.smoothingType,
+                                 **kwargs)
         else:  # default case
             if not smoothing:
                 return binned_spk / binned_pos, binned_pos_edges
@@ -409,9 +413,10 @@ class RateMap(object):
                 binned_spk = self._circPadSmooth(binned_spk, self.smooth_sz)
                 rmap = binned_spk / binned_pos
             else:
-                binned_pos = blurImage(
-                    binned_pos, self.smooth_sz, ftype=self.smoothingType
-                )
+                binned_pos = blurImage(binned_pos,
+                                       self.smooth_sz,
+                                       ftype=self.smoothingType,
+                                       **kwargs)
                 if binned_spk.ndim == 2:
                     pass
                 elif binned_spk.ndim == 1:
@@ -422,10 +427,10 @@ class RateMap(object):
                         binned_spk_tmp[i, :, :] = binned_spk[i]
                     binned_spk = binned_spk_tmp
                 binned_spk = blurImage(
-                    np.squeeze(binned_spk),
+                    binned_spk,
                     self.smooth_sz,
-                    ftype=self.smoothingType
-                )
+                    ftype=self.smoothingType,
+                    **kwargs)
                 rmap = binned_spk / binned_pos
                 if rmap.ndim <= 2:
                     rmap[nanIdx] = np.nan

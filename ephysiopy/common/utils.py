@@ -1,5 +1,5 @@
 import numpy as np
-from astropy.convolution import convolve
+import astropy.convolution as cnv
 
 
 def get_z_score(x: np.ndarray,
@@ -101,12 +101,12 @@ def smooth(x, window_len=9, window='hanning'):
         w = np.ones(window_len, 'd')
     else:
         w = eval('np.'+window+'(window_len)')
-    y = convolve(x, w/w.sum(), normalize_kernel=False, boundary='extend')
+    y = cnv.convolve(x, w/w.sum(), normalize_kernel=False, boundary='extend')
     # return the smoothed signal
     return y
 
 
-def blurImage(im, n, ny=None, ftype='boxcar'):
+def blurImage(im, n, ny=None, ftype='boxcar', **kwargs):
     """
     Smooths a 2D image by convolving with a filter
 
@@ -124,39 +124,33 @@ def blurImage(im, n, ny=None, ftype='boxcar'):
     res: array_like
         The smoothed vector with shape the same as im
     """
-    from scipy import signal
+    if 'stddev' in kwargs.keys():
+        stddev = kwargs.pop('stddev')
+    else:
+        stddev = 5
     n = int(n)
     if not ny:
         ny = n
     else:
         ny = int(ny)
-    #  keep track of nans
-    nan_idx = np.isnan(im)
-    im[nan_idx] = 0
-    g = signal.windows.boxcar(n) / float(n)
+    ndims = im.ndim
     if 'box' in ftype:
-        if im.ndim == 1:
-            g = signal.windows.boxcar(n) / float(n)
-        elif im.ndim == 2:
-            g = signal.windows.boxcar(n) / float(n)
-            g = np.tile(g, (1, ny, 1))
-            g = g / g.sum()
-            g = np.squeeze(g)  # extra dim introduced in np.tile above
-        elif im.ndim == 3:  # mutlidimensional binning
-            g = signal.windows.boxcar(n) / float(n)
-            g = np.tile(g, (1, ny, 1))
-            g = g / g.sum()
+        if ndims == 1:
+            g = cnv.Box1DKernel(n)
+        elif ndims == 2:
+            g = cnv.Box2DKernel(n)
+        elif ndims == 3:  # mutlidimensional binning
+            g = cnv.Box2DKernel(n)
+            g = np.atleast_3d(g).T
     elif 'gaussian' in ftype:
-        x, y = np.mgrid[-n:n+1, 0-ny:ny+1]
-        g = np.exp(-(x**2/float(n) + y**2/float(ny)))
-        g = g / g.sum()
-        if np.ndim(im) == 1:
-            g = g[n, :]
-        if np.ndim(im) == 3:
-            g = np.tile(g, (1, ny, 1))
-    improc = signal.convolve(im, g, mode='same')
-    improc[nan_idx] = np.nan
-    return improc
+        if ndims == 1:
+            g = cnv.Gaussian1DKernel(stddev, x_size=n)
+        if ndims == 2:
+            g = cnv.Gaussian2DKernel(stddev, x_size=n, y_size=ny)
+        if ndims == 3:
+            g = cnv.Gaussian2DKernel(stddev, x_size=n, y_size=ny)
+            g = np.atleast_3d(g).T
+    return cnv.convolve(im, g, boundary='extend')
 
 
 def count_to(n):

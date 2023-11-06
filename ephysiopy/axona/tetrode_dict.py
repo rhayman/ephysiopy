@@ -31,11 +31,11 @@ class TetrodeDict(dict):
 
     def get_spike_samples(self, tetrode, cluster):
         '''
-        Returns spike times in pos samples for given cluster from given
+        Returns spike times in seconds for given cluster from given
         tetrode
         '''
         try:
             this_tet = self[tetrode]
-            return this_tet.getClustTS(cluster)
+            return this_tet.getClustTS(cluster) / this_tet.timebase
         except Exception:
             raise Exception(f'Could not get timestamps for cluster: {cluster}')

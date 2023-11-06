@@ -442,17 +442,17 @@ class PosCalcsGeneric(object):
         self._dir = self.calcHeadDirection(xy)
 
     def calcHeadDirection(self, xy: np.ma.MaskedArray) -> np.ma.MaskedArray:
-        import math
 
         pos2 = np.arange(0, self.npos - 1)
         xy_f = xy.astype(float)
         self.dir[pos2] = np.mod(
             (
-                (180 / math.pi)
+                (180 / np.pi)
                 * (
                     np.arctan2(
-                        -xy_f[1, pos2 + 1] + xy_f[1, pos2],
-                        +xy_f[0, pos2 + 1] - xy_f[0, pos2],
+                        -(xy_f[0, pos2 + 1] - xy_f[0, pos2]),
+                        xy_f[1, pos2 + 1] - xy_f[1, pos2],
+                        
                     )
                 )
             ),
