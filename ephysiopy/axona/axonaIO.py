@@ -569,19 +569,21 @@ class Stim(dict, IO):
         filename_root = Path(os.path.splitext(filename_root)[0])
         self.filename_root = filename_root
         stmData = self.getData(filename_root.with_suffix(".stm"))
-        self.__setitem__("ttl_timestamps", stmData["ts"])  # already in ms
+        times = stmData["ts"]
         stmHdr = self.getHeader(filename_root.with_suffix(".stm"))
         for k, v in stmHdr.items():
             self.__setitem__(k, v)
         tb = int(self["timebase"].split(" ")[0])
         self.timebase = tb
+        times = times / tb
+        self.__setitem__("ttl_timestamps", times * 1000)  # in ms
         # the 'duration' value in the header of the .stm file
         # is not correct so we need to read this from the .set
         # file and update
         setHdr = self.getHeader(filename_root.with_suffix(".set"))
         stim_duration = [setHdr[k] for k in setHdr.keys() if 'stim_pwidth' in k][0]
         stim_duration = int(stim_duration)
-        stim_duration = stim_duration / self.timebase  # in ms now
+        stim_duration = stim_duration / 1000  # in ms now
         self.__setitem__('stim_duration', stim_duration)
 
     def update(self, *args, **kwargs):
