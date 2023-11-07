@@ -1090,7 +1090,7 @@ class RateMap(object):
         if arena_type == "circle":
             radius = 50
             circle_centre = Point(
-                np.min(self.xy[0])+radius, np.min(self.xy[1])+radius)
+                np.nanmin(self.xy[0])+radius, np.nanmin(self.xy[1])+radius)
             arena_boundary = circle_centre.buffer(radius).boundary
         # now we have a circle with its centre at the centre of the arena
         # i.e. the circle defines the arena edges. Calling .boundary on the
