@@ -327,10 +327,10 @@ class AxonaTrial(TrialInterface):
                 ppm=ppm,
                 jumpmax=jumpmax,
             )
-            P.xyTS = AxonaPos.ts
             P.sample_rate = AxonaPos.getHeaderVal(
                 AxonaPos.header, "sample_rate")
-            P.postprocesspos()
+            P.xyTS = AxonaPos.ts / P.sample_rate  # in seconds now
+            P.postprocesspos(tracker_params={"SampleRate": P.sample_rate})
             print("Loaded pos data")
             self.PosCalcs = P
         except IOError:
