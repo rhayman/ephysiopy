@@ -419,9 +419,9 @@ class SpikeCalcsGeneric(object):
             the threshold value to be classed as a responder
         return_activity: bool
             Whether to return the mean reponse curve
-        return_magnitude: bool
+        return_magnitude: int
             Whether to return the magnitude of the response
-            NB this is the magnitude of the min-max normed response
+            NB this is either +1 for excited or -1 for inhibited
 
         Returns
         -------
@@ -494,8 +494,10 @@ class SpikeCalcsGeneric(object):
                 if not return_activity:
                     return True
                 else:
-                    if not return_magnitude:
-                        return True, normd
+                    if return_magnitude:
+                        sl = [slc for slc in slices if (slc.stop-slc.start) == max_runlength]
+                        mag = [-1 if np.mean(normd[sl[0]]) < 0 else 1]
+                        return True, normd, mag
                     else:
                         return True, normd
         if not return_activity:
