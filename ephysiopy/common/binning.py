@@ -443,7 +443,7 @@ class RateMap(object):
 
         return rmap, binned_pos_edges
 
-    def _binData(self, var, bin_edges, weights, good_indices):
+    def _binData(self, var, bin_edges, weights, good_indices=None):
         """
         Bins data taking account of possible multi-dimensionality
 

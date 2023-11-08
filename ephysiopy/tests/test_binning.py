@@ -38,11 +38,12 @@ def test_bin_data(standard_Ratemap):
     pw2d[0, :] = R.pos_weights
     pw2d[1, :] = R.pos_weights
     pw = [R.pos_weights, pw2d]
+    keep = np.arange(len(hd))
     for sample in zip(samples, bins, pw):
-        ret = R._binData(sample[0], sample[1], sample[2])
+        ret = R._binData(sample[0], sample[1], sample[2], keep)
         assert isinstance(ret, tuple)
         assert isinstance(ret[0][0], np.ndarray)
-    R._binData(xy, xy_bins, None)
+    R._binData(xy, xy_bins, None, keep)
     R.pos_weights = np.random.randn(100)
     R.smoothingType = "gaussian"
 
