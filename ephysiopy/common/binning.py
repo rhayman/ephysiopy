@@ -319,8 +319,10 @@ class RateMap(object):
             self.binedges = np.arange(0, maxspeed, binsize)
         else:  # self.var2Bin == VariableToBin.XY:
             x_lims, y_lims = self._getXYLimits()
-            _x = np.arange(x_lims[0], x_lims[1], binsize)
-            _y = np.arange(y_lims[0], y_lims[1], binsize)
+            nxbins = int(np.ceil((x_lims[1]-x_lims[0])/binsize))
+            nybins = int(np.ceil((y_lims[1]-y_lims[0])/binsize))
+            _x = np.linspace(x_lims[0], x_lims[1], nxbins)
+            _y = np.linspace(y_lims[0], y_lims[1], nybins)
             self.binedges = _y, _x
         self._calcBinDims()
         return self.binedges
@@ -361,10 +363,13 @@ class RateMap(object):
         """
         if varType.value == VariableToBin.DIR.value:
             sample = self.dir
+            keep_these = np.isfinite(sample)
         elif varType.value == VariableToBin.SPEED.value:
             sample = self.speed
+            keep_these = np.isfinite(sample)
         elif varType.value == VariableToBin.XY.value:
             sample = self.xy
+            keep_these = np.isfinite(sample[0])
         else:
             raise ValueError("Unrecognized variable to bin.")
         assert sample is not None
@@ -376,7 +381,8 @@ class RateMap(object):
         binned_pos, binned_pos_edges = self._binData(
                                                      sample,
                                                      self._binedges,
-                                                     self.pos_weights)
+                                                     self.pos_weights,
+                                                     keep_these)
         nanIdx = binned_pos == 0
 
         if mapType.value == MapType.POS.value:  # return binned up position
@@ -391,7 +397,7 @@ class RateMap(object):
                                            **kwargs)
             return binned_pos, binned_pos_edges
 
-        binned_spk, _ = self._binData(sample, self._binedges, spkWeights)
+        binned_spk, _ = self._binData(sample, self._binedges, spkWeights, keep_these)
         if mapType.value == MapType.SPK:
             return binned_spk
         # binned_spk is returned as a tuple of the binned data and the bin
@@ -437,7 +443,7 @@ class RateMap(object):
 
         return rmap, binned_pos_edges
 
-    def _binData(self, var, bin_edges, weights):
+    def _binData(self, var, bin_edges, weights, good_indices):
         """
         Bins data taking account of possible multi-dimensionality
 
@@ -449,6 +455,8 @@ class RateMap(object):
             The edges of the data - see numpys histogramdd for more
         weights : array_like
             The weights attributed to the samples in var
+        good_indices : array_like
+            Valid indices (i.e. not nan and not infinite)
 
         Returns
         -------
@@ -502,9 +510,9 @@ class RateMap(object):
         weights = np.atleast_2d(weights)  # needed for list comp below
         var = np.array(var.data.T.tolist())
         ndhist = [np.histogramdd(
-                sample=var,
+                sample=var[good_indices],
                 bins=bin_edges,
-                weights=np.ravel(w)) for w in weights]
+                weights=np.ravel(w[good_indices])) for w in weights]
         if np.shape(weights)[0] == 1:
             return ndhist[0][0], ndhist[0][1]
         else:

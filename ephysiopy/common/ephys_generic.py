@@ -442,7 +442,8 @@ class PosCalcsGeneric(object):
         self._dir = self.calcHeadDirection(xy)
 
     def calcHeadDirection(self, xy: np.ma.MaskedArray) -> np.ma.MaskedArray:
-
+        # keep track of valid/ non-valid indices
+        good = np.isfinite(xy[0])
         pos2 = np.arange(0, self.npos - 1)
         xy_f = xy.astype(float)
         self.dir[pos2] = np.mod(
@@ -459,6 +460,7 @@ class PosCalcsGeneric(object):
             360,
         )
         self.dir[-1] = self.dir[-2]
+        self.dir[~good] = np.nan
         return self.dir
 
     def speedfilter(self, xy: np.ma.MaskedArray):
