@@ -460,7 +460,7 @@ class PosCalcsGeneric(object):
             360,
         )
         self.dir[-1] = self.dir[-2]
-        self.dir[~good] = np.nan
+        self.dir[~good] = np.ma.masked
         return self.dir
 
     def speedfilter(self, xy: np.ma.MaskedArray):
