@@ -1108,13 +1108,17 @@ class RateMap(object):
         # iterate through the digitized locations (x/y and angular), using the
         # lookup table to get the distances to the arena boundary and then
         # increment the appropriate bin in the egocentric boundary map
-
-        xy_by_heading, _ = np.histogramdd([self.xy[0], self.xy[1], self.dir],
+        good_idx = np.isfinite(self.xy[0])
+        xy_by_heading, _ = np.histogramdd([self.xy[0][good_idx],
+                                           self.xy[1][good_idx],
+                                           self.dir[good_idx]],
                                           bins=distances.shape,
-                                          weights=self.pos_weights)
-        spk_xy_by_hd, _ = np.histogramdd([self.xy[0], self.xy[1], self.dir],
+                                          weights=self.pos_weights[good_idx])
+        spk_xy_by_hd, _ = np.histogramdd([self.xy[0][good_idx],
+                                          self.xy[1][good_idx],
+                                          self.dir[good_idx]],
                                          bins=distances.shape,
-                                         weights=spk_weights)
+                                         weights=spk_weights[good_idx])
         assert xy_by_heading.shape == distances.shape
         distlist = []
         anglist = []
