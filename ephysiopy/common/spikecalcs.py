@@ -503,6 +503,8 @@ class SpikeCalcsGeneric(object):
         if not return_activity:
             return False
         else:
+            if return_magnitude:
+                return False, normd, 0
             return False, normd
 
     def clusterQuality(self, cluster, fet=1):
