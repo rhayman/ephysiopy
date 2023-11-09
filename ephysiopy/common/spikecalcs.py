@@ -496,7 +496,7 @@ class SpikeCalcsGeneric(object):
                 else:
                     if return_magnitude:
                         sl = [slc for slc in slices if (slc.stop-slc.start) == max_runlength]
-                        mag = [-1 if np.mean(normd[sl[0]]) < 0 else 1]
+                        mag = [-1 if np.mean(normd[sl[0]]) < 0 else 1][0]
                         return True, normd, mag
                     else:
                         return True, normd
