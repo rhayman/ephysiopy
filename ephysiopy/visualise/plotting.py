@@ -282,9 +282,7 @@ class FigureMaker(object):
             self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
         spk_weights = np.bincount(spk_times_in_pos_samples, minlength=self.npos)
-        rmap = self.RateMap.getMap(spk_weights)
-        nodwell = ~np.isfinite(rmap[0])
-        sac = self.RateMap.autoCorr2D(rmap[0], nodwell)
+        sac = self.RateMap.getSAC(spk_weights)
         from ephysiopy.common.gridcell import SAC
 
         S = SAC()

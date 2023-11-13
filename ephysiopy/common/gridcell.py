@@ -87,7 +87,7 @@ class SAC(object):
         deformed (or re-formed?!) SAC
         '''
         from ephysiopy.common.fieldcalcs import deform_SAC
-        deformed_SAC, _ = deform_SAC(A)
+        deformed_SAC = deform_SAC(A)
         return self.get_basic_gridscore(deformed_SAC)
 
     def show(self, A, inDict, ax=None, **kwargs):

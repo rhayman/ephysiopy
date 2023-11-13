@@ -327,6 +327,36 @@ class RateMap(object):
         self._calcBinDims()
         return self.binedges
 
+    def getSpatialSparsity(self,
+                           spkWeights,
+                           sample_rate=50,
+                           **kwargs):
+        '''
+        Gets the spatial sparsity measure - closer to 1 means
+        sparser firing field.
+
+        References
+        ----------
+        Skaggs, W.E., McNaughton, B.L., Wilson, M.A. & Barnes, C.A.
+        Theta phase precession in hippocampal neuronal populations
+        and the compression of temporal sequences.
+        Hippocampus 6, 149–172 (1996).
+        '''
+        sample = self.xy
+        keep_these = np.isfinite(sample[0])
+        pos, _ = self._binData(sample,
+                               self._binedges,
+                               self.pos_weights,
+                               keep_these)
+        npos = len(self.dir)
+        p_i = np.count_nonzero(pos) / npos / sample_rate
+        spk, _ = self._binData(sample,
+                               self._binedges,
+                               spkWeights,
+                               keep_these)
+        res = 1-(np.nansum(p_i*spk)**2) / np.nansum(p_i*spk**2)
+        return res
+
     def getMap(self, spkWeights,
                varType=VariableToBin.XY,
                mapType=MapType.RATE,
@@ -442,6 +472,14 @@ class RateMap(object):
                     rmap[nanIdx] = np.nan
 
         return rmap, binned_pos_edges
+
+    def getSAC(self, spkWeights, **kwargs):
+        '''
+        Returns the SAC - convenience function
+        '''
+        rmap = self.getMap(spkWeights=spkWeights, **kwargs)
+        nodwell = ~np.isfinite(rmap[0])
+        return self.autoCorr2D(rmap[0], nodwell)
 
     def _binData(self, var, bin_edges, weights, good_indices=None):
         """
@@ -1171,3 +1209,38 @@ class RateMap(object):
         if return_raw_spk:
             em = em._replace(spk=ego_boundary_spk)
         return em
+
+    def doStackedCorrelations(self,
+                              spkW: np.ndarray,
+                              times: np.ndarray,
+                              splits: np.ndarray,
+                              var2bin: Enum = VariableToBin.XY,
+                              maptype: Enum = MapType.RATE,
+                              **kwargs):
+        if var2bin.value == VariableToBin.DIR.value:
+            sample = self.dir
+        elif var2bin.value == VariableToBin.SPEED.value:
+            sample = self.speed
+        elif var2bin.value == VariableToBin.XY.value:
+            sample = self.xy
+        else:
+            raise ValueError("Unrecognized variable to bin.")
+        assert sample is not None
+
+        sample = np.concatenate((np.atleast_2d(sample),
+                                np.atleast_2d(times)))
+        edges = [b for b in self._binedges][::-1]
+        edges.append(splits)
+        # bin pos
+        binned_pos, bin_edges = np.histogramdd(sample.T,
+                                               bins=edges)
+        # bin spk - ie the histogram is weighted by spike count
+        # in bin i
+        spk = [np.histogramdd(sample.T, bins=edges, weights=w)
+               for w in spkW]
+        spk_arr = np.array([d[0] for d in spk])
+        # move the axes of spk_arr around to make smoothing easier
+        if spk_arr.ndim == 3:
+            spk_arr = np.moveaxis(spk_arr, [0, 1, 2], [-2, 0, -1])
+        if spk_arr.ndim == 4:
+            spk_arr = np.moveaxis(spk_arr, [0, 1, 2, 3], [-2, 0, 1, -1])
