@@ -488,7 +488,7 @@ class SpikeCalcsGeneric(object):
         # that are at least as long as the min_contiguous value
         # and classify this as a True response
         slices = np.ma.notmasked_contiguous(normd_masked)
-        if slices:
+        if slices and np.any(np.isfinite(normd)):
             max_runlength = max([len(normd_masked[s]) for s in slices])
             if max_runlength >= min_contiguous:
                 if not return_activity:
