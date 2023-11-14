@@ -483,7 +483,7 @@ class SpikeCalcsGeneric(object):
         # pre_stim_min = pre_stim_mean * (threshold-1.0)
         # updated so threshold is double (+ or -) the pre-stim
         # norm (lies between )
-        normd_masked = np.ma.masked_inside(normd, -1, 2)
+        normd_masked = np.ma.masked_inside(normd, -threshold, 1+threshold)
         # find the contiguous runs in the masked array
         # that are at least as long as the min_contiguous value
         # and classify this as a True response
