@@ -454,7 +454,7 @@ class SpikeCalcsGeneric(object):
         if 'do_smooth' in kwargs.keys():
             do_smooth = kwargs.get('do_smooth')
         else:
-            do_smooth = False
+            do_smooth = True
 
         if do_smooth:
             smoothed_binned_spikes = convolve(mean_firing_rate,
@@ -478,12 +478,12 @@ class SpikeCalcsGeneric(object):
         # the threshold provided to this function is expressed
         # as a % above / below unit normality so adjust that now
         # so it is expressed as a pre-stimulus firing rate mean
-        pre_stim_mean = np.mean(smoothed_binned_spikes[idx])
-        pre_stim_max = pre_stim_mean * threshold
-        pre_stim_min = pre_stim_mean * (threshold-1.0)
-        normd_masked = np.ma.masked_inside(smoothed_binned_spikes,
-                                           pre_stim_min,
-                                           pre_stim_max)
+        # pre_stim_mean = np.mean(smoothed_binned_spikes[idx])
+        # pre_stim_max = pre_stim_mean * threshold
+        # pre_stim_min = pre_stim_mean * (threshold-1.0)
+        # updated so threshold is double (+ or -) the pre-stim
+        # norm (lies between )
+        normd_masked = np.ma.masked_inside(normd, -1, 2)
         # find the contiguous runs in the masked array
         # that are at least as long as the min_contiguous value
         # and classify this as a True response
