@@ -489,6 +489,14 @@ class SpikeCalcsGeneric(object):
         # and classify this as a True response
         slices = np.ma.notmasked_contiguous(normd_masked)
         if slices and np.any(np.isfinite(normd)):
+            # make sure that slices are within the first 25ms post-stim
+            if ~np.any([s.start > 50 and s.start < 75 for s in slices]):
+                if not return_activity:
+                    return False
+                else:
+                    if return_magnitude:
+                        return False, normd, 0
+                    return False, normd
             max_runlength = max([len(normd_masked[s]) for s in slices])
             if max_runlength >= min_contiguous:
                 if not return_activity:
