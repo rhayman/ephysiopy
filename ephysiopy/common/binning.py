@@ -342,6 +342,8 @@ class RateMap(object):
         and the compression of temporal sequences.
         Hippocampus 6, 149–172 (1996).
         '''
+        self.var2Bin = VariableToBin.XY
+        self._calcBinEdges()
         sample = self.xy
         keep_these = np.isfinite(sample[0])
         pos, _ = self._binData(sample,
