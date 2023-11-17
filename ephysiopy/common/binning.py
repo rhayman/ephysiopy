@@ -32,6 +32,7 @@ class VariableToBin(Enum):
     XY = 1
     DIR = 2
     SPEED = 3
+    XY_TIME = 4
 
 
 class MapType(Enum):
@@ -86,6 +87,7 @@ class RateMap(object):
         hdir: np.array = None,
         speed: np.array = None,
         pos_weights: np.array = None,
+        pos_times: np.array = None,
         ppm: int = 430,
         xyInCms: bool = False,
         binsize: int = 3,
@@ -95,6 +97,8 @@ class RateMap(object):
         self.dir = hdir
         self.speed = speed
         self._pos_weights = pos_weights
+        self._pos_times = pos_times
+        self._pos_time_splits = None
         self._spike_weights = None
         self._ppm = ppm  # pixels per metre
         self._binsize = binsize
@@ -240,9 +244,25 @@ class RateMap(object):
         self._pos_weights = value
 
     @property
+    def pos_times(self):
+        return self._pos_times
+
+    @pos_times.setter
+    def pos_times(self, value):
+        self._pos_times = value
+
+    @property
+    def pos_time_splits(self):
+        return self._pos_times
+
+    @pos_time_splits.setter
+    def pos_time_splits(self, value):
+        self._pos_times = value
+
+    @property
     def spike_weights(self):
         return self._spike_weights
-    
+
     @spike_weights.setter
     def spike_weights(self, value):
         self._spike_weights = value
@@ -317,13 +337,24 @@ class RateMap(object):
             maxspeed = np.max(self.speed)
             # assume min speed = 0
             self.binedges = np.arange(0, maxspeed, binsize)
-        else:  # self.var2Bin == VariableToBin.XY:
+        elif self.var2Bin == VariableToBin.XY:
             x_lims, y_lims = self._getXYLimits()
             nxbins = int(np.ceil((x_lims[1]-x_lims[0])/binsize))
             nybins = int(np.ceil((y_lims[1]-y_lims[0])/binsize))
             _x = np.linspace(x_lims[0], x_lims[1], nxbins)
             _y = np.linspace(y_lims[0], y_lims[1], nybins)
             self.binedges = _y, _x
+        elif self.var2Bin == VariableToBin.XY_TIME:
+            if self._pos_time_splits is None:
+                raise ValueError("Need pos times to bin up XY_TIME")
+            x_lims, y_lims = self._getXYLimits()
+            nxbins = int(np.ceil((x_lims[1]-x_lims[0])/binsize))
+            nybins = int(np.ceil((y_lims[1]-y_lims[0])/binsize))
+            _x = np.linspace(x_lims[0], x_lims[1], nxbins)
+            _y = np.linspace(y_lims[0], y_lims[1], nybins)
+            be = [_y, _x]
+            be.append(self.pos_time_splits)
+            self.binedges = be
         self._calcBinDims()
         return self.binedges
 
@@ -402,6 +433,10 @@ class RateMap(object):
         elif varType.value == VariableToBin.XY.value:
             sample = self.xy
             keep_these = np.isfinite(sample[0])
+        elif varType.value == VariableToBin.XY_TIME.value:
+            sample = np.concatenate((np.atleast_2d(self.xy),
+                                    np.atleast_2d(self.pos_times)))
+            keep_these = np.isfinite(self.xy[0])
         else:
             raise ValueError("Unrecognized variable to bin.")
         assert sample is not None
@@ -1212,6 +1247,45 @@ class RateMap(object):
             em = em._replace(spk=ego_boundary_spk)
         return em
 
+    def getAllSpikeWeights(self,
+                           spike_times: np.ndarray,
+                           spike_clusters: np.ndarray,
+                           pos_times: np.ndarray,
+                           **kwargs):
+        '''
+        Parameters
+        ----------
+        spike_times: np.ndarray
+            spike times in seconds
+        spike_clusters: np.ndarray
+            cluster identity vector
+        pos_times: np.ndarray
+            the times at which position was captured in seconds
+
+        Returns
+        -------
+        np.ndarray
+            the bincounts with respect to position for
+            each cluster. Shape of returned array will
+            be nClusters x npos
+        '''
+        assert len(spike_clusters) == len(spike_times)
+        clusters = np.unique(spike_clusters)
+        npos = len(self.dir)
+        idx = np.searchsorted(pos_times, spike_times) - 1
+        weights = [np.bincount(idx[spike_clusters == c], minlength=npos)
+                   for c in clusters]
+        return np.array(weights)
+
+    def _splitStackedCorrelations(self, binned_data: list) -> tuple:
+        '''
+        Takes in the result of doStackedCorrelations() and splits into
+        two arrays and returns these as a 2-tuple
+        '''
+        result = [(s[0][:, :, 0], s[0][:, :, 1]) for s in binned_data]
+        result = np.array(result)
+        return np.squeeze(result[:, 0, :, :]), np.squeeze(result[:, 1, :, :])
+
     def doStackedCorrelations(self,
                               spkW: np.ndarray,
                               times: np.ndarray,
@@ -1219,6 +1293,33 @@ class RateMap(object):
                               var2bin: Enum = VariableToBin.XY,
                               maptype: Enum = MapType.RATE,
                               **kwargs):
+        '''
+        Returns a list of binned data where each item in the list
+        is the result of running np.histogramdd on a spatial
+        variable (xy, dir etc) and a temporal one at the same
+        time. The idea is to split the spatial variable into two
+        temporal halves based on the bin edges in 'splits' and
+        then to run correlations between the two halves and
+        furthermore to do this for all of the clusters that have
+        spike weights in 'spkW'. 'spkW' should be the result of
+        using getAllSpikeWeights().
+
+        Parameters
+        ----------
+        spkW - np.ndarray
+            the result of calling getAllSpikeWeights()
+        times - np.ndarray
+            position times in seconds
+        splits - np.ndarray
+            where to split the data in seconds. Will
+            typically take the form (0, 100, 200) for
+            example which will give a split between 0-100
+            and 100-200 seconds
+        var2bin - Enum
+            the spatial variable to bin up
+        maptype - Enum
+            the type of map to produce
+        '''
         if var2bin.value == VariableToBin.DIR.value:
             sample = self.dir
         elif var2bin.value == VariableToBin.SPEED.value:
@@ -1228,21 +1329,32 @@ class RateMap(object):
         else:
             raise ValueError("Unrecognized variable to bin.")
         assert sample is not None
+        self.pos_time_splits = splits
+
+
+
+
+
 
         sample = np.concatenate((np.atleast_2d(sample),
                                 np.atleast_2d(times)))
         edges = [b for b in self._binedges][::-1]
         edges.append(splits)
         # bin pos
-        binned_pos, bin_edges = np.histogramdd(sample.T,
-                                               bins=edges)
+        bp, bpe = np.histogramdd(sample.T, bins=edges)
+        map1_pos, map2_pos = np.squeeze(bp[:, :, 0]), np.squeeze(bp[:, :, 1])
+        # smooth position
+        map1_pos = blurImage(map1_pos, 7, ftype='gaussian')
+        map2_pos = blurImage(map2_pos, 7, ftype='gaussian')
         # bin spk - ie the histogram is weighted by spike count
         # in bin i
         spk = [np.histogramdd(sample.T, bins=edges, weights=w)
                for w in spkW]
-        spk_arr = np.array([d[0] for d in spk])
-        # move the axes of spk_arr around to make smoothing easier
-        if spk_arr.ndim == 3:
-            spk_arr = np.moveaxis(spk_arr, [0, 1, 2], [-2, 0, -1])
-        if spk_arr.ndim == 4:
-            spk_arr = np.moveaxis(spk_arr, [0, 1, 2, 3], [-2, 0, 1, -1])
+        map1_spk, map2_spk = self._splitStackedCorrelations(spk)
+        map1_sm_spk = np.array([blurImage(m, 7, ftype='gaussian')
+                                for m in map1_spk])
+        map2_sm_spk = np.array([blurImage(m, 7, ftype='gaussian')
+                                for m in map2_spk])
+        map1_rmaps = map1_sm_spk / map1_pos
+        map2_rmaps = map2_sm_spk / map2_pos
+        return map1_rmaps, map2_rmaps

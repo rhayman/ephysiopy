@@ -417,7 +417,11 @@ class OpenEphysBase(TrialInterface):
         return recording_start_time
 
     @cache
-    def get_spike_times(self, cluster: int, tetrode: int = None, *args, **kwargs):
+    def get_spike_times(self, cluster: int,
+                        tetrode: int = None,
+                        *args, **kwargs):
+        if not self.clusterData:
+            self.load_cluster_data()
         ts = self.clusterData.spk_times
         if cluster in self.clusterData.spk_clusters:
             times = ts[self.clusterData.spk_clusters == cluster]

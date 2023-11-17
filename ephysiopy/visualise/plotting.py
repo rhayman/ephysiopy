@@ -71,6 +71,54 @@ class FigureMaker(object):
         self.RateMap.x_lims = getattr(self, "x_lims", None)  # 2-tuple
         self.RateMap.y_lims = getattr(self, "y_lims", None)
 
+    def get_rate_map(self, channel: int, cluster: int, **kwargs):
+        ts = self.get_spike_times(channel, cluster)
+        self.makeRateMap(ts, **kwargs)
+        plt.show()
+
+    def get_hd_map(self, channel: int, cluster: int, **kwargs):
+        ts = self.get_spike_times(channel, cluster)
+        self.makeHDPlot(ts, **kwargs)
+        plt.show()
+
+    def get_spike_path(self, channel=None, cluster=None, **kwargs):
+        if channel is not None and cluster is not None:
+            ts = self.get_spike_times(channel, cluster)
+        else:
+            ts = None
+        self.makeSpikePathPlot(ts, **kwargs)
+        plt.show()
+
+    def get_eb_map(self, channel: int, cluster: int, **kwargs):
+        ts = self.get_spike_times(channel, cluster)
+        self.makeEgoCentricBoundaryMap(ts, **kwargs)
+        plt.show()
+
+    def get_eb_spikes(self, channel: int, cluster: int, **kwargs):
+        ts = self.get_spike_times(channel, cluster)
+        self.makeEgoCentricBoundarySpikePlot(ts, **kwargs)
+        plt.show()
+
+    def get_sac(self, channel: int, cluster: int, **kwargs):
+        ts = self.get_spike_times(channel, cluster)
+        self.makeSAC(ts, **kwargs)
+        plt.show()
+
+    def get_speed_v_rate(self, channel: int, cluster: int, **kwargs):
+        ts = self.get_spike_times(channel, cluster)
+        self.makeSpeedVsRatePlot(ts, **kwargs)
+        plt.show()
+
+    def get_speed_v_hd(self, channel: int, cluster: int, **kwargs):
+        ts = self.get_spike_times(channel, cluster)
+        self.makeSpeedVsHeadDirectionPlot(ts, **kwargs)
+        plt.show()
+
+    def get_power_spectrum(self, **kwargs):
+        p = self.EEGCalcs.calcEEGPowerSpectrum()
+        self.makePowerSpectrum(p[0], p[1], p[2], p[3], p[4], **kwargs)
+        plt.show()
+
     def getSpikePosIndices(self, spk_times: np.ndarray):
         '''
         Returns the indices into the position data
@@ -88,8 +136,7 @@ class FigureMaker(object):
             spikes occurred
         '''
         pos_times = getattr(self.PosCalcs, "xyTS")
-        idx = np.searchsorted(pos_times, spk_times)
-        idx[idx == len(pos_times)] = idx[idx == len(pos_times)] - 1
+        idx = np.searchsorted(pos_times, spk_times) - 1
         return idx
 
     def makeSummaryPlot(self, spk_times: np.ndarray):
@@ -488,7 +535,7 @@ class FigureMaker(object):
         ax.plot(freqs, power, alpha=0.5, color=[0.8627, 0.8627, 0.8627])
         ax.plot(freqs, sm_power)
         ax.set_xlim(0, max_freq)
-        ylim = [0, band_max_power / 0.8]
+        ylim = [0, np.max(sm_power[freqs < max_freq])]
         if "ylim" in kwargs:
             ylim = kwargs["ylim"]
         ax.set_ylim(ylim)
@@ -660,7 +707,6 @@ class FigureMaker(object):
         for i in range(1, len(yticks) - 1):
             yticks[i].set_visible(False)
 
-        
         axHistx.hist(
             x,
             bins=np.arange(dt[0], dt[1] + ms_per_bin, ms_per_bin),
