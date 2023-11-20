@@ -346,8 +346,7 @@ class AxonaTrial(TrialInterface):
         return True
 
     def get_spike_times(
-            self, cluster: int, tetrode=None,
-            *args, **kwargs):
+            self, tetrode=None, cluster: int = None, *args, **kwargs):
         if tetrode is not None:
             return self.TETRODE.get_spike_samples(int(tetrode), int(cluster))
 

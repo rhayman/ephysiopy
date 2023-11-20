@@ -11,7 +11,6 @@ import seaborn as sns
 from ephysiopy.axona import tintcolours as tcols
 from ephysiopy.common.binning import RateMap, VariableToBin
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
-from ephysiopy.common.utils import blurImage
 
 
 # Decorators
@@ -71,47 +70,114 @@ class FigureMaker(object):
         self.RateMap.x_lims = getattr(self, "x_lims", None)  # 2-tuple
         self.RateMap.y_lims = getattr(self, "y_lims", None)
 
-    def get_rate_map(self, channel: int, cluster: int, **kwargs):
-        ts = self.get_spike_times(channel, cluster)
-        self.makeRateMap(ts, **kwargs)
-        plt.show()
-
-    def get_hd_map(self, channel: int, cluster: int, **kwargs):
-        ts = self.get_spike_times(channel, cluster)
-        self.makeHDPlot(ts, **kwargs)
-        plt.show()
-
-    def get_spike_path(self, channel=None, cluster=None, **kwargs):
-        if channel is not None and cluster is not None:
-            ts = self.get_spike_times(channel, cluster)
+    def _plot_multiple_clusters(self,
+                                func,
+                                clusters: list,
+                                channel: int,
+                                **kwargs):
+        fig = plt.figure()
+        nrows = int(np.ceil(len(clusters) / 5))
+        if 'projection' in kwargs.keys():
+            proj = kwargs.pop('projection')
         else:
-            ts = None
-        self.makeSpikePathPlot(ts, **kwargs)
+            proj = None
+        for i, c in enumerate(clusters):
+            ax = fig.add_subplot(nrows, 5, i+1, projection=proj)
+            ts = self.get_spike_times(channel, c)
+            func(ts, ax=ax, **kwargs)
+
+    def get_rate_map(self, cluster: int | list, channel: int, **kwargs):
+        if isinstance(cluster, list):
+            self._plot_multiple_clusters(self.makeRateMap,
+                                         cluster,
+                                         channel,
+                                         **kwargs)
+        else:
+            ts = self.get_spike_times(channel, cluster)
+            self.makeRateMap(ts, **kwargs)
         plt.show()
 
-    def get_eb_map(self, channel: int, cluster: int, **kwargs):
-        ts = self.get_spike_times(channel, cluster)
-        self.makeEgoCentricBoundaryMap(ts, **kwargs)
+    def get_hd_map(self, cluster: int | list, channel: int, **kwargs):
+        if isinstance(cluster, list):
+            self._plot_multiple_clusters(self.makeHDPlot,
+                                         cluster,
+                                         channel,
+                                         projection="polar",
+                                         strip_axes=True,
+                                         **kwargs)
+        else:
+            ts = self.get_spike_times(channel, cluster)
+            self.makeHDPlot(ts, **kwargs)
         plt.show()
 
-    def get_eb_spikes(self, channel: int, cluster: int, **kwargs):
-        ts = self.get_spike_times(channel, cluster)
-        self.makeEgoCentricBoundarySpikePlot(ts, **kwargs)
+    def get_spike_path(self, cluster=None, channel=None, **kwargs):
+        if isinstance(cluster, list):
+            self._plot_multiple_clusters(self.makeSpikePathPlot,
+                                         cluster,
+                                         channel,
+                                         **kwargs)
+        else:
+            if channel is not None and cluster is not None:
+                ts = self.get_spike_times(channel, cluster)
+            else:
+                ts = None
+            self.makeSpikePathPlot(ts, **kwargs)
         plt.show()
 
-    def get_sac(self, channel: int, cluster: int, **kwargs):
-        ts = self.get_spike_times(channel, cluster)
-        self.makeSAC(ts, **kwargs)
+    def get_eb_map(self, cluster: int | list, channel: int, **kwargs):
+        if isinstance(cluster, list):
+            self._plot_multiple_clusters(self.makeEgoCentricBoundaryMap,
+                                         cluster,
+                                         channel,
+                                         projection='polar',
+                                         **kwargs)
+        else:
+            ts = self.get_spike_times(channel, cluster)
+            self.makeEgoCentricBoundaryMap(ts, **kwargs)
         plt.show()
 
-    def get_speed_v_rate(self, channel: int, cluster: int, **kwargs):
-        ts = self.get_spike_times(channel, cluster)
-        self.makeSpeedVsRatePlot(ts, **kwargs)
+    def get_eb_spikes(self, cluster: int | list, channel: int, **kwargs):
+        if isinstance(cluster, list):
+            self._plot_multiple_clusters(self.makeEgoCentricBoundarySpikePlot,
+                                         cluster,
+                                         channel,
+                                         **kwargs)
+        else:
+            ts = self.get_spike_times(channel, cluster)
+            self.makeEgoCentricBoundarySpikePlot(ts, **kwargs)
         plt.show()
 
-    def get_speed_v_hd(self, channel: int, cluster: int, **kwargs):
-        ts = self.get_spike_times(channel, cluster)
-        self.makeSpeedVsHeadDirectionPlot(ts, **kwargs)
+    def get_sac(self, cluster: int | list, channel: int, **kwargs):
+        if isinstance(cluster, list):
+            self._plot_multiple_clusters(self.makeSAC,
+                                         cluster,
+                                         channel,
+                                         **kwargs)
+        else:
+            ts = self.get_spike_times(channel, cluster)
+            self.makeSAC(ts, **kwargs)
+        plt.show()
+
+    def get_speed_v_rate(self, cluster: int | list, channel: int, **kwargs):
+        if isinstance(cluster, list):
+            self._plot_multiple_clusters(self.makeSpeedVsRatePlot,
+                                         cluster,
+                                         channel,
+                                         **kwargs)
+        else:
+            ts = self.get_spike_times(channel, cluster)
+            self.makeSpeedVsRatePlot(ts, **kwargs)
+        plt.show()
+
+    def get_speed_v_hd(self, cluster: int | list, channel: int, **kwargs):
+        if isinstance(cluster, list):
+            self._plot_multiple_clusters(self.makeSpeedVsHeadDirectionPlot,
+                                         cluster,
+                                         channel,
+                                         **kwargs)
+        else:
+            ts = self.get_spike_times(channel, cluster)
+            self.makeSpeedVsHeadDirectionPlot(ts, **kwargs)
         plt.show()
 
     def get_power_spectrum(self, **kwargs):
@@ -276,8 +342,8 @@ class FigureMaker(object):
             strip_axes = kwargs.pop("strip_axes")
         else:
             strip_axes = False
-        if "rect_size" in kwargs.keys():
-            rect_size = kwargs.pop("rect_size")
+        if "ms" in kwargs.keys():
+            rect_size = kwargs.pop("ms")
         else:
             rect_size = 1
         dir_colours = sns.color_palette('hls', num_dir_bins)
@@ -354,7 +420,7 @@ class FigureMaker(object):
         rmap = self.RateMap.getMap(spk_weights, varType=VariableToBin.DIR)
         if ax is None:
             fig = plt.figure()
-            ax = fig.add_subplot(111, projection="polar")
+            ax = fig.add_subplot(111, **kwargs)
         ax.set_theta_zero_location("N")
         # need to deal with the case where the axis is supplied but
         # is not polar. deal with polar first
