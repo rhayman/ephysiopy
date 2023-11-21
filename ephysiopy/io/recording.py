@@ -416,8 +416,9 @@ class OpenEphysBase(TrialInterface):
         return recording_start_time
 
     @cache
-    def get_spike_times(self, cluster: int,
+    def get_spike_times(self,
                         tetrode: int = None,
+                        cluster: int = None,
                         *args, **kwargs):
         if not self.clusterData:
             self.load_cluster_data()
