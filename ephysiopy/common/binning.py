@@ -12,7 +12,6 @@ from scipy import signal
 from shapely import MultiLineString, prepare
 from shapely.affinity import rotate, translate
 from shapely.geometry import LineString, Point
-import matplotlib.pyplot as plt
 from ephysiopy.common.utils import blurImage, flatten_list
 
 warnings.filterwarnings(
