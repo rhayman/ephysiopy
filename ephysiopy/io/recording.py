@@ -345,8 +345,21 @@ class AxonaTrial(TrialInterface):
             return False
         return True
 
-    def get_spike_times(
-            self, tetrode=None, cluster: int = None, *args, **kwargs):
+    def get_spike_times(self,
+                        tetrode=None,
+                        cluster: int = None,
+                        *args,
+                        **kwargs):
+        '''
+        Parameters
+        ----------
+        tetrode: int
+        cluster: int
+
+        Returns
+        -------
+        spike_times: np.ndarray
+        '''
         if tetrode is not None:
             return self.TETRODE.get_spike_samples(int(tetrode), int(cluster))
 
@@ -420,6 +433,16 @@ class OpenEphysBase(TrialInterface):
                         tetrode: int = None,
                         cluster: int = None,
                         *args, **kwargs):
+        '''
+        Parameters
+        ----------
+        tetrode: int
+        cluster: int
+
+        Returns
+        -------
+        spike_times: np.ndarray
+        '''
         if not self.clusterData:
             self.load_cluster_data()
         ts = self.clusterData.spk_times

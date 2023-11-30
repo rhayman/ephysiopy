@@ -1,0 +1,19 @@
+site_name: ephysiopy
+
+theme:
+  name: "material"
+
+plugins:
+  - mkdocstrings:
+      handlers:
+        python:
+          selection:
+            docstring_style: numpy
+  - search
+
+nav:
+  - index.md
+  - tutorials.md
+  - how-to-guides.md
+  - reference.md
+  - explanation.md

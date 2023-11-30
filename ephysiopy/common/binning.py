@@ -48,13 +48,13 @@ class RateMap(object):
 
     Parameters
     ----------
-    xy : array_like, optional
+    xy
         The xy data, usually given as a 2 x n sample numpy array
-    hdir : array_like, optional
+    hdir
         The head direction data, usualy a 1 x n sample numpy array
-    speed : array_like, optional
+    speed
         Similar to hdir
-    pos_weights : array_like, optional
+    pos_weights
         A 1D numpy array n samples long which is used to weight a particular
         position sample when binning data. For example, if there were 5
         positions recorded and a cell spiked once in position 2 and 5 times
