@@ -23,17 +23,17 @@ class CosineDirectionalTuning(object):
         tracker_params={},
     ):
         """
-        Parameters
-        ----------
-        spike_times - 1d np.array
-        pos_times - 1d np.array
-        spk_clusters - 1d np.array
-        x and y - 1d np.array
-        tracker_params - dict - from the PosTracker as created in
-            OESettings.Settings.parse
+        Args:
+            spike_times (1d np.array): Spike times
+            pos_times (1d np.array): Position times
+            spk_clusters (1d np.array): Spike clusters
+            x and y (1d np.array): Position coordinates
+            tracker_params (dict): From the PosTracker as created in
+                                    OESettings.Settings.parse
 
-        NB All timestamps should be given in sub-millisecond accurate
-             seconds and pos_xy in cms
+        Note:
+            All timestamps should be given in sub-millisecond accurate seconds
+            and pos_xy in cms
         """
         self.spike_times = spike_times
         self.pos_times = pos_times
@@ -160,13 +160,11 @@ class CosineDirectionalTuning(object):
         Direction is in degrees as that what is created by me in some of the
         other bits of this package.
 
-        Parameters
-        ----------
-        binwidth : int - binsizethe bin width in degrees
+        Args:
+            binwidth (int): The bin width in degrees
 
-        Outputs
-        -------
-        A digitization of which directional bin each position sample belongs to
+        Returns:
+            A digitization of which directional bin each pos sample belongs to
         """
 
         bins = np.arange(0, 360, binwidth)
@@ -186,10 +184,9 @@ class CosineDirectionalTuning(object):
         returns the start and end indices at which
         the run was occurred and the directional bin that run belongs to
 
-        Returns
-        -------
-        np.array - the start and end indices into position samples of the run
-                          and the directional bin to which it belongs
+        Returns:
+            np.array: The start and end indices into pos samples of the run
+                      and the directional bin to which it belongs
         """
 
         b = self.getDirectionalBinPerPosition(45)
@@ -213,26 +210,24 @@ class CosineDirectionalTuning(object):
     def speedFilterRuns(self, runs: np.array, minspeed=5.0):
         """
         Given the runs identified in getRunsOfMinLength, filter for speed
-        and return runs that meet the min speed criteria
+        and return runs that meet the min speed criteria.
 
         The function goes over the runs with a moving window of length equal
         to self.min_runlength in samples and sees if any of those segments
-        meets the speed criteria and splits them out into separate runs if true
+        meet the speed criteria and splits them out into separate runs if true.
 
         NB For now this means the same spikes might get included in the
         autocorrelation procedure later as the
-        moving window will use overlapping periods - can be modified later
+        moving window will use overlapping periods - can be modified later.
 
-        Parameters
-        ----------
-        runs - 3 x nRuns np.array generated from getRunsOfMinLength
-        minspeed - float - min running speed in cm/s for an epoch (minimum
-                                        epoch length defined previously
-                            in getRunsOfMinLength as minlength, usually 0.4s)
+        Args:
+            runs (3 x nRuns np.array): Generated from getRunsOfMinLength
+            minspeed (float): Min running speed in cm/s for an epoch (minimum
+                              epoch length defined previously
+                              in getRunsOfMinLength as minlength, usually 0.4s)
 
-        Returns
-        -------
-        3 x nRuns np.array - A modified version of the "runs" input variable
+        Returns:
+            3 x nRuns np.array: A modified version of the "runs" input variable
         """
         minlength_in_samples = int(self.pos_sample_rate * self.min_runlength)
         run_list = runs.tolist()
@@ -323,16 +318,17 @@ class CosineDirectionalTuning(object):
         """
         This is taken and adapted from ephysiopy.common.eegcalcs.EEGCalcs
 
-        Parameters
-        ----------
-        spkTimes - np.array of times in seconds of the cells firing
-        posMask - boolean array corresponding to the length of spkTimes
-                            where True is stuff to keep
-        maxFreq - the maximum frequency to do the power spectrum out to
-        acBinSize - the bin size of the autocorrelogram in seconds
-        acWindow - the range of the autocorr in seconds
+        Args:
+            spkTimes (np.array): Times in seconds of the cells firing
+            posMask (np.array): Boolean array corresponding to the length of
+                                spkTimes where True is stuff to keep
+            maxFreq (float): The maximum frequency to do the power spectrum
+                                out to
+            acBinSize (float): The bin size of the autocorrelogram in seconds
+            acWindow (float): The range of the autocorr in seconds
 
-        NB Make sure all times are in seconds
+        Note:
+            Make sure all times are in seconds
         """
         acBinsPerPos = 1.0 / self.pos_sample_rate / acBinSize
         acWindowSizeBins = np.round(acWindow / acBinSize)
@@ -528,16 +524,12 @@ class LFPOscillations(object):
     def getFreqPhase(self, sig, band2filter: list, ford=3):
         """
         Uses the Hilbert transform to calculate the instantaneous phase and
-        amplitude of the time series in sig
+        amplitude of the time series in sig.
 
-        Parameters
-        ----------
-        sig: np.array
-            The signal to be analysed
-        ford: int
-            The order for the Butterworth filter
-        band2filter: list
-            The two frequencies to be filtered for e.g. [6, 12]
+        Args:
+            sig (np.array): The signal to be analysed
+            ford (int): The order for the Butterworth filter
+            band2filter (list): The two frequencies to be filtered for
         """
         if sig is None:
             sig = self.sig
@@ -562,25 +554,17 @@ class LFPOscillations(object):
         plot=True,
     ):
         """
-        Calculates the modulation index of theta and gamma oscillations
+        Calculates the modulation index of theta and gamma oscillations.
         Specifically this is the circular correlation between the phase of
-        theta and the power of theta
+        theta and the power of theta.
 
-        Parameters
-        ----------
-        sig; np.array
-            The LFP signal
-        nbins: int
-            The number of bins in the circular range 0 to 2*pi
-        forder: int
-            The order of the butterworth filter
-        thetaband: list
-            The lower and upper bands of the theta frequency range
-        gammaband: list
-            The lower and upper bands of the gamma frequency range
-        plot: bool
-            Show some pics or not
-
+        Args:
+            sig (np.array): The LFP signal
+            nbins (int): The number of bins in the circular range 0 to 2*pi
+            forder (int): The order of the butterworth filter
+            thetaband (list): The lower/upper bands of the theta freq range
+            gammaband (list): The lower/upper bands of the gamma freq range
+            plot (bool): Show some pics or not
         """
         if sig is None:
             sig = self.sig
@@ -628,23 +612,19 @@ class LFPOscillations(object):
         and gamma (defaults to 30-80Hz). A PLV of unity indicates perfect phase
         locking (here PAC) and a value of zero indicates no locking (no PAC)
 
-        Parameters
-        ----------
-        eeg: numpy array
-            the eeg data itself. This is a 1-d array which can be masked or not
-        forder: int
-            the order of the filter(s) applied to the eeg data
-        thetaband/ gammaband: list/ array
-            the range of values to bandpass filter for for the theta and gamma
-            ranges
-        plot: bool (default True)
-            whether to plot the resulting binned up polar plot which shows the
-            amplitude of the gamma oscillation found at different phases of the
-            theta oscillation
-        Returns
-        -------
-        plv: float
-            the value of the phase-amplitude coupling
+        Args:
+            eeg (numpy array): The eeg data itself. This is a 1-d array which
+            can be masked or not
+            forder (int): The order of the filter(s) applied to the eeg data
+            thetaband, gammaband (list/array): The range of values to bandpass
+            filter for for the theta and gamma ranges
+            plot (bool, optional): Whether to plot the resulting binned up
+            polar plot which shows the amplitude of the gamma oscillation
+            found at different phases of the theta oscillation.
+            Default is True.
+
+        Returns:
+            plv (float): The value of the phase-amplitude coupling
         """
 
         if sig is None:
@@ -676,13 +656,13 @@ class LFPOscillations(object):
 
     def filterForLaser(self, sig=None, width=0.125, dip=15.0, stimFreq=6.66):
         """
-        In some of the optogenetic experiments I ran the frequency of laser
-        stimulation was at 6.66Hz - this method attempts to filter those
-        frequencies out
+        Attempts to filter out frequencies from optogenetic experiments where
+        the frequency of laser stimulation was at 6.66Hz.
 
-        NB: This never worked as well as I would have liked as it required
-        tailoring for each trial almost. Maybe a better way to do this using
-        mean power or something...
+        Note:
+            This method may not work as expected for each trial and might
+            require tailoring. A potential improvement could be using mean
+            power or a similar metric.
         """
         from scipy.signal import filtfilt, firwin, kaiserord
 
@@ -704,11 +684,10 @@ class LFPOscillations(object):
             sig = self.sig
         fx = filtfilt(taps, [1.0], sig)
         return fx
-    
 
     def spike_phase_plot(self, cluster: int,
                          pos_data: PosCalcsGeneric,
-                         cluster_data: KiloSortSession,
+                         KSdata: KiloSortSession,
                          lfp_data: EEGCalcsGeneric) -> None:
         '''
         Produces a plot of the phase of theta at which each spike was
@@ -718,7 +697,7 @@ class LFPOscillations(object):
         '''
         _, phase, _, _ = self.getFreqPhase(
             lfp_data.sig, [6, 12])
-        cluster_times = cluster_data.spk_times[cluster_data.spk_clusters==cluster]
+        cluster_times = KSdata.spk_times[KSdata.spk_clusters == cluster]
         # cluster_times in samples (@30000Hz)
         # get indices into the phase vector
         phase_idx = np.array(cluster_times/(3e4/self.fs), dtype=int)
@@ -731,4 +710,4 @@ class LFPOscillations(object):
         bad_idx = np.nonzero(pos_idx >= len(pos_data.xyTS))[0]
         pos_idx[bad_idx] = len(pos_data.xyTS) - 1
         # add PI to phases to remove negativity
-        cluster_phases = phase[phase_idx]
+        # cluster_phases = phase[phase_idx]

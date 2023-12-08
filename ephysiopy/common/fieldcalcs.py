@@ -26,16 +26,14 @@ def getCentreBearingCurve(rmap: RateMap, pos: PosCalcsGeneric) -> np.ndarray:
 def field_lims(A):
     """
     Returns a labelled matrix of the ratemap A.
-    Uses anything >
-    than the half peak rate to select as a field. Data is heavily smoothed
-    Parameters
-    ----------
-    A: np.array
-        The ratemap
-    Returns
-    -------
-    label: np.array
-        The labelled ratemap
+    Uses anything greater than the half peak rate to select as a field.
+    Data is heavily smoothed.
+
+    Args:
+        A (np.array): The ratemap
+
+    Returns:
+        label (np.array): The labelled ratemap
     """
     nan_idx = np.isnan(A)
     A[nan_idx] = 0
@@ -197,68 +195,55 @@ def border_score(
     Calculates a border score totally dis-similar to that calculated in
     Solstad et al (2008)
 
-    Parameters
-    ----------
-    A : array_like
-        Should be the ratemap
-    B : array_like
-        This should be a boolean mask where True (1)
-        is equivalent to the presence of a border and False (0)
-        is equivalent to 'open space'. Naievely this will be the
-        edges of the ratemap but could be used to take account of
-        boundary insertions/ creations to check tuning to multiple
-        environmental boundaries. Default None: when the mask is
-        None then a mask is created that has 1's at the edges of the
-        ratemap i.e. it is assumed that occupancy = environmental
-        shape
-    shape : str
-        description of environment shape. Currently
-        only 'square' or 'circle' accepted. Used to calculate the
-        proportion of the environmental boundaries to examine for
-        firing
-    fieldThresh : float
-        Between 0 and 1 this is the percentage
-        amount of the maximum firing rate
-        to remove from the ratemap (i.e. to remove noise)
-    smthKernSig : float
-        the sigma value used in smoothing the ratemap
-        (again!) with a gaussian kernel
-    circumPrc : float
-        The percentage amount of the circumference
-        of the environment that the field needs to be to count
-        as long enough to make it through
-    binSize : float
-        bin size in cm
-    minArea : float
-        min area for a field to be considered
-    debug : bool
-        If True then some plots and text will be output
+    Args:
+        A (array_like): Should be the ratemap
+        B (array_like): This should be a boolean mask where True (1)
+            is equivalent to the presence of a border and False (0)
+            is equivalent to 'open space'. Naievely this will be the
+            edges of the ratemap but could be used to take account of
+            boundary insertions/ creations to check tuning to multiple
+            environmental boundaries. Default None: when the mask is
+            None then a mask is created that has 1's at the edges of the
+            ratemap i.e. it is assumed that occupancy = environmental
+            shape
+        shape (str): description of environment shape. Currently
+            only 'square' or 'circle' accepted. Used to calculate the
+            proportion of the environmental boundaries to examine for
+            firing
+        fieldThresh (float): Between 0 and 1 this is the percentage
+            amount of the maximum firing rate
+            to remove from the ratemap (i.e. to remove noise)
+        smthKernSig (float): the sigma value used in smoothing the ratemap
+            (again!) with a gaussian kernel
+        circumPrc (float): The percentage amount of the circumference
+            of the environment that the field needs to be to count
+            as long enough to make it through
+        binSize (float): bin size in cm
+        minArea (float): min area for a field to be considered
+        debug (bool): If True then some plots and text will be output
 
-    Returns
-    -------
-    float : the border score
+    Returns:
+        float: the border score
 
-    Notes
-    -----
-    If the cell is a border cell (BVC) then we know that it should
-    fire at a fixed distance from a given boundary (possibly more
-    than one). In essence this algorithm estimates the amount of
-    variance in this distance i.e. if the cell is a border cell this
-    number should be small. This is achieved by first doing a bunch of
-    morphological operations to isolate individual fields in the
-    ratemap (similar to the code used in phasePrecession.py - see
-    the partitionFields method therein). These partitioned fields are then
-    thinned out (using skimage's skeletonize) to a single pixel
-    wide field which will lie more or less in the middle of the
-    (highly smoothed) sub-field. It is the variance in distance from the
-    nearest boundary along this pseudo-iso-line that is the boundary
-    measure
+    Notes:
+        If the cell is a border cell (BVC) then we know that it should
+        fire at a fixed distance from a given boundary (possibly more
+        than one). In essence this algorithm estimates the amount of
+        variance in this distance i.e. if the cell is a border cell this
+        number should be small. This is achieved by first doing a bunch of
+        morphological operations to isolate individual fields in the
+        ratemap (similar to the code used in phasePrecession.py - see
+        the partitionFields method therein). These partitioned fields are then
+        thinned out (using skimage's skeletonize) to a single pixel
+        wide field which will lie more or less in the middle of the
+        (highly smoothed) sub-field. It is the variance in distance from the
+        nearest boundary along this pseudo-iso-line that is the boundary
+        measure
 
-    Other things to note are that the pixel-wide field has to have some
-    minimum length. In the case of a circular environment this is set to
-    20% of the circumference; in the case of a square environment markers
-    this is at least half the length of the longest side
-
+        Other things to note are that the pixel-wide field has to have some
+        minimum length. In the case of a circular environment this is set to
+        20% of the circumference; in the case of a square environment markers
+        this is at least half the length of the longest side
     """
     # need to know borders of the environment so we can see if a field
     # touches the edges, and the perimeter length of the environment
@@ -351,23 +336,20 @@ def border_score(
 
 
 def _get_field_labels(A: np.ndarray, **kwargs) -> tuple:
-    '''
+    """
     Returns a labeled version of A after finding the peaks
     in A and finding the watershed basins from the markers
     found from those peaks. Used in field_props() and
     grid_field_props()
 
-    Parameters
-    -----------------
-    A : np.ndarray
-    Valid kwargs:
-    min_distance : float
-        The distance in bins between fields to separate the regions
-        of the image
-    clear_border : bool
-        Input to skimage.feature.peak_local_max. The number of
-        pixels to ignore at the edge of the image
-    '''
+    Args:
+        A (np.ndarray): The array to process
+        min_distance (float, optional): The distance in bins between fields to
+        separate the regions of the image
+        clear_border (bool, optional): Input to skimage.feature.peak_local_max.
+        The number of
+            pixels to ignore at the edge of the image
+    """
     clear_border = True
     if 'clear_border' in kwargs:
         clear_border = kwargs.pop('clear_border')
@@ -395,36 +377,26 @@ def field_props(
     """
     Returns a dictionary of properties of the field(s) in a ratemap A
 
-    Parameters
-    ----------
-    A : array_like
-        a ratemap (but could be any image)
-    min_dist : float
-        the separation (in bins) between fields for measures
-        such as field distance to make sense. Used to
-        partition the image into separate fields in the call to
-        feature.peak_local_max
-    neighbours : int
-        the number of fields to consider as neighbours to
-        any given field. Defaults to 2
-    prc : float
-        percent of fields to consider
-    ax : matplotlib.Axes
-        user supplied axis. If None a new figure window is created
-    tri : bool
-        whether to do Delaunay triangulation between fields
-        and add to plot
-    verbose : bool
-        dumps the properties to the console
-    plot : bool
-        whether to plot some output - currently consists of the
-        ratemap A, the fields of which are outline in a black
-        contour. Default False
+    Args:
+        A (array_like): a ratemap (but could be any image)
+        min_dist (float): the separation (in bins) between fields for measures
+            such as field distance to make sense. Used to
+            partition the image into separate fields in the call to
+            feature.peak_local_max
+        neighbours (int): the number of fields to consider as neighbours to
+            any given field. Defaults to 2
+        prc (float): percent of fields to consider
+        ax (matplotlib.Axes): user supplied axis. If None a new figure window
+        is created
+        tri (bool): whether to do Delaunay triangulation between fields
+            and add to plot
+        verbose (bool): dumps the properties to the console
+        plot (bool): whether to plot some output - currently consists of the
+            ratemap A, the fields of which are outline in a black
+            contour. Default False
 
-    Returns
-    -------
-    result : dict
-        The properties of the field(s) in the input ratemap A
+    Returns:
+        result (dict): The properties of the field(s) in the input ratemap A
     """
 
     from skimage.measure import find_contours
@@ -587,25 +559,20 @@ def coherence(smthd_rate, unsmthd_rate):
 
 def kldiv_dir(polarPlot):
     """
-    Returns a kl divergence for directional firing: measure of
-    directionality.
-    Calculates kl diveregence between a smoothed ratemap (probably
-    should be smoothed otherwise information theoretic measures
-    don't 'care' about position of bins relative to
-    one another) and a pure circular distribution.
-    The larger the divergence the more tendancy the cell has to fire
-    when the animal faces a specific direction.
+    Returns a kl divergence for directional firing: measure of directionality.
+    Calculates kl diveregence between a smoothed ratemap (probably should be
+    smoothed otherwise information theoretic measures
+    don't 'care' about position of bins relative to one another) and a
+    pure circular distribution.
+    The larger the divergence the more tendancy the cell has to fire when the
+    animal faces a specific direction.
 
-    Parameters
-    ----------
-    polarPlot: 1D-array
-        The binned and smoothed directional ratemap
+    Args:
+        polarPlot (1D-array): The binned and smoothed directional ratemap
 
-    Returns
-    -------
-    klDivergence: float
-        The divergence from circular of the 1D-array from a
-        uniform circular distribution
+    Returns:
+        klDivergence (float): The divergence from circular of the 1D-array
+        from a uniform circular distribution
     """
 
     __inc = 0.00001
@@ -625,43 +592,41 @@ def kldiv(X, pvect1, pvect2, variant=None):
     Calculates the Kullback-Leibler or Jensen-Shannon divergence between
     two distributions.
 
-    kldiv(X,P1,P2) returns the Kullback-Leibler divergence between two
-    distributions specified over the M variable values in vector X.
-    P1 is a length-M vector of probabilities representing distribution 1;
-    P2 is a length-M vector of probabilities representing distribution 2.
-        Thus, the probability of value X(i) is P1(i) for distribution 1 and
-    P2(i) for distribution 2.
+    Args:
+        X (array_like): Vector of M variable values
+        P1 (array_like): Length-M vector of probabilities representing
+        distribution 1
+        P2 (array_like): Length-M vector of probabilities representing
+        distribution 2
+        sym (str, optional): If 'sym', returns a symmetric variant of the
+            Kullback-Leibler divergence, given by [KL(P1,P2)+KL(P2,P1)]/2
+        js (str, optional): If 'js', returns the Jensen-Shannon divergence,
+        given by
+            [KL(P1,Q)+KL(P2,Q)]/2, where Q = (P1+P2)/2
 
-    The Kullback-Leibler divergence is given by:
+    Returns:
+        float: The Kullback-Leibler divergence or Jensen-Shannon divergence
 
-    .. math:: KL(P1(x),P2(x)) = sum_[P1(x).log(P1(x)/P2(x))]
+    Notes:
+        The Kullback-Leibler divergence is given by:
 
-    If X contains duplicate values, there will be an warning message,
-    and these values will be treated as distinct values.  (I.e., the
-    actual values do not enter into the computation, but the probabilities
-    for the two duplicate values will be considered as probabilities
-    corresponding to two unique values.).
-    The elements of probability vectors P1 and P2 must
-    each sum to 1 +/- .00001.
+        .. math:: KL(P1(x),P2(x)) = sum_[P1(x).log(P1(x)/P2(x))]
 
-    kldiv(X,P1,P2,'sym') returns a symmetric variant of the
-    Kullback-Leibler divergence, given by [KL(P1,P2)+KL(P2,P1)]/2
+        If X contains duplicate values, there will be an warning message,
+        and these values will be treated as distinct values.  (I.e., the
+        actual values do not enter into the computation, but the probabilities
+        for the two duplicate values will be considered as probabilities
+        corresponding to two unique values.).
+        The elements of probability vectors P1 and P2 must
+        each sum to 1 +/- .00001.
 
-    kldiv(X,P1,P2,'js') returns the Jensen-Shannon divergence, given by
-    [KL(P1,Q)+KL(P2,Q)]/2, where Q = (P1+P2)/2.  See the Wikipedia article
-    for "Kullback–Leibler divergence".  This is equal to 1/2 the so-called
-    "Jeffrey divergence."
+        This function is taken from one on the Mathworks file exchange
 
-    See Also
-    --------
-    Cover, T.M. and J.A. Thomas. "Elements of Information Theory," Wiley,
-    1991.
+    See Also:
+        Cover, T.M. and J.A. Thomas. "Elements of Information Theory," Wiley,
+        1991.
 
-    https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence
-
-    Notes
-    -----
-    This function is taken from one on the Mathworks file exchange
+        https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence
     """
 
     if len(np.unique(X)) != len(np.sort(X)):
@@ -699,28 +664,21 @@ def skaggs_info(ratemap, dwelltimes, **kwargs):
     """
     Calculates Skaggs information measure
 
-    Parameters
-    ----------
-    ratemap : array_like
-        The binned up ratemap
-    dwelltimes: array_like
-        Must be same size as ratemap
+    Args:
+        ratemap (array_like): The binned up ratemap
+        dwelltimes (array_like): Must be same size as ratemap
 
-    Returns
-    -------
-    bits_per_spike : float
-        Skaggs information score
+    Returns:
+        bits_per_spike (float): Skaggs information score
 
-    Notes
-    -----
-    THIS DATA SHOULD UNDERGO ADAPTIVE BINNING
-    See getAdaptiveMap() in binning class
+    Notes:
+        THIS DATA SHOULD UNDERGO ADAPTIVE BINNING
+        See getAdaptiveMap() in binning class
 
-    Returns Skaggs et al's estimate of spatial information
-    in bits per spike:
+        Returns Skaggs et al's estimate of spatial information
+        in bits per spike:
 
-    .. math:: I = sum_{x} p(x).r(x).log(r(x)/r)
-
+        .. math:: I = sum_{x} p(x).r(x).log(r(x)/r)
     """
     if 'sample_rate' in kwargs:
         sample_rate = kwargs['sample_rate']
@@ -753,40 +711,33 @@ def grid_field_props(
     """
     Extracts various measures from a spatial autocorrelogram
 
-    Parameters
-    ----------
-    A : array_like
-        The spatial autocorrelogram (SAC)
-    maxima : str, optional
-        The method used to detect the peaks in the SAC.
-        Legal values are 'single' and 'centroid'. Default 'centroid'
-    allProps : bool, optional
-        Whether to return a dictionary that contains the attempt to fit an
-        ellipse around the edges of the central size peaks. See below
-        Default True
+    Args:
+        A (array_like): The spatial autocorrelogram (SAC)
+        maxima (str, optional): The method used to detect the peaks in the SAC.
+            Legal values are 'single' and 'centroid'. Default 'centroid'
+        allProps (bool, optional): Whether to return a dictionary that
+        contains the attempt to fit an ellipse around the edges of the
+        central size peaks. See below
+            Default True
 
-    Returns
-    -------
-    props : dict
-        A dictionary containing measures of the SAC. Keys include:
-        * gridness score
-        * scale
-        * orientation
-        * coordinates of the peaks (nominally 6) closest to SAC centre
-        * a binary mask around the extent of the 6 central fields
-        * values of the rotation procedure used to calculate gridness
-        * ellipse axes and angle (if allProps is True and the it worked)
+    Returns:
+        props (dict): A dictionary containing measures of the SAC.
+        Keys include:
+            * gridness score
+            * scale
+            * orientation
+            * coordinates of the peaks (nominally 6) closest to SAC centre
+            * a binary mask around the extent of the 6 central fields
+            * values of the rotation procedure used to calculate gridness
+            * ellipse axes and angle (if allProps is True and the it worked)
 
-    Notes
-    -----
-    The output from this method can be used as input to the show() method
-    of this class.
-    When it is the plot produced will display a lot more informative.
+    Notes:
+        The output from this method can be used as input to the show() method
+        of this class.
+        When it is the plot produced will display a lot more informative.
 
-    See Also
-    --------
-    ephysiopy.common.binning.autoCorr2D()
-
+    See Also:
+        ephysiopy.common.binning.autoCorr2D()
     """
     A_tmp = A.copy()
     A_tmp[~np.isfinite(A)] = -1
@@ -937,20 +888,15 @@ def grid_orientation(peakCoords, closestPeakIdx):
     The orientation angle is the angle of the first peak working
     counter-clockwise from 3 o'clock
 
-    Parameters
-    ----------
-    peakCoords : array_like
-        The peak coordinates as pairs of xy
-    closestPeakIdx : array_like
-        A 1D array of the indices in peakCoords of the peaks closest
-        to the centre of the SAC
+    Args:
+        peakCoords (array_like): The peak coordinates as pairs of xy
+        closestPeakIdx (array_like): A 1D array of the indices in peakCoords
+        of the peaks closest to the centre of the SAC
 
-    Returns
-    -------
-    peak_orientation : float
-        The first value in an array of the angles of the peaks in the SAC
-        working counter-clockwise from a line extending from the
-        middle of the SAC to 3 o'clock.
+    Returns:
+        peak_orientation (float): The first value in an array of the angles of
+        the peaks in the SAC working counter-clockwise from a line
+        extending from the middle of the SAC to 3 o'clock.
     """
     if len(peakCoords) < 3 or closestPeakIdx.size == 0:
         return np.nan
@@ -976,31 +922,23 @@ def gridness(image, step=30):
     is the subtracted from the minimum of the values at 60, 120
     and 180 degrees to give the grid score.
 
-    Parameters
-    ----------
-    image : array_like
-        The spatial autocorrelogram
-    step : int, optional
-        The amount to rotate the SAC in each step of the rotational
-        correlation procedure
+    Args:
+        image (array_like): The spatial autocorrelogram
+        step (int, optional): The amount to rotate the SAC in each step of the
+        rotational correlation procedure
 
-    Returns
-    -------
-    gridmeasures : 3-tuple
-        The gridscore, the correlation values at each `step` and
-        the rotational array
+    Returns:
+        gridmeasures (3-tuple): The gridscore, the correlation values at each
+        `step` and the rotational array
 
-    Notes
-    -----
-    The correlation performed is a Pearsons R. Some rescaling of the
-    values in `image` is performed following rotation.
+    Notes:
+        The correlation performed is a Pearsons R. Some rescaling of the
+        values in `image` is performed following rotation.
 
-    See Also
-    --------
-    skimage.transform.rotate : for how the rotation of `image` is done
-    skimage.exposure.rescale_intensity : for the resscaling following
-    rotation
-
+    See Also:
+        skimage.transform.rotate : for how the rotation of `image` is done
+        skimage.exposure.rescale_intensity : for the resscaling following
+        rotation
     """
     # TODO: add options in here for whether the full range of correlations
     # are wanted or whether a reduced set is wanted (i.e. at the 30-tuples)
@@ -1045,26 +983,21 @@ def deform_SAC(A, circleXY=None, ellipseXY=None):
     Basically a blatant attempt to improve grid scores, possibly
     introduced in a paper by Matt Nolan...
 
-    Parameters
-    ----------
-    A : array_like
-        The SAC
-    circleXY : array_like
-        The xy coordinates defining a circle. Default None.
-    ellipseXY : array_like
-        The xy coordinates defining an ellipse. Default None.
+    Args:
+        A (array_like): The SAC
+        circleXY (array_like, optional): The xy coordinates defining a circle.
+        Default None.
+        ellipseXY (array_like, optional): The xy coordinates defining an
+        ellipse. Default None.
 
-    Returns
-    -------
-    deformed_sac : array_like
-        The SAC deformed to be more circular
+    Returns:
+        deformed_sac (array_like): The SAC deformed to be more circular
 
-    See Also
-    --------
-    ephysiopy.common.ephys_generic.FieldCalcs.grid_field_props
-    skimage.transform.AffineTransform
-    skimage.transform.warp
-    skimage.exposure.rescale_intensity
+    See Also:
+        ephysiopy.common.ephys_generic.FieldCalcs.grid_field_props
+        skimage.transform.AffineTransform
+        skimage.transform.warp
+        skimage.exposure.rescale_intensity
     """
     if circleXY is None or ellipseXY is None:
         SAC_stats = grid_field_props(A)
@@ -1095,21 +1028,19 @@ def deform_SAC(A, circleXY=None, ellipseXY=None):
 
 
 def get_circular_regions(A: np.ndarray, **kwargs) -> list:
-    '''
+    """
     Returns a list of images which are expanding circular
     regions centred on the middle of the image out to the 
     image edge. Used for calculating the grid score of each
     image to find the one with the max grid score. Based on
     some Moser paper I can't recall.
 
-    Parameters
-    ----------
-    A: np.ndarray - the SAC
+    Args:
+        A (np.ndarray): The SAC
 
-    Valid kwargs
-    ------------
-    min_radius: int - the smallest radius circle to start with
-    '''
+    Keyword Args:
+        min_radius (int): The smallest radius circle to start with
+    """
     from skimage.measure import CircleModel, grid_points_in_poly
 
     min_radius = 5

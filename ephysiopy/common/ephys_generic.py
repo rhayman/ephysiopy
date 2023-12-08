@@ -27,28 +27,27 @@ class EventsGeneric(object):
 
     Once a .stm file is loaded the keys for STM are:
 
-    on: np.array
-        time in samples of the event
-    trial_date: str
-    trial_time: str
-    experimenter: str
-    comments: str
-    duration: str
-    sw_version: str
-    num_chans: str
-    timebase: strxy_ts[3] = juce::uint32(frameTime * 1e6);
-    bytes_per_timestamp: str
-    data_format: str
-    num_stm_samples: str
-    posSampRate: int
-    eegSampRate: int
-    egfSampRate: int
-    off: np.array
-    stim_params: OrderedDict()
-        This has keys:
-            Phase_1: str
-            Phase_2: str
-            Phase_3: str
+    Attributes:
+        on (np.array): time in samples of the event
+        trial_date (str): 
+        trial_time (str): 
+        experimenter (str): 
+        comments (str): 
+        duration (str): 
+        sw_version (str): 
+        num_chans (str): 
+        timebase (str): 
+        bytes_per_timestamp (str): 
+        data_format (str): 
+        num_stm_samples (str): 
+        posSampRate (int): 
+        eegSampRate (int): 
+        egfSampRate (int): 
+        off (np.array): 
+        stim_params (OrderedDict): This has keys:
+            Phase_1 (str): 
+            Phase_2 (str): 
+            Phase_3 (str): 
             etc
                 Each of these keys is also a dict with keys:
                     startTime: None
@@ -109,12 +108,9 @@ class EEGCalcsGeneric(object):
     """
     Generic class for processing and analysis of EEG data
 
-    Parameters
-    ----------
-    sig : array_like
-        The signal (of the LFP data)
-    fs  : float
-        The sample rate
+    Args:
+        sig (array_like): The signal (of the LFP data)
+        fs (float): The sample rate
     """
 
     def __init__(self, sig, fs):
@@ -151,22 +147,17 @@ class EEGCalcsGeneric(object):
         Filters self.sig with a butterworth filter with a bandpass filter
         defined by low and high
 
-        Parameters
-        ----------
-        low, high : float
-            The lower and upper bounds of the bandpass filter
-        order : int
-            The order of the filter
+        Args:
+            low, high (float): The lower and upper bounds of the bandpass
+            filter
+            order (int): The order of the filter
 
-        Returns
-        -------
-        filt : np.ndarray
-            The filtered signal
+        Returns:
+            filt (np.ndarray): The filtered signal
 
-        Notes
-        -----
-        The signal is filtered in both the forward and
-        reverse directions (scipy.signal.filtfilt)
+        Notes:
+            The signal is filtered in both the forward and
+            reverse directions (scipy.signal.filtfilt)
         """
         nyqlim = self.fs / 2
         lowcut = low / nyqlim
@@ -178,23 +169,15 @@ class EEGCalcsGeneric(object):
         """
         Calculates the power spectrum of self.sig
 
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        A 5-tuple of the following and sets a bunch of member variables:
-            freqs : array_like
-                The frequencies at which the spectrogram was calculated
-            power : array_like
-                The power at the frequencies defined above
-            sm_power : array_like
-                The smoothed power
-            bandmaxpower : float
-                The maximum power in the theta band
-            freqatbandmaxpower : float
-                The frequency at which the power is maximum
+        Returns:
+            A 5-tuple of the following and sets a bunch of member variables:
+                freqs (array_like): The frequencies at which the spectrogram
+                was calculated
+                power (array_like): The power at the frequencies defined above
+                sm_power (array_like): The smoothed power
+                bandmaxpower (float): The maximum power in the theta band
+                freqatbandmaxpower (float): The frequency at which the power
+                is maximum
         """
         nqlim = self.fs / 2
         origlen = len(self.sig)
@@ -235,19 +218,13 @@ class EEGCalcsGeneric(object):
         freqs from the result and reconstructs the original signal using
         the inverse fft without those frequencies
 
-        Parameters
-        ----------
-        sig : np.array
-            The LFP signal to be filtered
-        freqs: list
-            The frequencies to be filtered out
-        fs: int
-            The sampling frequency of sig
+        Args:
+            sig (np.array): The LFP signal to be filtered
+            freqs (list): The frequencies to be filtered out
+            fs (int): The sampling frequency of sig
 
-        Returns
-        -------
-        fftRes: np.array
-            The filtered LFP signal
+        Returns:
+            fftRes (np.array): The filtered LFP signal
         """
         # from scipy import signal
         nyq = fs / 2.0
@@ -272,26 +249,19 @@ class PosCalcsGeneric(object):
     Generic class for post-processing of position data
     Uses numpys masked arrays for dealing with bad positions, filtering etc
 
-    Parameters
-    ----------
-    x, y : array_like
-        The x and y positions.
-    ppm : int
-        Pixels per metre
-    cm : boolean
-        Whether everything is converted into cms or not
-    jumpmax : int
-        Jumps in position (pixel coords) greater than this are bad
-    **kwargs:
-        a dict[str, float] called 'tracker_params' is used to limit the
-        range of valid xy positions - 'bad' positions are masked out
-        and interpolated over
+    Args:
+        x, y (array_like): The x and y positions.
+        ppm (int): Pixels per metre
+        cm (bool): Whether everything is converted into cms or not
+        jumpmax (int): Jumps in position (pixel coords) > than this are bad
+        **kwargs: a dict[str, float] called 'tracker_params' is used to limit
+            the range of valid xy positions - 'bad' positions are masked out
+            and interpolated over
 
-    Notes
-    -----
-    The positional data (x,y) is turned into a numpy masked array once this
-    class is initialised - that mask is then modified through various
-    functions (postprocesspos being the main one).
+    Notes:
+        The positional data (x,y) is turned into a numpy masked array once this
+        class is initialised - that mask is then modified through various
+        functions (postprocesspos being the main one).
     """
 
     def __init__(
@@ -385,25 +355,20 @@ class PosCalcsGeneric(object):
         """
         Post-process position data
 
-        Parameters
-        ----------
-        tracker_params : dict
-            Same dict as created in OESettings.Settings.parse
-            (from module openephys2py)
+        Args:
+            tracker_params (dict): Same dict as created in
+            OESettings.Settings.parse
+                (from module openephys2py)
 
-        Returns
-        -------
-        xy, hdir : np.ma.MaskedArray
-            The post-processed position data
+        Returns:
+            xy, hdir (np.ma.MaskedArray): The post-processed position data
 
-        Notes
-        -----
-        Several internal functions are called here: speedfilter,
-        interpnans, smoothPos and calcSpeed.
-        Some internal state/ instance variables are set as well. The
-        mask of the positional data (an instance of numpy masked array)
-        is modified throughout this method.
-
+        Notes:
+            Several internal functions are called here: speedfilter,
+            interpnans, smoothPos and calcSpeed.
+            Some internal state/ instance variables are set as well. The
+            mask of the positional data (an instance of numpy masked array)
+            is modified throughout this method.
         """
         xy = self.orig_xy
         x_zero = xy[0, :] < 0
@@ -467,15 +432,12 @@ class PosCalcsGeneric(object):
         """
         Filters speed
 
-        Parameters
-        ----------
-        xy : np.ma.MaskedArray
-            The xy data
+        Args:
+            xy (np.ma.MaskedArray): The xy data
 
-        Returns
-        -------
-        xy : np.ma.MaskedArray
-            The xy data with speeds > self.jumpmax masked
+        Returns:
+            xy (np.ma.MaskedArray): The xy data with speeds >
+            self.jumpmax masked
         """
 
         disp: np.ma.MaskedArray = np.hypot(xy[0], xy[1])
@@ -513,15 +475,11 @@ class PosCalcsGeneric(object):
         """
         Smooths position data
 
-        Parameters
-        ----------
-        xy : np.ma.MaskedArray
-            The xy data
+        Args:
+            xy (np.ma.MaskedArray): The xy data
 
-        Returns
-        -------
-        xy : array_like
-            The smoothed positional data
+        Returns:
+            xy (array_like): The smoothed positional data
         """
         x = xy[0, :].astype(np.float64)
         y = xy[1, :].astype(np.float64)
@@ -538,14 +496,11 @@ class PosCalcsGeneric(object):
         """
         Calculates speed
 
-        Parameters
-        ---------
-        xy : np.ma.MaskedArray
-            The xy positional data
+        Args:
+            xy (np.ma.MaskedArray): The xy positional data
 
-        Returns
-        -------
-        Nothing. Sets self.speed
+        Returns:
+            Nothing. Sets self.speed
         """
         speed = np.abs(np.ma.ediff1d(np.hypot(xy[0], xy[1])))
         self.speed = np.append(speed, speed[-1])
@@ -556,24 +511,16 @@ class PosCalcsGeneric(object):
         """
         Upsamples position data from 30 to upsample_rate
 
-        Parameters
-        ---------
+        Args:
+            xy (np.ma.MaskedArray): The xy positional data
+            upsample_rate (int): The rate to upsample to
 
-        xy : np.ma.MaskedArray
-            The xy positional data
+        Returns:
+            new_xy (np.ma.MaskedArray): The upsampled xy positional data
 
-        upsample_rate : int
-            The rate to upsample to
-
-        Returns
-        -------
-        new_xy : np.ma.MaskedArray
-            The upsampled xy positional data
-
-        Notes
-        -----E =
-        This is mostly to get pos data recorded using PosTracker at 30Hz
-        into Axona format 50Hz data
+        Notes:
+            This is mostly to get pos data recorded using PosTracker at 30Hz
+            into Axona format 50Hz data
         """
         from scipy import signal
 
@@ -591,25 +538,22 @@ class PosCalcsGeneric(object):
         Meant to replicate a similar function in axona_util.Trial
         called filterPos
 
-        Parameters
-        ----------
-        filterDict : dict
-            Contains the type(s) of filter to be used and the
-            range of values to filter for. Values are pairs specifying the
-            range of values to filter for NB can take multiple filters and
-             iteratively apply them
-            legal values are:
-            * 'dir' - the directional range to filter for NB this can
-                contain 'w','e','s' or 'n'
-            * 'speed' - min and max speed to filter for
-            * 'xrange' - min and max values to filter x pos values
-            * 'yrange' - same as xrange but for y pos
-            * 'time' - the times to keep / remove specified in ms
+        Args:
+            filterDict (dict): Contains the type(s) of filter to be used and
+                the range of values to filter for. Values are pairs specifying
+                the range of values to filter for NB can take multiple filters
+                and iteratively apply them
+                legal values are:
+                * 'dir' - the directional range to filter for NB this can
+                    contain 'w','e','s' or 'n'
+                * 'speed' - min and max speed to filter for
+                * 'xrange' - min and max values to filter x pos values
+                * 'yrange' - same as xrange but for y pos
+                * 'time' - the times to keep / remove specified in ms
 
-        Returns
-        --------
-        pos_index_to_keep : ndarray
-            The position indices that should be kept
+        Returns:
+            pos_index_to_keep (ndarray): The position indices that should be
+            kept
         """
         if filt is None:
             self.xy.mask = False

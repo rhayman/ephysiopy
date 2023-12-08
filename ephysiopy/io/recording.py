@@ -117,6 +117,11 @@ Xml2RecordingKind = {
 
 
 class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
+    """
+    An abstract class inherited by OpenEphysBase and AxonaTrial that
+    defines methods and properties common to both and potentially
+    any other recording format (OpenEphysNWB is there but not used atm)
+    """
     def __init__(self, pname: Path, **kwargs) -> None:
         assert Path(pname).exists(), f"Path provided doesnt exist: {pname}"
         self._pname = pname
@@ -247,14 +252,10 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         Load the position data
 
-        Parameters
-        -----------
-        pname : Path
-            Path to base directory containing pos data
-        ppm : int
-            pixels per metre
-        jumpmax : int
-            max jump in pixels between positions
+        Args:
+            pname (Path): Path to base directory containing pos data
+            ppm (int): pixels per metre
+            jumpmax (int): max jump in pixels between positions
         """
         raise NotImplementedError
 
@@ -350,16 +351,14 @@ class AxonaTrial(TrialInterface):
                         cluster: int = None,
                         *args,
                         **kwargs):
-        '''
-        Parameters
-        ----------
-        tetrode: int
-        cluster: int
+        """
+        Args:
+            tetrode (int): 
+            cluster (int): 
 
-        Returns
-        -------
-        spike_times: np.ndarray
-        '''
+        Returns:
+            spike_times (np.ndarray): 
+        """
         if tetrode is not None:
             return self.TETRODE.get_spike_samples(int(tetrode), int(cluster))
 
@@ -433,16 +432,14 @@ class OpenEphysBase(TrialInterface):
                         tetrode: int = None,
                         cluster: int = None,
                         *args, **kwargs):
-        '''
-        Parameters
-        ----------
-        tetrode: int
-        cluster: int
+        """
+        Args:
+            tetrode (int): 
+            cluster (int): 
 
-        Returns
-        -------
-        spike_times: np.ndarray
-        '''
+        Returns:
+            spike_times (np.ndarray): 
+        """
         if not self.clusterData:
             self.load_cluster_data()
         ts = self.clusterData.spk_times
@@ -630,24 +627,21 @@ class OpenEphysBase(TrialInterface):
     @cache
     def load_ttl(self, *args, **kwargs) -> bool:
         """
-        Valid kwargs are:
-        StimControl_id: str
-            This is the string "StimControl [0-9][0-9][0-9]" where the numbers
-            are the node id in the openephys signal chain
-        TTL_channel_number: int
-            The integer value in the "states.npy" file that corresponds to the
-            identity of the TTL input on the Digital I/O board on the
-            openephys recording system. i.e. if there is input to BNC port 3 on
-            the digital I/O board then values of 3 in the states.npy file are
-            high TTL values on this input and -3 are low TTL values (I think)
+        Args:
+            StimControl_id (str): This is the string "StimControl [0-9][0-9][0-9]" where the numbers
+                are the node id in the openephys signal chain
+            TTL_channel_number (int): The integer value in the "states.npy" file that corresponds to the
+                identity of the TTL input on the Digital I/O board on the
+                openephys recording system. i.e. if there is input to BNC port 3 on
+                the digital I/O board then values of 3 in the states.npy file are
+                high TTL values on this input and -3 are low TTL values (I think)
 
-        Returns
-        -------
-        Nothing but sets some keys/values in a dict on 'self'
-        called ttl_data, namely:
+        Returns:
+            Nothing but sets some keys/values in a dict on 'self'
+            called ttl_data, namely:
 
-        ttl_timestamps: list - the times of high ttl pulses in ms
-        stim_duration: int - the duration of the ttl pulse in ms
+            ttl_timestamps (list): the times of high ttl pulses in ms
+            stim_duration (int): the duration of the ttl pulse in ms
         """
         if not Path(self.path2EventsData).exists:
             return False

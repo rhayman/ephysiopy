@@ -8,7 +8,7 @@ import matplotlib.pylab as plt
 import numpy as np
 from phylib.io.model import TemplateModel
 from scipy import signal, stats
-from ephysiopy.common.utils import smooth, min_max_norm
+from ephysiopy.common.utils import min_max_norm
 
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 
@@ -17,18 +17,16 @@ class SpikeCalcsGeneric(object):
     """
     Deals with the processing and analysis of spike data.
 
-    Parameters
-    ----------
-    spike_times : array_like
-        The times of 'spikes' in the trial
-        Should be the same length as the cluster identity vector _spk_clusters
-    waveforms : np.array, optional
-        An nSpikes x nSamples array (nSamples usually 50)
+    Args:
+        spike_times (array_like): The times of 'spikes' in the trial.
+            Should be the same length as the cluster identity vector
+            _spk_clusters
+        waveforms (np.array, optional): An nSpikes x nSamples array
+            (nSamples usually 50)
 
-    Notes
-    -----
-    Units for time are provided as per the sample rate but converted
-    internally to milliseconds
+    Note:
+        Units for time are provided as per the sample rate but converted
+        internally to milliseconds
     """
 
     @staticmethod
@@ -36,16 +34,11 @@ class SpikeCalcsGeneric(object):
         """
         Returns the requested parameter from a spike train as a numpy array
 
-        Parameters
-        -------------------
-
-        waveforms - numpy array
-            Shape of array can be an nSpikes x nSamples
-            OR
-            a nSpikes x nElectrodes x nSamples
-
-        param - str
-            Valid values are:
+        Args:
+            waveforms (numpy array): Shape of array can be nSpikes x nSamples
+                OR
+                a nSpikes x nElectrodes x nSamples
+            param (str): Valid values are:
                 'Amp' - peak-to-trough amplitude (default)
                 'P' - height of peak
                 'T' - depth of trough
@@ -53,12 +46,9 @@ class SpikeCalcsGeneric(object):
                 'tP' - time of peak (in seconds)
                 'tT' - time of trough (in seconds)
                 'PCA' - first n fet principal components (defaults to 1)
-
-        t - int
-            The time used for Vt
-
-        fet - int
-            The number of principal components (used with param 'PCA')
+            t (int): The time used for Vt
+            fet (int): The number of principal components
+                (use with param 'PCA')
         """
         from scipy import interpolate
         from sklearn.decomposition import PCA
@@ -78,11 +68,13 @@ class SpikeCalcsGeneric(object):
                 return waveforms[:, :, int(f(t))]
         elif param == "tP":
             idx = np.argmax(waveforms, axis=-1)
-            m = interpolate.interp1d([0, waveforms.shape[-1] - 1], [0, 1 / 1000.0])
+            m = interpolate.interp1d(
+                [0, waveforms.shape[-1] - 1], [0, 1 / 1000.0])
             return m(idx)
         elif param == "tT":
             idx = np.argmin(waveforms, axis=-1)
-            m = interpolate.interp1d([0, waveforms.shape[-1] - 1], [0, 1 / 1000.0])
+            m = interpolate.interp1d(
+                [0, waveforms.shape[-1] - 1], [0, 1 / 1000.0])
             return m(idx)
         elif param == "PCA":
             pca = PCA(n_components=fet)
@@ -101,9 +93,9 @@ class SpikeCalcsGeneric(object):
                             )
                         )
                         if A.ndim < 2:
-                            out[:, rng[0, i] : rng[1, i]] = np.atleast_2d(A).T
+                            out[:, rng[0, i]:rng[1, i]] = np.atleast_2d(A).T
                         else:
-                            out[:, rng[0, i] : rng[1, i]] = A
+                            out[:, rng[0, i]:rng[1, i]] = A
                 return out
 
     def __init__(self, spike_times, waveforms=None, **kwargs):
@@ -217,17 +209,12 @@ class SpikeCalcsGeneric(object):
         Calculates the mean of the autocorrelation from 0 to n milliseconds
         Used to help classify a neurons type (principal, interneuron etc)
 
-        Parameters
-        ----------
-        cluster : int
-            The cluster to analyse
-        n : int
-            The range in milliseconds to calculate the mean over
+        Args:
+            cluster (int): The cluster to analyse
+            n (int): The range in milliseconds to calculate the mean over
 
-        Returns
-        -------
-        mean_isi_range : float
-            The mean of the autocorrelogram between 0 and n milliseconds
+        Returns:
+            float: The mean of the autocorrelogram between 0 and n milliseconds
         """
         if cluster not in self.spk_clusters:
             raise IndexError("Cluster not available")
@@ -240,24 +227,22 @@ class SpikeCalcsGeneric(object):
         mask = np.logical_and(bins > 0, bins < n)
         return np.mean(counts[mask[1:]])
 
-    def xcorr(self, x1: np.ndarray, x2=None, Trange=None, **kwargs) -> np.ndarray:
+    def xcorr(self, x1: np.ndarray,
+              x2=None,
+              Trange=None,
+              **kwargs) -> np.ndarray:
         """
-        Calculates the ISIs in x1 or x1 vs x2 within a
-        given range
+        Calculates the ISIs in x1 or x1 vs x2 within a given range
 
-        Parameters
-        ----------
-        x1, x2 : array_like
-            The times of the spikes emitted by the cluster(s)
-            Assumed to be in milliseconds
-        Trange : array_like
-            Range of times to bin up in ms. Defaults to [-500, +500]
+        Args:
+            x1, x2 (array_like): The times of the spikes emitted by the
+                                cluster(s). Assumed to be in milliseconds
+            Trange (array_like): Range of times to bin up in ms.
+                                    Defaults to [-500, +500]
 
-        Returns
-        -------
-        y : np.ndarray
-            The time differences between spike times in x1 over the range
-            of times defined Trange
+        Returns:
+            y (np.ndarray): The time differences between spike times in x1
+                            over the range of times defined Trange
         """
         if x2 is None:
             x2 = x1.copy()
@@ -273,41 +258,34 @@ class SpikeCalcsGeneric(object):
         y = np.array(y, dtype=float)
         return y
 
-    def getClusterWaveforms(self, cluster_id: int, channel_id: int):
+    def getClusterWaveforms(self, clust_id: int, channel_id: int):
         """
-        NB Over-ride this in the individual specialisations below
-
         Get the waveforms for a particular cluster on a given channel
 
-        Parameters
-        ----------
-        cluster_id : int
+        Args:
+            clust_id (int)
 
-        Returns
-        -------
-        np.array : the waveforms
+        Returns:
+            np.array: the waveforms
         """
         if self.waveforms is not None:
-            return self.waveforms[self.spk_clusters == cluster_id, channel_id, :]
+            return self.waveforms[self.spk_clusters == clust_id, channel_id, :]
         else:
             return None
 
     def getMeanWaveform(self, cluster_id: int, channel_id: int):
         """
-        Returns the mean waveform and sem for a given spike train
-        on a particular channel
+        Returns the mean waveform and sem for a given spike train on a
+        particular channel
 
-        Parameters
-        ----------
-        cluster_id: int
-            The cluster to get the mean waveform for
+        Args:
+            cluster_id (int): The cluster to get the mean waveform for
 
-        Returns
-        -------
-        mn_wvs: ndarray (floats) - usually 4x50 for tetrode recordings
-            the mean waveforms
-        std_wvs: ndarray (floats) - usually 4x50 for tetrode recordings
-            the standard deviations of the waveforms
+        Returns:
+            mn_wvs (ndarray): The mean waveforms, usually 4x50 for tetrode
+                                recordings
+            std_wvs (ndarray): The standard deviations of the waveforms,
+                                usually 4x50 for tetrode recordings
         """
         if self.spk_clusters is not None:
             if cluster_id not in self.spk_clusters:
@@ -325,16 +303,12 @@ class SpikeCalcsGeneric(object):
         """
         Calculate the PSTH of event_ts against the spiking of a cell
 
-        Parameters
-        ----------
-        cluster_id : int
-            The cluster for which to calculate the psth
+        Args:
+            cluster_id (int): The cluster for which to calculate the psth
 
-        Returns
-        -------
-        x, y : list
-            The list of time differences between the spikes of the cluster
-            and the events (x) and the trials (y)
+        Returns:
+            x, y (list): The list of time differences between the spikes of
+                            the cluster and the events (x) and the trials (y)
         """
         if self._event_ts is None:
             raise Exception("Need some event timestamps! Aborting")
@@ -351,7 +325,7 @@ class SpikeCalcsGeneric(object):
         x = []
         y = []
         for i, t in enumerate(dts):
-            tmp = spike_times[t[0] : t[1]] - event_ts[i]
+            tmp = spike_times[t[0]:t[1]] - event_ts[i]
             x.extend(tmp)
             y.extend(np.repeat(i, len(tmp)))
         return x, y
@@ -359,21 +333,18 @@ class SpikeCalcsGeneric(object):
     def calculatePSCH(
             self, cluster_id: int, bin_width_secs: float) -> np.ndarray:
         """
-        Calculate the peri-stimulus *count* histogram of a cells spiking
-        against event times
+        Calculate the peri-stimulus *count* histogram of a cell's spiking
+        against event times.
 
-        Parameters
-        ----------
-        cluster_id : int
-            The cluster for which to calculate the psth
+        Args:
+            cluster_id (int): The cluster for which to calculate the psth.
+            bin_width_secs (float): The width of each bin in seconds.
 
-        Returns
-        -------
-        result: np.ndarray
-            Where rows are counts of spikes per bin_width_secs and
-            size of columns ranges from self.event_window[0] to 
-            self.event_window[1] with bin_width_secs steps
-            So x is count, y is "event" 
+        Returns:
+            result (np.ndarray): Rows are counts of spikes per bin_width_secs.
+            Size of columns ranges from self.event_window[0] to
+            self.event_window[1] with bin_width_secs steps;
+            so x is count, y is "event".
         """
         if self._event_ts is None:
             raise Exception("Need some event timestamps! Aborting")
@@ -387,10 +358,11 @@ class SpikeCalcsGeneric(object):
         spike_times = self.spike_times[self.spk_clusters == cluster_id]
         irange = event_ts[:, np.newaxis] + self.event_window[np.newaxis, :]
         dts = np.searchsorted(spike_times, irange)
-        bins = np.arange(self.event_window[0], self.event_window[1], bin_width_secs)
+        bins = np.arange(self.event_window[0],
+                         self.event_window[1], bin_width_secs)
         result = np.zeros(shape=(len(bins)-1, len(event_ts)))
         for i, t in enumerate(dts):
-            tmp = spike_times[t[0] : t[1]] - event_ts[i]
+            tmp = spike_times[t[0]:t[1]] - event_ts[i]
             indices = np.digitize(tmp, bins=bins)
             counts = np.bincount(indices, minlength=len(bins))
             result[:, i] = counts[1:]
@@ -402,38 +374,29 @@ class SpikeCalcsGeneric(object):
                            return_activity: bool = False,
                            return_magnitude: bool = False,
                            **kwargs) -> tuple:
-        '''
-        Checks whether a cluster responds to a laser stimulus
+        """
+        Checks whether a cluster responds to a laser stimulus.
 
-        Parameters
-        ----------
-        cluster: int
-            The cluster to check
-        threshold: float
-            The amount of activity the cluster needs to go beyond to
-            be classified as a responder (1.5 = 50% more or less than
-            the baseline activity)
-        min_contiguous: int
-            The number of contiguous samples in the post-stimulus
-            period for which the cluster needs to be active beyond
-            the threshold value to be classed as a responder
-        return_activity: bool
-            Whether to return the mean reponse curve
-        return_magnitude: int
-            Whether to return the magnitude of the response
-            NB this is either +1 for excited or -1 for inhibited
+        Args:
+            cluster (int): The cluster to check.
+            threshold (float): The amount of activity the cluster needs to go
+                beyond to be classified as a responder (1.5 = 50% more or less
+                than the baseline activity).
+            min_contiguous (int): The number of contiguous samples in the
+                post-stimulus period for which the cluster needs to be active
+                beyond the threshold value to be classed as a responder.
+            return_activity (bool): Whether to return the mean reponse curve.
+            return_magnitude (int): Whether to return the magnitude of the
+                response. NB this is either +1 for excited or -1 for inhibited.
 
-        Returns
-        -------
-        reponds: bool
-            Whether the cell responds or not
-        OR
-        tuple: responds (bool), normed_response_curve (np.ndarray)
-        OR
-        tuple: responds (bool), normed_response_curve (np.ndarray),
-               response_magnitude (np.ndarray)
-
-        '''
+        Returns:
+            responds (bool): Whether the cell responds or not.
+            OR
+            tuple: responds (bool), normed_response_curve (np.ndarray).
+            OR
+            tuple: responds (bool), normed_response_curve (np.ndarray),
+                response_magnitude (np.ndarray).
+        """
         spk_count_by_trial = self.calculatePSCH(cluster, self._secs_per_bin)
         firing_rate_by_trial = spk_count_by_trial / self.secs_per_bin
         mean_firing_rate = np.mean(firing_rate_by_trial, 1)
@@ -503,7 +466,8 @@ class SpikeCalcsGeneric(object):
                     return True
                 else:
                     if return_magnitude:
-                        sl = [slc for slc in slices if (slc.stop-slc.start) == max_runlength]
+                        sl = [slc for slc in slices if
+                              (slc.stop-slc.start) == max_runlength]
                         mag = [-1 if np.mean(normd[sl[0]]) < 0 else 1][0]
                         return True, normd, mag
                     else:
@@ -564,7 +528,8 @@ class SpikeCalcsGeneric(object):
         u_sz = u.shape
         v_sz = v.shape
         if u_sz[1] != v_sz[1]:
-            warnings.warn("Input size mismatch: matrices must have same num of columns")
+            warnings.warn("Input size mismatch: \
+                          matrices must have same num of columns")
         if v_sz[0] < v_sz[1]:
             warnings.warn("Too few rows: v must have more rows than columns")
         if np.any(np.imag(u)) or np.any(np.imag(v)):
@@ -580,20 +545,18 @@ class SpikeCalcsGeneric(object):
     def thetaModIdx(self, x1):
         """
         Calculates a theta modulation index of a spike train based on the cells
-        autocorrelogram
+        autocorrelogram.
 
-        Parameters
-        ----------
-        x1: np.array
-            The spike time-series
-        Returns
-        -------
-        thetaMod: float
-            The difference of the values at the first peak and trough of the
-            autocorrelogram
+        Args:
+            x1 (np.array): The spike time-series.
+
+        Returns:
+            thetaMod (float): The difference of the values at the first peak
+            and trough of the autocorrelogram.
         """
         y = self.xcorr(x1)
-        corr, _ = np.histogram(y[y != 0], bins=201, range=np.array([-500, 500]))
+        corr, _ = np.histogram(y[y != 0],
+                               bins=201, range=np.array([-500, 500]))
         # Take the fft of the spike train autocorr (from -500 to +500ms)
         from scipy.signal import periodogram
 
@@ -609,7 +572,7 @@ class SpikeCalcsGeneric(object):
             sqd_amp == np.max(sqd_amp[np.logical_and(freqs > 6, freqs < 11)])
         )[0][0]
         # Get the mean theta band power - mtbp
-        mtbp = np.mean(sqd_amp[theta_band_max_idx - 1 : theta_band_max_idx + 1])
+        mtbp = np.mean(sqd_amp[theta_band_max_idx-1: theta_band_max_idx+1])
         # Find the mean amplitude in the 2-50Hz range
         other_band_idx = np.logical_and(freqs > 2, freqs < 50)
         # Get the mean in the other band - mobp
@@ -627,7 +590,8 @@ class SpikeCalcsGeneric(object):
         Measure used in Cacucci et al., 2004 and Kropff et al 2015
         """
         y = self.xcorr(x1)
-        corr, bins = np.histogram(y[y != 0], bins=201, range=np.array([-500, 500]))
+        corr, bins = np.histogram(y[y != 0],
+                                  bins=201, range=np.array([-500, 500]))
         # 'close' the right-hand bin
         bins = bins[0:-1]
         # normalise corr so max is 1.0
@@ -644,36 +608,32 @@ class SpikeCalcsGeneric(object):
         See Welday paper - https://doi.org/10.1523/jneurosci.0712-11.2011
         """
         y = self.xcorr(x1)
-        corr, _ = np.histogram(y[y != 0], bins=201, range=np.array([-500, 500]))
+        corr, _ = np.histogram(y[y != 0],
+                               bins=201, range=np.array([-500, 500]))
         # Take the fft of the spike train autocorr (from -500 to +500ms)
         from scipy.signal import periodogram
 
         freqs, power = periodogram(corr, fs=200, return_onesided=True)
-        power_masked = np.ma.MaskedArray(power, np.logical_or(freqs < 6, freqs > 12))
+        power_masked = np.ma.MaskedArray(power,
+                                         np.logical_or(freqs < 6, freqs > 12))
         return freqs[np.argmax(power_masked)]
 
     def smoothSpikePosCount(self, x1, npos, sigma=3.0, shuffle=None):
         """
         Returns a spike train the same length as num pos samples that has been
         smoothed in time with a gaussian kernel M in width and standard
-        deviation equal to sigma
+        deviation equal to sigma.
 
-        Parameters
-        --------------
-        x1 : np.array
-            The pos indices the spikes occured at
-        npos : int
-            The number of position samples captured
-        sigma : float
-            the standard deviation of the gaussian used to smooth the spike
-            train
-        shuffle: int
-            The number of seconds to shift the spike train by. Default None
+        Args:
+            x1 (np.array): The pos indices the spikes occurred at.
+            npos (int): The number of position samples captured.
+            sigma (float): The standard deviation of the gaussian used to
+                smooth the spike train.
+            shuffle (int, optional): The number of seconds to shift the spike
+                train by. Default is None.
 
-        Returns
-        -----------
-        smoothed_spikes : np.array
-            The smoothed spike train
+        Returns:
+            smoothed_spikes (np.array): The smoothed spike train.
         """
         spk_hist = np.bincount(x1, minlength=npos)
         if shuffle is not None:
@@ -707,13 +667,26 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
         plot=False,
     ):
         """
-        x1 : np.array
-            The indices of pos at which the cluster fired
-        speed: np.array (1 x nSamples)
-            instantaneous speed
-        minSpeed: int
-            speeds below this value are ignored - defaults to 2cm/s as with
-            Kropff et al., 2015
+        Calculates the correlation between the instantaneous firing rate and
+        speed.
+
+        Args:
+            x1 (np.array): The indices of pos at which the cluster fired.
+            speed (np.array): Instantaneous speed (1 x nSamples).
+            minSpeed (float, optional): Speeds below this value are ignored.
+                Defaults to 2.0 cm/s as with Kropff et al., 2015.
+            maxSpeed (float, optional): Speeds above this value are ignored.
+                Defaults to 40.0 cm/s.
+            sigma (int, optional): The standard deviation of the gaussian used
+                to smooth the spike train. Defaults to 3.
+            shuffle (bool, optional): Whether to shuffle the spike train.
+                Defaults to False.
+            nShuffles (int, optional): The number of times to shuffle the
+                spike train. Defaults to 100.
+            minTime (int, optional): The minimum time for which the spike
+                train should be considered. Defaults to 30.
+            plot (bool, optional): Whether to plot the result.
+                Defaults to False.
         """
         speed = speed.ravel()
         posSampRate = 50
@@ -781,7 +754,8 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
             # TODO: linear regression is broken ie not regressing the correct
             # variables
             lr = stats.linregress(speed_filt, sm_spk_rate)
-            end_point = lr.intercept + ((sp_bin_edges[-1] - sp_bin_edges[0]) * lr.slope)
+            end_point = lr.intercept + \
+                ((sp_bin_edges[-1]-sp_bin_edges[0]) * lr.slope)
             ax.plot(
                 [np.min(sp_bin_edges), np.max(sp_bin_edges)],
                 [lr.intercept, end_point],
@@ -808,7 +782,8 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
                 spk_count = np.roll(spk_hist, t)
                 spk_count_filt = spk_count[~lowSpeedIdx]
                 spk_count_sm = signal.filtfilt(h.ravel(), 1, spk_count_filt)
-                shuffled_results.append(stats.pearsonr(spk_count_sm, speed_filt)[0])
+                shuffled_results.append(stats.pearsonr(
+                    spk_count_sm, speed_filt)[0])
             if plot:
                 fig = plt.figure()
                 ax = fig.add_subplot(1, 1, 1)
@@ -826,18 +801,15 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
 
     def half_amp_dur(self, waveforms):
         """
-        Half amplitude duration of a spike
+        Calculates the half amplitude duration of a spike.
 
-        Parameters
-        ----------
-        A: ndarray
-            An nSpikes x nElectrodes x nSamples array
+        Args:
+            A (ndarray): An nSpikes x nElectrodes x nSamples array.
 
-        Returns
-        -------
-        had: float
-            The half-amplitude duration for the channel (electrode) that has
-            the strongest (highest amplitude) signal. Units are ms
+        Returns:
+            had (float): The half-amplitude duration for the channel
+                (electrode) that has the strongest (highest amplitude)
+                signal. Units are ms.
         """
         from scipy import optimize
 
@@ -875,16 +847,13 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         """
         The peak to trough time of a spike in ms
 
-        Parameters
-        ----------
-        cluster: int
-            the cluster whose waveforms are to be analysed
+        Args:
+            cluster (int): The cluster whose waveforms are to be analysed
 
-        Returns
-        -------
-        p2t: float
-            The mean peak-to-trough time for the channel (electrode) that has
-            the strongest (highest amplitude) signal. Units are ms
+        Returns:
+            p2t (float): The mean peak-to-trough time for the channel
+                (electrode) that has the strongest (highest amplitude) signal.
+                Units are ms.
         """
         best_chan = np.argmax(np.max(np.mean(waveforms, 0), 1))
         tP = self.getParam(waveforms, param="tP")
@@ -894,7 +863,12 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         p2t = np.abs(mn_tP[best_chan] - mn_tT[best_chan])
         return p2t * 1000
 
-    def plotClusterSpace(self, waveforms, param="Amp", clusts=None, bins=256, **kwargs):
+    def plotClusterSpace(self,
+                         waveforms,
+                         param="Amp",
+                         clusts=None,
+                         bins=256,
+                         **kwargs):
         """
         Assumes the waveform data is signed 8-bit ints
         TODO: aspect of plot boxes in ImageGrid not right as scaled by range of
@@ -982,16 +956,17 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
         n_channels: int = 64,
         **kwargs
     ) -> np.ndarray:
-        """'
-        Returns waveforms for a cluster
+        """
+        Returns waveforms for a cluster.
 
-        Parameters
-        ----------
-        cluster: int - the cluster to return the waveforms for
-        cluster_data: KiloSortSession - the KiloSortSession object for the
-            session that contains the cluster
-        n_waveforms: int - the number of waveforms to return. Default 2000
-        n_channels: int - the number of channels in the recording. Default 64
+        Args:
+            cluster (int): The cluster to return the waveforms for.
+            cluster_data (KiloSortSession): The KiloSortSession object for the
+                session that contains the cluster.
+            n_waveforms (int, optional): The number of waveforms to return.
+                Defaults to 2000.
+            n_channels (int, optional): The number of channels in the
+                recording. Defaults to 64.
         """
         # instantiate the TemplateModel - this is used to get the waveforms
         # for the cluster. TemplateModel encapsulates the results of KiloSort
@@ -999,15 +974,16 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
             self.TemplateModel = TemplateModel(
                 dir_path=os.path.join(cluster_data.fname_root),
                 sample_rate=3e4,
-                dat_path=os.path.join(cluster_data.fname_root, "continuous.dat"),
+                dat_path=os.path.join(cluster_data.fname_root,
+                                      "continuous.dat"),
                 n_channels_dat=n_channels,
             )
         # get the waveforms for the given cluster on the best channel only
         waveforms = self.TemplateModel.get_cluster_spike_waveforms(cluster)
         # get a random subset of the waveforms
         rng = np.random.default_rng()
-        total_waveforms = waveforms.shape[0]
-        n_waveforms = n_waveforms if n_waveforms < total_waveforms else total_waveforms
+        total_waves = waveforms.shape[0]
+        n_waveforms = n_waveforms if n_waveforms < total_waves else total_waves
         waveforms_subset = rng.choice(waveforms, n_waveforms)
         # return the waveforms
         return np.squeeze(waveforms_subset[:, :, 0])
@@ -1015,7 +991,8 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
     def get_channel_depth_from_templates(self, pname: Path):
         """
         Determine depth of template as well as closest channel. Adopted from
-        'templatePositionsAmplitudes' by N. Steinmetz (https://github.com/cortex-lab/spikes)
+        'templatePositionsAmplitudes' by N. Steinmetz
+        (https://github.com/cortex-lab/spikes)
         """
         # Load inverse whitening matrix
         Winv = np.load(os.path.join(pname, "whitening_mat_inv.npy"))
@@ -1023,20 +1000,24 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
         templates = np.load(os.path.join(pname, "templates.npy"))
         # Load channel_map and positions
         channel_map = np.load(os.path.join(pname, "channel_map.npy"))
-        channel_positions = np.load(os.path.join(pname, "channel_positions.npy"))
-        map_and_pos = np.array([np.squeeze(channel_map), channel_positions[:, 1]])
+        channel_positions = np.load(os.path.join(pname,
+                                                 "channel_positions.npy"))
+        map_and_pos = np.array([np.squeeze(channel_map),
+                                channel_positions[:, 1]])
         # unwhiten all the templates
         tempsUnW = np.zeros(np.shape(templates))
         for i in np.shape(templates)[0]:
             tempsUnW[i, :, :] = np.squeeze(templates[i, :, :]) @ Winv
 
-        tempAmp = np.squeeze(np.max(tempsUnW, 1)) - np.squeeze(np.min(tempsUnW, 1))
+        tempAmp = np.squeeze(np.max(tempsUnW, 1)) - \
+            np.squeeze(np.min(tempsUnW, 1))
         tempAmpsUnscaled = np.max(tempAmp, 1)
-        # need to zero-out the potentially-many low values on distant channels ...
+        # need to zero-out the potentially-many low values on distant channels
         threshVals = tempAmpsUnscaled * 0.3
         tempAmp[tempAmp < threshVals[:, None]] = 0
         # Compute the depth as a centre of mass
-        templateDepths = np.sum(tempAmp * map_and_pos[1, :], -1) / np.sum(tempAmp, 1)
+        templateDepths = np.sum(tempAmp * map_and_pos[1, :], -1) / \
+            np.sum(tempAmp, 1)
         maxChanIdx = np.argmin(
             np.abs((templateDepths[:, None] - map_and_pos[1, :].T)), 1
         )
@@ -1055,7 +1036,8 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
         st3 = rez_mat["rez"]["st3"]
         st_spike_times = st3[0, :]
         idx = np.searchsorted(st_spike_times, cluster_times)
-        template_idx, counts = np.unique(spike_templates[idx], return_counts=True)
+        template_idx, counts = np.unique(spike_templates[idx],
+                                         return_counts=True)
         ind = np.argmax(counts)
         return template_idx[ind]
 

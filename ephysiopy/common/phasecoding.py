@@ -49,10 +49,10 @@ phase_precession_config = {
 
 class phasePrecession2D(object):
     """
-        Performs phase precession analysis for single unit data
+    Performs phase precession analysis for single unit data
 
-        Mostly a total rip-off of code written by Ali Jeewajee for his paper on
-        2D phase precession in place and grid cells [1]_
+    Mostly a total rip-off of code written by Ali Jeewajee for his paper on
+    2D phase precession in place and grid cells [1]_
 
     .. [1] Jeewajee A, Barry C, Douchamps V, Manson D, Lever C, Burgess N.
         Theta phase precession of grid and place cell firing in open
@@ -60,20 +60,13 @@ class phasePrecession2D(object):
         Philos Trans R Soc Lond B Biol Sci. 2013 Dec 23;369(1635):20120532.
         doi: 10.1098/rstb.2012.0532.
 
-        Parameters
-        ----------
-        lfp_sig: np.array
-            The LFP signal against which cells might precess...
-        lfp_fs: int
-            The sampling frequency of the LFP signal
-        xy: np.array
-            The position data as 2 x num_position_samples
-        spike_ts: np.array
-            The times in samples at which the cell fired
-        pos_ts: np.array
-            The times in samples at which position was captured
-        pp_config: dict
-            Contains parameters for running the analysis.
+    Args:
+        lfp_sig (np.array): The LFP signal against which cells might precess...
+        lfp_fs (int): The sampling frequency of the LFP signal
+        xy (np.array): The position data as 2 x num_position_samples
+        spike_ts (np.array): The times in samples at which the cell fired
+        pos_ts (np.array): The times in samples at which position was captured
+        pp_config (dict): Contains parameters for running the analysis.
             See phase_precession_config dict in ephysiopy.common.eegcalcs
     """
 
@@ -179,24 +172,22 @@ class phasePrecession2D(object):
         Wrapper function for doing the actual regression which has multiple
         stages.
 
-        Specifically here we parition fields into sub-fields, get a bunch of
+        Specifically here we partition fields into sub-fields, get a bunch of
         information about the position, spiking and theta data and then
-        do the actual regresssion.
+        do the actual regression.
 
-        Parameters
-        ----------
-        tetrode, cluster : int
-            The tetrode, cluster to examine
-        laserEvents : array_like, optional
-            The on times for laser events if present, by default None
+        Args:
+            tetrode (int): The tetrode to examine
+            cluster (int): The cluster to examine
+            laserEvents (array_like, optional): The on times for laser events
+            if present. Default is None
 
-        See Also
-        --------
-        ephysiopy.common.eegcalcs.phasePrecession.partitionFields()
-        ephysiopy.common.eegcalcs.phasePrecession.getPosProps()
-        ephysiopy.common.eegcalcs.phasePrecession.getThetaProps()
-        ephysiopy.common.eegcalcs.phasePrecession.getSpikeProps()
-        ephysiopy.common.eegcalcs.phasePrecession._ppRegress()
+        See Also:
+            ephysiopy.common.eegcalcs.phasePrecession.partitionFields()
+            ephysiopy.common.eegcalcs.phasePrecession.getPosProps()
+            ephysiopy.common.eegcalcs.phasePrecession.getThetaProps()
+            ephysiopy.common.eegcalcs.phasePrecession.getSpikeProps()
+            ephysiopy.common.eegcalcs.phasePrecession._ppRegress()
         """
 
         # Partition fields
@@ -223,30 +214,24 @@ class phasePrecession2D(object):
 
     def partitionFields(self, ftype="g", plot=False, **kwargs):
         """
-        Partitions fileds.
+        Partitions fields.
 
         Partitions spikes into fields by finding the watersheds around the
         peaks of a super-smoothed ratemap
 
-        Parameters
-        ----------
-        spike_ts: np.array
-            The ratemap to partition
-        ftype : str
-            'p' or 'g' denoting place or grid cells - not implemented yet
-        plot : boolean
-            Whether to produce a debugging plot or not
+        Args:
+            spike_ts (np.array): The ratemap to partition
+            ftype (str): 'p' or 'g' denoting place or grid cells
+              - not implemented yet
+            plot (bool): Whether to produce a debugging plot or not
 
-        Returns
-        -------
-        peaksXY : array_like
-            The xy coordinates of the peak rates in each field
-        peaksRate : array_like
-            The peak rates in peaksXY
-        labels : numpy.ndarray
-            An array of the labels corresponding to each field (starting at 1)
-        rmap : numpy.ndarray
-            The ratemap of the tetrode / cluster
+        Returns:
+            peaksXY (array_like): The xy coordinates of the peak rates in
+            each field
+            peaksRate (array_like): The peak rates in peaksXY
+            labels (numpy.ndarray): An array of the labels corresponding to
+            each field (starting at 1)
+            rmap (numpy.ndarray): The ratemap of the tetrode / cluster
         """
         rmap, (xe, ye) = self.RateMap.getMap(self.spk_weights)
         nan_idx = np.isnan(rmap)
@@ -337,35 +322,16 @@ class phasePrecession2D(object):
         Uses the output of partitionFields and returns vectors the same
         length as pos.
 
-        Parameters
-        ----------
-        tetrode, cluster : int
-            The tetrode / cluster to examine
-        peaksXY : array_like
-            The x-y coords of the peaks in the ratemap
-        laserEvents : array_like
-            The position indices of on events (laser on)
-        fieldPerimMask = bwperim(labels)
-        fieldPerimYBins, fieldPerimXBins = np.nonzero(fieldPerimMask)
-        fieldPerimX = ye[fieldPerimXBins]
-        fieldPerimY = xe[fieldPerimYBins]
-        fieldPerimXY = np.vstack((fieldPerimX, fieldPerimY))
-        peaksXYBins = np.array(
-            ndimage.measurements.maximum_position(
-                rmap, labels=labels, index=np.unique(labels)[1::])).astype(int)
-        peakY = xe[peaksXYBins[:, 0]]
-        peakX = ye[peaksXYBins[:, 1]]
-        peaksXY = np.vstack((peakX, peakY)).T
+        Args:
+            tetrode, cluster (int): The tetrode / cluster to examine
+            peaksXY (array_like): The x-y coords of the peaks in the ratemap
+            laserEvents (array_like): The position indices of on events
+            (laser on)
 
-        posRUnsmthd = np.zeros((nPos)) * np.nan
-        posAngleFromPeak = np.zeros_like(posRUnsmthd) * np.nan
-        perimAngleFromPeak = np.zeros((fieldPerimXY.shape[1])) * np.nan
-        Returns
-        -------
-        pos_dict, run_dict : dict
-            Contains a whole bunch of information for the whole trial and
-            also on a run-by-run basis (run_dict). See the end of this
-            function for all the key / value pairs.
+        Returns:
+            pos_dict, run_dict (dict): Contains a whole bunch of information
+            for the whole trial and also on a run-by-run basis (run_dict).
+            See the end of this function for all the key / value pairs.
         """
 
         spikeTS = self.spike_ts  # in seconds
@@ -867,7 +833,8 @@ class phasePrecession2D(object):
             reg = regressors[k]["values"][np.logical_and(
                 goodRegressor, goodPhase)]
             pha = phase[np.logical_and(goodRegressor, goodPhase)]
-            regressors[k]["slope"], regressors[k]["intercept"] = self._circRegress(
+            regressors[k]["slope"],
+            regressors[k]["intercept"] = self._circRegress(
                 reg, pha
             )
             regressors[k]["pha"] = pha
@@ -900,7 +867,8 @@ class phasePrecession2D(object):
             mm = (0, -2 * np.pi, 2 * np.pi, 4 * np.pi)
             for m in mm:
                 ax.plot(
-                    (-1, 1), (-slope + intercept + m, slope + intercept + m), "r", lw=3
+                    (-1, 1),
+                    (-slope + intercept + m, slope + intercept + m), "r", lw=3
                 )
             ax.set_xlim(-1, 1)
             ax.set_ylim(-np.pi, 3 * np.pi)
@@ -916,7 +884,8 @@ class phasePrecession2D(object):
             mm = (0, -2 * np.pi, 2 * np.pi, 4 * np.pi)
             for m in mm:
                 ax.plot(
-                    (-1, 1), (-slope + intercept + m, slope + intercept + m), "r", lw=3
+                    (-1, 1),
+                    (-slope + intercept + m, slope + intercept + m), "r", lw=3
                 )
             ax.set_xlim(-1, 1)
             ax.set_ylim(-np.pi, 3 * np.pi)
@@ -926,7 +895,10 @@ class phasePrecession2D(object):
         self.reg_phase = phase
         return regressors
 
-    def plotPPRegression(self, regressorDict, regressor2plot="pos_d_cum", ax=None):
+    def plotPPRegression(self,
+                         regressorDict,
+                         regressor2plot="pos_d_cum",
+                         ax=None):
 
         t = self.getLFPPhaseValsForSpikeTS()
         x = self.RateMap.xy[0, self.spk_times_in_pos_samples]
@@ -1136,45 +1108,28 @@ class phasePrecession2D(object):
                              hyp=0,
                              conf=True):
         """
-        ====
-        circCircCorrTLinear
-        ====
-
-        Definition: circCircCorrTLinear(theta, phi, k = 1000, alpha = 0.05,
-        hyp = 0, conf = 1)
-
-        ----
-
         An almost direct copy from AJs Matlab fcn to perform correlation
-        between 2 circular random variables
+        between 2 circular random variables.
 
         Returns the correlation value (rho), p-value, bootstrapped correlation
-        values, shuffled p values and correlation values
+        values, shuffled p values and correlation values.
 
-        Parameters
-        ----------
-        theta, phi: array_like
-               mx1 array containing circular data (radians) whose correlation
-               is to be measured
-        k: int, optional (default = 1000)
-               number of permutations to use to calculate p-value from
-               randomisation and bootstrap estimation of confidence intervals.
-               Leave empty to calculate p-value analytically (NB confidence
-               intervals will not be calculated)
-        alpha: float, optional (default = 0.05)
-               hypothesis test level e.g. 0.05, 0.01 etc
-        hyp:   int, optional (default = 0)
-               hypothesis to test; -1/ 0 / 1 (-ve correlated / correlated
-               in either direction / positively correlated)
-        conf:  bool, optional (default = True)
-               True or False to calculate confidence intervals via jackknife or
-               bootstrap
+        Args:
+            theta, phi (array_like): mx1 array containing circular data (radians) whose correlation
+                is to be measured
+            k (int, optional): number of permutations to use to calculate p-value from
+                randomisation and bootstrap estimation of confidence intervals.
+                Leave empty to calculate p-value analytically (NB confidence
+                intervals will not be calculated). Default is 1000.
+            alpha (float, optional): hypothesis test level e.g. 0.05, 0.01 etc. Default is 0.05.
+            hyp (int, optional): hypothesis to test; -1/ 0 / 1 (-ve correlated / correlated
+                in either direction / positively correlated). Default is 0.
+            conf (bool, optional): True or False to calculate confidence intervals via jackknife or
+                bootstrap. Default is True.
 
-
-        References
-        ---------
-        $6.3.3 Fisher (1993), Statistical Analysis of Circular Data,
-                   Cambridge University Press, ISBN: 0 521 56890 0
+        References:
+            Fisher (1993), Statistical Analysis of Circular Data,
+                Cambridge University Press, ISBN: 0 521 56890 0
         """
         theta = theta.ravel()
         phi = phi.ravel()
@@ -1270,11 +1225,14 @@ class phasePrecession2D(object):
 
     def _circRegress(self, x, t):
         """
-        Function to find approximation to circular-linear regression for phase
-        precession.
-        x - n-by-1 list of in-field positions (linear variable)
-        t - n-by-1 list of phases, in degrees (converted to radians internally)
-        neither can contain NaNs, must be paired (of equal length).
+        Finds approximation to circular-linear regression for phase precession.
+
+        Args:
+            x (list): n-by-1 list of in-field positions (linear variable)
+            t (list): n-by-1 list of phases, in degrees (converted to radians internally)
+
+        Note:
+            Neither x nor t can contain NaNs, must be paired (of equal length).
         """
         # transform the linear co-variate to the range -1 to 1
         if not np.any(x) or not np.any(t):

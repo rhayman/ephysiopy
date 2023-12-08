@@ -5,22 +5,18 @@ def circ_r(alpha, w=None, d=0, axis=0):
     """
     Computes the mean resultant vector length for circular data.
 
-    Parameters
-    ----------
-    alpha: array or list
-        sample of angles in radians
-    w: array or list
-        counts in the case of binned data. Must be same length as alpha
-    d: array or list
-        spacing of bin centres for binned data; if supplied, correction
-        factor is used to correct for bias in estimation of r, in radians
-    axis: int
-        the dimension along which to compute, Default is 0
+    Args:
+        alpha (array or list): Sample of angles in radians.
+        w (array or list): Counts in the case of binned data.
+            Must be same length as alpha.
+        d (array or list, optional): Spacing of bin centres for binned data; if
+            supplied, correction factor is used to correct for bias in
+            estimation of r, in radians.
+        axis (int, optional): The dimension along which to compute.
+            Default is 0.
 
-    Returns
-    -------
-    r: float
-        the mean resultant vector length
+    Returns:
+        r (float): The mean resultant vector length.
     """
 
     if w is None:
@@ -36,19 +32,14 @@ def circ_r(alpha, w=None, d=0, axis=0):
 
 def mean_resultant_vector(angles):
     """
-    Calculate the mean resultant length and direction for angles
+    Calculate the mean resultant length and direction for angles.
 
-    Parameters
-    ----------
-    angles: np.array
-        sample of angles in radians
+    Args:
+        angles (np.array): Sample of angles in radians.
 
-    Returns
-    -------
-    r: float
-        the mean resultant vector length
-    th: float
-        the mean resultant vector direction
+    Returns:
+        r (float): The mean resultant vector length.
+        th (float): The mean resultant vector direction.
     """
     S = np.sum(np.sin(angles)) * (1/float(len(angles)))
     C = np.sum(np.cos(angles)) * (1/float(len(angles)))
@@ -63,18 +54,15 @@ def V_test(angles, test_direction):
     """
     The Watson U2 tests whether the observed angles have a tendency to
     cluster around a given angle indicating a lack of randomness in the
-    distribution. Also known as the modified Rayleigh test
+    distribution. Also known as the modified Rayleigh test.
 
-    Parameters
-    ----------
-    angles : array_like
-        Vector of angular values in degrees
-    test_direction : int
-        A single angular value in degrees
-    Notes
-    -----
-    For grouped data the length of the mean vector must be adjusted,
-    and for axial data all angles must be doubled.
+    Args:
+        angles (array_like): Vector of angular values in degrees.
+        test_direction (int): A single angular value in degrees.
+
+    Notes:
+        For grouped data the length of the mean vector must be adjusted,
+        and for axial data all angles must be doubled.
     """
     n = len(angles)
     x_hat = np.sum(np.cos(np.radians(angles))) / float(n)
@@ -91,25 +79,20 @@ def duplicates_as_complex(x, already_sorted=False):
     """
     Finds duplicates in x
 
-    Parameters
-    ----------
-    x : array_like
-        The list to find duplicates in
-    already_sorted : bool, optional
-        Whether x is already sorted. Default False.
+    Args:
+        x (array_like): The list to find duplicates in.
+        already_sorted (bool, optional): Whether x is already sorted.
+            Default False.
 
-    Returns
-    -------
-    x : array_like
-        A complex array where the complex part is the count of the
-        number of duplicates of the real value
+    Returns:
+        x (array_like): A complex array where the complex part is the count of
+            the number of duplicates of the real value.
 
-    Examples
-    --------
-    >>>	x = [9.9, 9.9, 12.3, 15.2, 15.2, 15.2]
-    >>> ret = duplicates_as_complex(x)
-    >>>	print(ret)
-    [9.9+0j, 9.9+1j,  12.3+0j, 15.2+0j, 15.2+1j, 15.2+2j]
+    Examples:
+        >>>	x = [9.9, 9.9, 12.3, 15.2, 15.2, 15.2]
+        >>> ret = duplicates_as_complex(x)
+        >>>	print(ret)
+        [9.9+0j, 9.9+1j,  12.3+0j, 15.2+0j, 15.2+1j, 15.2+2j]
     """
 
     if not already_sorted:
@@ -123,25 +106,19 @@ def duplicates_as_complex(x, already_sorted=False):
 
 def watsonsU2(a, b):
     """
-    Tests whether two samples from circular observations differ
-    significantly from each other with regard to mean direction or angular
-    variance.
+    Tests whether two samples from circular observations differ significantly 
+    from each other with regard to mean direction or angular variance.
 
-    Parameters
-    ----------
-    a, b : array_like
-        The two samples to be tested
+    Args:
+        a, b (array_like): The two samples to be tested
 
-    Returns
-    -------
-    float : U2
-        The test statistic
+    Returns:
+        U2 (float): The test statistic
 
-    Notes
-    -----
-    Both samples must come from a continuous distribution. In the case of
-    grouping the class interval should not exceed 5.
-    Taken from '100 Statistical Tests' G.J.Kanji, 2006 Sage Publications
+    Notes:
+        Both samples must come from a continuous distribution. In the case of
+        grouping the class interval should not exceed 5.
+        Taken from '100 Statistical Tests' G.J.Kanji, 2006 Sage Publications
     """
 
     a = np.sort(np.ravel(a))
@@ -174,23 +151,18 @@ def watsonsU2(a, b):
 def watsonsU2n(angles):
     """
     Tests whether the given distribution fits a random sample of angular
-    values
+    values.
 
-    Parameters
-    ----------
-    angles : array_like
-        The angular samples
+    Args:
+        angles (array_like): The angular samples.
 
-    Returns
-    -------
-    float : U2n
-        The test statistic
+    Returns:
+        U2n (float): The test statistic.
 
-    Notes
-    -----
-    This test is suitable for both unimodal and the multimodal cases.
-    It can be used as a test for randomness.
-    Taken from '100 Statistical Tests' G.J.Kanji, 2006 Sage Publications
+    Notes:
+        This test is suitable for both unimodal and the multimodal cases.
+        It can be used as a test for randomness.
+        Taken from '100 Statistical Tests' G.J.Kanji, 2006 Sage Publications.
     """
 
     angles = np.sort(angles)
@@ -223,15 +195,11 @@ def watsonWilliams(a, b):
     equal given that the concentrations are unknown, but equal, given that
     the groups each follow a von Mises distribution.
 
-    Parameters
-    ----------
-    a, b : array_like
-        The directional samples
+    Args:
+        a, b (array_like): The directional samples
 
-    Returns
-    -------
-    float
-        The F-statistic
+    Returns:
+        F_stat (float): The F-statistic
     """
 
     n = len(a)

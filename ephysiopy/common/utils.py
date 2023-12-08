@@ -43,37 +43,30 @@ def smooth(x, window_len=9, window='hanning'):
     This method is based on the convolution of a scaled window with the signal.
     The signal is prepared by introducing reflected copies of the signal
     (with the window size) in both ends so that transient parts are minimized
-    in the begining and end part of the output signal.
+    in the beginning and end part of the output signal.
 
-    Parameters
-    ----------
-    x : array_like
-        the input signal
-    window_len : int
-        The length of the smoothing window
-    window : str
-        The type of window from 'flat', 'hanning', 'hamming', 'bartlett',
-        'blackman'
-        'flat' window will produce a moving average smoothing.
+    Args:
+        x (array_like): The input signal.
+        window_len (int): The length of the smoothing window.
+        window (str): The type of window from 'flat', 'hanning', 'hamming', 
+            'bartlett', 'blackman'. 'flat' window will produce a moving average 
+            smoothing.
 
-    Returns
-    -------
-    out : The smoothed signal
+    Returns:
+        out (array_like): The smoothed signal.
 
-    Example
-    -------
-    >>> t=linspace(-2,2,0.1)
-    >>> x=sin(t)+randn(len(t))*0.1
-    >>> y=smooth(x)
+    Example:
+        >>> t=linspace(-2,2,0.1)
+        >>> x=sin(t)+randn(len(t))*0.1
+        >>> y=smooth(x)
 
-    See Also
-    --------
-    numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman,
-    numpy.convolve
-    scipy.signal.lfilter
+    See Also:
+        numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman,
+        numpy.convolve, scipy.signal.lfilter
 
-    TODO: the window parameter could be the window itself if an array
-    instead of a string
+    Notes:
+        The window parameter could be the window itself if an array instead of a 
+        string.
     """
 
     if isinstance(x, list):
@@ -108,21 +101,15 @@ def smooth(x, window_len=9, window='hanning'):
 
 def blurImage(im, n, ny=None, ftype='boxcar', **kwargs):
     """
-    Smooths a 2D image by convolving with a filter
+    Smooths a 2D image by convolving with a filter.
 
-    Parameters
-    ----------
-    im : array_like
-        The array to smooth
-    n, ny : int
-        The size of the smoothing kernel
-    ftype : str
-        The type of smoothing kernel. Either 'boxcar' or 'gaussian'
+    Args:
+        im (array_like): The array to smooth.
+        n, ny (int): The size of the smoothing kernel.
+        ftype (str): The type of smoothing kernel. Either 'boxcar' or 'gaussian'.
 
-    Returns
-    -------
-    res: array_like
-        The smoothed vector with shape the same as im
+    Returns:
+        res (array_like): The smoothed vector with shape the same as im.
     """
     if 'stddev' in kwargs.keys():
         stddev = kwargs.pop('stddev')
@@ -154,19 +141,14 @@ def blurImage(im, n, ny=None, ftype='boxcar', **kwargs):
 
 
 def count_to(n):
-    """By example:
+    """
+    This function is equivalent to hstack((arange(n_i) for n_i in n)).
+    It seems to be faster for some possible inputs and encapsulates
+    a task in a function.
 
-        #    0  1  2  3  4  5  6  7  8
-        n = [0, 0, 3, 0, 0, 2, 0, 2, 1]
-        res = [0, 1, 2, 0, 1, 0, 1, 0]
-
-    That is, it is equivalent to something like this :
-
-        hstack((arange(n_i) for n_i in n))
-
-    This version seems quite a bit faster, at least for some
-    possible inputs, and at any rate it encapsulates a task
-    in a function.
+    Example:
+        Given n = [0, 0, 3, 0, 0, 2, 0, 2, 1],
+        the result would be [0, 1, 2, 0, 1, 0, 1, 0].
     """
     if n.ndim != 1:
         raise Exception("n is supposed to be 1d array.")
@@ -181,20 +163,18 @@ def count_to(n):
 
 def repeat_ind(n: np.array):
     """
-    Examples
-    --------
-    >>> n = [0, 0, 3, 0, 0, 2, 0, 2, 1]
-    >>> res = repeat_ind(n)
-    >>> res = [2, 2, 2, 5, 5, 7, 7, 8]
+    Examples:
+        >>> n = [0, 0, 3, 0, 0, 2, 0, 2, 1]
+        >>> res = repeat_ind(n)
+        >>> res = [2, 2, 2, 5, 5, 7, 7, 8]
 
-    That is the input specifies how many times to repeat the given index.
-
-    It is equivalent to something like this :
+    The input specifies how many times to repeat the given index.
+    It is equivalent to something like this:
 
         hstack((zeros(n_i,dtype=int)+i for i, n_i in enumerate(n)))
 
-    But this version seems to be faster, and probably scales better, at
-    any rate it encapsulates a task in a function.
+    But this version seems to be faster, and probably scales better.
+    At any rate, it encapsulates a task in a function.
     """
     if n.ndim != 1:
         raise Exception("n is supposed to be 1d array.")
