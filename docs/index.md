@@ -1,17 +1,23 @@
-# Welcome to MkDocs
+# Welcome to ephysiopy
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+## Installation
 
-## Commands
+```
+pip install ephysiopy
+```
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+## Basic usage
 
-## Project layout
+python```
+from ephysiopy.io.recording import OpenEphysBase
+from pathlib import Path
+trial = OpenEphysBase(Path("/path/to/top/folder"))
+trial.load_pos_data()
+trial.load_neural_data()
+trial.get_rate_map(1, 1)
+```
 
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+This will load the data recorded with openephys contained
+in the folder "/path/to/top/folder", load the position data
+and the neural data (KiloSort output) and plot the cluster 1
+on channel 1
