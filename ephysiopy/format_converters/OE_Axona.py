@@ -144,16 +144,21 @@ class OE2Axona(object):
 
     """
 
-    def __init__(self, pname: Path,
+    def __init__(self,
+                 pname: Path,
                  path2APData: Path = None,
                  pos_sample_rate: int = 50,
                  channels: int = 0,
                  **kwargs):
-        '''
-        pname: Path
-            the base directory of the openephys recording
-            e.g. '/home/robin/Data/M4643_2023-07-21_11-52-02'
-        '''
+        """
+        Args:
+            pname (Path): The base directory of the openephys recording.
+                e.g. '/home/robin/Data/M4643_2023-07-21_11-52-02'
+            path2APData (Path, optional): Path to AP data. Defaults to None.
+            pos_sample_rate (int, optional): Position sample rate. Defaults to 50.
+            channels (int, optional): Number of channels. Defaults to 0.
+            **kwargs: Variable length argument list.
+        """
         pname = Path(pname)
         assert pname.exists()
         self.pname: Path = pname
@@ -215,15 +220,13 @@ class OE2Axona(object):
     def getOEData(self) -> OpenEphysBase:
         """
         Loads the nwb file names in filename_root and returns a dict
-        containing some of the nwb data
-        relevant for converting to Axona file formats
+        containing some of the nwb data relevant for converting to Axona file formats.
 
-        Parameters
-        ----------------
-        filename_root - fuly qualified name of the nwb file
-        recording_name - the name of the recording in the nwb file NB the
-        default has changed in different versions of OE from 'recording0'
-        to 'recording1'
+        Args:
+            filename_root (str): Fully qualified name of the nwb file.
+            recording_name (str): The name of the recording in the nwb file. Note that
+                the default has changed in different versions of OE from 'recording0'
+                to 'recording1'.
         """
         OE_data = OpenEphysBase(self.pname)
         try:
@@ -350,13 +353,12 @@ class OE2Axona(object):
                   gain: int = 5000,
                   **kwargs):
         """
-        Export LFP data to file
+        Exports LFP data to file.
 
-        Parameters
-        -----------
-        channel - int
-        lfp_type - str. Legal values are 'egf' or 'eeg'
-        gain - int. Multiplier for the lfp data
+        Args:
+            channel (int): The channel number.
+            lfp_type (str): The type of LFP data. Legal values are 'egf' or 'eeg'.
+            gain (int): Multiplier for the LFP data.
         """
         print("Beginning conversion and exporting of LFP data...")
         if not self.settings.processors:
@@ -373,12 +375,12 @@ class OE2Axona(object):
 
     def convertPosData(self, xy: np.array, xy_ts: np.array) -> np.array:
         """
-        Perform the conversion of the array parts of the data
-        NB As well as upsampling the data to the Axona pos sampling rate (50Hz)
+        Performs the conversion of the array parts of the data.
+
+        Note: As well as upsampling the data to the Axona pos sampling rate (50Hz),
         we have to insert some columns into the pos array as Axona format
-        expects it like:
-        pos_format: t,x1,y1,x2,y2,numpix1,numpix2
-        We can make up some of the info and ignore other bits
+        expects it like: pos_format: t,x1,y1,x2,y2,numpix1,numpix2
+        We can make up some of the info and ignore other bits.
         """
         n_new_pts = int(np.floor((
             self.last_pos_ts - self.first_pos_ts) * self.pos_sample_rate))
@@ -409,36 +411,25 @@ class OE2Axona(object):
     def convertTemplateDataToAxonaTetrode(self,
                                           max_n_waves=2000,
                                           **kwargs):
-        '''
+        """
         Converts the data held in a TemplateModel instance into tetrode
-        format Axona data files
+        format Axona data files.
 
-        Notes
-        -----
-        For each cluster there'll be a channel that 
-        has a peak amplitude and this contains that peak channel.
-        Whilst the other channels with a large signal in might be 
-        on the same tetrode, KiloSort (or whatever) might find
-        channels *not* within the same tetrode. For a given cluster
-        we can extract from the TemplateModel the 12 channels across
-        which the signal is strongest using Model.get_cluster_channels()
-        If a channel from a tetrode is missing from this list then the
-        spikes for that channel(s) will be zeroed when saved to Axona
-        format. For example, if cluster 3 has a peak channel of 1 then
-        get_cluster_channels() might look like:
+        For each cluster, there'll be a channel that has a peak amplitude and this contains that peak channel.
+        While the other channels with a large signal in might be on the same tetrode, KiloSort (or whatever) might find
+        channels *not* within the same tetrode. For a given cluster, we can extract from the TemplateModel the 12 channels across
+        which the signal is strongest using Model.get_cluster_channels(). If a channel from a tetrode is missing from this list then the
+        spikes for that channel(s) will be zeroed when saved to Axona format.
 
+        Example:
+            If cluster 3 has a peak channel of 1 then get_cluster_channels() might look like:
             [ 1,  2,  0,  6, 10, 11,  4,  12,  7,  5,  8,  9]
+            Here the cluster has the best signal on 1, then 2, 0 etc, but note that channel 3 isn't in the list. 
+            In this case the data for channel 3 will be zeroed when saved to Axona format.
 
-        Here the cluster has the best signal on 1, then 2, 0 etc, but 
-        note that channel 3 isn't in the list. In this case the data for
-        channel 3 will be zeroed when saved to Axona format.
-
-        References
-        -----------
-
-        1) https://phy.readthedocs.io/en/latest/api/#phyappstemplatetemplatemodel)
-
-        '''
+        References:
+            1) https://phy.readthedocs.io/en/latest/api/#phyappstemplatetemplatemodel
+        """
         # First lets get the datatype for tetrode files as this will be the
         # same for all tetrodes...
         dt = self.AxonaData.axona_files[".1"]
@@ -564,15 +555,11 @@ class OE2Axona(object):
 
     def convertSpikeData(self, hdf5_tetrode_data: h5py._hl.group.Group):
         """
-        Does the spike conversion from OE Spike Sorter format to Axona
-        format tetrode files
+        Does the spike conversion from OE Spike Sorter format to Axona format tetrode files.
 
-        Parameters
-        -----------
-        hdf5_tetrode_data - h5py._hl.group.Group -
-            this kind of looks like a dictionary and can, it seems,
-            be treated as one more or less.
-            See http://docs.h5py.org/en/stable/high/group.html
+        Args:
+            hdf5_tetrode_data (h5py._hl.group.Group): This kind of looks like a dictionary and can, 
+                it seems, be treated as one more or less. See http://docs.h5py.org/en/stable/high/group.html
         """
         # First lets get the datatype for tetrode files as this will be the
         # same for all tetrodes...
@@ -635,15 +622,12 @@ class OE2Axona(object):
                     eeg_type="eeg",
                     gain=5000):
         """
-        Downsamples the data in data and saves the result
-        as either an egf or eeg file depending on the choice of
-        either eeg_type which can
-        take a value of either 'egf' or 'eeg'
-        gain is the scaling factor
+        Downsamples the data in data and saves the result as either an egf or eeg file 
+        depending on the choice of either eeg_type which can take a value of either 'egf' or 'eeg'.
+        Gain is the scaling factor.
 
-        Parameters
-        ----------
-        data - np.array with dtype as np.int16
+        Args:
+            data (np.array): The data to be downsampled. Must have dtype as np.int16.
         """
         if eeg_type == "eeg":
             from ephysiopy.axona.file_headers import EEGHeader

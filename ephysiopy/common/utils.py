@@ -65,8 +65,8 @@ def smooth(x, window_len=9, window='hanning'):
         numpy.convolve, scipy.signal.lfilter
 
     Notes:
-        The window parameter could be the window itself if an array instead of a 
-        string.
+        The window parameter could be the window itself if an array instead of
+        a string.
     """
 
     if isinstance(x, list):
@@ -106,7 +106,8 @@ def blurImage(im, n, ny=None, ftype='boxcar', **kwargs):
     Args:
         im (array_like): The array to smooth.
         n, ny (int): The size of the smoothing kernel.
-        ftype (str): The type of smoothing kernel. Either 'boxcar' or 'gaussian'.
+        ftype (str): The type of smoothing kernel.
+            Either 'boxcar' or 'gaussian'.
 
     Returns:
         res (array_like): The smoothed vector with shape the same as im.
@@ -197,17 +198,14 @@ def rect(r, w, deg=False):
 
 def polar(x, y, deg=False):
     """
-    Converts from rectangular coordinates to polar ones
-    Parameters
-    ----------
-    x, y : array_like, list_like
-        The x and y coordinates
-    deg : int
-        radian if deg=0; degree if deg=1
-    Returns
-    -------
-    p : array_like
-        The polar version of x and y
+    Converts from rectangular coordinates to polar ones.
+
+    Args:
+        x, y (array_like, list_like): The x and y coordinates.
+        deg (int): Radian if deg=0; degree if deg=1.
+
+    Returns:
+        p (array_like): The polar version of x and y.
     """
     if deg:
         return np.hypot(x, y), 180.0 * np.arctan2(y, x) / np.pi
@@ -217,9 +215,7 @@ def polar(x, y, deg=False):
 
 def bwperim(bw, n=4):
     """
-    perim = bwperim(bw, n=4)
-
-    Find the perimeter of objects in binary images.
+    Finds the perimeter of objects in binary images.
 
     A pixel is part of an object perimeter if its value is one and there
     is at least one zero-valued pixel in its neighborhood.
@@ -227,14 +223,12 @@ def bwperim(bw, n=4):
     By default the neighborhood of a pixel is 4 nearest pixels, but
     if `n` is set to 8 the 8 nearest pixels will be considered.
 
-    Parameters
-    ----------
-      bw : A black-and-white image
-      n : Connectivity. Must be 4 or 8 (default: 8)
+    Args:
+        bw (array_like): A black-and-white image.
+        n (int, optional): Connectivity. Must be 4 or 8. Default is 8.
 
-    Returns
-    -------
-      perim : A boolean image
+    Returns:
+        perim (array_like): A boolean image.
     """
 
     if n not in (4, 8):

@@ -13,19 +13,17 @@ class KiloSortSession(object):
 
     A kilosort session results in a load of .npy files, a .csv or .tsv file.
     The .npy files contain things like spike times, cluster indices and so on.
-    Importantly	the .csv (or .tsv) file contains the cluster identities of
+    Importantly the .csv (or .tsv) file contains the cluster identities of
     the SAVED part of the phy template-gui (ie when you click "Save" from the
     Clustering menu): this file consists of a header ('cluster_id' and 'group')
     where 'cluster_id' is obvious (relates to identity in spk_clusters.npy),
     the 'group' is a string that contains things like 'noise' or 'unsorted' or
     whatever as the phy user can define their own labels.
 
-    Parameters
-    ----------
-    fname_root : str
-        The top-level directory. If the Kilosort session was run directly on
-        data from an openephys recording session then fname_root is typically
-        in form of YYYY-MM-DD_HH-MM-SS
+    Args:
+        fname_root (str): The top-level directory. If the Kilosort session was
+        run directly on data from an openephys recording session then
+        fname_root is typically in form of YYYY-MM-DD_HH-MM-SS
     """
 
     def __init__(self, fname_root):
@@ -34,22 +32,12 @@ class KiloSortSession(object):
         has been called in another way i.e. binary format a la Neuropixels
         """
         self.fname_root = fname_root
-        
-        # param_dict = dict()
 
         for d, c, f in os.walk(fname_root):
             for ff in f:
                 if "." not in c:  # ignore hidden directories
                     if "spike_times.npy" in ff:
                         self.fname_root = d
-                    # if "params.py" in ff:
-                    #     with open(ff, 'r') as _f:
-                    #         param = _f.readline
-                    #         keys = 
-                    #         param_dict[]
-                            
-        # parse out the lines in params.py
-        
         self.cluster_id = None
         self.spk_clusters = None
         self.spk_times = None

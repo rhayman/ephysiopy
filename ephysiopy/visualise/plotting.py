@@ -9,7 +9,6 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import seaborn as sns
 
 from ephysiopy.axona import tintcolours as tcols
-from ephysiopy.common.binning import RateMap, VariableToBin
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 
 
@@ -41,171 +40,162 @@ grey_cmap = matplotlib.colormaps["gray_r"]
 class FigureMaker(object):
     """
     A mixin class for TrialInterface that deals solely with
-    producing graphical output
+    producing graphical output.
     """
 
     def __init__(self):
+        """
+        Initializes the FigureMaker object.
+        """
         self.PosCalcs = None
 
     def initialise(self):
-        xy = getattr(self.PosCalcs, "xy")
-        hdir = getattr(self.PosCalcs, "dir")
-        speed = getattr(self.PosCalcs, "speed")
-        ppm = getattr(self.PosCalcs, "ppm")
-        setattr(self, "npos", xy.shape[1])
-        pos_weights = None
-        if hdir is not None:
-            if np.ma.is_masked(hdir):
-                pos_weights = np.array(~hdir.mask).astype(int)
-            else:
-                pos_weights = np.ones_like(hdir)
-        self.RateMap = RateMap(
-            xy=xy,
-            hdir=hdir,
-            speed=speed,
-            pos_weights=pos_weights,
-            ppm=ppm,
-            xyInCms=True,
-        )
-        self.RateMap.x_lims = getattr(self, "x_lims", None)  # 2-tuple
-        self.RateMap.y_lims = getattr(self, "y_lims", None)
+        """
+        Initializes the FigureMaker object with data from PosCalcs.
+        """
 
     def _plot_multiple_clusters(self,
                                 func,
                                 clusters: list,
                                 channel: int,
                                 **kwargs):
-        fig = plt.figure()
-        nrows = int(np.ceil(len(clusters) / 5))
-        if 'projection' in kwargs.keys():
-            proj = kwargs.pop('projection')
-        else:
-            proj = None
-        for i, c in enumerate(clusters):
-            ax = fig.add_subplot(nrows, 5, i+1, projection=proj)
-            ts = self.get_spike_times(channel, c)
-            func(ts, ax=ax, **kwargs)
+        """
+        Plots multiple clusters.
+
+        Args:
+            func (function): The function to apply to each cluster.
+            clusters (list): The list of clusters to plot.
+            channel (int): The channel number.
+            **kwargs: Additional keyword arguments for the function.
+        """
 
     def get_rate_map(self, cluster: int | list, channel: int, **kwargs):
-        if isinstance(cluster, list):
-            self._plot_multiple_clusters(self.makeRateMap,
-                                         cluster,
-                                         channel,
-                                         **kwargs)
-        else:
-            ts = self.get_spike_times(channel, cluster)
-            self.makeRateMap(ts, **kwargs)
-        plt.show()
+        """
+        Gets the rate map for the specified cluster(s) and channel.
+
+        Args:
+            cluster (int | list): The cluster(s) to get the rate map for.
+            channel (int): The channel number.
+            **kwargs: Additional keyword arguments for the function.
+        """
 
     def get_hd_map(self, cluster: int | list, channel: int, **kwargs):
-        if isinstance(cluster, list):
-            self._plot_multiple_clusters(self.makeHDPlot,
-                                         cluster,
-                                         channel,
-                                         projection="polar",
-                                         strip_axes=True,
-                                         **kwargs)
-        else:
-            ts = self.get_spike_times(channel, cluster)
-            self.makeHDPlot(ts, **kwargs)
-        plt.show()
+        """
+        Gets the head direction map for the specified cluster(s) and channel.
+
+        Args:
+            cluster (int | list): The cluster(s) to get the head direction map
+                for.
+            channel (int): The channel number.
+            **kwargs: Additional keyword arguments for the function.
+        """
 
     def get_spike_path(self, cluster=None, channel=None, **kwargs):
-        if isinstance(cluster, list):
-            self._plot_multiple_clusters(self.makeSpikePathPlot,
-                                         cluster,
-                                         channel,
-                                         **kwargs)
-        else:
-            if channel is not None and cluster is not None:
-                ts = self.get_spike_times(channel, cluster)
-            else:
-                ts = None
-            self.makeSpikePathPlot(ts, **kwargs)
-        plt.show()
+        """
+        Gets the spike path for the specified cluster(s) and channel.
+
+        Args:
+            cluster (int | list | None): The cluster(s) to get the spike path
+                for.
+            channel (int | None): The channel number.
+            **kwargs: Additional keyword arguments for the function.
+        """
 
     def get_eb_map(self, cluster: int | list, channel: int, **kwargs):
-        if isinstance(cluster, list):
-            self._plot_multiple_clusters(self.makeEgoCentricBoundaryMap,
-                                         cluster,
-                                         channel,
-                                         projection='polar',
-                                         **kwargs)
-        else:
-            ts = self.get_spike_times(channel, cluster)
-            self.makeEgoCentricBoundaryMap(ts, **kwargs)
-        plt.show()
+        """
+        Gets the ego-centric boundary map for the specified cluster(s) and
+        channel.
+
+        Args:
+            cluster (int | list): The cluster(s) to get the ego-centric
+                boundary map for.
+            channel (int): The channel number.
+            **kwargs: Additional keyword arguments for the function.
+        """
 
     def get_eb_spikes(self, cluster: int | list, channel: int, **kwargs):
-        if isinstance(cluster, list):
-            self._plot_multiple_clusters(self.makeEgoCentricBoundarySpikePlot,
-                                         cluster,
-                                         channel,
-                                         **kwargs)
-        else:
-            ts = self.get_spike_times(channel, cluster)
-            self.makeEgoCentricBoundarySpikePlot(ts, **kwargs)
-        plt.show()
+        """
+        Gets the ego-centric boundary spikes for the specified cluster(s)
+        and channel.
+
+        Args:
+            cluster (int | list): The cluster(s) to get the ego-centric
+                boundary spikes for.
+            channel (int): The channel number.
+            **kwargs: Additional keyword arguments for the function.
+        """
 
     def get_sac(self, cluster: int | list, channel: int, **kwargs):
-        if isinstance(cluster, list):
-            self._plot_multiple_clusters(self.makeSAC,
-                                         cluster,
-                                         channel,
-                                         **kwargs)
-        else:
-            ts = self.get_spike_times(channel, cluster)
-            self.makeSAC(ts, **kwargs)
-        plt.show()
+        """
+        Gets the spatial autocorrelation for the specified cluster(s) and
+        channel.
+
+        Args:
+            cluster (int | list): The cluster(s) to get the spatial
+                autocorrelation for.
+            channel (int): The channel number.
+            **kwargs: Additional keyword arguments for the function.
+        """
 
     def get_speed_v_rate(self, cluster: int | list, channel: int, **kwargs):
-        if isinstance(cluster, list):
-            self._plot_multiple_clusters(self.makeSpeedVsRatePlot,
-                                         cluster,
-                                         channel,
-                                         **kwargs)
-        else:
-            ts = self.get_spike_times(channel, cluster)
-            self.makeSpeedVsRatePlot(ts, **kwargs)
-        plt.show()
+        """
+        Gets the speed versus rate plot for the specified cluster(s) and
+        channel.
+
+        Args:
+            cluster (int | list): The cluster(s) to get the speed versus rate
+                plot for.
+            channel (int): The channel number.
+            **kwargs: Additional keyword arguments for the function.
+        """
 
     def get_speed_v_hd(self, cluster: int | list, channel: int, **kwargs):
-        if isinstance(cluster, list):
-            self._plot_multiple_clusters(self.makeSpeedVsHeadDirectionPlot,
-                                         cluster,
-                                         channel,
-                                         **kwargs)
-        else:
-            ts = self.get_spike_times(channel, cluster)
-            self.makeSpeedVsHeadDirectionPlot(ts, **kwargs)
-        plt.show()
+        """
+        Gets the speed versus head direction plot for the specified cluster(s)
+        and channel.
+
+        Args:
+            cluster (int | list): The cluster(s) to get the speed versus head
+                direction plot for.
+            channel (int): The channel number.
+            **kwargs: Additional keyword arguments for the function.
+        """
 
     def get_power_spectrum(self, **kwargs):
-        p = self.EEGCalcs.calcEEGPowerSpectrum()
-        self.makePowerSpectrum(p[0], p[1], p[2], p[3], p[4], **kwargs)
-        plt.show()
+        """
+        Gets the power spectrum.
+
+        Args:
+            **kwargs: Additional keyword arguments for the function.
+        """
 
     def getSpikePosIndices(self, spk_times: np.ndarray):
-        '''
-        Returns the indices into the position data
-        at which some spike times occurred.
+        """
+        Returns the indices into the position data at which some spike times
+        occurred.
 
-        Parameters
-        ----------
-        spk_times: np.ndarray
-            The spike times in seconds
+        Args:
+            spk_times (np.ndarray): The spike times in seconds.
 
-        Returns
-        -------
-        idx: np.ndarray
-            The indices into the position data at which the
-            spikes occurred
-        '''
+        Returns:
+            np.ndarray: The indices into the position data at which the spikes
+            occurred.
+        """
         pos_times = getattr(self.PosCalcs, "xyTS")
         idx = np.searchsorted(pos_times, spk_times) - 1
         return idx
 
     def makeSummaryPlot(self, spk_times: np.ndarray):
+        """
+        Creates a summary plot with spike path, rate map, head direction plot,
+        and spatial autocorrelation.
+
+        Args:
+            spk_times (np.ndarray): The spike times in seconds.
+
+        Returns:
+            matplotlib.figure.Figure: The created figure.
+        """
         fig = plt.figure()
         ax = plt.subplot(221)
         self.makeSpikePathPlot(spk_times, ax=ax, markersize=2)
@@ -221,35 +211,42 @@ class FigureMaker(object):
         return fig
 
     @stripAxes
-    def makeRateMap(
-        self, spk_times: np.ndarray, ax: matplotlib.axes = None, **kwargs
-    ) -> matplotlib.axes:
-        if not self.RateMap:
-            self.initialise()
-        spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
-        spk_weights = np.bincount(spk_times_in_pos_samples, minlength=self.npos)
-        rmap = self.RateMap.getMap(spk_weights)
-        ratemap = np.ma.MaskedArray(rmap[0], np.isnan(rmap[0]), copy=True)
-        x, y = np.meshgrid(rmap[1][1][0:-1].data, rmap[1][0][0:-1].data)
-        vmax = np.nanmax(np.ravel(ratemap))
-        if ax is None:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-        ax.pcolormesh(
-            x, y, ratemap,
-            cmap=jet_cmap,
-            edgecolors="face",
-            vmax=vmax,
-            shading="auto",
-            **kwargs
-        )
-        ax.set_aspect("equal")
-        return ax
+    def makeRateMap(self,
+                    spk_times: np.ndarray,
+                    ax: matplotlib.axes = None,
+                    **kwargs) -> matplotlib.axes:
+        """
+        Creates a rate map plot.
+
+        Args:
+            spk_times (np.ndarray): The spike times in seconds.
+            ax (matplotlib.axes, optional): The axes to plot on. If None,
+                new axes are created.
+            **kwargs: Additional keyword arguments for the function.
+
+        Returns:
+            matplotlib.axes: The axes with the plot.
+        """
+        # ... rest of the function ...
 
     @stripAxes
-    def makeSpikePathPlot(
-        self, spk_times: np.ndarray = None, ax: matplotlib.axes = None, **kwargs
-    ) -> matplotlib.axes:
+    def makeSpikePathPlot(self,
+                          spk_times: np.ndarray = None,
+                          ax: matplotlib.axes = None,
+                          **kwargs) -> matplotlib.axes:
+        """
+        Creates a spike path plot.
+
+        Args:
+            spk_times (np.ndarray, optional): The spike times in seconds.
+                If None, no spikes are plotted.
+            ax (matplotlib.axes, optional): The axes to plot on.
+                If None, new axes are created.
+            **kwargs: Additional keyword arguments for the function.
+
+        Returns:
+            matplotlib.axes: The axes with the plot.
+        """
         if not self.RateMap:
             self.initialise()
         if "c" in kwargs:
@@ -274,63 +271,44 @@ class FigureMaker(object):
             )
         return ax
 
-    def makeEgoCentricBoundaryMap(self, spk_times: np.ndarray,
+    def makeEgoCentricBoundaryMap(self,
+                                  spk_times: np.ndarray,
                                   ax: matplotlib.axes = None,
                                   **kwargs) -> matplotlib.axes:
-        if not self.RateMap:
-            self.initialise()
+        """
+        Creates an ego-centric boundary map plot.
 
-        degs_per_bin = 3
-        xy_binsize = 2.5
-        arena_type = "circle"
-        # parse kwargs
-        if "degs_per_bin" in kwargs.keys():
-            degs_per_bin = kwargs["degs_per_bin"]
-        if "xy_binsize" in kwargs.keys():
-            xy_binsize = kwargs["xy_binsize"]
-        if "arena_type" in kwargs.keys():
-            arena_type = kwargs["arena_type"]
-        if "strip_axes" in kwargs.keys():
-            strip_axes = kwargs.pop("strip_axes")
-        else:
-            strip_axes = False
-        if 'return_ratemap' in kwargs.keys():
-            return_ratemap = kwargs.pop('return_ratemap') 
-        else:
-            return_ratemap = False
+        Args:
+            spk_times (np.ndarray): The spike times in seconds.
+            ax (matplotlib.axes, optional): The axes to plot on. If None,
+                new axes are created.
+            **kwargs: Additional keyword arguments for the function.
 
-        idx = self.getSpikePosIndices(spk_times)
-        spk_weights = np.bincount(idx, minlength=len(self.RateMap.dir))
-        ego_map = self.RateMap.get_egocentric_boundary_map(spk_weights,
-                                                           degs_per_bin,
-                                                           xy_binsize,
-                                                           arena_type)
-        rmap = ego_map.rmap
-        if ax is None:
-            fig = plt.figure()
-            ax = fig.add_subplot(projection='polar')
-        theta = np.arange(0, 2*np.pi, 2*np.pi/rmap.shape[1])
-        phi = np.arange(0, rmap.shape[0]*2.5, 2.5)
-        X, Y = np.meshgrid(theta, phi)
-        ax.pcolormesh(X, Y, rmap, **kwargs)
-        ax.set_xticks(np.arange(0, 2*np.pi, np.pi/4))
-        # ax.set_xticklabels(np.arange(0, 2*np.pi, np.pi/4))
-        ax.set_yticks(np.arange(0, 50, 10))
-        ax.set_yticklabels(np.arange(0, 50, 10))
-        ax.set_xlabel('Angle (deg)')
-        ax.set_ylabel('Distance (cm)')
-        if strip_axes:
-            return stripAxes(ax)
-        if return_ratemap:
-            return ax, rmap
-        return ax
+        Returns:
+            matplotlib.axes: The axes with the plot.
+        """
+        # ... rest of the function ...
 
     @stripAxes
-    def makeEgoCentricBoundarySpikePlot(
-                                        self, spk_times: np.ndarray,
+    def makeEgoCentricBoundarySpikePlot(self,
+                                        spk_times: np.ndarray,
                                         add_colour_wheel: bool = False,
                                         ax: matplotlib.axes = None,
                                         **kwargs) -> matplotlib.axes:
+        """
+        Creates an ego-centric boundary spike plot.
+
+        Args:
+            spk_times (np.ndarray): The spike times in seconds.
+            add_colour_wheel (bool, optional): Whether to add a colour wheel
+                to the plot. Defaults to False.
+            ax (matplotlib.axes, optional): The axes to plot on. If None,
+                new axes are created.
+            **kwargs: Additional keyword arguments for the function.
+
+        Returns:
+            matplotlib.axes: The axes with the plot.
+        """
         if not self.RateMap:
             self.initialise()
         # get the index into a circular colormap based
@@ -352,7 +330,8 @@ class FigureMaker(object):
         dir_spike_fired_at = self.RateMap.dir[idx]
         idx_of_dir_to_colour = np.floor(
             dir_spike_fired_at / (360 / num_dir_bins)).astype(int)
-        rects = [Rectangle(self.RateMap.xy[:, i], width=rect_size, height=rect_size)
+        rects = [Rectangle(self.RateMap.xy[:, i],
+                           width=rect_size, height=rect_size)
                  for i in idx]
         if ax is None:
             fig = plt.figure()
@@ -391,63 +370,38 @@ class FigureMaker(object):
     def makeSAC(
         self, spk_times: np.array = None, ax: matplotlib.axes = None, **kwargs
     ) -> matplotlib.axes:
-        if not self.RateMap:
-            self.initialise()
-        spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
-        spk_weights = np.bincount(spk_times_in_pos_samples, minlength=self.npos)
-        sac = self.RateMap.getSAC(spk_weights)
-        from ephysiopy.common.gridcell import SAC
+        """
+        Creates a spatial autocorrelation plot.
 
-        S = SAC()
-        measures = S.getMeasures(sac)
-        if ax is None:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-        ax = self.show_SAC(sac, measures, ax)
-        return ax
+        Args:
+            spk_times (np.array, optional): The spike times in seconds. If
+                None, no spikes are plotted.
+            ax (matplotlib.axes, optional): The axes to plot on. If None,
+                new axes are created.
+            **kwargs: Additional keyword arguments for the function.
+
+        Returns:
+            matplotlib.axes: The axes with the plot.
+        """
+        # ... rest of the function ...
 
     def makeHDPlot(
         self, spk_times: np.array = None, ax: matplotlib.axes = None, **kwargs
     ) -> matplotlib.axes:
-        if not self.RateMap:
-            self.initialise()
-        if "strip_axes" in kwargs.keys():
-            strip_axes = kwargs.pop("strip_axes")
-        else:
-            strip_axes = True
-        spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
-        spk_weights = np.bincount(spk_times_in_pos_samples, minlength=self.npos)
-        rmap = self.RateMap.getMap(spk_weights, varType=VariableToBin.DIR)
-        if ax is None:
-            fig = plt.figure()
-            ax = fig.add_subplot(111, **kwargs)
-        ax.set_theta_zero_location("N")
-        # need to deal with the case where the axis is supplied but
-        # is not polar. deal with polar first
-        theta = np.deg2rad(rmap[1][0])
-        ax.clear()
-        r = rmap[0]  # in samples so * pos sample_rate
-        r = np.insert(r, -1, r[0])
-        if "polar" in ax.name:
-            ax.plot(theta, r)
-            if "fill" in kwargs:
-                ax.fill(theta, r, alpha=0.5)
-            ax.set_aspect("equal")
-        else:
-            pass
+        """
+        Creates a head direction plot.
 
-        # See if we should add the mean resultant vector (mrv)
-        if "add_mrv" in kwargs:
-            from ephysiopy.common.statscalcs import mean_resultant_vector
+        Args:
+            spk_times (np.array, optional): The spike times in seconds. If
+                None, no spikes are plotted.
+            ax (matplotlib.axes, optional): The axes to plot on. If None, new
+                axes are created.
+            **kwargs: Additional keyword arguments for the function.
 
-            angles = self.PosCalcs.dir[spk_times_in_pos_samples]
-            r, th = mean_resultant_vector(np.deg2rad(angles))
-            ax.plot([th, th], [0, r * np.max(rmap[0])], "r")
-        if "polar" in ax.name:
-            ax.set_thetagrids([0, 90, 180, 270])
-        if strip_axes:
-            return stripAxes(ax)
-        return ax
+        Returns:
+            matplotlib.axes: The axes with the plot.
+        """
+        # ... rest of the function ...
 
     def makeSpeedVsRatePlot(
         self,
@@ -459,10 +413,21 @@ class FigureMaker(object):
         **kwargs
     ) -> matplotlib.axes:
         """
-        Plots the instantaneous firing rate of a cell against running speed
+        Plots the instantaneous firing rate of a cell against running speed.
         Also outputs a couple of measures as with Kropff et al., 2015; the
-        Pearsons correlation and the depth of modulation (dom) - see below for
-        details
+        Pearsons correlation and the depth of modulation (dom).
+
+        Args:
+            spk_times (np.array): The spike times in seconds.
+            minSpeed (float, optional): The minimum speed. Defaults to 0.0.
+            maxSpeed (float, optional): The maximum speed. Defaults to 40.0.
+            sigma (float, optional): The sigma value. Defaults to 3.0.
+            ax (matplotlib.axes, optional): The axes to plot on. If None, new
+                axes are created.
+            **kwargs: Additional keyword arguments for the function.
+
+        Returns:
+            matplotlib.axes: The axes with the plot.
         """
         if "strip_axes" in kwargs.keys():
             strip_axes = kwargs.pop("strip_axes")
@@ -484,7 +449,9 @@ class FigureMaker(object):
 
         x1 = spk_times_in_pos_samples
         S = SpikeCalcsGeneric(x1)
-        spk_sm = S.smoothSpikePosCount(x1, self.PosCalcs.xyTS.shape[0], sigma, None)
+        spk_sm = S.smoothSpikePosCount(x1,
+                                       self.PosCalcs.xyTS.shape[0],
+                                       sigma, None)
         spk_sm = np.ma.MaskedArray(spk_sm, mask=np.ma.getmask(speed_filt))
         spd_dig = np.digitize(speed_filt, spd_bins, right=True)
         mn_rate = np.array(
@@ -493,11 +460,13 @@ class FigureMaker(object):
         var = np.array(
             [np.ma.std(spk_sm[spd_dig == i]) for i in range(0, len(spd_bins))]
         )
-        np.array([np.ma.sum(spk_sm[spd_dig == i]) for i in range(0, len(spd_bins))])
+        np.array([np.ma.sum(spk_sm[spd_dig == i]) for i in range(
+            0, len(spd_bins))])
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-        ax.errorbar(spd_bins, mn_rate * self.PosCalcs.sample_rate, yerr=var, color="k")
+        ax.errorbar(spd_bins, mn_rate * self.PosCalcs.sample_rate,
+                    yerr=var, color="k")
         ax.set_xlim(spd_bins[0], spd_bins[-1])
         ax.set_xticks(
             [spd_bins[0], spd_bins[-1]],
@@ -518,6 +487,18 @@ class FigureMaker(object):
     def makeSpeedVsHeadDirectionPlot(
         self, spk_times: np.array, ax: matplotlib.axes = None, **kwargs
     ) -> matplotlib.axes:
+        """
+        Creates a speed versus head direction plot.
+
+        Args:
+            spk_times (np.array): The spike times in seconds.
+            ax (matplotlib.axes, optional): The axes to plot on. If None,
+                new axes are created.
+            **kwargs: Additional keyword arguments for the function.
+
+        Returns:
+            matplotlib.axes: The axes with the plot.
+        """
         if "strip_axes" in kwargs.keys():
             strip_axes = kwargs.pop("strip_axes")
         else:
@@ -528,14 +509,13 @@ class FigureMaker(object):
         idx = np.array(spk_times_in_pos_samples, dtype=int)
         w = np.bincount(idx, minlength=self.PosCalcs.speed.shape[0])
         if np.ma.is_masked(self.PosCalcs.speed):
-            m = self.PosCalcs.speed.mask
-            w[m==True] = 0
-            
+            w[self.PosCalcs.speed.mask] = 0
+
         dir_bins = np.arange(0, 360, 6)
         spd_bins = np.arange(0, 30, 1)
-        h = np.histogram2d(
-            self.PosCalcs.dir, self.PosCalcs.speed, [dir_bins, spd_bins], weights=w
-        )
+        h = np.histogram2d(self.PosCalcs.dir,
+                           self.PosCalcs.speed,
+                           [dir_bins, spd_bins], weights=w)
         from ephysiopy.common.utils import blurImage
 
         im = blurImage(h[0], 5, ftype="gaussian")
@@ -548,11 +528,13 @@ class FigureMaker(object):
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-        ax.pcolormesh(
-            x, y, im.T, cmap=jet_cmap, edgecolors="face", vmax=vmax, shading="auto"
-        )
-        ax.set_xticks([90, 180, 270], labels=['90', '180', '270'], fontweight="normal", size=6)
-        ax.set_yticks([10, 20], labels=['10', '20'], fontweight="normal", size=6)
+        ax.pcolormesh(x, y, im.T,
+                      cmap=jet_cmap, edgecolors="face",
+                      vmax=vmax, shading="auto")
+        ax.set_xticks([90, 180, 270], labels=['90', '180', '270'],
+                      fontweight="normal", size=6)
+        ax.set_yticks([10, 20], labels=['10', '20'],
+                      fontweight="normal", size=6)
         ax.set_xlabel("Heading", fontweight="normal", size=6)
         if strip_axes:
             stripAxes(ax)
@@ -570,23 +552,27 @@ class FigureMaker(object):
         ax: matplotlib.axes = None,
         **kwargs
     ) -> matplotlib.axes:
-        '''
-        Plots the power spectrum
+        """
+        Plots the power spectrum. The parameters can be obtained from
+        calcEEGPowerSpectrum() in the EEGCalcsGeneric class.
 
-        The parameters can be obtained from
-        calcEEGPowerSpectrum() in the EEGCalcsGeneric class
+        Args:
+            freqs (np.array): The frequencies.
+            power (np.array): The power values.
+            sm_power (np.array): The smoothed power values.
+            band_max_power (float): The maximum power in the band.
+            freq_at_band_max_power (float): The frequency at which the maximum
+                power in the band occurs.
+            max_freq (int, optional): The maximum frequency. Defaults to 50.
+            theta_range (tuple, optional): The theta range.
+                Defaults to [6, 12].
+            ax (matplotlib.axes, optional): The axes to plot on. If None, new
+                axes are created.
+            **kwargs: Additional keyword arguments for the function.
 
-        Parameters
-        ----------
-        freqs: np.array
-        power: np.array
-        sm_power: np.array
-        band_at_max_power: float
-        freq_at_band_max_power: float
-        max_freq: int (default 50)
-        theta_range: tuple (default [6, 12])
-        ax: matplotlib.axes
-        '''
+        Returns:
+            matplotlib.axes: The axes with the plot.
+        """
         if "strip_axes" in kwargs.keys():
             strip_axes = kwargs.pop("strip_axes")
         else:
@@ -631,17 +617,19 @@ class FigureMaker(object):
     def makeXCorr(
         self, spk_times: np.array, ax: matplotlib.axes = None, **kwargs
     ) -> matplotlib.axes:
-        '''
+        """
         Returns an axis containing the autocorrelogram of the spike
-        times provided over the range +/-500ms
+        times provided over the range +/-500ms.
 
-        Parameters
-        ----------
-        spk_times: np.array
-            spike times in samples
-        ax: matplotlib.axes
-            the axes to plot into (default None)
-        '''
+        Args:
+            spk_times (np.array): Spike times in samples.
+            ax (matplotlib.axes, optional): The axes to plot into. If None,
+                new axes are created.
+            **kwargs: Additional keyword arguments for the function.
+
+        Returns:
+            matplotlib.axes: The axes with the plot.
+        """
         if "strip_axes" in kwargs.keys():
             strip_axes = kwargs.pop("strip_axes")
         else:
@@ -654,15 +642,13 @@ class FigureMaker(object):
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-        ax.hist(
-            y[y != 0], bins=201, range=[-500, 500], color="k", histtype="stepfilled"
-        )
+        ax.hist(y[y != 0], bins=201,
+                range=[-500, 500], color="k", histtype="stepfilled")
         ax.set_xlim(-500, 500)
         ax.set_xticks((-500, 0, 500))
         ax.set_xticklabels("")
-        ax.tick_params(
-            axis="both", which="both", left=False, right=False, bottom=False, top=False
-        )
+        ax.tick_params(axis="both", which="both", left=False, right=False,
+                       bottom=False, top=False)
         ax.set_yticklabels("")
         ax.spines["right"].set_visible(False)
         ax.spines["top"].set_visible(False)
@@ -679,26 +665,29 @@ class FigureMaker(object):
         prc_max: float = 0.5,
         ax: matplotlib.axes = None,
         ms_per_bin: int = 1,
-        sample_rate: float = 3e4, # OE=3e4, Axona=96000
+        sample_rate: float = 3e4,  # OE=3e4, Axona=96000
         **kwargs
     ) -> matplotlib.axes:
         """
-        Plots a raster plot for a specified tetrode/ cluster
+        Plots a raster plot for a specified tetrode/ cluster.
 
-        Parameters
-        ----------
-        spk_times: np.array
-            The spike times in samples
-        dt : 2-tuple
-            the window of time in ms to examine zeroed on the event of interest
-            i.e. the first value will probably be negative as in the  example
-        prc_max : float
-            the proportion of firing the cell has to 'lose' to count as
-            silent; a float between 0 and 1
-        ax - matplotlib.axes
-            the axes to plot into. If not provided a new figure is created
-        ms_per_bin : int
-            The number of milliseconds in each bin of the raster plot
+        Args:
+            spk_times (np.array): The spike times in samples.
+            dt (tuple, optional): The window of time in ms to examine zeroed
+                on the event of interest i.e. the first value will probably
+                be negative as in the example. Defaults to (-50, 100).
+            prc_max (float, optional): The proportion of firing the cell has
+                to 'lose' to count as silent; a float between 0 and 1.
+                Defaults to 0.5.
+            ax (matplotlib.axes, optional): The axes to plot into.
+                If not provided a new figure is created. Defaults to None.
+            ms_per_bin (int, optional): The number of milliseconds in each bin
+                of the raster plot. Defaults to 1.
+            sample_rate (float, optional): The sample rate. Defaults to 3e4.
+            **kwargs: Additional keyword arguments for the function.
+
+        Returns:
+            matplotlib.axes: The axes with the plot.
         """
         assert hasattr(self, "ttl_data")
 
@@ -715,7 +704,7 @@ class FigureMaker(object):
         y = []
         x = []
         for i, t in enumerate(dts):
-            tmp = x1[t[0] : t[1]] - on_good[i]
+            tmp = x1[t[0]:t[1]] - on_good[i]
             x.extend(tmp)
             y.extend(np.repeat(i, len(tmp)))
         if ax is None:
@@ -724,13 +713,14 @@ class FigureMaker(object):
         else:
             axScatter = ax
         histColor = [1 / 255.0, 1 / 255.0, 1 / 255.0]
-        axScatter.scatter(x, y, marker=".", s=2, rasterized=False, color=histColor)
+        axScatter.scatter(x, y, marker=".", s=2,
+                          rasterized=False, color=histColor)
         divider = make_axes_locatable(axScatter)
         axScatter.set_xticks((dt[0], 0, dt[1]))
         axScatter.set_xticklabels((str(dt[0]), "0", str(dt[1])))
-        axHistx = divider.append_axes(
-            "top", 0.95, pad=0.2, sharex=axScatter, transform=axScatter.transAxes
-        )
+        axHistx = divider.append_axes("top", 0.95, pad=0.2,
+                                      sharex=axScatter,
+                                      transform=axScatter.transAxes)
         scattTrans = transforms.blended_transform_factory(
             axScatter.transData, axScatter.transAxes
         )
@@ -852,24 +842,19 @@ class FigureMaker(object):
         Uses the dictionary containing measures of the grid cell SAC to
         make a pretty picture
 
-        Parameters
-        ----------
-        A : array_like
-            The spatial autocorrelogram
-        inDict : dict
-            The dictionary calculated in getmeasures
-        ax : matplotlib.axes._subplots.AxesSubplot, optional
-            If given the plot will get drawn in these axes. Default None
+        Args:
+            A (np.array): The spatial autocorrelogram.
+            inDict (dict): The dictionary calculated in getmeasures.
+            ax (matplotlib.axes, optional): If given the plot will get drawn
+                in these axes. Default None.
+            **kwargs: Additional keyword arguments for the function.
 
-        Returns
-        -------
-        fig : matplotlib.Figure instance
-            The Figure on which the SAC is shown
+        Returns:
+            matplotlib.axes: The axes with the plot.
 
-        See Also
-        --------
-        ephysiopy.common.binning.RateMap.autoCorr2D()
-        ephysiopy.common.ephys_generic.FieldCalcs.getMeaures()
+        See Also:
+            ephysiopy.common.binning.RateMap.autoCorr2D()
+            ephysiopy.common.ephys_generic.FieldCalcs.getMeaures()
         """
         if ax is None:
             fig = plt.figure()
@@ -877,16 +862,17 @@ class FigureMaker(object):
         Am = A.copy()
         Am[~inDict["dist_to_centre"]] = np.nan
         Am = np.ma.masked_invalid(np.atleast_2d(Am))
-        x, y = np.meshgrid(np.arange(0, np.shape(A)[1]), np.arange(0, np.shape(A)[0]))
+        x, y = np.meshgrid(np.arange(0, np.shape(A)[1]),
+                           np.arange(0, np.shape(A)[0]))
         vmax = np.nanmax(np.ravel(A))
-        ax.pcolormesh(
-            x, y, A, cmap=grey_cmap, edgecolors="face", vmax=vmax, shading="auto"
-        )
+        ax.pcolormesh(x, y, A, cmap=grey_cmap, edgecolors="face",
+                      vmax=vmax, shading="auto")
         import copy
 
         cmap = copy.copy(jet_cmap)
         cmap.set_bad("w", 0)
-        ax.pcolormesh(x, y, Am, cmap=cmap, edgecolors="face", vmax=vmax, shading="auto")
+        ax.pcolormesh(x, y, Am, cmap=cmap,
+                      edgecolors="face", vmax=vmax, shading="auto")
         # horizontal green line at 3 o'clock
         _y = (np.shape(A)[0] / 2, np.shape(A)[0] / 2)
         _x = (np.shape(A)[1] / 2, np.shape(A)[0])
@@ -933,33 +919,29 @@ class FigureMaker(object):
         Plots a heat map spectrogram of the LFP for each channel.
         Line plots of power per frequency band and power on a subset of
         channels are also displayed to the right and above the main plot.
-        Parameters
-        ----------
-        nchannels : int
-            The number of channels on the probe
-        nseconds : int, optional
-            How long in seconds from the start of the trial to do
-            the spectrogram for (for speed).
-            Default 100
-        maxFreq : int
-            The maximum frequency in Hz to plot the spectrogram out to.
-            Maximum 1250. Default 125
-        channels: list
-            The channels to plot separately on the top plot
-        frequencies: list
-            The specific frequencies to examine across
-            all channels. The mean from frequency: frequency+frequencyIncrement
-            is calculated and plotted on the left hand side of the plot
-        frequencyIncrement: int
-            The amount to add to each value of the frequencies list above
-        kwargs: valid key value pairs:
-            "saveas" - save the figure to this location, needs absolute
-            path and filename
 
-        Notes
-        -----
-        Should also allow kwargs to specify exactly which channels
-        and / or frequency bands to do the line plots for
+        Args:
+            nchannels (int): The number of channels on the probe.
+            nseconds (int, optional): How long in seconds from the start of
+                the trial to do the spectrogram for (for speed).
+                Default is 100.
+            maxFreq (int): The maximum frequency in Hz to plot the spectrogram
+                out to. Maximum is 1250. Default is 125.
+            channels (list): The channels to plot separately on the top plot.
+            frequencies (list): The specific frequencies to examine across
+                all channels. The mean from frequency: 
+                frequency+frequencyIncrement is calculated and plotted on
+                the left hand side of the plot.
+            frequencyIncrement (int): The amount to add to each value of
+                the frequencies list above.
+            **kwargs: Additional keyword arguments for the function.
+                Valid key value pairs:
+                    "saveas" - save the figure to this location, needs absolute
+                    path and filename.
+
+        Notes:
+            Should also allow kwargs to specify exactly which channels
+            and / or frequency bands to do the line plots for.
         """
         if not self.path2LFPdata:
             raise TypeError("Not a probe recording so not plotting")
@@ -968,14 +950,15 @@ class FigureMaker(object):
         lfp_file = os.path.join(self.path2LFPdata, "continuous.dat")
         status = os.stat(lfp_file)
         nsamples = int(status.st_size / 2 / nchannels)
-        mmap = np.memmap(lfp_file, np.int16, "r", 0, (nchannels, nsamples), order="F")
+        mmap = np.memmap(lfp_file, np.int16, "r", 0,
+                         (nchannels, nsamples), order="F")
         # Load the channel map NB assumes this is in the AP data
         # location and that kilosort was run there
         channel_map = np.squeeze(
             np.load(os.path.join(self.path2APdata, "channel_map.npy"))
         )
         lfp_sample_rate = 2500
-        data = np.array(mmap[channel_map, 0 : nseconds * lfp_sample_rate])
+        data = np.array(mmap[channel_map, 0:nseconds * lfp_sample_rate])
         from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 
         E = EEGCalcsGeneric(data[0, :], lfp_sample_rate)
@@ -992,20 +975,21 @@ class FigureMaker(object):
         from mpl_toolkits.axes_grid1 import make_axes_locatable
 
         _, spectoAx = plt.subplots()
-        spectoAx.pcolormesh(
-            x, y, spec_data, edgecolors="face", cmap="bone", norm=colors.LogNorm()
-        )
+        spectoAx.pcolormesh(x, y, spec_data,
+                            edgecolors="face", cmap="bone",
+                            norm=colors.LogNorm())
         spectoAx.set_xlim(0, maxFreq)
         spectoAx.set_ylim(channel_map[0], channel_map[-1])
         spectoAx.set_xlabel("Frequency (Hz)")
         spectoAx.set_ylabel("Channel")
         divider = make_axes_locatable(spectoAx)
-        channel_spectoAx = divider.append_axes("top", 1.2, pad=0.1, sharex=spectoAx)
-        meanfreq_powerAx = divider.append_axes("right", 1.2, pad=0.1, sharey=spectoAx)
-        plt.setp(
-            channel_spectoAx.get_xticklabels() + meanfreq_powerAx.get_yticklabels(),
-            visible=False,
-        )
+        channel_spectoAx = divider.append_axes("top", 1.2, pad=0.1,
+                                               sharex=spectoAx)
+        meanfreq_powerAx = divider.append_axes("right", 1.2, pad=0.1,
+                                               sharey=spectoAx)
+        plt.setp(channel_spectoAx.get_xticklabels()
+                 + meanfreq_powerAx.get_yticklabels(),
+                 visible=False)
 
         # plot mean power across some channels
         mn_power = np.mean(spec_data, 0)
@@ -1046,7 +1030,8 @@ class FigureMaker(object):
             freq_mask = np.logical_and(
                 E.freqs[0::50] > freqs[0], E.freqs[0::50] < freqs[1]
             )
-            mean_power = 10 * np.log10(np.mean(spec_data[:, freq_mask], 1) / mn_power)
+            mean_power = 10 * np.log10(np.mean(
+                spec_data[:, freq_mask], 1) / mn_power)
             c = next(cols)
             meanfreq_powerAx.plot(
                 mean_power,

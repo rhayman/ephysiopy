@@ -49,15 +49,14 @@ class OE2Numpy(object):
             self, filename_root: str, recording_name='recording1') -> dict:
         """
         Loads the nwb file names in filename_root and returns a dict
-        containing some of the nwb data
-        relevant for converting to Axona file formats
+        containing some of the nwb data relevant for converting to Axona
+        file formats.
 
-        Parameters
-        ----------------
-        filename_root - fuly qualified name of the nwb file
-        recording_name - the name of the recording in the nwb file NB the
-        default has changed in different versions of OE from
-        'recording0' to 'recording1'
+        Args:
+            filename_root (str): Fully qualified name of the nwb file.
+            recording_name (str): The name of the recording in the nwb file.
+            Note that the default has changed in different versions of OE from
+            'recording0' to 'recording1'.
         """
         if os.path.isfile(filename_root):
             OE_data = OpenEphysNWB(self.dirname)
