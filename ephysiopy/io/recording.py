@@ -118,9 +118,9 @@ Xml2RecordingKind = {
 
 class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     """
-    An abstract class inherited by OpenEphysBase and AxonaTrial that
-    defines methods and properties common to both and potentially
-    any other recording format (OpenEphysNWB is there but not used atm)
+    Defines a minimal and required set of methods for loading
+    electrophysiology data recorded using Axona or OpenEphys
+    (OpenEphysNWB is there but not used)
     """
     def __init__(self, pname: Path, **kwargs) -> None:
         assert Path(pname).exists(), f"Path provided doesnt exist: {pname}"
@@ -255,7 +255,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         Args:
             pname (Path): Path to base directory containing pos data
             ppm (int): pixels per metre
-            jumpmax (int): max jump in pixels between positions
+            jumpmax (int): max jump in pixels between positions, more
+                than this and the position is interpolated over
         """
         raise NotImplementedError
 

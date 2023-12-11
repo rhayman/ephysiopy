@@ -68,6 +68,16 @@ class FigureMaker(object):
             channel (int): The channel number.
             **kwargs: Additional keyword arguments for the function.
         """
+        fig = plt.figure()
+        nrows = int(np.ceil(len(clusters) / 5))
+        if 'projection' in kwargs.keys():
+            proj = kwargs.pop('projection')
+        else:
+            proj = None
+        for i, c in enumerate(clusters):
+            ax = fig.add_subplot(nrows, 5, i+1, projection=proj)
+            ts = self.get_spike_times(channel, c)
+            func(ts, ax=ax, **kwargs)
 
     def get_rate_map(self, cluster: int | list, channel: int, **kwargs):
         """
@@ -78,6 +88,15 @@ class FigureMaker(object):
             channel (int): The channel number.
             **kwargs: Additional keyword arguments for the function.
         """
+        if isinstance(cluster, list):
+            self._plot_multiple_clusters(self.makeRateMap,
+                                         cluster,
+                                         channel,
+                                         **kwargs)
+        else:
+            ts = self.get_spike_times(channel, cluster)
+            self.makeRateMap(ts, **kwargs)
+        plt.show()
 
     def get_hd_map(self, cluster: int | list, channel: int, **kwargs):
         """
@@ -89,6 +108,17 @@ class FigureMaker(object):
             channel (int): The channel number.
             **kwargs: Additional keyword arguments for the function.
         """
+        if isinstance(cluster, list):
+            self._plot_multiple_clusters(self.makeHDPlot,
+                                         cluster,
+                                         channel,
+                                         projection="polar",
+                                         strip_axes=True,
+                                         **kwargs)
+        else:
+            ts = self.get_spike_times(channel, cluster)
+            self.makeHDPlot(ts, **kwargs)
+        plt.show()
 
     def get_spike_path(self, cluster=None, channel=None, **kwargs):
         """
@@ -100,6 +130,18 @@ class FigureMaker(object):
             channel (int | None): The channel number.
             **kwargs: Additional keyword arguments for the function.
         """
+        if isinstance(cluster, list):
+            self._plot_multiple_clusters(self.makeSpikePathPlot,
+                                         cluster,
+                                         channel,
+                                         **kwargs)
+        else:
+            if channel is not None and cluster is not None:
+                ts = self.get_spike_times(channel, cluster)
+            else:
+                ts = None
+            self.makeSpikePathPlot(ts, **kwargs)
+        plt.show()
 
     def get_eb_map(self, cluster: int | list, channel: int, **kwargs):
         """
@@ -112,6 +154,16 @@ class FigureMaker(object):
             channel (int): The channel number.
             **kwargs: Additional keyword arguments for the function.
         """
+        if isinstance(cluster, list):
+            self._plot_multiple_clusters(self.makeEgoCentricBoundaryMap,
+                                         cluster,
+                                         channel,
+                                         projection='polar',
+                                         **kwargs)
+        else:
+            ts = self.get_spike_times(channel, cluster)
+            self.makeEgoCentricBoundaryMap(ts, **kwargs)
+        plt.show()
 
     def get_eb_spikes(self, cluster: int | list, channel: int, **kwargs):
         """
@@ -124,6 +176,15 @@ class FigureMaker(object):
             channel (int): The channel number.
             **kwargs: Additional keyword arguments for the function.
         """
+        if isinstance(cluster, list):
+            self._plot_multiple_clusters(self.makeEgoCentricBoundarySpikePlot,
+                                         cluster,
+                                         channel,
+                                         **kwargs)
+        else:
+            ts = self.get_spike_times(channel, cluster)
+            self.makeEgoCentricBoundarySpikePlot(ts, **kwargs)
+        plt.show()
 
     def get_sac(self, cluster: int | list, channel: int, **kwargs):
         """
@@ -136,6 +197,15 @@ class FigureMaker(object):
             channel (int): The channel number.
             **kwargs: Additional keyword arguments for the function.
         """
+        if isinstance(cluster, list):
+            self._plot_multiple_clusters(self.makeSAC,
+                                         cluster,
+                                         channel,
+                                         **kwargs)
+        else:
+            ts = self.get_spike_times(channel, cluster)
+            self.makeSAC(ts, **kwargs)
+        plt.show()
 
     def get_speed_v_rate(self, cluster: int | list, channel: int, **kwargs):
         """
@@ -148,6 +218,15 @@ class FigureMaker(object):
             channel (int): The channel number.
             **kwargs: Additional keyword arguments for the function.
         """
+        if isinstance(cluster, list):
+            self._plot_multiple_clusters(self.makeSpeedVsRatePlot,
+                                         cluster,
+                                         channel,
+                                         **kwargs)
+        else:
+            ts = self.get_spike_times(channel, cluster)
+            self.makeSpeedVsRatePlot(ts, **kwargs)
+        plt.show()
 
     def get_speed_v_hd(self, cluster: int | list, channel: int, **kwargs):
         """
@@ -160,6 +239,15 @@ class FigureMaker(object):
             channel (int): The channel number.
             **kwargs: Additional keyword arguments for the function.
         """
+        if isinstance(cluster, list):
+            self._plot_multiple_clusters(self.makeSpeedVsHeadDirectionPlot,
+                                         cluster,
+                                         channel,
+                                         **kwargs)
+        else:
+            ts = self.get_spike_times(channel, cluster)
+            self.makeSpeedVsHeadDirectionPlot(ts, **kwargs)
+        plt.show()
 
     def get_power_spectrum(self, **kwargs):
         """
@@ -168,6 +256,9 @@ class FigureMaker(object):
         Args:
             **kwargs: Additional keyword arguments for the function.
         """
+        p = self.EEGCalcs.calcEEGPowerSpectrum()
+        self.makePowerSpectrum(p[0], p[1], p[2], p[3], p[4], **kwargs)
+        plt.show()
 
     def getSpikePosIndices(self, spk_times: np.ndarray):
         """
@@ -179,7 +270,7 @@ class FigureMaker(object):
 
         Returns:
             np.ndarray: The indices into the position data at which the spikes
-            occurred.
+                occurred.
         """
         pos_times = getattr(self.PosCalcs, "xyTS")
         idx = np.searchsorted(pos_times, spk_times) - 1
@@ -227,7 +318,27 @@ class FigureMaker(object):
         Returns:
             matplotlib.axes: The axes with the plot.
         """
-        # ... rest of the function ...
+        if not self.RateMap:
+            self.initialise()
+        spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
+        spk_weights = np.bincount(spk_times_in_pos_samples, minlength=self.npos)
+        rmap = self.RateMap.getMap(spk_weights)
+        ratemap = np.ma.MaskedArray(rmap[0], np.isnan(rmap[0]), copy=True)
+        x, y = np.meshgrid(rmap[1][1][0:-1].data, rmap[1][0][0:-1].data)
+        vmax = np.nanmax(np.ravel(ratemap))
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+        ax.pcolormesh(
+            x, y, ratemap,
+            cmap=jet_cmap,
+            edgecolors="face",
+            vmax=vmax,
+            shading="auto",
+            **kwargs
+        )
+        ax.set_aspect("equal")
+        return ax
 
     @stripAxes
     def makeSpikePathPlot(self,
@@ -287,7 +398,53 @@ class FigureMaker(object):
         Returns:
             matplotlib.axes: The axes with the plot.
         """
-        # ... rest of the function ...
+        if not self.RateMap:
+            self.initialise()
+
+        degs_per_bin = 3
+        xy_binsize = 2.5
+        arena_type = "circle"
+        # parse kwargs
+        if "degs_per_bin" in kwargs.keys():
+            degs_per_bin = kwargs["degs_per_bin"]
+        if "xy_binsize" in kwargs.keys():
+            xy_binsize = kwargs["xy_binsize"]
+        if "arena_type" in kwargs.keys():
+            arena_type = kwargs["arena_type"]
+        if "strip_axes" in kwargs.keys():
+            strip_axes = kwargs.pop("strip_axes")
+        else:
+            strip_axes = False
+        if 'return_ratemap' in kwargs.keys():
+            return_ratemap = kwargs.pop('return_ratemap') 
+        else:
+            return_ratemap = False
+
+        idx = self.getSpikePosIndices(spk_times)
+        spk_weights = np.bincount(idx, minlength=len(self.RateMap.dir))
+        ego_map = self.RateMap.get_egocentric_boundary_map(spk_weights,
+                                                           degs_per_bin,
+                                                           xy_binsize,
+                                                           arena_type)
+        rmap = ego_map.rmap
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(projection='polar')
+        theta = np.arange(0, 2*np.pi, 2*np.pi/rmap.shape[1])
+        phi = np.arange(0, rmap.shape[0]*2.5, 2.5)
+        X, Y = np.meshgrid(theta, phi)
+        ax.pcolormesh(X, Y, rmap, **kwargs)
+        ax.set_xticks(np.arange(0, 2*np.pi, np.pi/4))
+        # ax.set_xticklabels(np.arange(0, 2*np.pi, np.pi/4))
+        ax.set_yticks(np.arange(0, 50, 10))
+        ax.set_yticklabels(np.arange(0, 50, 10))
+        ax.set_xlabel('Angle (deg)')
+        ax.set_ylabel('Distance (cm)')
+        if strip_axes:
+            return stripAxes(ax)
+        if return_ratemap:
+            return ax, rmap
+        return ax
 
     @stripAxes
     def makeEgoCentricBoundarySpikePlot(self,
@@ -383,7 +540,20 @@ class FigureMaker(object):
         Returns:
             matplotlib.axes: The axes with the plot.
         """
-        # ... rest of the function ...
+        if not self.RateMap:
+            self.initialise()
+        spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
+        spk_weights = np.bincount(spk_times_in_pos_samples, minlength=self.npos)
+        sac = self.RateMap.getSAC(spk_weights)
+        from ephysiopy.common.gridcell import SAC
+
+        S = SAC()
+        measures = S.getMeasures(sac)
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+        ax = self.show_SAC(sac, measures, ax)
+        return ax
 
     def makeHDPlot(
         self, spk_times: np.array = None, ax: matplotlib.axes = None, **kwargs
@@ -401,7 +571,45 @@ class FigureMaker(object):
         Returns:
             matplotlib.axes: The axes with the plot.
         """
-        # ... rest of the function ...
+        if not self.RateMap:
+            self.initialise()
+        if "strip_axes" in kwargs.keys():
+            strip_axes = kwargs.pop("strip_axes")
+        else:
+            strip_axes = True
+        spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
+        spk_weights = np.bincount(spk_times_in_pos_samples, minlength=self.npos)
+        rmap = self.RateMap.getMap(spk_weights, varType=VariableToBin.DIR)
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, **kwargs)
+        ax.set_theta_zero_location("N")
+        # need to deal with the case where the axis is supplied but
+        # is not polar. deal with polar first
+        theta = np.deg2rad(rmap[1][0])
+        ax.clear()
+        r = rmap[0]  # in samples so * pos sample_rate
+        r = np.insert(r, -1, r[0])
+        if "polar" in ax.name:
+            ax.plot(theta, r)
+            if "fill" in kwargs:
+                ax.fill(theta, r, alpha=0.5)
+            ax.set_aspect("equal")
+        else:
+            pass
+
+        # See if we should add the mean resultant vector (mrv)
+        if "add_mrv" in kwargs:
+            from ephysiopy.common.statscalcs import mean_resultant_vector
+
+            angles = self.PosCalcs.dir[spk_times_in_pos_samples]
+            r, th = mean_resultant_vector(np.deg2rad(angles))
+            ax.plot([th, th], [0, r * np.max(rmap[0])], "r")
+        if "polar" in ax.name:
+            ax.set_thetagrids([0, 90, 180, 270])
+        if strip_axes:
+            return stripAxes(ax)
+        return ax
 
     def makeSpeedVsRatePlot(
         self,
