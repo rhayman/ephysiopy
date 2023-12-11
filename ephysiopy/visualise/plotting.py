@@ -10,7 +10,7 @@ import seaborn as sns
 
 from ephysiopy.axona import tintcolours as tcols
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
-
+from ephysiopy.common.binning import VariableToBin
 
 # Decorators
 def stripAxes(func):
