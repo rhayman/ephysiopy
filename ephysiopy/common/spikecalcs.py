@@ -734,6 +734,9 @@ class SpikeCalcsGeneric(object):
         K[nbins] = a  # restore the center value of the cross-correlogram
         Qin = Qi/Q00  # normalize the normalized refractory index in two different ways
         Qin1 = Qi/Q01
+
+        # Q = min(Qi/(max(Q00, Q01))); % this is a measure of refractoriness
+        # R = min(rir); % this is a second measure of refractoriness (kicks in for very low firing rates)
         return K, Qi, Q00, Q01, Ri
 
 
