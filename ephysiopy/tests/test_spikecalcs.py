@@ -54,7 +54,7 @@ def test_xcorr(path_to_axona_data):
     S = get_spikecalcs_instance(path_to_axona_data)
     spk_ts = S.spike_times[S.spk_clusters == 1]
     S.xcorr(spk_ts)
-    y = S.xcorr(spk_ts, Trange=[-100, 100])
+    y, bins = S.xcorr(spk_ts, Trange=[-100, 100])
     assert (isinstance(y, np.ndarray))
 
 

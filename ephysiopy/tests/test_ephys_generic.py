@@ -197,7 +197,7 @@ def test_mean_isi_range(basic_SpikeCalcs):
 
 def test_xcorr(basic_SpikeCalcs):
     c1_times = basic_SpikeCalcs.spike_times[basic_SpikeCalcs.spk_clusters == 1]
-    xc = basic_SpikeCalcs.xcorr(c1_times)
+    xc, bins = basic_SpikeCalcs.xcorr(c1_times)
     assert isinstance(xc, np.ndarray)
 
 

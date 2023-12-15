@@ -13,6 +13,8 @@ from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 from ephysiopy.common.binning import VariableToBin
 
 # Decorators
+
+
 def stripAxes(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
@@ -321,7 +323,8 @@ class FigureMaker(object):
         if not self.RateMap:
             self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
-        spk_weights = np.bincount(spk_times_in_pos_samples, minlength=self.npos)
+        spk_weights = np.bincount(
+            spk_times_in_pos_samples, minlength=self.npos)
         rmap = self.RateMap.getMap(spk_weights)
         ratemap = np.ma.MaskedArray(rmap[0], np.isnan(rmap[0]), copy=True)
         x, y = np.meshgrid(rmap[1][1][0:-1].data, rmap[1][0][0:-1].data)
@@ -416,7 +419,7 @@ class FigureMaker(object):
         else:
             strip_axes = False
         if 'return_ratemap' in kwargs.keys():
-            return_ratemap = kwargs.pop('return_ratemap') 
+            return_ratemap = kwargs.pop('return_ratemap')
         else:
             return_ratemap = False
 
@@ -543,7 +546,8 @@ class FigureMaker(object):
         if not self.RateMap:
             self.initialise()
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
-        spk_weights = np.bincount(spk_times_in_pos_samples, minlength=self.npos)
+        spk_weights = np.bincount(
+            spk_times_in_pos_samples, minlength=self.npos)
         sac = self.RateMap.getSAC(spk_weights)
         from ephysiopy.common.gridcell import SAC
 
@@ -578,7 +582,8 @@ class FigureMaker(object):
         else:
             strip_axes = True
         spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
-        spk_weights = np.bincount(spk_times_in_pos_samples, minlength=self.npos)
+        spk_weights = np.bincount(
+            spk_times_in_pos_samples, minlength=self.npos)
         rmap = self.RateMap.getMap(spk_weights, varType=VariableToBin.DIR)
         if ax is None:
             fig = plt.figure()
@@ -830,10 +835,12 @@ class FigureMaker(object):
         times provided over the range +/-500ms.
 
         Args:
-            spk_times (np.array): Spike times in samples.
+            spk_times (np.array): Spike times in seconds.
             ax (matplotlib.axes, optional): The axes to plot into. If None,
                 new axes are created.
             **kwargs: Additional keyword arguments for the function.
+                binsize (int, optional): The size of the bins in ms. Gets passed
+                to SpikeCalcsGeneric.xcorr(). Defaults to 1.
 
         Returns:
             matplotlib.axes: The axes with the plot.
@@ -844,16 +851,23 @@ class FigureMaker(object):
             strip_axes = False
         # spk_times in samples provided in seconds but convert to
         # ms for a more display friendly scale
-        spk_times = spk_times / 3e4 * 1000.0
+        spk_times = spk_times
         S = SpikeCalcsGeneric(spk_times)
-        y = S.xcorr(spk_times)
+        c, b = S.xcorr(spk_times, **kwargs)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-        ax.hist(y[y != 0], bins=201,
-                range=[-500, 500], color="k", histtype="stepfilled")
-        ax.set_xlim(-500, 500)
-        ax.set_xticks((-500, 0, 500))
+        if 'binsize' in kwargs.keys():
+            binsize = kwargs['binsize']
+        else:
+            binsize = 1
+        if "Trange" in kwargs.keys():
+            xrange = kwargs["Trange"]
+        else:
+            xrange = [-500, 500]
+        ax.bar(b[:-1], c, width=binsize, color="k")
+        ax.set_xlim(xrange)
+        ax.set_xticks((xrange[0], 0, xrange[1]))
         ax.set_xticklabels("")
         ax.tick_params(axis="both", which="both", left=False, right=False,
                        bottom=False, top=False)

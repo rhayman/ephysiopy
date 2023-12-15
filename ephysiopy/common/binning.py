@@ -419,10 +419,10 @@ class RateMap(object):
         self._calcBinEdges(self.binsize)
 
         binned_pos, binned_pos_edges = self._binData(
-                                                     sample,
-                                                     self._binedges,
-                                                     self.pos_weights,
-                                                     keep_these)
+            sample,
+            self._binedges,
+            self.pos_weights,
+            keep_these)
         nanIdx = binned_pos == 0
 
         if mapType.value == MapType.POS.value:  # return binned up position
@@ -437,7 +437,8 @@ class RateMap(object):
                                            **kwargs)
             return binned_pos, binned_pos_edges
 
-        binned_spk, _ = self._binData(sample, self._binedges, spkWeights, keep_these)
+        binned_spk, _ = self._binData(
+            sample, self._binedges, spkWeights, keep_these)
         if mapType.value == MapType.SPK:
             return binned_spk
         # binned_spk is returned as a tuple of the binned data and the bin
@@ -550,9 +551,9 @@ class RateMap(object):
         weights = np.atleast_2d(weights)  # needed for list comp below
         var = np.array(var.data.T.tolist())
         ndhist = [np.histogramdd(
-                sample=var[good_indices],
-                bins=bin_edges,
-                weights=np.ravel(w[good_indices])) for w in weights]
+            sample=var[good_indices],
+            bins=bin_edges,
+            weights=np.ravel(w[good_indices])) for w in weights]
         if np.shape(weights)[0] == 1:
             return ndhist[0][0], ndhist[0][1]
         else:
@@ -1081,7 +1082,7 @@ class RateMap(object):
 
         # Use the shaeply package to specify some geometry for the arena
         # boundary and the lines radiating out
-        # from the current location of the animal. The geometry for the 
+        # from the current location of the animal. The geometry for the
         # arena should be user specified but for now I'll just use a circle
         if arena_type == "circle":
             radius = 50

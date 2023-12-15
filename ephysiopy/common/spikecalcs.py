@@ -223,9 +223,7 @@ class SpikeCalcsGeneric(object):
         bins = 201
         trange = np.array((-500, 500))
         t = self.spike_times[self.spk_clusters == cluster]
-        y = self.xcorr(t, Trange=trange)
-        y = y.astype(np.int64)  # See xcorr docs
-        counts, bins = np.histogram(y[y != 0], bins=bins, range=trange)
+        counts, bins = self.xcorr(t, Trange=trange)
         mask = np.logical_and(bins > 0, bins < n)
         return np.mean(counts[mask[1:]])
 
@@ -233,33 +231,39 @@ class SpikeCalcsGeneric(object):
               x1: np.ndarray,
               x2=None,
               Trange=None,
-              **kwargs) -> np.ndarray:
+              binsize=0.001,
+              **kwargs) -> tuple:
         """
         Calculates the ISIs in x1 or x1 vs x2 within a given range
 
         Args:
             x1, x2 (array_like): The times of the spikes emitted by the
-                                cluster(s). Assumed to be in milliseconds
-            Trange (array_like): Range of times to bin up in ms.
-                                    Defaults to [-500, +500]
+                                cluster(s) in seconds
+            Trange (array_like): Range of times to bin up in seconds
+                                    Defaults to [-0.5, +0.5]
+            binsize (float): The size of the bins in seconds
 
         Returns:
-            y (np.ndarray): The time differences between spike times in x1
-                            over the range of times defined Trange
+            counts (np.ndarray): The cross-correlogram of the spike trains
+                x1 and x2
+            bins (np.ndarray): The bins used to calculate the cross-correlogram
         """
         if x2 is None:
             x2 = x1.copy()
         if Trange is None:
-            Trange = np.array([-500, 500])
+            Trange = np.array([-0.5, 0.5])
         if isinstance(Trange, list):
             Trange = np.array(Trange)
         y = []
         irange = x1[:, np.newaxis] + Trange[np.newaxis, :]
         dts = np.searchsorted(x2, irange)
         for i, t in enumerate(dts):
-            y.extend(np.round(x2[t[0]: t[1]] - x1[i]))
+            y.extend((x2[t[0]: t[1]] - x1[i]))
         y = np.array(y, dtype=float)
-        return y
+        counts, bins = np.histogram(y[y != 0],
+                                    bins=int(np.ptp(Trange)/binsize),
+                                    range=Trange)
+        return counts, bins
 
     def getClusterWaveforms(self, clust_id: int, channel_id: int):
         """
@@ -370,7 +374,7 @@ class SpikeCalcsGeneric(object):
             counts = np.bincount(indices, minlength=len(bins))
             result[:, i] = counts[1:]
         return result
-    
+
     def respondsToStimulus(self, cluster: int,
                            threshold: float,
                            min_contiguous: int,
@@ -694,8 +698,11 @@ class SpikeCalcsGeneric(object):
                 K[ibin + nbins] += 1
             j += 1
 
-        irange1 = np.concatenate([np.arange(2, nbins/2 + 1), np.arange(3/2*nbins + 1, 2*nbins + 1)])  # this index range corresponds to the CCG shoulders
-        irange2 = np.arange(nbins+1-50, nbins-10 + 1)  # these indices are the narrow, immediate shoulders
+        # this index range corresponds to the CCG shoulders
+        irange1 = np.concatenate(
+            [np.arange(2, nbins/2 + 1), np.arange(3/2*nbins + 1, 2*nbins + 1)])
+        # these indices are the narrow, immediate shoulders
+        irange2 = np.arange(nbins+1-50, nbins-10 + 1)
         irange3 = np.arange(nbins+12, nbins+50 + 1)
         irange1 = irange1.astype(int)
         irange2 = irange2.astype(int)
@@ -703,22 +710,31 @@ class SpikeCalcsGeneric(object):
 
         # normalize the shoulders by what's expected from the mean firing rates
         # a non-refractive poisson process should yield 1
-        Q00 = np.sum(K[irange1-1]) / (len(irange1)*tbin* len(st1) * len(st2)/T)
-        Q01 = np.sum(K[irange2-1]) / (len(irange2)*tbin* len(st1) * len(st2)/T)  # do the same for irange 2
-        Q01 = max(Q01, np.sum(K[irange3-1]) / (len(irange3)*tbin* len(st1) * len(st2)/T))  # compare to the other shoulder
+        Q00 = np.sum(K[irange1-1]) / (len(irange1)
+                                      * tbin * len(st1) * len(st2)/T)
+        Q01 = np.sum(K[irange2-1]) / (len(irange2)*tbin * len(st1)
+                                      * len(st2)/T)  # do the same for irange 2
+        # compare to the other shoulder
+        Q01 = max(Q01, np.sum(K[irange3-1]) /
+                  (len(irange3)*tbin * len(st1) * len(st2)/T))
 
-        R00 = max(np.mean(K[irange2-1]), np.mean(K[irange3-1]))  # take the biggest shoulder
-        R00 = max(R00, np.mean(K[irange1-1]))  # compare this to the asymptotic shoulder
+        # take the biggest shoulder
+        R00 = max(np.mean(K[irange2-1]), np.mean(K[irange3-1]))
+        # compare this to the asymptotic shoulder
+        R00 = max(R00, np.mean(K[irange1-1]))
 
         # test the probability that a central area in the autocorrelogram might be refractory
         # test increasingly larger areas of the central CCG
         a = K[nbins]
-        K[nbins] = 0  # overwrite the center of the correlogram with 0 (removes double counted spikes)
+        # overwrite the center of the correlogram with 0 (removes double counted spikes)
+        K[nbins] = 0
         Qi = np.zeros(10)
         Ri = np.zeros(10)
         for i in range(1, 11):
-            irange = np.arange(nbins+1-i, nbins+1+i)  # for this central range of the CCG
-            Qi0 = np.sum(K[irange]) / (2*i*tbin* len(st1) * len(st2)/T)  # compute the same normalized ratio as above. this should be 1 if there is no refractoriness
+            # for this central range of the CCG
+            irange = np.arange(nbins+1-i, nbins+1+i)
+            # compute the same normalized ratio as above. this should be 1 if there is no refractoriness
+            Qi0 = np.sum(K[irange]) / (2*i*tbin * len(st1) * len(st2)/T)
             Qi[i-1] = Qi0  # save the normalized probability
 
             n = np.sum(K[irange])/2
@@ -727,7 +743,7 @@ class SpikeCalcsGeneric(object):
             # this is tricky: we approximate the Poisson likelihood with a gaussian of equal mean and variance
             # that allows us to integrate the probability that we would see <N spikes in the center of the
             # cross-correlogram from a distribution with mean R00*i spikes
-            p = 1/2 * (1+ erf((n - lam)/sqrt(2*lam)))
+            p = 1/2 * (1 + erf((n - lam)/sqrt(2*lam)))
 
             Ri[i-1] = p  # keep track of p for each bin size i
 
@@ -736,7 +752,7 @@ class SpikeCalcsGeneric(object):
         Qin1 = Qi/Q01
 
         # Q = min(Qi/(max(Q00, Q01))); % this is a measure of refractoriness
-        # R = min(rir); % this is a second measure of refractoriness (kicks in for very low firing rates)
+        # R = min(Ri); % this is a second measure of refractoriness (kicks in for very low firing rates)
         return K, Qi, Q00, Q01, Ri
 
 
