@@ -755,6 +755,46 @@ class SpikeCalcsGeneric(object):
         # R = min(Ri); % this is a second measure of refractoriness (kicks in for very low firing rates)
         return K, Qi, Q00, Q01, Ri
 
+    def contamination_percent(self,
+                              x1: np.ndarray,
+                              x2: None,
+                              **kwargs) -> tuple:
+        '''
+        Computes the cross-correlogram between two sets of spikes and
+        estimates how refractory the cross-correlogram is.
+
+        Args:
+            st1 (np.array): The first set of spikes.
+            st2 (np.array): The second set of spikes.
+
+        kwargs:
+            Anything that can be fed into xcorr above
+
+        Returns:
+            Q (float): a measure of refractoriness
+            R (float): a second measure of refractoriness
+                 (kicks in for very low firing rates)
+
+        Notes:
+            Taken from KiloSorts ccg.m
+
+            The contamination metrics are calculated based on
+            an analysis of the 'shoulders' of the cross-correlogram.
+            Specifically, the ranges from +/-5-25ms of 0 and
+            +/-250-500ms
+        '''
+        c, b = self.xcorr(x1, x2, **kwargs)
+        mid = [[-0.025, -0.006], [0.005, 0.025]]
+        far = [[-0.5, -0.251], [0.25, 0.5]]
+
+        def get_mask(bins, vals):
+            all = np.array([np.logical_and(bins >= i[0], bins <= i[1])
+                           for i in vals])
+            return all[0, :] | all[1, :]
+
+        inner = get_mask(b, mid)
+        outer = get_mask(b, far)
+
 
 class SpikeCalcsTetrode(SpikeCalcsGeneric):
     """

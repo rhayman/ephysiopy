@@ -122,6 +122,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     electrophysiology data recorded using Axona or OpenEphys
     (OpenEphysNWB is there but not used)
     """
+
     def __init__(self, pname: Path, **kwargs) -> None:
         assert Path(pname).exists(), f"Path provided doesnt exist: {pname}"
         self._pname = pname
@@ -424,7 +425,8 @@ class OpenEphysBase(TrialInterface):
                 if "Start Time" in line:
                     tokens = line.split(":")
                     start_time = int(tokens[-1])
-                    sample_rate = int(tokens[0].split("@")[-1].strip().split()[0])
+                    sample_rate = int(tokens[0].split(
+                        "@")[-1].strip().split()[0])
                     recording_start_time = start_time / float(sample_rate)
         return recording_start_time
 
@@ -472,7 +474,8 @@ class OpenEphysBase(TrialInterface):
                 target_sample_rate = kwargs["target_sample_rate"]
             n_samples = np.shape(lfp[channel, :])[0]
             sig = signal.resample(
-                lfp[channel, :], int(n_samples / self.sample_rate) * target_sample_rate
+                lfp[channel, :], int(
+                    n_samples / self.sample_rate) * target_sample_rate
             )
             self.EEGCalcs = EEGCalcsGeneric(sig, target_sample_rate)
 
@@ -560,7 +563,8 @@ class OpenEphysBase(TrialInterface):
 
             if "Tracker" in pos_plugin_name:
                 print("Loading Tracker data...")
-                pos_data = np.load(os.path.join(self.path2PosData, "data_array.npy"))
+                pos_data = np.load(os.path.join(
+                    self.path2PosData, "data_array.npy"))
             if "Tracking Port" in pos_plugin_name:
                 print("Loading Tracking Port data...")
                 pos_data = loadTrackingPluginData(
@@ -570,7 +574,7 @@ class OpenEphysBase(TrialInterface):
                 pos_data = loadTrackingPluginData(
                     os.path.join(self.path2PosData, "data_array.npy")
                 )
-            
+
             pos_ts = np.load(os.path.join(self.path2PosData, "timestamps.npy"))
             # pos_ts in seconds
             pos_ts = np.ravel(pos_ts)
@@ -584,13 +588,14 @@ class OpenEphysBase(TrialInterface):
                     n_channels=n_pos_chans,
                 )
                 if "loadTTLPos" in kwargs.keys():
-                    pos_ts = loadTrackMeTTLTimestamps(Path(self.path2EventsData))
+                    pos_ts = loadTrackMeTTLTimestamps(
+                        Path(self.path2EventsData))
                 else:
                     pos_ts = loadTrackMeTimestamps(Path(self.path2PosData))
                 pos_ts = pos_ts[0:len(pos_data)]
             sample_rate = self.settings.processors[pos_plugin_name].sample_rate
             sample_rate = float(sample_rate) if sample_rate is not None else 50
-            # the timestamps for the Tracker Port plugin are fucked so 
+            # the timestamps for the Tracker Port plugin are fucked so
             # we have to infer from the shape of the position data
             if "Tracking Port" in pos_plugin_name:
                 sample_rate = kwargs["sample_rate"] or 50
@@ -604,7 +609,8 @@ class OpenEphysBase(TrialInterface):
                 xyTS = pos_ts
             if self.sync_message_file is not None:
                 recording_start_time = xyTS[0]
-            print(f"First and last ts before PosCalcs: {pos_ts[0]} & {pos_ts[-1]}")
+            print(
+                f"First & last ts before PosCalcs: {pos_ts[0]} & {pos_ts[-1]}")
             P = PosCalcsGeneric(
                 pos_data[:, 0],
                 pos_data[:, 1],
@@ -629,13 +635,16 @@ class OpenEphysBase(TrialInterface):
     def load_ttl(self, *args, **kwargs) -> bool:
         """
         Args:
-            StimControl_id (str): This is the string "StimControl [0-9][0-9][0-9]" where the numbers
+            StimControl_id (str): This is the string 
+                "StimControl [0-9][0-9][0-9]" where the numbers
                 are the node id in the openephys signal chain
-            TTL_channel_number (int): The integer value in the "states.npy" file that corresponds to the
+            TTL_channel_number (int): The integer value in the "states.npy"
+                file that corresponds to the
                 identity of the TTL input on the Digital I/O board on the
-                openephys recording system. i.e. if there is input to BNC port 3 on
-                the digital I/O board then values of 3 in the states.npy file are
-                high TTL values on this input and -3 are low TTL values (I think)
+                openephys recording system. i.e. if there is input to BNC
+                port 3 on the digital I/O board then values of 3 in the
+                states.npy file are high TTL values on this input and -3
+                are low TTL values (I think)
 
         Returns:
             Nothing but sets some keys/values in a dict on 'self'
@@ -653,7 +662,8 @@ class OpenEphysBase(TrialInterface):
         if "StimControl_id" in kwargs.keys():
             stim_id = kwargs["StimControl_id"]
             if stim_id in self.settings.processors.keys():
-                duration = getattr(self.settings.processors[stim_id], "Duration")
+                duration = getattr(
+                    self.settings.processors[stim_id], "Duration")
             else:
                 return False
             self.ttl_data["stim_duration"] = int(duration)
@@ -683,7 +693,8 @@ class OpenEphysBase(TrialInterface):
             exp_name / rec_name / "events" / "*Tracking_Port*/BINARY_group*"
         )
         TrackMe_match = (
-            exp_name / rec_name / "continuous" / "TrackMe-[0-9][0-9][0-9].TrackingNode"
+            exp_name / rec_name / "continuous" /
+            "TrackMe-[0-9][0-9][0-9].TrackingNode"
         )
         sync_file_match = exp_name / rec_name
         acq_method = ""
@@ -695,25 +706,32 @@ class OpenEphysBase(TrialInterface):
             # of the folder
             # the older way:
             acq_method = "Neuropix-PXI-[0-9][0-9][0-9]."
-            APdata_match = exp_name / rec_name / "continuous" / (acq_method + "0")
-            LFPdata_match = exp_name / rec_name / "continuous" / (acq_method + "1")
+            APdata_match = exp_name / rec_name / \
+                "continuous" / (acq_method + "0")
+            LFPdata_match = exp_name / rec_name / \
+                "continuous" / (acq_method + "1")
             # the new way:
             Rawdata_match = (
-                exp_name / rec_name / "continuous" / (acq_method + "Probe[A-Z]")
+                exp_name / rec_name / "continuous" /
+                (acq_method + "Probe[A-Z]")
             )
         elif self.rec_kind == RecordingKind.FPGA:
             acq_method = "Rhythm_FPGA-[0-9][0-9][0-9]."
-            APdata_match = exp_name / rec_name / "continuous" / (acq_method + "0")
-            LFPdata_match = exp_name / rec_name / "continuous" / (acq_method + "1")
+            APdata_match = exp_name / rec_name / \
+                "continuous" / (acq_method + "0")
+            LFPdata_match = exp_name / rec_name / \
+                "continuous" / (acq_method + "1")
             Rawdata_match = (
-                exp_name / rec_name / "continuous" / (acq_method + "Probe[A-Z]")
+                exp_name / rec_name / "continuous" /
+                (acq_method + "Probe[A-Z]")
             )
         else:
             acq_method = "Acquisition_Board-[0-9][0-9][0-9].*"
             APdata_match = exp_name / rec_name / "continuous" / acq_method
             LFPdata_match = exp_name / rec_name / "continuous" / acq_method
             Rawdata_match = (
-                exp_name / rec_name / "continuous" / (acq_method + "Probe[A-Z]")
+                exp_name / rec_name / "continuous" /
+                (acq_method + "Probe[A-Z]")
             )
         Events_match = (
             # only dealing with a single TTL channel at the moment
@@ -751,7 +769,8 @@ class OpenEphysBase(TrialInterface):
                             self.path2APOEBin = Path(d).parents[1]
                         if PurePath(d).match(str(LFPdata_match)):
                             self.path2LFPdata = os.path.join(d)
-                            print(f"Continuous LFP data at: {self.path2LFPdata}")
+                            print(
+                                f"Continuous LFP data at: {self.path2LFPdata}")
                         if PurePath(d).match(str(Rawdata_match)):
                             self.path2APdata = os.path.join(d)
                             self.path2LFPdata = os.path.join(d)
@@ -773,7 +792,8 @@ class OpenEphysBase(TrialInterface):
                         print(f"nwb data at: {self.path2NWBData}")
                     if "spike_templates.npy" in ff:
                         self.path2KiloSortData = os.path.join(d)
-                        print(f"Found KiloSort data at {self.path2KiloSortData}")
+                        print(
+                            f"Found KiloSort data at {self.path2KiloSortData}")
 
 
 class OpenEphysNWB(OpenEphysBase):
@@ -794,7 +814,8 @@ class OpenEphysNWB(OpenEphysBase):
             xy = np.array(nwbData[self.path2PosData + "/data"])
             xy = xy[:, 0:2]
             ts = np.array(nwbData[self.path2PosData]["timestamps"])
-            P = PosCalcsGeneric(xy[0, :], xy[1, :], cm=True, ppm=ppm, jumpmax=jumpmax)
+            P = PosCalcsGeneric(xy[0, :], xy[1, :],
+                                cm=True, ppm=ppm, jumpmax=jumpmax)
             P.xyTS = ts
             P.sample_rate = 1.0 / np.mean(np.diff(ts))
             P.postprocesspos()

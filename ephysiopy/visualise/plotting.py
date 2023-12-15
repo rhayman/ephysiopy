@@ -839,8 +839,8 @@ class FigureMaker(object):
             ax (matplotlib.axes, optional): The axes to plot into. If None,
                 new axes are created.
             **kwargs: Additional keyword arguments for the function.
-                binsize (int, optional): The size of the bins in ms. Gets passed
-                to SpikeCalcsGeneric.xcorr(). Defaults to 1.
+                binsize (int, optional): The size of the bins in ms. Gets
+                passed to SpikeCalcsGeneric.xcorr(). Defaults to 1.
 
         Returns:
             matplotlib.axes: The axes with the plot.
@@ -860,11 +860,11 @@ class FigureMaker(object):
         if 'binsize' in kwargs.keys():
             binsize = kwargs['binsize']
         else:
-            binsize = 1
+            binsize = 0.001
         if "Trange" in kwargs.keys():
             xrange = kwargs["Trange"]
         else:
-            xrange = [-500, 500]
+            xrange = [-0.5, 0.5]
         ax.bar(b[:-1], c, width=binsize, color="k")
         ax.set_xlim(xrange)
         ax.set_xticks((xrange[0], 0, xrange[1]))
@@ -872,9 +872,6 @@ class FigureMaker(object):
         ax.tick_params(axis="both", which="both", left=False, right=False,
                        bottom=False, top=False)
         ax.set_yticklabels("")
-        ax.spines["right"].set_visible(False)
-        ax.spines["top"].set_visible(False)
-        ax.spines["left"].set_visible(False)
         ax.xaxis.set_ticks_position("bottom")
         if strip_axes:
             return stripAxes(ax)
