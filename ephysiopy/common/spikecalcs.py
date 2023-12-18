@@ -780,20 +780,62 @@ class SpikeCalcsGeneric(object):
 
             The contamination metrics are calculated based on
             an analysis of the 'shoulders' of the cross-correlogram.
-            Specifically, the ranges from +/-5-25ms of 0 and
-            +/-250-500ms
+            Specifically, the spike counts in the ranges +/-5-25ms and
+            +/-250-500ms are compared for refractoriness
         '''
         c, b = self.xcorr(x1, x2, **kwargs)
-        mid = [[-0.025, -0.006], [0.005, 0.025]]
-        far = [[-0.5, -0.251], [0.25, 0.5]]
+        left = [[-0.05, -0.01]]
+        right = [[0.01, 0.051]]
+        far = [[-0.5, -0.249], [0.25, 0.501]]
 
-        def get_mask(bins, vals):
-            all = np.array([np.logical_and(bins >= i[0], bins <= i[1])
+        def get_shoulder(bins, vals):
+            all = np.array([np.logical_and(bins >= i[0], bins < i[1])
                            for i in vals])
-            return all[0, :] | all[1, :]
+            return np.any(all, 0)
 
-        inner = get_mask(b, mid)
-        outer = get_mask(b, far)
+        inner_left = get_shoulder(b, left)
+        inner_right = get_shoulder(b, right)
+        outer = get_shoulder(b, far)
+
+        tbin = 500 * 0.001
+        Tr = max(np.concatenate([x1, x2])) - min(np.concatenate([x1, x2]))
+
+        def get_normd_shoulder(idx):
+            return np.sum(c[idx[:-1]]) / (len(np.nonzero(idx)[0]) *
+                                   tbin * len(x1) * len(x2) / Tr)
+
+        Q00 = get_normd_shoulder(outer)
+        Q01 = max(get_normd_shoulder(inner_left),
+                  get_normd_shoulder(inner_right))
+
+        R00 = max(np.mean(c[outer[:-1]]),
+                  np.mean(c[inner_left[:-1]]),
+                  np.mean(c[inner_right[:-1]]))
+
+        middle_idx = np.nonzero(b==0)[0]
+        a = c[middle_idx]
+        c[middle_idx] = 0
+        Qi = np.zeros(10)
+        Ri = np.zeros(10)
+        # enumerate through the central range of the xcorr
+        # saving the same calculation as done above
+        for i, t in enumerate(np.linspace(0.001, 0.01, 10)):
+            irange = [[-t, t]]
+            chunk = get_shoulder(b, irange)
+            # compute the same normalized ratio as above;
+            # this should be 1 if there is no refractoriness
+            Qi[i] = get_normd_shoulder(chunk) # save the normd prob
+            n = np.sum(c[chunk[:-1]])/2
+            lam = R00 * i
+            # this is tricky: we approximate the Poisson likelihood with a gaussian of equal mean and variance
+            # that allows us to integrate the probability that we would see <N spikes in the center of the
+            # cross-correlogram from a distribution with mean R00*i spikes
+            p = 1/2 * (1 + erf((n - lam)/np.sqrt(2*lam)))
+
+            Ri[i] = p  # keep track of p for each bin size i
+
+
+
 
 
 class SpikeCalcsTetrode(SpikeCalcsGeneric):
