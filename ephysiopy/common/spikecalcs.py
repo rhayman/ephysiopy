@@ -2,12 +2,11 @@ import os
 import warnings
 from pathlib import Path
 from astropy.convolution import convolve, Box1DKernel, Gaussian1DKernel
-
+from collections.abc import Sequence
 import h5py
 import matplotlib.pylab as plt
 import numpy as np
 from scipy.special import erf
-from math import sqrt
 from phylib.io.model import TemplateModel
 from scipy import signal, stats
 from ephysiopy.common.utils import min_max_norm
@@ -651,110 +650,6 @@ class SpikeCalcsGeneric(object):
         h = h / float(np.sum(h))
         return signal.filtfilt(h.ravel(), 1, spk_hist)
 
-    def ccg(self, st1, st2, nbins, tbin) -> tuple:
-        """
-        Computes the cross-correlogram between two sets of spikes and
-        estimates how refractory the cross-correlogram is.
-
-        Args:
-            st1 (np.array): The first set of spikes.
-            st2 (np.array): The second set of spikes.
-            nbins (int): The number of bins.
-            tbin (float): The length of each bin.
-
-        Returns:
-            K (np.array): The cross-correlogram.
-            Qi (np.array): The normalized probabilities for each bin size.
-            Q00 (float): The normalized shoulder value for a non-refractive
-                Poisson process.
-            Q01 (float): The normalized shoulder value for the immediate
-                shoulders.
-            Ri (np.array): The probabilities for each bin size.
-        """
-        st1 = np.sort(st1)
-        st2 = np.sort(st2)
-
-        dt = nbins * tbin
-        T = max(np.concatenate([st1, st2])) - min(np.concatenate([st1, st2]))
-
-        ilow = 0
-        ihigh = 0
-        j = 0
-
-        K = np.zeros(2 * nbins + 1)
-
-        while j < len(st2):
-            while (ihigh < len(st1)) and (st1[ihigh] < st2[j] + dt):
-                ihigh += 1
-            while (ilow < len(st1)) and (st1[ilow] <= st2[j] - dt):
-                ilow += 1
-            if ilow >= len(st1):
-                break
-            if st1[ilow] > st2[j] + dt:
-                j += 1
-                continue
-            for k in range(ilow, ihigh):
-                ibin = round((st2[j] - st1[k]) / tbin)
-                K[ibin + nbins] += 1
-            j += 1
-
-        # this index range corresponds to the CCG shoulders
-        irange1 = np.concatenate(
-            [np.arange(2, nbins/2 + 1), np.arange(3/2*nbins + 1, 2*nbins + 1)])
-        # these indices are the narrow, immediate shoulders
-        irange2 = np.arange(nbins+1-50, nbins-10 + 1)
-        irange3 = np.arange(nbins+12, nbins+50 + 1)
-        irange1 = irange1.astype(int)
-        irange2 = irange2.astype(int)
-        irange3 = irange3.astype(int)
-
-        # normalize the shoulders by what's expected from the mean firing rates
-        # a non-refractive poisson process should yield 1
-        Q00 = np.sum(K[irange1-1]) / (len(irange1)
-                                      * tbin * len(st1) * len(st2)/T)
-        Q01 = np.sum(K[irange2-1]) / (len(irange2)*tbin * len(st1)
-                                      * len(st2)/T)  # do the same for irange 2
-        # compare to the other shoulder
-        Q01 = max(Q01, np.sum(K[irange3-1]) /
-                  (len(irange3)*tbin * len(st1) * len(st2)/T))
-
-        # take the biggest shoulder
-        R00 = max(np.mean(K[irange2-1]), np.mean(K[irange3-1]))
-        # compare this to the asymptotic shoulder
-        R00 = max(R00, np.mean(K[irange1-1]))
-
-        # test the probability that a central area in the autocorrelogram might be refractory
-        # test increasingly larger areas of the central CCG
-        a = K[nbins]
-        # overwrite the center of the correlogram with 0 (removes double counted spikes)
-        K[nbins] = 0
-        Qi = np.zeros(10)
-        Ri = np.zeros(10)
-        for i in range(1, 11):
-            # for this central range of the CCG
-            irange = np.arange(nbins+1-i, nbins+1+i)
-            # compute the same normalized ratio as above. this should be 1 if there is no refractoriness
-            Qi0 = np.sum(K[irange]) / (2*i*tbin * len(st1) * len(st2)/T)
-            Qi[i-1] = Qi0  # save the normalized probability
-
-            n = np.sum(K[irange])/2
-            lam = R00 * i
-
-            # this is tricky: we approximate the Poisson likelihood with a gaussian of equal mean and variance
-            # that allows us to integrate the probability that we would see <N spikes in the center of the
-            # cross-correlogram from a distribution with mean R00*i spikes
-            p = 1/2 * (1 + erf((n - lam)/sqrt(2*lam)))
-
-            Ri[i-1] = p  # keep track of p for each bin size i
-
-        K[nbins] = a  # restore the center value of the cross-correlogram
-        Qin = Qi/Q00  # normalize the normalized refractory index in two different ways
-        Qin1 = Qi/Q01
-
-        # Q = min(Qi/(max(Q00, Q01))); % this is a measure of refractoriness
-        # R = min(Ri); % this is a second measure of refractoriness (kicks in for very low firing rates)
-        return K, Qi, Q00, Q01, Ri
-
     def contamination_percent(self,
                               x1: np.ndarray,
                               x2: None,
@@ -802,7 +697,7 @@ class SpikeCalcsGeneric(object):
 
         def get_normd_shoulder(idx):
             return np.sum(c[idx[:-1]]) / (len(np.nonzero(idx)[0]) *
-                                   tbin * len(x1) * len(x2) / Tr)
+                                          tbin * len(x1) * len(x2) / Tr)
 
         Q00 = get_normd_shoulder(outer)
         Q01 = max(get_normd_shoulder(inner_left),
@@ -812,7 +707,7 @@ class SpikeCalcsGeneric(object):
                   np.mean(c[inner_left[:-1]]),
                   np.mean(c[inner_right[:-1]]))
 
-        middle_idx = np.nonzero(b==0)[0]
+        middle_idx = np.nonzero(b == 0)[0]
         a = c[middle_idx]
         c[middle_idx] = 0
         Qi = np.zeros(10)
@@ -824,18 +719,22 @@ class SpikeCalcsGeneric(object):
             chunk = get_shoulder(b, irange)
             # compute the same normalized ratio as above;
             # this should be 1 if there is no refractoriness
-            Qi[i] = get_normd_shoulder(chunk) # save the normd prob
+            Qi[i] = get_normd_shoulder(chunk)  # save the normd prob
             n = np.sum(c[chunk[:-1]])/2
             lam = R00 * i
-            # this is tricky: we approximate the Poisson likelihood with a gaussian of equal mean and variance
-            # that allows us to integrate the probability that we would see <N spikes in the center of the
+            # this is tricky: we approximate the Poisson likelihood with a
+            # gaussian of equal mean and variance
+            # that allows us to integrate the probability that we would
+            # see <N spikes in the center of the
             # cross-correlogram from a distribution with mean R00*i spikes
             p = 1/2 * (1 + erf((n - lam)/np.sqrt(2*lam)))
 
             Ri[i] = p  # keep track of p for each bin size i
 
-
-
+        c[middle_idx] = a
+        Q = min(Qi/(max(Q00, Q01)))  # a measure of refractoriness
+        R = min(Ri)  # a second measure (for very low firing rates)
+        return Q, R
 
 
 class SpikeCalcsTetrode(SpikeCalcsGeneric):
@@ -1147,6 +1046,7 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
         cluster_data: KiloSortSession,
         n_waveforms: int = 2000,
         n_channels: int = 64,
+        channel_range = None,
         **kwargs
     ) -> np.ndarray:
         """
@@ -1179,7 +1079,13 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
         n_waveforms = n_waveforms if n_waveforms < total_waves else total_waves
         waveforms_subset = rng.choice(waveforms, n_waveforms)
         # return the waveforms
-        return np.squeeze(waveforms_subset[:, :, 0])
+        if channel_range is None:
+            return np.squeeze(waveforms_subset[:, :, 0])
+        else:
+            if isinstance(channel_range, Sequence):
+                return np.squeeze(waveforms_subset[:, :, channel_range])
+            else:
+                warnings.warn("Invalid channel_range sequence")
 
     def get_channel_depth_from_templates(self, pname: Path):
         """
