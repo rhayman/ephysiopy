@@ -44,19 +44,19 @@ class RateMap(object):
     """
     Bins up positional data (xy, head direction etc) and produces rate maps
     of the relevant kind. This is a generic class meant to be independent of
-    any particular recording format
+    any particular recording format.
 
     Args:
-        xy (ndarray): The xy data, usually given as a 2 x n sample numpy array
-        hdir (ndarray): The head direction data, usualy a 1 x n sample numpy array
-        speed (ndarray): Similar to hdir
+        xy (ndarray): The xy data, usually given as a 2 x n sample numpy array.
+        hdir (ndarray): The head direction data, usually a 1 x n sample numpy array.
+        speed (ndarray): Similar to hdir.
         pos_weights (ndarray): A 1D numpy array n samples long which is used to weight a particular
             position sample when binning data. For example, if there were 5
             positions recorded and a cell spiked once in position 2 and 5 times
             in position 3 and nothing anywhere else then pos_weights looks like:
             [0 0 1 5 0]
             In the case of binning up position this will be an array of mostly 1's
-            unless there are some positions you want excluded for some reason
+            unless there are some positions you want excluded for some reason.
         ppm (int, optional): Pixels per metre. Specifies how many camera pixels per metre so this,
             in combination with cmsPerBin, will determine how many bins there are
             in the rate map. Defaults to None.
@@ -66,7 +66,7 @@ class RateMap(object):
         smooth_sz (int, optional): The width of the smoothing kernel for smoothing rate maps. Defaults to 5.
 
     Notes:
-        There are several instance variables you can set, see below
+        There are several instance variables you can set, see below.
     """
 
     def __init__(
