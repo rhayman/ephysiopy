@@ -57,7 +57,7 @@ class FigureMaker(object):
         Initializes the FigureMaker object with data from PosCalcs.
         """
         self.RateMap = RateMap(self.PosCalcs.xy,
-                               self.PosCalcs.hdir,
+                               self.PosCalcs.dir,
                                self.PosCalcs.speed,)
 
     def _plot_multiple_clusters(self,
