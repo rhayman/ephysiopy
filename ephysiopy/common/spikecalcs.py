@@ -113,8 +113,14 @@ class SpikeCalcsGeneric(object):
         self._secs_per_bin = 0.001
         self._sample_rate = 30000
         self._duration = None
+        # these values should be specific to OE data
         self._pre_spike_samples = 18
         self._post_spike_samples = 32
+        # values from running KS
+        self._amplitude = None
+        self._group = None
+        self._kslabel = None
+        self._contam_pct = None
         # update the __dict__ attribute with the kwargs
         self.__dict__.update(kwargs)
 
@@ -802,7 +808,7 @@ class SpikeCalcsGeneric(object):
 
         def get_normd_shoulder(idx):
             return np.sum(c[idx[:-1]]) / (len(np.nonzero(idx)[0]) *
-                                   tbin * len(x1) * len(x2) / Tr)
+                                          tbin * len(x1) * len(x2) / Tr)
 
         Q00 = get_normd_shoulder(outer)
         Q01 = max(get_normd_shoulder(inner_left),
@@ -812,7 +818,7 @@ class SpikeCalcsGeneric(object):
                   np.mean(c[inner_left[:-1]]),
                   np.mean(c[inner_right[:-1]]))
 
-        middle_idx = np.nonzero(b==0)[0]
+        middle_idx = np.nonzero(b == 0)[0]
         a = c[middle_idx]
         c[middle_idx] = 0
         Qi = np.zeros(10)
@@ -824,7 +830,7 @@ class SpikeCalcsGeneric(object):
             chunk = get_shoulder(b, irange)
             # compute the same normalized ratio as above;
             # this should be 1 if there is no refractoriness
-            Qi[i] = get_normd_shoulder(chunk) # save the normd prob
+            Qi[i] = get_normd_shoulder(chunk)  # save the normd prob
             n = np.sum(c[chunk[:-1]])/2
             lam = R00 * i
             # this is tricky: we approximate the Poisson likelihood with a gaussian of equal mean and variance
@@ -833,9 +839,6 @@ class SpikeCalcsGeneric(object):
             p = 1/2 * (1 + erf((n - lam)/np.sqrt(2*lam)))
 
             Ri[i] = p  # keep track of p for each bin size i
-
-
-
 
 
 class SpikeCalcsTetrode(SpikeCalcsGeneric):
