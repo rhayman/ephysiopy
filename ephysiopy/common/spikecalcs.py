@@ -112,8 +112,14 @@ class SpikeCalcsGeneric(object):
         self._secs_per_bin = 0.001
         self._sample_rate = 30000
         self._duration = None
+        # these values should be specific to OE data
         self._pre_spike_samples = 18
         self._post_spike_samples = 32
+        # values from running KS
+        self._amplitude = None
+        self._group = None
+        self._kslabel = None
+        self._contam_pct = None
         # update the __dict__ attribute with the kwargs
         self.__dict__.update(kwargs)
 
@@ -708,6 +714,7 @@ class SpikeCalcsGeneric(object):
                   np.mean(c[inner_right[:-1]]))
 
         middle_idx = np.nonzero(b == 0)[0]
+        middle_idx = np.nonzero(b == 0)[0]
         a = c[middle_idx]
         c[middle_idx] = 0
         Qi = np.zeros(10)
@@ -719,7 +726,7 @@ class SpikeCalcsGeneric(object):
             chunk = get_shoulder(b, irange)
             # compute the same normalized ratio as above;
             # this should be 1 if there is no refractoriness
-            Qi[i] = get_normd_shoulder(chunk)  # save the normd prob
+            Qi[i] = get_normd_shoulder(chunk)   # save the normd prob
             n = np.sum(c[chunk[:-1]])/2
             lam = R00 * i
             # this is tricky: we approximate the Poisson likelihood with a
@@ -1046,7 +1053,7 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
         cluster_data: KiloSortSession,
         n_waveforms: int = 2000,
         n_channels: int = 64,
-        channel_range = None,
+        channel_range=None,
         **kwargs
     ) -> np.ndarray:
         """
