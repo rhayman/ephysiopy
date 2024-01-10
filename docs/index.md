@@ -14,7 +14,7 @@ from pathlib import Path
 trial = OpenEphysBase(Path("/path/to/top/folder"))
 trial.load_pos_data()
 trial.load_neural_data()
-trial.get_rate_map(1, 1)
+trial.rate_map(1, 1)
 ```
 
 This will load the data recorded with openephys contained
