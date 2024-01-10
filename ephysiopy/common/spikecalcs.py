@@ -205,6 +205,38 @@ class SpikeCalcsGeneric(object):
     def secs_per_bin(self, value):
         self._secs_per_bin = value
 
+    @property
+    def amplitude(self):
+        return self._amplitude
+
+    @amplitude.setter
+    def amplitude(self, value):
+        self._amplitude = value
+
+    @property
+    def group(self):
+        return self._group
+
+    @group.setter
+    def group(self, value):
+        self._group = value
+
+    @property
+    def kslabel(self):
+        return self._kslabel
+
+    @kslabel.setter
+    def kslabel(self, value):
+        self._kslabel = value
+
+    @property
+    def contam_pct(self):
+        return self._contam_pct
+
+    @contam_pct.setter
+    def contam_pct(self, value):
+        self._contam_pct = value
+
     def trial_mean_fr(self, cluster: int) -> float:
         # Returns the trial mean firing rate for the cluster
         if self.duration is None:
