@@ -205,6 +205,38 @@ class SpikeCalcsGeneric(object):
     def secs_per_bin(self, value):
         self._secs_per_bin = value
 
+    @property
+    def amplitude(self):
+        return self._amplitude
+
+    @amplitude.setter
+    def amplitude(self, value):
+        self._amplitude = value
+
+    @property
+    def group(self):
+        return self._group
+
+    @group.setter
+    def group(self, value):
+        self._group = value
+
+    @property
+    def kslabel(self):
+        return self._kslabel
+
+    @kslabel.setter
+    def kslabel(self, value):
+        self._kslabel = value
+
+    @property
+    def contam_pct(self):
+        return self._contam_pct
+
+    @contam_pct.setter
+    def contam_pct(self, value):
+        self._contam_pct = value
+
     def trial_mean_fr(self, cluster: int) -> float:
         # Returns the trial mean firing rate for the cluster
         if self.duration is None:
@@ -266,7 +298,7 @@ class SpikeCalcsGeneric(object):
             y.extend((x2[t[0]: t[1]] - x1[i]))
         y = np.array(y, dtype=float)
         counts, bins = np.histogram(y[y != 0],
-                                    bins=int(np.ptp(Trange)/binsize),
+                                    bins=int(np.ptp(Trange)/binsize)+1,
                                     range=Trange)
         return counts, bins
 
@@ -711,9 +743,8 @@ class SpikeCalcsGeneric(object):
 
         R00 = max(np.mean(c[outer[:-1]]),
                   np.mean(c[inner_left[:-1]]),
-                  np.mean(c[inner_right[:-1]]))
+                  np.mean(c[inner_right[1:]]))
 
-        middle_idx = np.nonzero(b == 0)[0]
         middle_idx = np.nonzero(b == 0)[0]
         a = c[middle_idx]
         c[middle_idx] = 0
@@ -727,9 +758,8 @@ class SpikeCalcsGeneric(object):
             # compute the same normalized ratio as above;
             # this should be 1 if there is no refractoriness
             Qi[i] = get_normd_shoulder(chunk)  # save the normd prob
-            Qi[i] = get_normd_shoulder(chunk)  # save the normd prob
             n = np.sum(c[chunk[:-1]])/2
-            lam = R00 * i
+            lam = R00 * (i+1)
             # this is tricky: we approximate the Poisson likelihood with a
             # gaussian of equal mean and variance
             # that allows us to integrate the probability that we would
@@ -1054,7 +1084,7 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
         cluster_data: KiloSortSession,
         n_waveforms: int = 2000,
         n_channels: int = 64,
-        channel_range = None,
+        channel_range=None,
         **kwargs
     ) -> np.ndarray:
         """
@@ -1156,3 +1186,31 @@ class SpikeCalcsProbe(SpikeCalcsGeneric):
 
     def __init__(self):
         pass
+
+
+def xcorr(s1: SpikeCalcsGeneric,
+          s2: SpikeCalcsGeneric = None,
+          Trange: Sequence = None,
+          binsize: float = 0.001,
+          **kwargs) -> tuple:
+    """
+    Calculates the ISIs in x1 or x1 vs x2 within a given range
+    """
+    if s2 is None:
+        s2 = s1.copy()
+    if Trange is None:
+        Trange = np.array([-0.5, 0.5])
+    if isinstance(Trange, list):
+        Trange = np.array(Trange)
+    y = []
+    x1 = s1.spike_times
+    x2 = s2.spike_times
+    irange = x1[:, np.newaxis] + Trange[np.newaxis, :]
+    dts = np.searchsorted(x2, irange)
+    for i, t in enumerate(dts):
+        y.extend((x2[t[0]: t[1]] - x1[i]))
+    y = np.array(y, dtype=float)
+    counts, bins = np.histogram(y[y != 0],
+                                bins=int(np.ptp(Trange)/binsize),
+                                range=Trange)
+    return counts, bins
