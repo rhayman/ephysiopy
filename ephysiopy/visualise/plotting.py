@@ -869,7 +869,7 @@ class FigureMaker(object):
             xrange = kwargs["Trange"]
         else:
             xrange = [-0.5, 0.5]
-        ax.bar(b[:-1], c, width=binsize, color="k")
+        ax.bar(b[:-1], c, width=binsize, color="k", align="edge")
         ax.set_xlim(xrange)
         ax.set_xticks((xrange[0], 0, xrange[1]))
         ax.set_xticklabels("")
