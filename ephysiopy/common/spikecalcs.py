@@ -298,7 +298,7 @@ class SpikeCalcsGeneric(object):
             y.extend((x2[t[0]: t[1]] - x1[i]))
         y = np.array(y, dtype=float)
         counts, bins = np.histogram(y[y != 0],
-                                    bins=int(np.ptp(Trange)/binsize),
+                                    bins=int(np.ptp(Trange)/binsize)+1,
                                     range=Trange)
         return counts, bins
 
@@ -760,7 +760,7 @@ class SpikeCalcsGeneric(object):
             # this should be 1 if there is no refractoriness
             Qi[i] = get_normd_shoulder(chunk)   # save the normd prob
             n = np.sum(c[chunk[:-1]])/2
-            lam = R00 * i
+            lam = R00 * (i+1)
             # this is tricky: we approximate the Poisson likelihood with a
             # gaussian of equal mean and variance
             # that allows us to integrate the probability that we would
