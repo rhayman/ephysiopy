@@ -321,7 +321,7 @@ class SpikeCalcsGeneric(object):
 
     Args:
         spike_times (array_like): The times of spikes in the trial.
-        waveforms (np.array, optional): An nSpikes x nSamples array
+        waveforms (np.array, optional): An nSpikes x nChannels x nSamples array
 
     """
 
@@ -330,7 +330,7 @@ class SpikeCalcsGeneric(object):
                  waveforms: np.ndarray = None,
                  **kwargs):
         self.spike_times = spike_times  # IN SECONDS
-        self.waveforms = waveforms
+        self._waveforms = waveforms
         self.cluster = cluster
         self._event_ts = None  # the times that events occured IN SECONDS
         # window, in seconds, either side of the stimulus, to examine
@@ -375,6 +375,22 @@ class SpikeCalcsGeneric(object):
     @post_spike_samples.setter
     def post_spike_samples(self, value):
         self._post_spike_samples = int(self._post_spike_samples)
+
+    @property
+    def waveforms(self, channel_id: Sequence = None):
+        if isinstance(channel_id, int):
+            channel_id = [channel_id]
+        if self._waveforms is not None:
+            if channel_id is None:
+                return self._waveforms
+            else:
+                return self._waveforms[:, channel_id, :]
+        else:
+            return None
+
+    @waveforms.setter
+    def waveforms(self, value):
+        self._waveforms = value
 
     @property
     def n_spikes(self):
@@ -484,22 +500,7 @@ class SpikeCalcsGeneric(object):
         mask = np.logical_and(bins > 0, bins < isi_range)
         return np.mean(counts[mask[1:]])
 
-    def waveforms(self, channel_id: int):
-        """
-        Get the waveforms for a particular cluster on a given channel
-
-        Args:
-            clust_id (int)
-
-        Returns:
-            np.array: the waveforms
-        """
-        if self.waveforms is not None:
-            return self.waveforms[:, channel_id, :]
-        else:
-            return None
-
-    def mean_waveform(self, channel_id: int):
+    def mean_waveform(self, channel_id: Sequence = None):
         """
         Returns the mean waveform and sem for a given spike train on a
         particular channel

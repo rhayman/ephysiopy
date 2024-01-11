@@ -6,6 +6,9 @@ from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 from scipy import signal
 
+# WARNING - THIS WILL NOT WORK AT THE MOMENT (2024-01-11) AS THE
+# CLUSTER ID IS SET TO 1 IN __INIT__
+
 
 class CosineDirectionalTuning(object):
     """
@@ -54,7 +57,7 @@ class CosineDirectionalTuning(object):
         self.posCalcs = PosCalcsGeneric(
             x, y, 230, cm=True, jumpmax=100, tracker_params=tracker_params
         )
-        self.spikeCalcs = SpikeCalcsGeneric(spike_times)
+        self.spikeCalcs = SpikeCalcsGeneric(spike_times, spk_clusters[0])
         self.spikeCalcs.spk_clusters = spk_clusters
         self.posCalcs.postprocesspos(tracker_params)
         xy = self.posCalcs.xy
@@ -701,7 +704,7 @@ class LFPOscillations(object):
         # cluster_times in samples (@30000Hz)
         # get indices into the phase vector
         phase_idx = np.array(cluster_times/(3e4/self.fs), dtype=int)
-        # It's possible that there are indices higher than the length of 
+        # It's possible that there are indices higher than the length of
         # the phase vector so lets set them to the last index
         bad_idx = np.nonzero(phase_idx > len(phase))[0]
         phase_idx[bad_idx] = len(phase) - 1

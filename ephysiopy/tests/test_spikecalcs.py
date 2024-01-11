@@ -48,13 +48,13 @@ def test_mean_isi_range(path_to_axona_data):
 def test_xcorr(path_to_axona_data):
     S = get_spikecalcs_instance(path_to_axona_data)
     S.acorr()
-    y, bins = S.xcorr(Trange=[-100, 100])
+    y, bins = S.acorr(Trange=[-100, 100])
     assert (isinstance(y, np.ndarray))
 
 
 def test_mean_waveforms(path_to_axona_data):
     S = get_spikecalcs_instance(path_to_axona_data)
-    S.mean_waveform(1)
+    S.mean_waveform()
     with pytest.raises(IndexError):
         S.mean_waveform(9999)
     S.waveforms(1)
