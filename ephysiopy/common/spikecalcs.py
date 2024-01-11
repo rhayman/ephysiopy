@@ -156,7 +156,7 @@ def cluster_quality(waveforms: np.ndarray = None,
     E = E[:, ~zeroIdx]
     wvs = wvs[:, ~zeroIdx, :]
     normdWaves = (wvs.T / E.T).T
-    PCA_m = getParam(normdWaves, "PCA", fet=fet)
+    PCA_m = get_param(normdWaves, "PCA", fet=fet)
     badIdx = np.sum(PCA_m, axis=0) == 0
     PCA_m = PCA_m[:, ~badIdx]
     # get mahalanobis distance
@@ -1021,8 +1021,8 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
                 Units are ms.
         """
         best_chan = np.argmax(np.max(np.mean(waveforms, 0), 1))
-        tP = self.getParam(waveforms, param="tP")
-        tT = self.getParam(waveforms, param="tT")
+        tP = get_param(waveforms, param="tP")
+        tT = get_param(waveforms, param="tT")
         mn_tP = np.mean(tP, 0)
         mn_tT = np.mean(tT, 0)
         p2t = np.abs(mn_tP[best_chan] - mn_tT[best_chan])
@@ -1048,7 +1048,7 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
 
         self.scaling = np.full(4, 15)
 
-        amps = self.getParam(waveforms, param=param)
+        amps = get_param(waveforms, param=param)
         cmap = np.tile(tcols[0], (bins, 1))
         cmap[0] = (1, 1, 1)
         cmap = colors.ListedColormap(cmap)

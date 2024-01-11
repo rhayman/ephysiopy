@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
+from ephysiopy.common.spikecalcs import SpikeCalcsGeneric, get_param
 from ephysiopy.common.spikecalcs import SpikeCalcsAxona
 from ephysiopy.io.recording import AxonaTrial
 
@@ -89,11 +89,9 @@ def test_get_param(path_to_axona_data):
     T.load_pos_data()
     waveforms = T.TETRODE[1].waveforms
     waveforms = waveforms[T.TETRODE[1].cut == 1, :, :]
-    spk_ts = T.TETRODE.get_spike_samples(1, 1)
-    S = SpikeCalcsAxona(spk_ts)
     params = ['Amp', 'P', 'T', 'Vt', 'tP', 'tT', 'PCA']
     for param in params:
-        S.getParam(waveforms, param=param)
+        get_param(waveforms, param=param)
 
 
 def test_half_amp_duration(path_to_axona_data):
