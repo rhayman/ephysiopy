@@ -207,28 +207,24 @@ def test_calculate_psth(basic_SpikeCalcs):
 
 
 def test_theta_mod_idx(basic_SpikeCalcs):
-    c1_times = basic_SpikeCalcs.spike_times
-    tm = basic_SpikeCalcs.theta_mod_idx(c1_times)
+    tm = basic_SpikeCalcs.theta_mod_idx()
     assert isinstance(tm, float)
 
 
 def test_theta_mod_idx2(basic_SpikeCalcs):
-    c1_times = basic_SpikeCalcs.spike_times
-    tm = basic_SpikeCalcs.theta_mod_idxV2(c1_times)
+    tm = basic_SpikeCalcs.theta_mod_idxV2()
     assert isinstance(tm, float)
 
 
 def test_theta_band_max_freq(basic_SpikeCalcs):
-    c1_times = basic_SpikeCalcs.spike_times
-    tm = basic_SpikeCalcs.theta_band_max_freq(c1_times)
+    tm = basic_SpikeCalcs.theta_band_max_freq()
     assert isinstance(tm, float)
 
 
 def test_smooth_spike_pos_count(basic_SpikeCalcs):
-    c1_times = basic_SpikeCalcs.spike_times
     # Assume a 10 second trial sampled at 30Hz so times are congruous
     # with the spiking data
-    sm_spks = basic_SpikeCalcs.smooth_spike_train(c1_times, npos=3000)
+    sm_spks = basic_SpikeCalcs.smooth_spike_train(npos=3000)
     assert isinstance(sm_spks, np.ndarray)
 
 
@@ -244,9 +240,7 @@ def test_plot_ifr_sp_corr(basic_SpikeCalcsTetrode, basic_xy):
     speed = speed / (1 / 30.0)  # pos sample rate=30
     # Need to provide the indices of position at which the cell fired
     # so need to do some timebase conversion stuff
-    c1_times = basic_SpikeCalcsTetrode.spike_times[
-        basic_SpikeCalcsTetrode.spk_clusters == 1
-    ]
+    c1_times = basic_SpikeCalcsTetrode.spike_times
     c1_pos_idx = np.floor(c1_times / 3e4 * 30).astype(int)
     basic_SpikeCalcsTetrode.ifr_sp_corr(c1_pos_idx, speed, plot=True)
 

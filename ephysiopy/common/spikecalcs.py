@@ -220,6 +220,93 @@ def xcorr(x1: np.ndarray,
     return counts, bins
 
 
+def contamination_percent(
+        x1: np.ndarray,
+        x2: None,
+        **kwargs) -> tuple:
+    '''
+    Computes the cross-correlogram between two sets of spikes and
+    estimates how refractory the cross-correlogram is.
+
+    Args:
+        st1 (np.array): The first set of spikes.
+        st2 (np.array): The second set of spikes.
+
+    kwargs:
+        Anything that can be fed into xcorr above
+
+    Returns:
+        Q (float): a measure of refractoriness
+        R (float): a second measure of refractoriness
+                (kicks in for very low firing rates)
+
+    Notes:
+        Taken from KiloSorts ccg.m
+
+        The contamination metrics are calculated based on
+        an analysis of the 'shoulders' of the cross-correlogram.
+        Specifically, the spike counts in the ranges +/-5-25ms and
+        +/-250-500ms are compared for refractoriness
+    '''
+    if x2 is None:
+        x1 = x2.copy()
+    c, b = xcorr(x1, x2, **kwargs)
+    left = [[-0.05, -0.01]]
+    right = [[0.01, 0.051]]
+    far = [[-0.5, -0.249], [0.25, 0.501]]
+
+    def get_shoulder(bins, vals):
+        all = np.array([np.logical_and(bins >= i[0], bins < i[1])
+                        for i in vals])
+        return np.any(all, 0)
+
+    inner_left = get_shoulder(b, left)
+    inner_right = get_shoulder(b, right)
+    outer = get_shoulder(b, far)
+
+    tbin = 500 * 0.001
+    Tr = max(np.concatenate([x1, x2])) - min(np.concatenate([x1, x2]))
+
+    def get_normd_shoulder(idx):
+        return np.sum(c[idx[:-1]]) / (len(np.nonzero(idx)[0]) *
+                                      tbin * len(x1) * len(x2) / Tr)
+
+    Q00 = get_normd_shoulder(outer)
+    Q01 = max(get_normd_shoulder(inner_left),
+              get_normd_shoulder(inner_right))
+
+    R00 = max(np.mean(c[outer[:-1]]),
+              np.mean(c[inner_left[:-1]]),
+              np.mean(c[inner_right[1:]]))
+
+    middle_idx = np.nonzero(b == 0)[0]
+    a = c[middle_idx]
+    c[middle_idx] = 0
+    Qi = np.zeros(10)
+    Ri = np.zeros(10)
+    # enumerate through the central range of the xcorr
+    # saving the same calculation as done above
+    for i, t in enumerate(np.linspace(0.001, 0.01, 10)):
+        irange = [[-t, t]]
+        chunk = get_shoulder(b, irange)
+        # compute the same normalized ratio as above;
+        # this should be 1 if there is no refractoriness
+        Qi[i] = get_normd_shoulder(chunk)  # save the normd prob
+        n = np.sum(c[chunk[:-1]])/2
+        lam = R00 * i
+        # this is tricky: we approximate the Poisson likelihood with a
+        # gaussian of equal mean and variance
+        # that allows us to integrate the probability that we would see <N
+        # spikes in the center of the
+        # cross-correlogram from a distribution with mean R00*i spikes
+        p = 1/2 * (1 + erf((n - lam)/np.sqrt(2*lam)))
+
+        Ri[i] = p  # keep track of p for each bin size i
+
+    c[middle_idx] = a  # restore the center value of the cross-correlogram
+    return c, Qi, Q00, Q01, Ri
+
+
 KSMeta = namedtuple(
     'KSMeta', 'amplitude group kslabel contam_pct ')
 
@@ -289,6 +376,7 @@ class SpikeCalcsGeneric(object):
     def post_spike_samples(self, value):
         self._post_spike_samples = int(self._post_spike_samples)
 
+    @property
     def n_spikes(self):
         """
         Returns the number of spikes in the cluster
@@ -357,7 +445,7 @@ class SpikeCalcsGeneric(object):
     def secs_per_bin(self, value):
         self._secs_per_bin = value
 
-    def acorr(self, ts: np.ndarray, Trange: np.ndarray = None) -> tuple:
+    def acorr(self, Trange: np.ndarray = None) -> tuple:
         """
         Calculates the autocorrelogram of a spike train
 
@@ -371,7 +459,7 @@ class SpikeCalcsGeneric(object):
             bins (np.ndarray): The bins used to calculate the
                 autocorrelogram
         """
-        return xcorr(ts, ts, Trange=Trange)
+        return xcorr(self.spike_times, Trange=Trange)
 
     def trial_mean_fr(self) -> float:
         # Returns the trial mean firing rate for the cluster
@@ -605,7 +693,7 @@ class SpikeCalcsGeneric(object):
                 return False, normd, 0
             return False, normd
 
-    def theta_mod_idx(self, x1):
+    def theta_mod_idx(self):
         """
         Calculates a theta modulation index of a spike train based on the cells
         autocorrelogram.
@@ -617,7 +705,7 @@ class SpikeCalcsGeneric(object):
             thetaMod (float): The difference of the values at the first peak
             and trough of the autocorrelogram.
         """
-        corr, _ = self.acorr(x1)
+        corr, _ = self.acorr(self.spike_times)
         # Take the fft of the spike train autocorr (from -500 to +500ms)
         from scipy.signal import periodogram
 
@@ -641,7 +729,7 @@ class SpikeCalcsGeneric(object):
         # Find the ratio of these two - this is the theta modulation index
         return (mtbp - mobp) / (mtbp + mobp)
 
-    def theta_mod_idxV2(self, x1):
+    def theta_mod_idxV2(self):
         """
         This is a simpler alternative to the theta_mod_idx method in that it
         calculates the difference between the normalized temporal
@@ -650,7 +738,7 @@ class SpikeCalcsGeneric(object):
 
         Measure used in Cacucci et al., 2004 and Kropff et al 2015
         """
-        corr, bins = self.acorr(x1)
+        corr, bins = self.acorr(self.spike_times)
         # 'close' the right-hand bin
         bins = bins[0:-1]
         # normalise corr so max is 1.0
@@ -659,7 +747,7 @@ class SpikeCalcsGeneric(object):
         thetaPhase = np.max(corr[np.logical_and(bins > 100, bins < 140)])
         return (thetaPhase - thetaAntiPhase) / (thetaPhase + thetaAntiPhase)
 
-    def theta_band_max_freq(self, x1):
+    def theta_band_max_freq(self):
         """
     Calculates the frequency with the maximum power in the theta band (6-12Hz)
     of a spike train's autocorrelogram.
@@ -678,7 +766,7 @@ class SpikeCalcsGeneric(object):
     Raises:
         ValueError: If the input spike train is not valid.
     """
-        corr, _ = self.acorr(x1)
+        corr, _ = self.acorr(self.spike_times)
         # Take the fft of the spike train autocorr (from -500 to +500ms)
         from scipy.signal import periodogram
 
@@ -687,7 +775,7 @@ class SpikeCalcsGeneric(object):
                                          np.logical_or(freqs < 6, freqs > 12))
         return freqs[np.argmax(power_masked)]
 
-    def smooth_spike_train(self, x1, npos, sigma=3.0, shuffle=None):
+    def smooth_spike_train(self, npos, sigma=3.0, shuffle=None):
         """
         Returns a spike train the same length as num pos samples that has been
         smoothed in time with a gaussian kernel M in width and standard
@@ -704,7 +792,7 @@ class SpikeCalcsGeneric(object):
         Returns:
             smoothed_spikes (np.array): The smoothed spike train.
         """
-        spk_hist = np.bincount(x1, minlength=npos)
+        spk_hist = np.bincount(self.spike_times, minlength=npos)
         if shuffle is not None:
             spk_hist = np.roll(spk_hist, int(shuffle * 50))
         # smooth the spk_hist (which is a temporal histogram) with a 250ms
@@ -713,96 +801,10 @@ class SpikeCalcsGeneric(object):
         h = h / float(np.sum(h))
         return signal.filtfilt(h.ravel(), 1, spk_hist)
 
-    def _contamination_percent(self,
-                               x1: np.ndarray,
-                               x2: None,
-                               **kwargs) -> tuple:
-        '''
-        Computes the cross-correlogram between two sets of spikes and
-        estimates how refractory the cross-correlogram is.
-
-        Args:
-            st1 (np.array): The first set of spikes.
-            st2 (np.array): The second set of spikes.
-
-        kwargs:
-            Anything that can be fed into xcorr above
-
-        Returns:
-            Q (float): a measure of refractoriness
-            R (float): a second measure of refractoriness
-                 (kicks in for very low firing rates)
-
-        Notes:
-            Taken from KiloSorts ccg.m
-
-            The contamination metrics are calculated based on
-            an analysis of the 'shoulders' of the cross-correlogram.
-            Specifically, the spike counts in the ranges +/-5-25ms and
-            +/-250-500ms are compared for refractoriness
-        '''
-        c, b = xcorr(x1, x2, **kwargs)
-        left = [[-0.05, -0.01]]
-        right = [[0.01, 0.051]]
-        far = [[-0.5, -0.249], [0.25, 0.501]]
-
-        def get_shoulder(bins, vals):
-            all = np.array([np.logical_and(bins >= i[0], bins < i[1])
-                           for i in vals])
-            return np.any(all, 0)
-
-        inner_left = get_shoulder(b, left)
-        inner_right = get_shoulder(b, right)
-        outer = get_shoulder(b, far)
-
-        tbin = 500 * 0.001
-        Tr = max(np.concatenate([x1, x2])) - min(np.concatenate([x1, x2]))
-
-        def get_normd_shoulder(idx):
-            return np.sum(c[idx[:-1]]) / (len(np.nonzero(idx)[0]) *
-                                          tbin * len(x1) * len(x2) / Tr)
-
-        Q00 = get_normd_shoulder(outer)
-        Q01 = max(get_normd_shoulder(inner_left),
-                  get_normd_shoulder(inner_right))
-
-        R00 = max(np.mean(c[outer[:-1]]),
-                  np.mean(c[inner_left[:-1]]),
-                  np.mean(c[inner_right[1:]]))
-
-        middle_idx = np.nonzero(b == 0)[0]
-        a = c[middle_idx]
-        c[middle_idx] = 0
-        Qi = np.zeros(10)
-        Ri = np.zeros(10)
-        # enumerate through the central range of the xcorr
-        # saving the same calculation as done above
-        for i, t in enumerate(np.linspace(0.001, 0.01, 10)):
-            irange = [[-t, t]]
-            chunk = get_shoulder(b, irange)
-            # compute the same normalized ratio as above;
-            # this should be 1 if there is no refractoriness
-            Qi[i] = get_normd_shoulder(chunk)  # save the normd prob
-            n = np.sum(c[chunk[:-1]])/2
-            lam = R00 * i
-            # this is tricky: we approximate the Poisson likelihood with a
-            # gaussian of equal mean and variance
-            # that allows us to integrate the probability that we would see <N
-            # spikes in the center of the
-            # cross-correlogram from a distribution with mean R00*i spikes
-            p = 1/2 * (1 + erf((n - lam)/np.sqrt(2*lam)))
-
-            Ri[i] = p  # keep track of p for each bin size i
-
-        c[middle_idx] = a  # restore the center value of the cross-correlogram
-        return c, Qi, Q00, Q01, Ri
-
     def contamination_percent(self,
-                              x1: np.ndarray,
-                              x2: None,
                               **kwargs) -> tuple:
 
-        c, Qi, Q00, Q01, Ri = self._contamination_percent(x1, x2, **kwargs)
+        c, Qi, Q00, Q01, Ri = contamination_percent(self.spike_times, **kwargs)
         Q = min(Qi/(max(Q00, Q01)))  # this is a measure of refractoriness
         # this is a second measure of refractoriness (kicks in for very low
         # firing rates)
