@@ -181,52 +181,51 @@ def test_ifft_filter(basic_EEGCalcs):
 # ------------ SpikeCalcsGeneric testing ----------------------
 # -----------------------------------------------------------------------
 def test_trial_mean_firing_rate(basic_SpikeCalcs):
-    fr = basic_SpikeCalcs.trial_mean_fr(1)
+    fr = basic_SpikeCalcs.trial_mean_fr()
     assert isinstance(fr, float)
 
 
 def test_count_spikes(basic_SpikeCalcs):
-    n = basic_SpikeCalcs.n_spikes(1)
+    n = basic_SpikeCalcs.n_spikes()
     assert isinstance(n, int)
 
 
 def test_mean_isi_range(basic_SpikeCalcs):
-    mn_count = basic_SpikeCalcs.mean_isi_range(1, 500)
+    mn_count = basic_SpikeCalcs.mean_isi_range(500)
     assert isinstance(mn_count, float)
 
 
-def test_xcorr(basic_SpikeCalcs):
-    c1_times = basic_SpikeCalcs.spike_times[basic_SpikeCalcs.spk_clusters == 1]
-    xc, bins = basic_SpikeCalcs.xcorr(c1_times)
+def test_acorr(basic_SpikeCalcs):
+    xc, _ = basic_SpikeCalcs.acorr()
     assert isinstance(xc, np.ndarray)
 
 
 def test_calculate_psth(basic_SpikeCalcs):
-    x, y = basic_SpikeCalcs.psth(1)
+    x, y = basic_SpikeCalcs.psth()
     assert isinstance(x, list)
     assert isinstance(y, list)
 
 
 def test_theta_mod_idx(basic_SpikeCalcs):
-    c1_times = basic_SpikeCalcs.spike_times[basic_SpikeCalcs.spk_clusters == 1]
+    c1_times = basic_SpikeCalcs.spike_times
     tm = basic_SpikeCalcs.theta_mod_idx(c1_times)
     assert isinstance(tm, float)
 
 
 def test_theta_mod_idx2(basic_SpikeCalcs):
-    c1_times = basic_SpikeCalcs.spike_times[basic_SpikeCalcs.spk_clusters == 1]
+    c1_times = basic_SpikeCalcs.spike_times
     tm = basic_SpikeCalcs.theta_mod_idxV2(c1_times)
     assert isinstance(tm, float)
 
 
 def test_theta_band_max_freq(basic_SpikeCalcs):
-    c1_times = basic_SpikeCalcs.spike_times[basic_SpikeCalcs.spk_clusters == 1]
+    c1_times = basic_SpikeCalcs.spike_times
     tm = basic_SpikeCalcs.theta_band_max_freq(c1_times)
     assert isinstance(tm, float)
 
 
 def test_smooth_spike_pos_count(basic_SpikeCalcs):
-    c1_times = basic_SpikeCalcs.spike_times[basic_SpikeCalcs.spk_clusters == 1]
+    c1_times = basic_SpikeCalcs.spike_times
     # Assume a 10 second trial sampled at 30Hz so times are congruous
     # with the spiking data
     sm_spks = basic_SpikeCalcs.smooth_spike_train(c1_times, npos=3000)

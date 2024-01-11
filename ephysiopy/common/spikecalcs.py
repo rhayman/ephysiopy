@@ -1,6 +1,7 @@
 import os
 import warnings
 from pathlib import Path
+from collections import namedtuple
 from astropy.convolution import convolve, Box1DKernel, Gaussian1DKernel
 
 import h5py
@@ -219,6 +220,10 @@ def xcorr(x1: np.ndarray,
     return counts, bins
 
 
+KSMeta = namedtuple(
+    'KSMeta', 'amplitude group kslabel contam_pct ')
+
+
 class SpikeCalcsGeneric(object):
     """
     Deals with the processing and analysis of spike data.
@@ -233,9 +238,13 @@ class SpikeCalcsGeneric(object):
 
     """
 
-    def __init__(self, spike_times, waveforms=None, **kwargs):
+    def __init__(self, spike_times: np.ndarray,
+                 cluster: int,
+                 waveforms: np.ndarray = None,
+                 **kwargs):
         self.spike_times = spike_times  # IN SECONDS
         self.waveforms = waveforms
+        self.cluster = cluster
         self._event_ts = None  # the times that events occured IN SECONDS
         # window, in seconds, either side of the stimulus, to examine
         self._event_window = np.array((-0.050, 0.100))
@@ -248,6 +257,7 @@ class SpikeCalcsGeneric(object):
         self._pre_spike_samples = 18
         self._post_spike_samples = 32
         # values from running KS
+        self._KSMeta = KSMeta(None, None, None, None)
         self._amplitude = None
         self._group = None
         self._kslabel = None
@@ -279,15 +289,14 @@ class SpikeCalcsGeneric(object):
     def post_spike_samples(self, value):
         self._post_spike_samples = int(self._post_spike_samples)
 
-    def n_spikes(self, cluster=None):
-        if cluster is None:
-            return len(self.spike_times)
-        else:
-            if self.spk_clusters is None:
-                warnings.warn("No clusters available, please load some.")
-                return
-            else:
-                return np.count_nonzero(self._spk_clusters == cluster)
+    def n_spikes(self):
+        """
+        Returns the number of spikes in the cluster
+
+        Returns:
+            int: The number of spikes in the cluster
+        """
+        return len(self.spike_times)
 
     @property
     def event_ts(self):
@@ -304,6 +313,25 @@ class SpikeCalcsGeneric(object):
     @duration.setter
     def duration(self, value):
         self._duration = value
+
+    @property
+    def KSMeta(self):
+        return self._KSMeta
+
+    @KSMeta.setter
+    def KSMeta(self, value: dict):
+        """
+        Takes in the template_model attribute of a phy session and
+        parses out the relevant metrics for the cluster and places
+        into the namedtuple KSMeta
+        """
+        for f in KSMeta._fields:
+            metavals = []
+            if f in value.keys():
+                metavals.append(value[f][self.cluster])
+            else:
+                metavals.append(None)
+        self._KSMeta = KSMeta(*metavals)
 
     @property
     def event_window(self):
@@ -345,11 +373,11 @@ class SpikeCalcsGeneric(object):
         """
         return xcorr(ts, ts, Trange=Trange)
 
-    def trial_mean_fr(self, cluster: int) -> float:
+    def trial_mean_fr(self) -> float:
         # Returns the trial mean firing rate for the cluster
         if self.duration is None:
             raise IndexError("No duration provided, give me one!")
-        return self.n_spikes(cluster) / self.duration
+        return self.n_spikes / self.duration
 
     def mean_isi_range(self, isi_range: int) -> float:
         """
