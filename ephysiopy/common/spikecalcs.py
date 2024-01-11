@@ -484,7 +484,7 @@ class SpikeCalcsGeneric(object):
         mask = np.logical_and(bins > 0, bins < isi_range)
         return np.mean(counts[mask[1:]])
 
-    def cluster_waveforms(self, channel_id: int):
+    def waveforms(self, channel_id: int):
         """
         Get the waveforms for a particular cluster on a given channel
 
@@ -513,7 +513,7 @@ class SpikeCalcsGeneric(object):
             std_wvs (ndarray): The standard deviations of the waveforms,
                                 usually 4x50 for tetrode recordings
         """
-        x = self.cluster_waveforms(channel_id)
+        x = self.waveforms(channel_id)
         if x is not None:
             return np.mean(x, axis=0), np.std(x, axis=0)
         else:
@@ -743,8 +743,10 @@ class SpikeCalcsGeneric(object):
         bins = bins[0:-1]
         # normalise corr so max is 1.0
         corr = corr / float(np.max(corr))
-        thetaAntiPhase = np.min(corr[np.logical_and(bins > 50, bins < 70)])
-        thetaPhase = np.max(corr[np.logical_and(bins > 100, bins < 140)])
+        thetaAntiPhase = np.min(
+            corr[np.logical_and(bins > 50/1000., bins < 70/1000.)])
+        thetaPhase = np.max(
+            corr[np.logical_and(bins > 100/1000., bins < 140/1000.)])
         return (thetaPhase - thetaAntiPhase) / (thetaPhase + thetaAntiPhase)
 
     def theta_band_max_freq(self):
