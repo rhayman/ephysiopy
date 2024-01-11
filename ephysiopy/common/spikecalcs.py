@@ -816,8 +816,8 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
     recordings
     """
 
-    def __init__(self, spike_times, waveforms=None, **kwargs):
-        super().__init__(spike_times, waveforms, **kwargs)
+    def __init__(self, spike_times, cluster, waveforms=None, **kwargs):
+        super().__init__(spike_times, cluster, waveforms, **kwargs)
 
     def ifr_sp_corr(
         self,
@@ -1108,8 +1108,8 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
 
 
 class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
-    def __init__(self, spike_times, waveforms=None, **kwargs):
-        super().__init__(spike_times, waveforms, **kwargs)
+    def __init__(self, spike_times, cluster, waveforms=None, **kwargs):
+        super().__init__(spike_times, cluster, waveforms, **kwargs)
         self.n_samples = [-40, 41]
         self.TemplateModel = None
 
@@ -1221,31 +1221,3 @@ class SpikeCalcsProbe(SpikeCalcsGeneric):
 
     def __init__(self):
         pass
-
-
-def xcorr(s1: SpikeCalcsGeneric,
-          s2: SpikeCalcsGeneric = None,
-          Trange: Sequence = None,
-          binsize: float = 0.001,
-          **kwargs) -> tuple:
-    """
-    Calculates the ISIs in x1 or x1 vs x2 within a given range
-    """
-    if s2 is None:
-        s2 = s1.copy()
-    if Trange is None:
-        Trange = np.array([-0.5, 0.5])
-    if isinstance(Trange, list):
-        Trange = np.array(Trange)
-    y = []
-    x1 = s1.spike_times
-    x2 = s2.spike_times
-    irange = x1[:, np.newaxis] + Trange[np.newaxis, :]
-    dts = np.searchsorted(x2, irange)
-    for i, t in enumerate(dts):
-        y.extend((x2[t[0]: t[1]] - x1[i]))
-    y = np.array(y, dtype=float)
-    counts, bins = np.histogram(y[y != 0],
-                                bins=int(np.ptp(Trange)/binsize),
-                                range=Trange)
-    return counts, bins
