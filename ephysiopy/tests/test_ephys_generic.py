@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 from ephysiopy.common.ephys_generic import EEGCalcsGeneric, EventsGeneric
-from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
+from ephysiopy.common.spikecalcs import SpikeCalcsGeneric, SpikeCalcsTetrode
 
 
 @pytest.fixture
@@ -26,7 +26,7 @@ def basic_SpikeCalcs(basic_spike_times_and_cluster_ids):
 def basic_SpikeCalcsTetrode(basic_spike_times_and_cluster_ids):
     spike_times, cluster_ids = basic_spike_times_and_cluster_ids
     cluster = cluster_ids.astype(int)[0]
-    S = SpikeCalcsGeneric(spike_times, cluster)
+    S = SpikeCalcsTetrode(spike_times, cluster)
     S.sample_rate = 30000
     event_ts = np.arange(20, 380, 10)
     S.event_ts = event_ts / S.sample_rate
