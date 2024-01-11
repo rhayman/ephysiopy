@@ -11,6 +11,7 @@ import seaborn as sns
 from ephysiopy.axona import tintcolours as tcols
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 from ephysiopy.common.binning import VariableToBin
+from ephysiopy.common.binning import RateMap
 
 # Decorators
 
@@ -55,6 +56,9 @@ class FigureMaker(object):
         """
         Initializes the FigureMaker object with data from PosCalcs.
         """
+        self.RateMap = RateMap(self.PosCalcs.xy,
+                               self.PosCalcs.dir,
+                               self.PosCalcs.speed,)
 
     def _plot_multiple_clusters(self,
                                 func,
@@ -81,7 +85,7 @@ class FigureMaker(object):
             ts = self.get_spike_times(channel, c)
             func(ts, ax=ax, **kwargs)
 
-    def get_rate_map(self, cluster: int | list, channel: int, **kwargs):
+    def rate_map(self, cluster: int | list, channel: int, **kwargs):
         """
         Gets the rate map for the specified cluster(s) and channel.
 
@@ -100,7 +104,7 @@ class FigureMaker(object):
             self.makeRateMap(ts, **kwargs)
         plt.show()
 
-    def get_hd_map(self, cluster: int | list, channel: int, **kwargs):
+    def hd_map(self, cluster: int | list, channel: int, **kwargs):
         """
         Gets the head direction map for the specified cluster(s) and channel.
 
@@ -122,7 +126,7 @@ class FigureMaker(object):
             self.makeHDPlot(ts, **kwargs)
         plt.show()
 
-    def get_spike_path(self, cluster=None, channel=None, **kwargs):
+    def spike_path(self, cluster=None, channel=None, **kwargs):
         """
         Gets the spike path for the specified cluster(s) and channel.
 
@@ -145,7 +149,7 @@ class FigureMaker(object):
             self.makeSpikePathPlot(ts, **kwargs)
         plt.show()
 
-    def get_eb_map(self, cluster: int | list, channel: int, **kwargs):
+    def eb_map(self, cluster: int | list, channel: int, **kwargs):
         """
         Gets the ego-centric boundary map for the specified cluster(s) and
         channel.
@@ -167,7 +171,7 @@ class FigureMaker(object):
             self.makeEgoCentricBoundaryMap(ts, **kwargs)
         plt.show()
 
-    def get_eb_spikes(self, cluster: int | list, channel: int, **kwargs):
+    def eb_spikes(self, cluster: int | list, channel: int, **kwargs):
         """
         Gets the ego-centric boundary spikes for the specified cluster(s)
         and channel.
@@ -188,7 +192,7 @@ class FigureMaker(object):
             self.makeEgoCentricBoundarySpikePlot(ts, **kwargs)
         plt.show()
 
-    def get_sac(self, cluster: int | list, channel: int, **kwargs):
+    def sac(self, cluster: int | list, channel: int, **kwargs):
         """
         Gets the spatial autocorrelation for the specified cluster(s) and
         channel.
@@ -209,7 +213,7 @@ class FigureMaker(object):
             self.makeSAC(ts, **kwargs)
         plt.show()
 
-    def get_speed_v_rate(self, cluster: int | list, channel: int, **kwargs):
+    def speed_v_rate(self, cluster: int | list, channel: int, **kwargs):
         """
         Gets the speed versus rate plot for the specified cluster(s) and
         channel.
@@ -230,7 +234,7 @@ class FigureMaker(object):
             self.makeSpeedVsRatePlot(ts, **kwargs)
         plt.show()
 
-    def get_speed_v_hd(self, cluster: int | list, channel: int, **kwargs):
+    def speed_v_hd(self, cluster: int | list, channel: int, **kwargs):
         """
         Gets the speed versus head direction plot for the specified cluster(s)
         and channel.
@@ -251,7 +255,7 @@ class FigureMaker(object):
             self.makeSpeedVsHeadDirectionPlot(ts, **kwargs)
         plt.show()
 
-    def get_power_spectrum(self, **kwargs):
+    def power_spectrum(self, **kwargs):
         """
         Gets the power spectrum.
 
@@ -865,7 +869,7 @@ class FigureMaker(object):
             xrange = kwargs["Trange"]
         else:
             xrange = [-0.5, 0.5]
-        ax.bar(b[:-1], c, width=binsize, color="k")
+        ax.bar(b[:-1], c, width=binsize, color="k", align="edge")
         ax.set_xlim(xrange)
         ax.set_xticks((xrange[0], 0, xrange[1]))
         ax.set_xticklabels("")

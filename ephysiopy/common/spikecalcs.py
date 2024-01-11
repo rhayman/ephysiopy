@@ -3,7 +3,7 @@ import warnings
 from pathlib import Path
 from collections import namedtuple
 from astropy.convolution import convolve, Box1DKernel, Gaussian1DKernel
-
+from collections.abc import Sequence
 import h5py
 import matplotlib.pylab as plt
 import numpy as np
@@ -15,7 +15,7 @@ from ephysiopy.common.utils import min_max_norm
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 
 
-def getParam(waveforms, param="Amp", t=200, fet=1):
+def get_param(waveforms, param="Amp", t=200, fet=1):
     """
     Returns the requested parameter from a spike train as a numpy array
 
@@ -84,7 +84,7 @@ def getParam(waveforms, param="Amp", t=200, fet=1):
             return out
 
 
-def mahal(self, u, v):
+def mahal(u, v):
     """
     Returns the L-ratio and Isolation Distance measures calculated on the
     principal components of the energy in a spike matrix.
@@ -123,10 +123,10 @@ def mahal(self, u, v):
     return d
 
 
-def clusterQuality(waveforms: np.ndarray = None,
-                   spike_clusters: np.ndarray = None,
-                   cluster_id: int = None,
-                   fet: int = 1):
+def cluster_quality(waveforms: np.ndarray = None,
+                    spike_clusters: np.ndarray = None,
+                    cluster_id: int = None,
+                    fet: int = 1):
     """
     Returns the L-ratio and Isolation Distance measures calculated
     on the principal components of the energy in a spike matrix.
@@ -768,7 +768,7 @@ class SpikeCalcsGeneric(object):
 
         R00 = max(np.mean(c[outer[:-1]]),
                   np.mean(c[inner_left[:-1]]),
-                  np.mean(c[inner_right[:-1]]))
+                  np.mean(c[inner_right[1:]]))
 
         middle_idx = np.nonzero(b == 0)[0]
         a = c[middle_idx]
@@ -1119,6 +1119,7 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
         cluster_data: KiloSortSession,
         n_waveforms: int = 2000,
         n_channels: int = 64,
+        channel_range=None,
         **kwargs
     ) -> np.ndarray:
         """
@@ -1151,7 +1152,13 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
         n_waveforms = n_waveforms if n_waveforms < total_waves else total_waves
         waveforms_subset = rng.choice(waveforms, n_waveforms)
         # return the waveforms
-        return np.squeeze(waveforms_subset[:, :, 0])
+        if channel_range is None:
+            return np.squeeze(waveforms_subset[:, :, 0])
+        else:
+            if isinstance(channel_range, Sequence):
+                return np.squeeze(waveforms_subset[:, :, channel_range])
+            else:
+                warnings.warn("Invalid channel_range sequence")
 
     def get_channel_depth_from_templates(self, pname: Path):
         """
@@ -1214,3 +1221,31 @@ class SpikeCalcsProbe(SpikeCalcsGeneric):
 
     def __init__(self):
         pass
+
+
+def xcorr(s1: SpikeCalcsGeneric,
+          s2: SpikeCalcsGeneric = None,
+          Trange: Sequence = None,
+          binsize: float = 0.001,
+          **kwargs) -> tuple:
+    """
+    Calculates the ISIs in x1 or x1 vs x2 within a given range
+    """
+    if s2 is None:
+        s2 = s1.copy()
+    if Trange is None:
+        Trange = np.array([-0.5, 0.5])
+    if isinstance(Trange, list):
+        Trange = np.array(Trange)
+    y = []
+    x1 = s1.spike_times
+    x2 = s2.spike_times
+    irange = x1[:, np.newaxis] + Trange[np.newaxis, :]
+    dts = np.searchsorted(x2, irange)
+    for i, t in enumerate(dts):
+        y.extend((x2[t[0]: t[1]] - x1[i]))
+    y = np.array(y, dtype=float)
+    counts, bins = np.histogram(y[y != 0],
+                                bins=int(np.ptp(Trange)/binsize),
+                                range=Trange)
+    return counts, bins
