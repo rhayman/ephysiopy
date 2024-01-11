@@ -10,7 +10,7 @@ def get_spikecalcs_instance(path_to_axona_data) -> SpikeCalcsGeneric:
     T.load_pos_data()
     spk_ts = T.TETRODE[1].spk_ts
     S = SpikeCalcsGeneric(spk_ts)
-    S.getClusterWaveforms(1, 1)
+    S.cluster_waveforms(1, 1)
     S.waveforms = T.TETRODE[1].waveforms
     S.spk_clusters = T.TETRODE[1].cut
     return S
@@ -60,16 +60,16 @@ def test_xcorr(path_to_axona_data):
 
 def test_mean_waveforms(path_to_axona_data):
     S = get_spikecalcs_instance(path_to_axona_data)
-    S.getMeanWaveform(1, 1)
+    S.mean_waveform(1, 1)
     with pytest.raises(IndexError):
-        S.getMeanWaveform(9999, 1)
-    S.getClusterWaveforms(1, 1)
+        S.mean_waveform(9999, 1)
+    S.cluster_waveforms(1, 1)
     S.waveforms = 1
     with pytest.raises(IndexError):
-        S.getMeanWaveform(9999, 1)
+        S.mean_waveform(9999, 1)
     S.waveforms = None
     S.spk_clusters = None
-    S.getMeanWaveform(1, 1)
+    S.mean_waveform(1, 1)
 
 
 def test_cluster_quality(path_to_axona_data):

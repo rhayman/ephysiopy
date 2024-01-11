@@ -7,7 +7,6 @@ import h5py
 import matplotlib.pylab as plt
 import numpy as np
 from scipy.special import erf
-from math import sqrt
 from phylib.io.model import TemplateModel
 from scipy import signal, stats
 from ephysiopy.common.utils import min_max_norm
@@ -15,97 +14,229 @@ from ephysiopy.common.utils import min_max_norm
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 
 
+def getParam(waveforms, param="Amp", t=200, fet=1):
+    """
+    Returns the requested parameter from a spike train as a numpy array
+
+    Args:
+        waveforms (numpy array): Shape of array can be nSpikes x nSamples
+            OR
+            a nSpikes x nElectrodes x nSamples
+        param (str): Valid values are:
+            'Amp' - peak-to-trough amplitude (default)
+            'P' - height of peak
+            'T' - depth of trough
+            'Vt' height at time t
+            'tP' - time of peak (in seconds)
+            'tT' - time of trough (in seconds)
+            'PCA' - first n fet principal components (defaults to 1)
+        t (int): The time used for Vt
+        fet (int): The number of principal components
+            (use with param 'PCA')
+    """
+    from scipy import interpolate
+    from sklearn.decomposition import PCA
+
+    if param == "Amp":
+        return np.ptp(waveforms, axis=-1)
+    elif param == "P":
+        return np.max(waveforms, axis=-1)
+    elif param == "T":
+        return np.min(waveforms, axis=-1)
+    elif param == "Vt":
+        times = np.arange(0, 1000, 20)
+        f = interpolate.interp1d(times, range(50), "nearest")
+        if waveforms.ndim == 2:
+            return waveforms[:, int(f(t))]
+        elif waveforms.ndim == 3:
+            return waveforms[:, :, int(f(t))]
+    elif param == "tP":
+        idx = np.argmax(waveforms, axis=-1)
+        m = interpolate.interp1d(
+            [0, waveforms.shape[-1] - 1], [0, 1 / 1000.0])
+        return m(idx)
+    elif param == "tT":
+        idx = np.argmin(waveforms, axis=-1)
+        m = interpolate.interp1d(
+            [0, waveforms.shape[-1] - 1], [0, 1 / 1000.0])
+        return m(idx)
+    elif param == "PCA":
+        pca = PCA(n_components=fet)
+        if waveforms.ndim == 2:
+            return pca.fit(waveforms).transform(waveforms).squeeze()
+        elif waveforms.ndim == 3:
+            out = np.zeros((waveforms.shape[0], waveforms.shape[1] * fet))
+            st = np.arange(0, waveforms.shape[1] * fet, fet)
+            en = np.arange(fet, fet + (waveforms.shape[1] * fet), fet)
+            rng = np.vstack((st, en))
+            for i in range(waveforms.shape[1]):
+                if ~np.any(np.isnan(waveforms[:, i, :])):
+                    A = np.squeeze(
+                        pca.fit(waveforms[:, i, :].squeeze()).transform(
+                            waveforms[:, i, :].squeeze()
+                        )
+                    )
+                    if A.ndim < 2:
+                        out[:, rng[0, i]:rng[1, i]] = np.atleast_2d(A).T
+                    else:
+                        out[:, rng[0, i]:rng[1, i]] = A
+            return out
+
+
+def mahal(self, u, v):
+    """
+    Returns the L-ratio and Isolation Distance measures calculated on the
+    principal components of the energy in a spike matrix.
+
+    Args:
+        waveforms (np.ndarray, optional): The waveforms to be processed. If
+            None, the function will return None.
+        spike_clusters (np.ndarray, optional): The spike clusters to be
+            processed.
+        cluster_id (int, optional): The ID of the cluster to be processed.
+        fet (int, default=1): The feature to be used in the PCA calculation.
+
+    Returns:
+        tuple: A tuple containing the L-ratio and Isolation Distance of the
+            cluster.
+
+    Raises:
+        Exception: If an error occurs during the calculation of the L-ratio or
+            Isolation Distance.
+    """
+    u_sz = u.shape
+    v_sz = v.shape
+    if u_sz[1] != v_sz[1]:
+        warnings.warn("Input size mismatch: \
+                        matrices must have same num of columns")
+    if v_sz[0] < v_sz[1]:
+        warnings.warn("Too few rows: v must have more rows than columns")
+    if np.any(np.imag(u)) or np.any(np.imag(v)):
+        warnings.warn("No complex inputs are allowed")
+    m = np.nanmean(v, axis=0)
+    M = np.tile(m, reps=(u_sz[0], 1))
+    C = v - np.tile(m, reps=(v_sz[0], 1))
+    _, R = np.linalg.qr(C)
+    ri = np.linalg.solve(R.T, (u - M).T)
+    d = np.sum(ri * ri, 0).T * (v_sz[0] - 1)
+    return d
+
+
+def clusterQuality(waveforms: np.ndarray = None,
+                   spike_clusters: np.ndarray = None,
+                   cluster_id: int = None,
+                   fet: int = 1):
+    """
+    Returns the L-ratio and Isolation Distance measures calculated
+    on the principal components of the energy in a spike matrix.
+
+    Args:
+        waveforms (np.ndarray, optional): The waveforms to be processed.
+            If None, the function will return None.
+        spike_clusters (np.ndarray, optional): The spike clusters to be
+            processed.
+        cluster_id (int, optional): The ID of the cluster to be processed.
+        fet (int, default=1): The feature to be used in the PCA calculation.
+
+    Returns:
+        tuple: A tuple containing the L-ratio and Isolation Distance of the
+            cluster.
+
+    Raises:
+        Exception: If an error occurs during the calculation of the L-ratio or
+            Isolation Distance.
+    """
+    if waveforms is None:
+        return None
+    nSpikes, nElectrodes, _ = waveforms.shape
+    wvs = waveforms.copy()
+    E = np.sqrt(np.nansum(waveforms**2, axis=2))
+    zeroIdx = np.sum(E, 0) == [0, 0, 0, 0]
+    E = E[:, ~zeroIdx]
+    wvs = wvs[:, ~zeroIdx, :]
+    normdWaves = (wvs.T / E.T).T
+    PCA_m = getParam(normdWaves, "PCA", fet=fet)
+    badIdx = np.sum(PCA_m, axis=0) == 0
+    PCA_m = PCA_m[:, ~badIdx]
+    # get mahalanobis distance
+    idx = spike_clusters == cluster_id
+    nClustSpikes = np.count_nonzero(idx)
+    try:
+        d = mahal(PCA_m, PCA_m[idx, :])
+        # get the indices of the spikes not in the cluster
+        M_noise = d[~idx]
+        df = np.prod((fet, nElectrodes))
+        from scipy import stats
+
+        L = np.sum(1 - stats.chi2.cdf(M_noise, df))
+        L_ratio = L / nClustSpikes
+        # calculate isolation distance
+        if nClustSpikes < nSpikes / 2:
+            M_noise.sort()
+            isolation_dist = M_noise[nClustSpikes]
+        else:
+            isolation_dist = np.nan
+    except Exception:
+        isolation_dist = L_ratio = np.nan
+    return L_ratio, isolation_dist
+
+
+def xcorr(x1: np.ndarray,
+          x2=None,
+          Trange=None,
+          binsize=0.001,
+          **kwargs) -> tuple:
+    """
+    Calculates the ISIs in x1 or x1 vs x2 within a given range
+
+    Args:
+        x1, x2 (array_like): The times of the spikes emitted by the
+                            cluster(s) in seconds
+        Trange (array_like): Range of times to bin up in seconds
+                                Defaults to [-0.5, +0.5]
+        binsize (float): The size of the bins in seconds
+
+    Returns:
+        counts (np.ndarray): The cross-correlogram of the spike trains
+            x1 and x2
+        bins (np.ndarray): The bins used to calculate the cross-correlogram
+    """
+    if x2 is None:
+        x2 = x1.copy()
+    if Trange is None:
+        Trange = np.array([-0.5, 0.5])
+    if isinstance(Trange, list):
+        Trange = np.array(Trange)
+    y = []
+    irange = x1[:, np.newaxis] + Trange[np.newaxis, :]
+    dts = np.searchsorted(x2, irange)
+    for i, t in enumerate(dts):
+        y.extend((x2[t[0]: t[1]] - x1[i]))
+    y = np.array(y, dtype=float)
+    counts, bins = np.histogram(y[y != 0],
+                                bins=int(np.ptp(Trange)/binsize),
+                                range=Trange)
+    return counts, bins
+
+
 class SpikeCalcsGeneric(object):
     """
     Deals with the processing and analysis of spike data.
+    There should be one instance of this class per cluster in the
+    recording session. NB this differs from previous versions of this
+    class where there was one instance per recording session and clusters
+    were selected by passing in the cluster id to the methods.
 
     Args:
-        spike_times (array_like): The times of 'spikes' in the trial.
-            Should be the same length as the cluster identity vector
-            _spk_clusters
+        spike_times (array_like): The times of spikes in the trial.
         waveforms (np.array, optional): An nSpikes x nSamples array
-            (nSamples usually 50)
 
-    Note:
-        Units for time are provided as per the sample rate but converted
-        internally to milliseconds
     """
-
-    @staticmethod
-    def getParam(waveforms, param="Amp", t=200, fet=1):
-        """
-        Returns the requested parameter from a spike train as a numpy array
-
-        Args:
-            waveforms (numpy array): Shape of array can be nSpikes x nSamples
-                OR
-                a nSpikes x nElectrodes x nSamples
-            param (str): Valid values are:
-                'Amp' - peak-to-trough amplitude (default)
-                'P' - height of peak
-                'T' - depth of trough
-                'Vt' height at time t
-                'tP' - time of peak (in seconds)
-                'tT' - time of trough (in seconds)
-                'PCA' - first n fet principal components (defaults to 1)
-            t (int): The time used for Vt
-            fet (int): The number of principal components
-                (use with param 'PCA')
-        """
-        from scipy import interpolate
-        from sklearn.decomposition import PCA
-
-        if param == "Amp":
-            return np.ptp(waveforms, axis=-1)
-        elif param == "P":
-            return np.max(waveforms, axis=-1)
-        elif param == "T":
-            return np.min(waveforms, axis=-1)
-        elif param == "Vt":
-            times = np.arange(0, 1000, 20)
-            f = interpolate.interp1d(times, range(50), "nearest")
-            if waveforms.ndim == 2:
-                return waveforms[:, int(f(t))]
-            elif waveforms.ndim == 3:
-                return waveforms[:, :, int(f(t))]
-        elif param == "tP":
-            idx = np.argmax(waveforms, axis=-1)
-            m = interpolate.interp1d(
-                [0, waveforms.shape[-1] - 1], [0, 1 / 1000.0])
-            return m(idx)
-        elif param == "tT":
-            idx = np.argmin(waveforms, axis=-1)
-            m = interpolate.interp1d(
-                [0, waveforms.shape[-1] - 1], [0, 1 / 1000.0])
-            return m(idx)
-        elif param == "PCA":
-            pca = PCA(n_components=fet)
-            if waveforms.ndim == 2:
-                return pca.fit(waveforms).transform(waveforms).squeeze()
-            elif waveforms.ndim == 3:
-                out = np.zeros((waveforms.shape[0], waveforms.shape[1] * fet))
-                st = np.arange(0, waveforms.shape[1] * fet, fet)
-                en = np.arange(fet, fet + (waveforms.shape[1] * fet), fet)
-                rng = np.vstack((st, en))
-                for i in range(waveforms.shape[1]):
-                    if ~np.any(np.isnan(waveforms[:, i, :])):
-                        A = np.squeeze(
-                            pca.fit(waveforms[:, i, :].squeeze()).transform(
-                                waveforms[:, i, :].squeeze()
-                            )
-                        )
-                        if A.ndim < 2:
-                            out[:, rng[0, i]:rng[1, i]] = np.atleast_2d(A).T
-                        else:
-                            out[:, rng[0, i]:rng[1, i]] = A
-                return out
 
     def __init__(self, spike_times, waveforms=None, **kwargs):
         self.spike_times = spike_times  # IN SECONDS
         self.waveforms = waveforms
         self._event_ts = None  # the times that events occured IN SECONDS
-        # vector of cluster ids, same length as spike_times
-        self._spk_clusters = None
         # window, in seconds, either side of the stimulus, to examine
         self._event_window = np.array((-0.050, 0.100))
         self._stim_width = None  # the width, in ms, of the stimulus
@@ -175,14 +306,6 @@ class SpikeCalcsGeneric(object):
         self._duration = value
 
     @property
-    def spk_clusters(self):
-        return self._spk_clusters
-
-    @spk_clusters.setter
-    def spk_clusters(self, value):
-        self._spk_clusters = value
-
-    @property
     def event_window(self):
         return self._event_window
 
@@ -206,72 +329,46 @@ class SpikeCalcsGeneric(object):
     def secs_per_bin(self, value):
         self._secs_per_bin = value
 
+    def acorr(self, ts: np.ndarray, Trange: np.ndarray = None) -> tuple:
+        """
+        Calculates the autocorrelogram of a spike train
+
+        Args:
+            ts (np.ndarray): The spike times
+            Trange (np.ndarray): The range of times to calculate the
+                autocorrelogram over
+
+        Returns:
+            counts (np.ndarray): The autocorrelogram
+            bins (np.ndarray): The bins used to calculate the
+                autocorrelogram
+        """
+        return xcorr(ts, ts, Trange=Trange)
+
     def trial_mean_fr(self, cluster: int) -> float:
         # Returns the trial mean firing rate for the cluster
         if self.duration is None:
             raise IndexError("No duration provided, give me one!")
         return self.n_spikes(cluster) / self.duration
 
-    def mean_isi_range(self, cluster: int, n: int) -> float:
+    def mean_isi_range(self, isi_range: int) -> float:
         """
         Calculates the mean of the autocorrelation from 0 to n milliseconds
         Used to help classify a neurons type (principal, interneuron etc)
 
         Args:
-            cluster (int): The cluster to analyse
-            n (int): The range in milliseconds to calculate the mean over
+            isi_range (int): The range in ms to calculate the mean over
 
         Returns:
             float: The mean of the autocorrelogram between 0 and n milliseconds
         """
-        if cluster not in self.spk_clusters:
-            raise IndexError("Cluster not available")
         bins = 201
         trange = np.array((-500, 500))
-        t = self.spike_times[self.spk_clusters == cluster]
-        counts, bins = self.xcorr(t, Trange=trange)
-        mask = np.logical_and(bins > 0, bins < n)
+        counts, bins = self.acorr(self.spike_times, Trange=trange)
+        mask = np.logical_and(bins > 0, bins < isi_range)
         return np.mean(counts[mask[1:]])
 
-    def xcorr(self,
-              x1: np.ndarray,
-              x2=None,
-              Trange=None,
-              binsize=0.001,
-              **kwargs) -> tuple:
-        """
-        Calculates the ISIs in x1 or x1 vs x2 within a given range
-
-        Args:
-            x1, x2 (array_like): The times of the spikes emitted by the
-                                cluster(s) in seconds
-            Trange (array_like): Range of times to bin up in seconds
-                                    Defaults to [-0.5, +0.5]
-            binsize (float): The size of the bins in seconds
-
-        Returns:
-            counts (np.ndarray): The cross-correlogram of the spike trains
-                x1 and x2
-            bins (np.ndarray): The bins used to calculate the cross-correlogram
-        """
-        if x2 is None:
-            x2 = x1.copy()
-        if Trange is None:
-            Trange = np.array([-0.5, 0.5])
-        if isinstance(Trange, list):
-            Trange = np.array(Trange)
-        y = []
-        irange = x1[:, np.newaxis] + Trange[np.newaxis, :]
-        dts = np.searchsorted(x2, irange)
-        for i, t in enumerate(dts):
-            y.extend((x2[t[0]: t[1]] - x1[i]))
-        y = np.array(y, dtype=float)
-        counts, bins = np.histogram(y[y != 0],
-                                    bins=int(np.ptp(Trange)/binsize),
-                                    range=Trange)
-        return counts, bins
-
-    def getClusterWaveforms(self, clust_id: int, channel_id: int):
+    def cluster_waveforms(self, channel_id: int):
         """
         Get the waveforms for a particular cluster on a given channel
 
@@ -282,11 +379,11 @@ class SpikeCalcsGeneric(object):
             np.array: the waveforms
         """
         if self.waveforms is not None:
-            return self.waveforms[self.spk_clusters == clust_id, channel_id, :]
+            return self.waveforms[:, channel_id, :]
         else:
             return None
 
-    def getMeanWaveform(self, cluster_id: int, channel_id: int):
+    def mean_waveform(self, channel_id: int):
         """
         Returns the mean waveform and sem for a given spike train on a
         particular channel
@@ -300,19 +397,13 @@ class SpikeCalcsGeneric(object):
             std_wvs (ndarray): The standard deviations of the waveforms,
                                 usually 4x50 for tetrode recordings
         """
-        if self.spk_clusters is not None:
-            if cluster_id not in self.spk_clusters:
-                warnings.warn("Cluster not available. Try again!")
-                raise IndexError("cluster_id not available")
-            x = self.getClusterWaveforms(cluster_id, channel_id)
-            if x is not None:
-                return np.mean(x, axis=0), np.std(x, axis=0)
-            else:
-                return None
+        x = self.cluster_waveforms(channel_id)
+        if x is not None:
+            return np.mean(x, axis=0), np.std(x, axis=0)
         else:
             return None
 
-    def calculatePSTH(self, cluster_id, **kwargs):
+    def psth(self, **kwargs):
         """
         Calculate the PSTH of event_ts against the spiking of a cell
 
@@ -325,26 +416,23 @@ class SpikeCalcsGeneric(object):
         """
         if self._event_ts is None:
             raise Exception("Need some event timestamps! Aborting")
-        if self._spk_clusters is None:
-            raise Exception("Need cluster identities! Aborting")
         event_ts = self.event_ts
         event_ts.sort()
         if isinstance(event_ts, list):
             event_ts = np.array(event_ts)
 
-        spike_times = self.spike_times[self.spk_clusters == cluster_id]
         irange = event_ts[:, np.newaxis] + self.event_window[np.newaxis, :]
-        dts = np.searchsorted(spike_times, irange)
+        dts = np.searchsorted(self.spike_times, irange)
         x = []
         y = []
         for i, t in enumerate(dts):
-            tmp = spike_times[t[0]:t[1]] - event_ts[i]
+            tmp = self.spike_times[t[0]:t[1]] - event_ts[i]
             x.extend(tmp)
             y.extend(np.repeat(i, len(tmp)))
         return x, y
 
-    def calculatePSCH(
-            self, cluster_id: int, bin_width_secs: float) -> np.ndarray:
+    def psch(
+            self, bin_width_secs: float) -> np.ndarray:
         """
         Calculate the peri-stimulus *count* histogram of a cell's spiking
         against event times.
@@ -361,32 +449,29 @@ class SpikeCalcsGeneric(object):
         """
         if self._event_ts is None:
             raise Exception("Need some event timestamps! Aborting")
-        if self._spk_clusters is None:
-            raise Exception("Need cluster identities! Aborting")
         event_ts = self.event_ts
         event_ts.sort()
         if isinstance(event_ts, list):
             event_ts = np.array(event_ts)
 
-        spike_times = self.spike_times[self.spk_clusters == cluster_id]
         irange = event_ts[:, np.newaxis] + self.event_window[np.newaxis, :]
-        dts = np.searchsorted(spike_times, irange)
+        dts = np.searchsorted(self.spike_times, irange)
         bins = np.arange(self.event_window[0],
                          self.event_window[1], bin_width_secs)
         result = np.zeros(shape=(len(bins)-1, len(event_ts)))
         for i, t in enumerate(dts):
-            tmp = spike_times[t[0]:t[1]] - event_ts[i]
+            tmp = self.spike_times[t[0]:t[1]] - event_ts[i]
             indices = np.digitize(tmp, bins=bins)
             counts = np.bincount(indices, minlength=len(bins))
             result[:, i] = counts[1:]
         return result
 
-    def respondsToStimulus(self, cluster: int,
-                           threshold: float,
-                           min_contiguous: int,
-                           return_activity: bool = False,
-                           return_magnitude: bool = False,
-                           **kwargs) -> tuple:
+    def responds_to_stimulus(self,
+                             threshold: float,
+                             min_contiguous: int,
+                             return_activity: bool = False,
+                             return_magnitude: bool = False,
+                             **kwargs) -> tuple:
         """
         Checks whether a cluster responds to a laser stimulus.
 
@@ -410,7 +495,7 @@ class SpikeCalcsGeneric(object):
             tuple: responds (bool), normed_response_curve (np.ndarray),
                 response_magnitude (np.ndarray).
         """
-        spk_count_by_trial = self.calculatePSCH(cluster, self._secs_per_bin)
+        spk_count_by_trial = self.psch(self._secs_per_bin)
         firing_rate_by_trial = spk_count_by_trial / self.secs_per_bin
         mean_firing_rate = np.mean(firing_rate_by_trial, 1)
         # smooth with a moving average
@@ -492,70 +577,7 @@ class SpikeCalcsGeneric(object):
                 return False, normd, 0
             return False, normd
 
-    def clusterQuality(self, cluster, fet=1):
-        """
-        returns the L-ratio and Isolation Distance measures
-        calculated on the principal components of the energy in a spike matrix
-        """
-        if self.waveforms is None:
-            return None
-        nSpikes, nElectrodes, _ = self.waveforms.shape
-        wvs = self.waveforms.copy()
-        E = np.sqrt(np.nansum(self.waveforms**2, axis=2))
-        zeroIdx = np.sum(E, 0) == [0, 0, 0, 0]
-        E = E[:, ~zeroIdx]
-        wvs = wvs[:, ~zeroIdx, :]
-        normdWaves = (wvs.T / E.T).T
-        PCA_m = self.getParam(normdWaves, "PCA", fet=fet)
-        badIdx = np.sum(PCA_m, axis=0) == 0
-        PCA_m = PCA_m[:, ~badIdx]
-        # get mahalanobis distance
-        idx = self.spk_clusters == cluster
-        nClustSpikes = np.count_nonzero(idx)
-        try:
-            d = self._mahal(PCA_m, PCA_m[idx, :])
-            # get the indices of the spikes not in the cluster
-            M_noise = d[~idx]
-            df = np.prod((fet, nElectrodes))
-            from scipy import stats
-
-            L = np.sum(1 - stats.chi2.cdf(M_noise, df))
-            L_ratio = L / nClustSpikes
-            # calculate isolation distance
-            if nClustSpikes < nSpikes / 2:
-                M_noise.sort()
-                isolation_dist = M_noise[nClustSpikes]
-            else:
-                isolation_dist = np.nan
-        except Exception:
-            isolation_dist = L_ratio = np.nan
-        return L_ratio, isolation_dist
-
-    def _mahal(self, u, v):
-        """
-        gets the mahalanobis distance between two vectors u and v
-        a blatant copy of the Mathworks fcn as it doesn't require the
-        covariance matrix to be calculated which is a pain if there
-        are NaNs in the matrix
-        """
-        u_sz = u.shape
-        v_sz = v.shape
-        if u_sz[1] != v_sz[1]:
-            warnings.warn("Input size mismatch: \
-                          matrices must have same num of columns")
-        if v_sz[0] < v_sz[1]:
-            warnings.warn("Too few rows: v must have more rows than columns")
-        if np.any(np.imag(u)) or np.any(np.imag(v)):
-            warnings.warn("No complex inputs are allowed")
-        m = np.nanmean(v, axis=0)
-        M = np.tile(m, reps=(u_sz[0], 1))
-        C = v - np.tile(m, reps=(v_sz[0], 1))
-        _, R = np.linalg.qr(C)
-        ri = np.linalg.solve(R.T, (u - M).T)
-        d = np.sum(ri * ri, 0).T * (v_sz[0] - 1)
-        return d
-
-    def thetaModIdx(self, x1):
+    def theta_mod_idx(self, x1):
         """
         Calculates a theta modulation index of a spike train based on the cells
         autocorrelogram.
@@ -567,9 +589,7 @@ class SpikeCalcsGeneric(object):
             thetaMod (float): The difference of the values at the first peak
             and trough of the autocorrelogram.
         """
-        y = self.xcorr(x1)
-        corr, _ = np.histogram(y[y != 0],
-                               bins=201, range=np.array([-500, 500]))
+        corr, _ = self.acorr(x1)
         # Take the fft of the spike train autocorr (from -500 to +500ms)
         from scipy.signal import periodogram
 
@@ -593,18 +613,16 @@ class SpikeCalcsGeneric(object):
         # Find the ratio of these two - this is the theta modulation index
         return (mtbp - mobp) / (mtbp + mobp)
 
-    def thetaModIdxV2(self, x1):
+    def theta_mod_idxV2(self, x1):
         """
-        This is a simpler alternative to the thetaModIdx method in that it
+        This is a simpler alternative to the theta_mod_idx method in that it
         calculates the difference between the normalized temporal
         autocorrelogram at the trough between 50-70ms and the
         peak between 100-140ms over their sum (data is binned into 5ms bins)
 
         Measure used in Cacucci et al., 2004 and Kropff et al 2015
         """
-        y = self.xcorr(x1)
-        corr, bins = np.histogram(y[y != 0],
-                                  bins=201, range=np.array([-500, 500]))
+        corr, bins = self.acorr(x1)
         # 'close' the right-hand bin
         bins = bins[0:-1]
         # normalise corr so max is 1.0
@@ -613,16 +631,26 @@ class SpikeCalcsGeneric(object):
         thetaPhase = np.max(corr[np.logical_and(bins > 100, bins < 140)])
         return (thetaPhase - thetaAntiPhase) / (thetaPhase + thetaAntiPhase)
 
-    def thetaBandMaxFreq(self, x1):
+    def theta_band_max_freq(self, x1):
         """
-        Calculates the frequency with the max power in the theta band (6-12Hz)
-        of a spike trains autocorrelogram. Partly to look for differences
-        in theta frequency in different running directions a la Blair
-        See Welday paper - https://doi.org/10.1523/jneurosci.0712-11.2011
-        """
-        y = self.xcorr(x1)
-        corr, _ = np.histogram(y[y != 0],
-                               bins=201, range=np.array([-500, 500]))
+    Calculates the frequency with the maximum power in the theta band (6-12Hz)
+    of a spike train's autocorrelogram.
+
+    This function is used to look for differences in theta frequency in
+    different running directions as per Blair.
+    See Welday paper - https://doi.org/10.1523/jneurosci.0712-11.2011
+
+    Args:
+        x1 (np.ndarray): The spike train for which the autocorrelogram will be
+            calculated.
+
+    Returns:
+        float: The frequency with the maximum power in the theta band.
+
+    Raises:
+        ValueError: If the input spike train is not valid.
+    """
+        corr, _ = self.acorr(x1)
         # Take the fft of the spike train autocorr (from -500 to +500ms)
         from scipy.signal import periodogram
 
@@ -631,7 +659,7 @@ class SpikeCalcsGeneric(object):
                                          np.logical_or(freqs < 6, freqs > 12))
         return freqs[np.argmax(power_masked)]
 
-    def smoothSpikePosCount(self, x1, npos, sigma=3.0, shuffle=None):
+    def smooth_spike_train(self, x1, npos, sigma=3.0, shuffle=None):
         """
         Returns a spike train the same length as num pos samples that has been
         smoothed in time with a gaussian kernel M in width and standard
@@ -657,114 +685,10 @@ class SpikeCalcsGeneric(object):
         h = h / float(np.sum(h))
         return signal.filtfilt(h.ravel(), 1, spk_hist)
 
-    def ccg(self, st1, st2, nbins, tbin) -> tuple:
-        """
-        Computes the cross-correlogram between two sets of spikes and
-        estimates how refractory the cross-correlogram is.
-
-        Args:
-            st1 (np.array): The first set of spikes.
-            st2 (np.array): The second set of spikes.
-            nbins (int): The number of bins.
-            tbin (float): The length of each bin.
-
-        Returns:
-            K (np.array): The cross-correlogram.
-            Qi (np.array): The normalized probabilities for each bin size.
-            Q00 (float): The normalized shoulder value for a non-refractive
-                Poisson process.
-            Q01 (float): The normalized shoulder value for the immediate
-                shoulders.
-            Ri (np.array): The probabilities for each bin size.
-        """
-        st1 = np.sort(st1)
-        st2 = np.sort(st2)
-
-        dt = nbins * tbin
-        T = max(np.concatenate([st1, st2])) - min(np.concatenate([st1, st2]))
-
-        ilow = 0
-        ihigh = 0
-        j = 0
-
-        K = np.zeros(2 * nbins + 1)
-
-        while j < len(st2):
-            while (ihigh < len(st1)) and (st1[ihigh] < st2[j] + dt):
-                ihigh += 1
-            while (ilow < len(st1)) and (st1[ilow] <= st2[j] - dt):
-                ilow += 1
-            if ilow >= len(st1):
-                break
-            if st1[ilow] > st2[j] + dt:
-                j += 1
-                continue
-            for k in range(ilow, ihigh):
-                ibin = round((st2[j] - st1[k]) / tbin)
-                K[ibin + nbins] += 1
-            j += 1
-
-        # this index range corresponds to the CCG shoulders
-        irange1 = np.concatenate(
-            [np.arange(2, nbins/2 + 1), np.arange(3/2*nbins + 1, 2*nbins + 1)])
-        # these indices are the narrow, immediate shoulders
-        irange2 = np.arange(nbins+1-50, nbins-10 + 1)
-        irange3 = np.arange(nbins+12, nbins+50 + 1)
-        irange1 = irange1.astype(int)
-        irange2 = irange2.astype(int)
-        irange3 = irange3.astype(int)
-
-        # normalize the shoulders by what's expected from the mean firing rates
-        # a non-refractive poisson process should yield 1
-        Q00 = np.sum(K[irange1-1]) / (len(irange1)
-                                      * tbin * len(st1) * len(st2)/T)
-        Q01 = np.sum(K[irange2-1]) / (len(irange2)*tbin * len(st1)
-                                      * len(st2)/T)  # do the same for irange 2
-        # compare to the other shoulder
-        Q01 = max(Q01, np.sum(K[irange3-1]) /
-                  (len(irange3)*tbin * len(st1) * len(st2)/T))
-
-        # take the biggest shoulder
-        R00 = max(np.mean(K[irange2-1]), np.mean(K[irange3-1]))
-        # compare this to the asymptotic shoulder
-        R00 = max(R00, np.mean(K[irange1-1]))
-
-        # test the probability that a central area in the autocorrelogram might be refractory
-        # test increasingly larger areas of the central CCG
-        a = K[nbins]
-        # overwrite the center of the correlogram with 0 (removes double counted spikes)
-        K[nbins] = 0
-        Qi = np.zeros(10)
-        Ri = np.zeros(10)
-        for i in range(1, 11):
-            # for this central range of the CCG
-            irange = np.arange(nbins+1-i, nbins+1+i)
-            # compute the same normalized ratio as above. this should be 1 if there is no refractoriness
-            Qi0 = np.sum(K[irange]) / (2*i*tbin * len(st1) * len(st2)/T)
-            Qi[i-1] = Qi0  # save the normalized probability
-
-            n = np.sum(K[irange])/2
-            lam = R00 * i
-
-            # this is tricky: we approximate the Poisson likelihood with a gaussian of equal mean and variance
-            # that allows us to integrate the probability that we would see <N spikes in the center of the
-            # cross-correlogram from a distribution with mean R00*i spikes
-            p = 1/2 * (1 + erf((n - lam)/sqrt(2*lam)))
-
-            Ri[i-1] = p  # keep track of p for each bin size i
-
-        K[nbins] = a  # restore the center value of the cross-correlogram
-        Qin = Qi/Q00  # normalize the normalized refractory index in two different ways
-        Qin1 = Qi/Q01
-
-        # Q = min(Qi/(max(Q00, Q01))); % this is a measure of refractoriness
-        # R = min(Ri); % this is a second measure of refractoriness (kicks in for very low firing rates)
-        return K, Qi, Q00, Q01, Ri
-
-    def contamination_percent(self,
-                              x1: np.ndarray,
-                              x2: None,
-                              **kwargs) -> tuple:
+    def _contamination_percent(self,
+                               x1: np.ndarray,
+                               x2: None,
+                               **kwargs) -> tuple:
         '''
         Computes the cross-correlogram between two sets of spikes and
         estimates how refractory the cross-correlogram is.
@@ -789,7 +713,7 @@ class SpikeCalcsGeneric(object):
             Specifically, the spike counts in the ranges +/-5-25ms and
             +/-250-500ms are compared for refractoriness
         '''
-        c, b = self.xcorr(x1, x2, **kwargs)
+        c, b = xcorr(x1, x2, **kwargs)
         left = [[-0.05, -0.01]]
         right = [[0.01, 0.051]]
         far = [[-0.5, -0.249], [0.25, 0.501]]
@@ -833,12 +757,29 @@ class SpikeCalcsGeneric(object):
             Qi[i] = get_normd_shoulder(chunk)  # save the normd prob
             n = np.sum(c[chunk[:-1]])/2
             lam = R00 * i
-            # this is tricky: we approximate the Poisson likelihood with a gaussian of equal mean and variance
-            # that allows us to integrate the probability that we would see <N spikes in the center of the
+            # this is tricky: we approximate the Poisson likelihood with a
+            # gaussian of equal mean and variance
+            # that allows us to integrate the probability that we would see <N
+            # spikes in the center of the
             # cross-correlogram from a distribution with mean R00*i spikes
             p = 1/2 * (1 + erf((n - lam)/np.sqrt(2*lam)))
 
             Ri[i] = p  # keep track of p for each bin size i
+
+        c[middle_idx] = a  # restore the center value of the cross-correlogram
+        return c, Qi, Q00, Q01, Ri
+
+    def contamination_percent(self,
+                              x1: np.ndarray,
+                              x2: None,
+                              **kwargs) -> tuple:
+
+        c, Qi, Q00, Q01, Ri = self._contamination_percent(x1, x2, **kwargs)
+        Q = min(Qi/(max(Q00, Q01)))  # this is a measure of refractoriness
+        # this is a second measure of refractoriness (kicks in for very low
+        # firing rates)
+        R = min(Ri)
+        return Q, R
 
 
 class SpikeCalcsTetrode(SpikeCalcsGeneric):

@@ -202,26 +202,26 @@ def test_xcorr(basic_SpikeCalcs):
 
 
 def test_calculate_psth(basic_SpikeCalcs):
-    x, y = basic_SpikeCalcs.calculatePSTH(1)
+    x, y = basic_SpikeCalcs.psth(1)
     assert isinstance(x, list)
     assert isinstance(y, list)
 
 
 def test_theta_mod_idx(basic_SpikeCalcs):
     c1_times = basic_SpikeCalcs.spike_times[basic_SpikeCalcs.spk_clusters == 1]
-    tm = basic_SpikeCalcs.thetaModIdx(c1_times)
+    tm = basic_SpikeCalcs.theta_mod_idx(c1_times)
     assert isinstance(tm, float)
 
 
 def test_theta_mod_idx2(basic_SpikeCalcs):
     c1_times = basic_SpikeCalcs.spike_times[basic_SpikeCalcs.spk_clusters == 1]
-    tm = basic_SpikeCalcs.thetaModIdxV2(c1_times)
+    tm = basic_SpikeCalcs.theta_mod_idxV2(c1_times)
     assert isinstance(tm, float)
 
 
 def test_theta_band_max_freq(basic_SpikeCalcs):
     c1_times = basic_SpikeCalcs.spike_times[basic_SpikeCalcs.spk_clusters == 1]
-    tm = basic_SpikeCalcs.thetaBandMaxFreq(c1_times)
+    tm = basic_SpikeCalcs.theta_band_max_freq(c1_times)
     assert isinstance(tm, float)
 
 
@@ -229,7 +229,7 @@ def test_smooth_spike_pos_count(basic_SpikeCalcs):
     c1_times = basic_SpikeCalcs.spike_times[basic_SpikeCalcs.spk_clusters == 1]
     # Assume a 10 second trial sampled at 30Hz so times are congruous
     # with the spiking data
-    sm_spks = basic_SpikeCalcs.smoothSpikePosCount(c1_times, npos=3000)
+    sm_spks = basic_SpikeCalcs.smooth_spike_train(c1_times, npos=3000)
     assert isinstance(sm_spks, np.ndarray)
 
 

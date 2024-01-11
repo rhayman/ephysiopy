@@ -662,9 +662,9 @@ class FigureMaker(object):
 
         x1 = spk_times_in_pos_samples
         S = SpikeCalcsGeneric(x1)
-        spk_sm = S.smoothSpikePosCount(x1,
-                                       self.PosCalcs.xyTS.shape[0],
-                                       sigma, None)
+        spk_sm = S.smooth_spike_train(x1,
+                                      self.PosCalcs.xyTS.shape[0],
+                                      sigma, None)
         spk_sm = np.ma.MaskedArray(spk_sm, mask=np.ma.getmask(speed_filt))
         spd_dig = np.digitize(speed_filt, spd_bins, right=True)
         mn_rate = np.array(
@@ -853,7 +853,7 @@ class FigureMaker(object):
         # ms for a more display friendly scale
         spk_times = spk_times
         S = SpikeCalcsGeneric(spk_times)
-        c, b = S.xcorr(spk_times, **kwargs)
+        c, b = S.acorr(spk_times, **kwargs)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
@@ -1312,7 +1312,7 @@ class FigureMaker(object):
                     tetrode=tetrode, cluster=cluster, var2bin='dir')[0]
             elif 'xcorr' in maptype:
                 x1 = self.TETRODE[tetrode].getClustTS(cluster) / (96000/1000)
-                rmap = self.spikecalcs.xcorr(
+                rmap = self.spikecalcs.acorr(
                     x1, x1, Trange=np.array([-500, 500]))
             else:
                 rmap = self._getMap(tetrode=tetrode, cluster=cluster)[0]
@@ -1347,7 +1347,7 @@ class FigureMaker(object):
                     tetrode, cluster, ax=d[2])
                 x1 = self.TETRODE[tetrode].getClustTS(cluster) / (96000/1000)
                 print("x1 len = {}".format(len(x1)))
-                dir_rates[d[0]] = self.spikecalcs.thetaBandMaxFreq(x1)
+                dir_rates[d[0]] = self.spikecalcs.theta_band_max_freq(x1)
                 d[2].set_xlabel('')
                 d[2].set_title('')
                 d[2].set_xticklabels('')
