@@ -186,7 +186,7 @@ def test_trial_mean_firing_rate(basic_SpikeCalcs):
 
 
 def test_count_spikes(basic_SpikeCalcs):
-    n = basic_SpikeCalcs.n_spikes()
+    n = basic_SpikeCalcs.n_spikes
     assert isinstance(n, int)
 
 

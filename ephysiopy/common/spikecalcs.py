@@ -480,7 +480,7 @@ class SpikeCalcsGeneric(object):
         """
         bins = 201
         trange = np.array((-500, 500))
-        counts, bins = self.acorr(self.spike_times, Trange=trange)
+        counts, bins = self.acorr(Trange=trange)
         mask = np.logical_and(bins > 0, bins < isi_range)
         return np.mean(counts[mask[1:]])
 
@@ -705,7 +705,7 @@ class SpikeCalcsGeneric(object):
             thetaMod (float): The difference of the values at the first peak
             and trough of the autocorrelogram.
         """
-        corr, _ = self.acorr(self.spike_times)
+        corr, _ = self.acorr()
         # Take the fft of the spike train autocorr (from -500 to +500ms)
         from scipy.signal import periodogram
 
@@ -738,7 +738,7 @@ class SpikeCalcsGeneric(object):
 
         Measure used in Cacucci et al., 2004 and Kropff et al 2015
         """
-        corr, bins = self.acorr(self.spike_times)
+        corr, bins = self.acorr()
         # 'close' the right-hand bin
         bins = bins[0:-1]
         # normalise corr so max is 1.0
@@ -766,7 +766,7 @@ class SpikeCalcsGeneric(object):
     Raises:
         ValueError: If the input spike train is not valid.
     """
-        corr, _ = self.acorr(self.spike_times)
+        corr, _ = self.acorr()
         # Take the fft of the spike train autocorr (from -500 to +500ms)
         from scipy.signal import periodogram
 
