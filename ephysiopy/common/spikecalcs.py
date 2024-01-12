@@ -330,7 +330,7 @@ class SpikeCalcsGeneric(object):
                  waveforms: np.ndarray = None,
                  **kwargs):
         self.spike_times = spike_times  # IN SECONDS
-        self._waveforms = waveforms
+        self._waves = waveforms
         self.cluster = cluster
         self._event_ts = None  # the times that events occured IN SECONDS
         # window, in seconds, either side of the stimulus, to examine
@@ -380,17 +380,17 @@ class SpikeCalcsGeneric(object):
     def waveforms(self, channel_id: Sequence = None):
         if isinstance(channel_id, int):
             channel_id = [channel_id]
-        if self._waveforms is not None:
+        if self._waves is not None:
             if channel_id is None:
-                return self._waveforms
+                return self._waves
             else:
-                return self._waveforms[:, channel_id, :]
+                return self._waves[:, channel_id, :]
         else:
             return None
 
     @waveforms.setter
     def waveforms(self, value):
-        self._waveforms = value
+        self._waves = value
 
     @property
     def n_spikes(self):
