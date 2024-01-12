@@ -345,10 +345,6 @@ class SpikeCalcsGeneric(object):
         self._post_spike_samples = 32
         # values from running KS
         self._KSMeta = KSMeta(None, None, None, None)
-        self._amplitude = None
-        self._group = None
-        self._kslabel = None
-        self._contam_pct = None
         # update the __dict__ attribute with the kwargs
         self.__dict__.update(kwargs)
 
@@ -376,21 +372,16 @@ class SpikeCalcsGeneric(object):
     def post_spike_samples(self, value):
         self._post_spike_samples = int(self._post_spike_samples)
 
-    @property
     def waveforms(self, channel_id: Sequence = None):
-        if isinstance(channel_id, int):
-            channel_id = [channel_id]
         if self._waves is not None:
             if channel_id is None:
-                return self._waves
+                return self._waves[:, :, :]
             else:
+                if isinstance(channel_id, int):
+                    channel_id = [channel_id]
                 return self._waves[:, channel_id, :]
         else:
             return None
-
-    @waveforms.setter
-    def waveforms(self, value):
-        self._waves = value
 
     @property
     def n_spikes(self):
@@ -425,7 +416,7 @@ class SpikeCalcsGeneric(object):
     @KSMeta.setter
     def KSMeta(self, value: dict):
         """
-        Takes in the template_model attribute of a phy session and
+        Takes in a TemplateModel instance from a phy session and
         parses out the relevant metrics for the cluster and places
         into the namedtuple KSMeta
         """
