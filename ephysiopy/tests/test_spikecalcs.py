@@ -58,8 +58,7 @@ def test_mean_waveforms(path_to_axona_data):
     with pytest.raises(IndexError):
         S.mean_waveform(9999)
     S.waveforms(1)
-    S.waveforms = None
-    S.spk_clusters = None
+    S._waves = None
     S.mean_waveform(1)
 
 
