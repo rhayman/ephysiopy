@@ -318,13 +318,15 @@ class FigureMaker(object):
         waves = self.SpikeCalcs.waveforms(range(4))
         if ax is None:
             fig = plt.figure()
+            ax = fig.add_subplot(2, 2, 1)
         if mean_waveform:
-            ax = fig.add_subplot(1, 1, 1)
-            ax.plot(np.mean(waves, axis=-1))
+            for i in range(4):
+                ax = fig.add_subplot(2, 2, i+1)
+                ax.plot(np.mean(np.mean(waves, axis=-1)), 0)
         else:
             for i in range(4):
                 ax = fig.add_subplot(2, 2, i+1)
-                ax.plot(waves[i, :])
+                ax.plot(np.mean(waves, -1)[:, i])
         return ax
 
     @stripAxes
