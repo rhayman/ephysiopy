@@ -315,7 +315,7 @@ class FigureMaker(object):
         if not self.SpikeCalcs:
             Warning("No spike data loaded")
             return
-        waves = self.SpikeCalcs.waveforms[:, range(4), :]
+        waves = self.SpikeCalcs.waveforms(range(4))
         if ax is None:
             fig = plt.figure()
         if mean_waveform:
