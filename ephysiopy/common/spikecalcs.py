@@ -215,14 +215,14 @@ def xcorr(x1: np.ndarray,
         y.extend((x2[t[0]: t[1]] - x1[i]))
     y = np.array(y, dtype=float)
     counts, bins = np.histogram(y[y != 0],
-                                bins=int(np.ptp(Trange)/binsize),
+                                bins=int(np.ptp(Trange)/binsize)+1,
                                 range=Trange)
     return counts, bins
 
 
 def contamination_percent(
         x1: np.ndarray,
-        x2: None,
+        x2: np.ndarray = None,
         **kwargs) -> tuple:
     '''
     Computes the cross-correlogram between two sets of spikes and
@@ -249,7 +249,7 @@ def contamination_percent(
         +/-250-500ms are compared for refractoriness
     '''
     if x2 is None:
-        x1 = x2.copy()
+        x2 = x1.copy()
     c, b = xcorr(x1, x2, **kwargs)
     left = [[-0.05, -0.01]]
     right = [[0.01, 0.051]]
@@ -264,7 +264,7 @@ def contamination_percent(
     inner_right = get_shoulder(b, right)
     outer = get_shoulder(b, far)
 
-    tbin = 500 * 0.001
+    tbin = 1000
     Tr = max(np.concatenate([x1, x2])) - min(np.concatenate([x1, x2]))
 
     def get_normd_shoulder(idx):
@@ -307,8 +307,9 @@ def contamination_percent(
     return c, Qi, Q00, Q01, Ri
 
 
-KSMeta = namedtuple(
-    'KSMeta', 'amplitude group kslabel contam_pct ')
+# a namedtuple to hold some metrics from the KS run
+KSMetaTuple = namedtuple(
+    'KSMeta', 'Amplitude group KSLabel ContamPct ')
 
 
 class SpikeCalcsGeneric(object):
@@ -320,7 +321,7 @@ class SpikeCalcsGeneric(object):
     were selected by passing in the cluster id to the methods.
 
     Args:
-        spike_times (array_like): The times of spikes in the trial.
+        spike_times (array_like): The times of spikes in the trial in seconds
         waveforms (np.array, optional): An nSpikes x nChannels x nSamples array
 
     """
@@ -344,7 +345,7 @@ class SpikeCalcsGeneric(object):
         self._pre_spike_samples = 18
         self._post_spike_samples = 32
         # values from running KS
-        self._KSMeta = KSMeta(None, None, None, None)
+        self._ksmeta = KSMetaTuple(None, None, None, None)
         # update the __dict__ attribute with the kwargs
         self.__dict__.update(kwargs)
 
@@ -411,22 +412,21 @@ class SpikeCalcsGeneric(object):
 
     @property
     def KSMeta(self):
-        return self._KSMeta
+        return self._ksmeta
 
-    @KSMeta.setter
-    def KSMeta(self, value: dict):
+    def update_KSMeta(self, value: dict):
         """
         Takes in a TemplateModel instance from a phy session and
         parses out the relevant metrics for the cluster and places
         into the namedtuple KSMeta
         """
-        for f in KSMeta._fields:
-            metavals = []
+        metavals = []
+        for f in KSMetaTuple._fields:
             if f in value.keys():
                 metavals.append(value[f][self.cluster])
             else:
                 metavals.append(None)
-        self._KSMeta = KSMeta(*metavals)
+        self._ksmeta = KSMetaTuple(*metavals)
 
     @property
     def event_window(self):
