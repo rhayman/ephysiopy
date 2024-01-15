@@ -342,8 +342,8 @@ class SpikeCalcsGeneric(object):
         self._sample_rate = 30000
         self._duration = None
         # these values should be specific to OE data
-        self._pre_spike_samples = 18
-        self._post_spike_samples = 32
+        self._pre_spike_samples = 16
+        self._post_spike_samples = 34
         # values from running KS
         self._ksmeta = KSMetaTuple(None, None, None, None)
         # update the __dict__ attribute with the kwargs

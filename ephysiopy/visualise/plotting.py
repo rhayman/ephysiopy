@@ -3,6 +3,7 @@ import functools
 import matplotlib
 import matplotlib.pylab as plt
 import matplotlib.transforms as transforms
+from matplotlib.collections import LineCollection
 import numpy as np
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -322,11 +323,23 @@ class FigureMaker(object):
         if mean_waveform:
             for i in range(4):
                 ax = fig.add_subplot(2, 2, i+1)
-                ax.plot(np.mean(np.mean(waves, axis=-1)), 0)
+                ax.plot(np.mean(waves, 0)[:, i], **kwargs)
         else:
+            spike_at = np.shape(waves)[2] // 2
+            # this should be equal to range(25, 75)
+            r = range(spike_at - self.SpikeCalcs.pre_spike_samples,
+                      spike_at + self.SpikeCalcs.post_spike_samples)
+            min_x = np.min(waves)
+            max_x = np.max(waves)
             for i in range(4):
                 ax = fig.add_subplot(2, 2, i+1)
-                ax.plot(np.mean(waves, -1)[:, i])
+                segs = np.zeros((waves.shape[0], len(r), 2))
+                segs[:, :, 0] = r
+                segs[:, :, 1] = np.squeeze(waves[:, i, r])
+                ax.add_collection(LineCollection(segs, **kwargs))
+                ax.set_xlim(r)
+                ax.set_ylim(min_x, max_x)
+                ax.plot(waves[:, i, :], **kwargs)
         return ax
 
     @stripAxes
