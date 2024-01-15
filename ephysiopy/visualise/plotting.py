@@ -308,6 +308,14 @@ class FigureMaker(object):
         return fig
 
     @stripAxes
+    def makeSpikePlot(self,
+                      **kwargs) -> matplotlib.axes:
+        if not self.SpikeCalcs:
+            Warning("No spike data loaded")
+            return
+        
+
+    @stripAxes
     def makeRateMap(self,
                     spk_times: np.ndarray,
                     ax: matplotlib.axes = None,
