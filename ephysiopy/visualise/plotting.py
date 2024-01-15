@@ -3,7 +3,6 @@ import functools
 import matplotlib
 import matplotlib.pylab as plt
 import matplotlib.transforms as transforms
-from matplotlib.collections import LineCollection
 import numpy as np
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -318,7 +317,6 @@ class FigureMaker(object):
         waves = self.SpikeCalcs.waveforms(range(4))
         if ax is None:
             fig = plt.figure()
-            ax = fig.add_subplot(2, 2, 1)
         if mean_waveform:
             for i in range(4):
                 ax = fig.add_subplot(2, 2, i+1)
@@ -337,7 +335,7 @@ class FigureMaker(object):
     def _plotSpikes(self, waves: np.ndarray,
                     ax: matplotlib.axes,
                     **kwargs) -> matplotlib.axes:
-        ax.plot(waves, **kwargs)
+        ax.plot(waves, c='k', **kwargs)
         return ax
 
     @stripAxes
