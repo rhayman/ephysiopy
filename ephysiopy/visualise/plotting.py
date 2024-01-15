@@ -309,11 +309,23 @@ class FigureMaker(object):
 
     @stripAxes
     def makeSpikePlot(self,
+                      mean_waveform: bool = True,
+                      ax: matplotlib.axes = None,
                       **kwargs) -> matplotlib.axes:
         if not self.SpikeCalcs:
             Warning("No spike data loaded")
             return
-        
+        waves = self.SpikeCalcs.waveforms[:, range(4), :]
+        if ax is None:
+            fig = plt.figure()
+        if mean_waveform:
+            ax = fig.add_subplot(1, 1, 1)
+            ax.plot(np.mean(waves, axis=-1))
+        else:
+            for i in range(4):
+                ax = fig.add_subplot(2, 2, i+1)
+                ax.plot(waves[i, :])
+        return ax
 
     @stripAxes
     def makeRateMap(self,
