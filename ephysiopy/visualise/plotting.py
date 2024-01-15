@@ -311,7 +311,7 @@ class FigureMaker(object):
     def makeSpikePlot(self,
                       mean_waveform: bool = True,
                       ax: matplotlib.axes = None,
-                      **kwargs) -> matplotlib.Figure:
+                      **kwargs) -> matplotlib.figure:
         if not self.SpikeCalcs:
             Warning("No spike data loaded")
             return
