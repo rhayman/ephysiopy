@@ -308,11 +308,10 @@ class FigureMaker(object):
             pass
         return fig
 
-    @stripAxes
     def makeSpikePlot(self,
                       mean_waveform: bool = True,
                       ax: matplotlib.axes = None,
-                      **kwargs) -> matplotlib.axes:
+                      **kwargs) -> matplotlib.Figure:
         if not self.SpikeCalcs:
             Warning("No spike data loaded")
             return
@@ -323,24 +322,22 @@ class FigureMaker(object):
         if mean_waveform:
             for i in range(4):
                 ax = fig.add_subplot(2, 2, i+1)
-                ax.plot(np.mean(waves, 0)[i, :], **kwargs)
-                ax = stripAxes(ax)
+                ax = self._plotSpikes(np.mean(waves, 0)[i, :], ax=ax, **kwargs)
         else:
             spike_at = np.shape(waves)[2] // 2
             # this should be equal to range(25, 75)
             r = range(spike_at - self.SpikeCalcs.pre_spike_samples,
                       spike_at + self.SpikeCalcs.post_spike_samples)
-            min_x = np.min(waves)
-            max_x = np.max(waves)
             for i in range(4):
                 ax = fig.add_subplot(2, 2, i+1)
-                segs = np.zeros((waves.shape[0], len(r), 2))
-                segs[:, :, 0] = r
-                segs[:, :, 1] = np.squeeze(waves[:, i, r])
-                ax.set_xlim(r[0], r[-1])
-                ax.set_ylim(min_x, max_x)
-                ax.add_collection(LineCollection(segs, **kwargs))
-                ax = stripAxes(ax)
+                self._plotSpikes(waves[:, i, r], ax=ax, **kwargs)
+        return fig
+
+    @stripAxes
+    def _plotSpikes(self, waves: np.ndarray,
+                    ax: matplotlib.axes,
+                    **kwargs) -> matplotlib.axes:
+        ax.plot(waves, **kwargs)
         return ax
 
     @stripAxes
