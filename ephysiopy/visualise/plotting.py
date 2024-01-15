@@ -324,6 +324,7 @@ class FigureMaker(object):
             for i in range(4):
                 ax = fig.add_subplot(2, 2, i+1)
                 ax.plot(np.mean(waves, 0)[i, :], **kwargs)
+                ax = stripAxes(ax)
         else:
             spike_at = np.shape(waves)[2] // 2
             # this should be equal to range(25, 75)
@@ -336,9 +337,10 @@ class FigureMaker(object):
                 segs = np.zeros((waves.shape[0], len(r), 2))
                 segs[:, :, 0] = r
                 segs[:, :, 1] = np.squeeze(waves[:, i, r])
-                ax.set_xlim(r)
+                ax.set_xlim(r[0], r[-1])
                 ax.set_ylim(min_x, max_x)
                 ax.add_collection(LineCollection(segs, **kwargs))
+                ax = stripAxes(ax)
         return ax
 
     @stripAxes
