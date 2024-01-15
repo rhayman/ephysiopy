@@ -323,7 +323,7 @@ class FigureMaker(object):
         if mean_waveform:
             for i in range(4):
                 ax = fig.add_subplot(2, 2, i+1)
-                ax.plot(np.mean(waves, 0)[:, i], **kwargs)
+                ax.plot(np.mean(waves, 0)[i, :], **kwargs)
         else:
             spike_at = np.shape(waves)[2] // 2
             # this should be equal to range(25, 75)
@@ -336,10 +336,9 @@ class FigureMaker(object):
                 segs = np.zeros((waves.shape[0], len(r), 2))
                 segs[:, :, 0] = r
                 segs[:, :, 1] = np.squeeze(waves[:, i, r])
-                ax.add_collection(LineCollection(segs, **kwargs))
                 ax.set_xlim(r)
                 ax.set_ylim(min_x, max_x)
-                ax.plot(waves[:, i, :], **kwargs)
+                ax.add_collection(LineCollection(segs, **kwargs))
         return ax
 
     @stripAxes
