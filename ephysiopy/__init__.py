@@ -1,4 +1,4 @@
-from __about__ import __version__
+from .__about__ import __version__
 version = __version__
 # used to bandpass filter the continuous raw openephys data when converting to
 # Axona eeg/ egf format
