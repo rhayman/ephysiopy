@@ -317,18 +317,26 @@ class FigureMaker(object):
         waves = self.SpikeCalcs.waveforms(range(4))
         if ax is None:
             fig = plt.figure()
+        spike_at = np.shape(waves)[2] // 2
+        if spike_at > 25:  # OE data
+            # this should be equal to range(25, 75)
+            t = range(spike_at - self.SpikeCalcs.pre_spike_samples,
+                      spike_at + self.SpikeCalcs.post_spike_samples)
+        else:  # Axona data
+            t = range(50)
         if mean_waveform:
             for i in range(4):
                 ax = fig.add_subplot(2, 2, i+1)
-                ax = self._plotSpikes(np.mean(waves, 0)[i, :], ax=ax, **kwargs)
+                ax = self._plotSpikes(np.mean(
+                    waves[:, :, t], 0)[i, :], ax=ax, **kwargs)
+                if spike_at > 25:  # OE data
+                    ax.invert_yaxis()
         else:
-            spike_at = np.shape(waves)[2] // 2
-            # this should be equal to range(25, 75)
-            r = range(spike_at - self.SpikeCalcs.pre_spike_samples,
-                      spike_at + self.SpikeCalcs.post_spike_samples)
             for i in range(4):
                 ax = fig.add_subplot(2, 2, i+1)
-                self._plotSpikes(waves[:, i, r], ax=ax, **kwargs)
+                ax = self._plotSpikes(waves[:, i, t], ax=ax, **kwargs)
+                if spike_at > 25:  # OE data
+                    ax.invert_yaxis()
         return fig
 
     @stripAxes
