@@ -829,6 +829,7 @@ class phasePrecession2D(object):
 
         goodPhase = ~np.isnan(phase)
         for k in regressors.keys():
+            print(f"Doing regression: {k}")
             goodRegressor = ~np.isnan(regressors[k]["values"])
             reg = regressors[k]["values"][np.logical_and(
                 goodRegressor, goodPhase)]
