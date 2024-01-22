@@ -17,7 +17,7 @@ phase_precession_config = {
     "spike_sample_rate": 96000,
     "cms_per_bin": 1,  # bin size gets calculated in Ratemap
     "ppm": 400,
-    "field_smoothing_kernel_len": 50,
+    "field_smoothing_kernel_len": 51,
     "field_smoothing_kernel_sigma": 5,
     # fractional limit of field peak to restrict fields with
     "field_threshold": 0.35,
