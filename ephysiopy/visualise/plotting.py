@@ -59,6 +59,7 @@ class FigureMaker(object):
         self.RateMap = RateMap(self.PosCalcs.xy,
                                self.PosCalcs.dir,
                                self.PosCalcs.speed,)
+        self.npos = self.PosCalcs.xy.shape[1]
 
     def _plot_multiple_clusters(self,
                                 func,

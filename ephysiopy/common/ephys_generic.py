@@ -139,10 +139,10 @@ class EEGCalcsGeneric(object):
         return np.log2(val + 1)
 
     def butterFilter(
-                     self,
-                     low: float,
-                     high: float,
-                     order: int = 5) -> np.ndarray:
+            self,
+            low: float,
+            high: float,
+            order: int = 5) -> np.ndarray:
         """
         Filters self.sig with a butterworth filter with a bandpass filter
         defined by low and high
@@ -252,7 +252,7 @@ class PosCalcsGeneric(object):
     Args:
         x, y (array_like): The x and y positions.
         ppm (int): Pixels per metre
-        cm (bool): Whether everything is converted into cms or not
+        convert2cm (bool): Whether everything is converted into cms or not
         jumpmax (int): Jumps in position (pixel coords) > than this are bad
         **kwargs: a dict[str, float] called 'tracker_params' is used to limit
             the range of valid xy positions - 'bad' positions are masked out
@@ -269,7 +269,7 @@ class PosCalcsGeneric(object):
         x: npt.ArrayLike,
         y: npt.ArrayLike,
         ppm: float,
-        cm: bool = True,
+        convert2cm: bool = True,
         jumpmax: float = 100,
         **kwargs,
     ):
@@ -280,7 +280,7 @@ class PosCalcsGeneric(object):
         self._dir = np.ma.MaskedArray(np.zeros_like(x))
         self._speed = None
         self._ppm = ppm
-        self.cm = cm
+        self.convert2cm = convert2cm
         self._jumpmax = jumpmax
         self.nleds = np.ndim(x)
         self.npos = len(x)
@@ -349,9 +349,9 @@ class PosCalcsGeneric(object):
         self._sample_rate = val
 
     def postprocesspos(
-                       self,
-                       tracker_params: "dict[str, float]" = {},
-                       **kwargs) -> None:
+            self,
+            tracker_params: "dict[str, float]" = {},
+            **kwargs) -> None:
         """
         Post-process position data
 
@@ -396,7 +396,7 @@ class PosCalcsGeneric(object):
         else:
             self.sample_rate = 30
 
-        if self.cm:
+        if self.convert2cm:
             xy = xy / (self._ppm / 100.0)
 
         xy = self.speedfilter(xy)
@@ -418,7 +418,7 @@ class PosCalcsGeneric(object):
                     np.arctan2(
                         -(xy_f[0, pos2 + 1] - xy_f[0, pos2]),
                         xy_f[1, pos2 + 1] - xy_f[1, pos2],
-                        
+
                     )
                 )
             ),
@@ -443,7 +443,7 @@ class PosCalcsGeneric(object):
         disp: np.ma.MaskedArray = np.hypot(xy[0], xy[1])
         disp: np.ma.MaskedArray = np.diff(disp, axis=0)
         disp: np.ma.MaskedArray = np.insert(disp, -1, 0)
-        if self.cm:
+        if self.convert2cm:
             jumpmax: float = self.ppm / self.jumpmax
         else:
             jumpmax: float = self.jumpmax
@@ -504,7 +504,7 @@ class PosCalcsGeneric(object):
         """
         speed = np.abs(np.ma.ediff1d(np.hypot(xy[0], xy[1])))
         self.speed = np.append(speed, speed[-1])
-        if self.cm:
+        if self.convert2cm:
             self.speed = self.speed * self.sample_rate
 
     def upsamplePos(self, xy: np.ma.MaskedArray, upsample_rate: int = 50):
