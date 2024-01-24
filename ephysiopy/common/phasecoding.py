@@ -24,6 +24,7 @@ phase_precession_config = {
     # fractional limit for restricting fields at environment edges
     "area_threshold": np.nan,
     "bins_per_cm": 2,
+    "convert_xy_2_cm": False,
     # defines start/ end of theta cycle
     "allowed_min_spike_phase": np.pi,
     # percentile power below which theta cycles are rejected
@@ -79,9 +80,9 @@ class phasePrecession2D(object):
         pos_ts: np.array,
         pp_config: dict = phase_precession_config,
     ):
-
-        [setattr(self, k, pp_config[k]) for k in pp_config.keys()]
-
+        # Set up the parameters
+        # this sets a bunch of member attributes from the pp_config dict
+        self.update_config(pp_config)
         self._pos_ts = pos_ts
 
         # Create a dict to hold the stats values
@@ -131,25 +132,14 @@ class phasePrecession2D(object):
         self.phase = phase
         self.phaseAdj = None
 
-        # ... and the position data
-        P = PosCalcsGeneric(
-            xy[0, :],
-            xy[1, :],
-            ppm=self.ppm,
-            cm=True,
-        )
-        P.postprocesspos(tracker_params={"AxonaBadValue": 1023})
-        # ... do the ratemap creation here once
-        R = RateMap(P.xy, P.dir, P.speed, xyInCms=True)
-        R.binsize = self.cms_per_bin
-        R.smooth_sz = self.field_smoothing_kernel_len
-        R.ppm = self.ppm
+        self.update_position(xy, self.ppm, cm=self.convert_xy_2_cm)
+        self.update_rate_map()
+
         spk_times_in_pos_samples = self.getSpikePosIndices(spike_ts)
         spk_weights = np.bincount(
             spk_times_in_pos_samples, minlength=len(self.pos_ts))
         self.spk_times_in_pos_samples = spk_times_in_pos_samples
         self.spk_weights = spk_weights
-        self.RateMap = R  # this will be used a fair bit below
 
         self.spike_ts = spike_ts
 
@@ -160,6 +150,36 @@ class phasePrecession2D(object):
     @pos_ts.setter
     def pos_ts(self, value):
         self._pos_ts = value
+
+    @property
+    def xy(self):
+        return self.PosData.xy
+
+    @xy.setter
+    def xy(self, value):
+        self.PosData.xy = value
+
+    def update_config(self, pp_config):
+        [setattr(self, k, pp_config[k]) for k in pp_config.keys()]
+
+    def update_position(self, xy, ppm: float, cm: bool):
+        P = PosCalcsGeneric(
+            xy[0, :],
+            xy[1, :],
+            ppm=ppm,
+            cm=cm,
+        )
+        P.postprocesspos(tracker_params={"AxonaBadValue": 1023})
+        # ... do the ratemap creation here once
+        self.PosData = P
+
+    def update_rate_map(self):
+        R = RateMap(self.PosData.xy, self.PosData.dir,
+                    self.PosData.speed, xyInCms=self.convert_xy_2_cm)
+        R.binsize = self.cms_per_bin
+        R.smooth_sz = self.field_smoothing_kernel_len
+        R.ppm = self.ppm
+        self.RateMap = R  # this will be used a fair bit below
 
     def getSpikePosIndices(self, spk_times: np.array):
         pos_times = getattr(self, "pos_ts")
