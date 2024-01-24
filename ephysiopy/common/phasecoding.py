@@ -21,6 +21,8 @@ phase_precession_config = {
     "field_smoothing_kernel_sigma": 5,
     # fractional limit of field peak to restrict fields with
     "field_threshold": 0.35,
+    # field threshold percent - the amount fed into fieldcalcs.local_threshold as prc
+    "field_threshold_percent": 0.65,
     # fractional limit for restricting fields at environment edges
     "area_threshold": np.nan,
     "bins_per_cm": 2,
@@ -167,7 +169,7 @@ class phasePrecession2D(object):
             xy[0, :],
             xy[1, :],
             ppm=ppm,
-            cm=cm,
+            convert2cm=cm,
         )
         P.postprocesspos(tracker_params={"AxonaBadValue": 1023})
         # ... do the ratemap creation here once
@@ -260,7 +262,8 @@ class phasePrecession2D(object):
         # get some markers
         from ephysiopy.common import fieldcalcs
 
-        markers = fieldcalcs.local_threshold(rmap)
+        markers = fieldcalcs.local_threshold(
+            rmap, prc=self.field_threshold_percent)
         # clear the edges / any invalid positions again
         markers[nan_idx] = 0
         # label these markers so each blob has a unique id
@@ -275,6 +278,10 @@ class phasePrecession2D(object):
         # TODO: come back to this as may need to know field id ordering
         peakCoords = np.array(
             ndimage.maximum_position(
+                rmap, labels=labels, index=fieldId)
+        ).astype(int)
+        COMCoords = np.array(
+            ndimage.center_of_mass(
                 rmap, labels=labels, index=fieldId)
         ).astype(int)
         peaksXY = np.vstack((xe[peakCoords[:, 0]], ye[peakCoords[:, 1]])).T

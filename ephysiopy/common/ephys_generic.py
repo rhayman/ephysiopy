@@ -280,7 +280,7 @@ class PosCalcsGeneric(object):
         self._dir = np.ma.MaskedArray(np.zeros_like(x))
         self._speed = None
         self._ppm = ppm
-        self.convert2cm = convert2cm
+        self._convert2cm = convert2cm
         self._jumpmax = jumpmax
         self.nleds = np.ndim(x)
         self.npos = len(x)
@@ -297,6 +297,14 @@ class PosCalcsGeneric(object):
     @xy.setter
     def xy(self, value) -> None:
         self._xy: np.ma.MaskedArray = value
+
+    @property
+    def convert2cm(self):
+        return self._convert2cm
+
+    @convert2cm.setter
+    def convert2cm(self, val):
+        self._convert2cm = val
 
     @property
     def xyTS(self):
