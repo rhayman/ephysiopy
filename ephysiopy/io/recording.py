@@ -129,6 +129,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self._settings = None
         self._PosCalcs = None
         self._RateMap = None
+        self._EEGCalcs = None
         self._sync_message_file = None
         self._clusterData = None  # Kilosort or .cut / .clu file
         self._recording_start_time = None  # float
@@ -187,6 +188,14 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     @RateMap.setter
     def RateMap(self, value):
         self._RateMap = value
+
+    @property
+    def EEGCalcs(self):
+        return self._EEGCalcs
+
+    @EEGCalcs.setter
+    def EEGCalcs(self, val):
+        self._EEGCalcs = val
 
     @property
     def clusterData(self):

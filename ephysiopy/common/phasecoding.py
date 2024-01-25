@@ -22,7 +22,7 @@ phase_precession_config = {
     # fractional limit of field peak to restrict fields with
     "field_threshold": 0.35,
     # field threshold percent - the amount fed into fieldcalcs.local_threshold as prc
-    "field_threshold_percent": 0.65,
+    "field_threshold_percent": 65,
     # fractional limit for restricting fields at environment edges
     "area_threshold": np.nan,
     "bins_per_cm": 2,
@@ -382,12 +382,15 @@ class phasePrecession2D(object):
         # will lead to fields labelled with lots of small holes in. Fill those
         # gaps in here and calculate the perimeter of the fields based on that
         # labelled image
-        labels = ndimage.binary_fill_holes(labels)
+        labels, n_labels = ndimage.label(ndimage.binary_fill_holes(labels))
 
         rmap[np.isnan(rmap)] = 0
         xBins = np.digitize(xy[0], ye[:-1])
         yBins = np.digitize(xy[1], xe[:-1])
         fieldLabel = labels[yBins - 1, xBins - 1]
+        fl_counts, fl_bins = np.histogram(fieldLabel, bins=np.unique(labels))
+        for i, fl in enumerate(fl_bins[1::]):
+            print("Field {} has {} samples".format(i, fl_counts[i]))
 
         fieldPerimMask = bwperim(labels)
         fieldPerimYBins, fieldPerimXBins = np.nonzero(fieldPerimMask)

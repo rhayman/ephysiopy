@@ -378,7 +378,7 @@ class PosCalcsGeneric(object):
             mask of the positional data (an instance of numpy masked array)
             is modified throughout this method.
         """
-        xy = self.orig_xy
+        xy = self.orig_xy.copy()
         x_zero = xy[0, :] < 0
         y_zero = xy[1, :] < 0
         xy[:, np.logical_or(x_zero, y_zero)] = np.ma.masked
