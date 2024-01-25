@@ -767,10 +767,10 @@ class phasePrecession2D(object):
         phase = self.phaseAdj
         cycleLabel = self.cycleLabel
         spkEEGIdx = np.ceil(
-            spikeTS * (self.lfp_sample_rate / self.pos_sample_rate))
+            spikeTS * self.lfp_sample_rate)
         spkEEGIdx[spkEEGIdx > len(phase)] = len(phase) - 1
         spkEEGIdx = spkEEGIdx.astype(int)
-        spkPosIdx = np.ceil(spikeTS)
+        spkPosIdx = np.ceil(spikeTS * self.pos_sample_rate)
         spkPosIdx[spkPosIdx > xy.shape[1]] = xy.shape[1] - 1
         spkRunLabel = runLabel[spkPosIdx.astype(int)]
         thetaCycleLabel = cycleLabel[spkEEGIdx.astype(int)]
