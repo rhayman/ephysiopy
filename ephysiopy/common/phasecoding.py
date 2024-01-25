@@ -409,7 +409,7 @@ class phasePrecession2D(object):
 
         posRUnsmthd = np.zeros((nPos)) * np.nan
         posAngleFromPeak = np.zeros_like(posRUnsmthd) * np.nan
-        perimAngleFromPeak = np.zeros((fieldPerimXY.shape[1])) * np.nan
+        perimAngleFromPeak = np.zeros_like(fieldPerimMask) * np.nan
         for i, peak in enumerate(peaksXY):
             i = i + 1
             # grab each fields perim coords and the pos samples within it
@@ -427,7 +427,8 @@ class phasePrecession2D(object):
                     this_xy[1, :] - peak[1], this_xy[0, :] - peak[0]
                 )
                 posAngleFromPeak[fieldLabel == i] = thisPosAngle
-                perimAngleFromPeak[labels[fieldPerimMask]
+
+                perimAngleFromPeak[fieldPerimMask
                                    == i] = thisPerimAngle
                 # for each pos sample calculate which point on the perim is
                 # most colinear with the field centre - see _circ_abs for more
