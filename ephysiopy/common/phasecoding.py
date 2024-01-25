@@ -367,6 +367,7 @@ class phasePrecession2D(object):
         spd = self.RateMap.speed
         spkPosInd = np.ceil(spikeTS).astype(int)
         spkPosInd[spkPosInd > len(xy.T)] = len(xy.T) - 1
+        spkPosInd = spkPosInd * self.pos_sample_rate
         nPos = xy.shape[1]
         xy_old = xy.copy()
         xydir = np.squeeze(xydir)
