@@ -9,6 +9,331 @@ from ephysiopy.common.utils import bwperim
 from scipy import ndimage, optimize, signal
 from scipy.stats import norm
 
+
+def labelledCumSum(X, L):
+    X = np.ravel(X)
+    L = np.ravel(L)
+    if len(X) != len(L):
+        print("The two inputs need to be of the same length")
+        return
+    X[np.isnan(X)] = 0
+    S = np.cumsum(X)
+
+    mask = L.astype(bool)
+    LL = L[:-1] != L[1::]
+    LL = np.insert(LL, 0, True)
+    isStart = np.logical_and(mask, LL)
+    startInds = np.nonzero(isStart)[0]
+    if len(startInds) == 0:
+        return S
+    if startInds[0] == 0:
+        S_starts = S[startInds[1::] - 1]
+        S_starts = np.insert(S_starts, 0, 0)
+    else:
+        S_starts = S[startInds - 1]
+
+    L_safe = np.cumsum(isStart)
+    S[mask] = S[mask] - S_starts[L_safe[mask] - 1]
+    S[L == 0] = np.nan
+    return S
+
+
+def cart2pol(x, y):
+    r = np.hypot(x, y)
+    th = np.arctan2(y, x)
+    return r, th
+
+
+def pol2cart(r, theta):
+    x = r * np.cos(theta)
+    y = r * np.sin(theta)
+    return x, y
+
+
+def applyFilter2Labels(M, x):
+    """
+    M is a logical mask specifying which label numbers to keep
+    x is an array of positive integer labels
+
+    This method sets the undesired labels to 0 and renumbers the remaining
+    labels 1 to n when n is the number of trues in M
+    """
+    newVals = M * np.cumsum(M)
+    x[x > 0] = newVals[x[x > 0] - 1]
+    return x
+
+
+def getLabelStarts(x):
+    x = np.ravel(x)
+    xx = np.ones(len(x) + 1)
+    xx[1::] = x
+    xx = xx[:-1] != xx[1::]
+    xx[0] = True
+    return np.nonzero(np.logical_and(x, xx))[0]
+
+
+def getLabelEnds(x):
+    x = np.ravel(x)
+    xx = np.ones(len(x) + 1)
+    xx[:-1] = x
+    xx = xx[:-1] != xx[1::]
+    xx[-1] = True
+    return np.nonzero(np.logical_and(x, xx))[0]
+
+
+def circ_abs(x):
+    return np.abs(np.mod(x + np.pi, 2 * np.pi) - np.pi)
+
+
+def labelContigNonZeroRuns(x):
+    x = np.ravel(x)
+    xx = np.ones(len(x) + 1)
+    xx[1::] = x
+    xx = xx[:-1] != xx[1::]
+    xx[0] = True
+    L = np.cumsum(np.logical_and(x, xx))
+    L[np.logical_not(x)] = 0
+    return L
+
+
+def getPhaseOfMinSpiking(spkPhase):
+    kernelLen = 180
+    kernelSig = kernelLen / 4
+
+    k = signal.gaussian(kernelLen, kernelSig)
+    bins = np.arange(-179.5, 180, 1)
+    phaseDist, _ = np.histogram(spkPhase / np.pi * 180, bins=bins)
+    phaseDist = ndimage.convolve(phaseDist, k)
+    phaseMin = bins[
+        int(np.ceil(np.nanmean(np.nonzero(
+            phaseDist == np.min(phaseDist))[0])))
+    ]
+    return phaseMin
+
+
+def fixAngle(a):
+    """
+    Ensure angles lie between -pi and pi
+    a must be in radians
+    """
+    b = np.mod(a + np.pi, 2 * np.pi) - np.pi
+    return b
+
+
+def ccc(t, p):
+    """
+    Calculates correlation between two random circular variables
+    """
+    n = len(t)
+    A = np.sum(np.cos(t) * np.cos(p))
+    B = np.sum(np.sin(t) * np.sin(p))
+    C = np.sum(np.cos(t) * np.sin(p))
+    D = np.sum(np.sin(t) * np.cos(p))
+    E = np.sum(np.cos(2 * t))
+    F = np.sum(np.sin(2 * t))
+    G = np.sum(np.cos(2 * p))
+    H = np.sum(np.sin(2 * p))
+    rho = (
+        4
+        * (A * B - C * D)
+        / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
+    )
+    return rho
+
+
+def ccc_jack(t, p):
+    """
+    Function used to calculate jackknife estimates of correlation
+    """
+    n = len(t) - 1
+    A = np.cos(t) * np.cos(p)
+    A = np.sum(A) - A
+    B = np.sin(t) * np.sin(p)
+    B = np.sum(B) - B
+    C = np.cos(t) * np.sin(p)
+    C = np.sum(C) - C
+    D = np.sin(t) * np.cos(p)
+    D = np.sum(D) - D
+    E = np.cos(2 * t)
+    E = np.sum(E) - E
+    F = np.sin(2 * t)
+    F = np.sum(F) - F
+    G = np.cos(2 * p)
+    G = np.sum(G) - G
+    H = np.sin(2 * p)
+    H = np.sum(H) - H
+    rho = (
+        4
+        * (A * B - C * D)
+        / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
+    )
+    return rho
+
+
+def circCircCorrTLinear(theta,
+                        phi,
+                        k=1000,
+                        alpha=0.05,
+                        hyp=0,
+                        conf=True):
+    """
+    An almost direct copy from AJs Matlab fcn to perform correlation
+    between 2 circular random variables.
+
+    Returns the correlation value (rho), p-value, bootstrapped correlation
+    values, shuffled p values and correlation values.
+
+    Args:
+        theta, phi (array_like): mx1 array containing circular data (radians)
+            whose correlation is to be measured
+        k (int, optional): number of permutations to use to calculate p-value
+            from randomisation and bootstrap estimation of confidence
+            intervals.
+            Leave empty to calculate p-value analytically (NB confidence
+            intervals will not be calculated). Default is 1000.
+        alpha (float, optional): hypothesis test level e.g. 0.05, 0.01 etc.
+            Default is 0.05.
+        hyp (int, optional): hypothesis to test; -1/ 0 / 1 (-ve correlated /
+            correlated in either direction / positively correlated).
+            Default is 0.
+        conf (bool, optional): True or False to calculate confidence intervals
+            via jackknife or bootstrap. Default is True.
+
+    References:
+        Fisher (1993), Statistical Analysis of Circular Data,
+            Cambridge University Press, ISBN: 0 521 56890 0
+    """
+    theta = theta.ravel()
+    phi = phi.ravel()
+
+    if not len(theta) == len(phi):
+        print("theta and phi not same length - try again!")
+        raise ValueError()
+
+    # estimate correlation
+    rho = ccc(theta, phi)
+    n = len(theta)
+
+    # derive p-values
+    if k:
+        p_shuff = shuffledPVal(theta, phi, rho, k, hyp)
+        p = np.nan
+
+    # estimtate ci's for correlation
+    if n >= 25 and conf:
+        # obtain jackknife estimates of rho and its ci's
+        rho_jack = ccc_jack(theta, phi)
+        rho_jack = n * rho - (n - 1) * rho_jack
+        rho_boot = np.mean(rho_jack)
+        rho_jack_std = np.std(rho_jack)
+        ci = (
+            rho_boot
+            - (1 / np.sqrt(n)) * rho_jack_std *
+            norm.ppf(alpha / 2, (0, 1))[0],
+            rho_boot
+            + (1 / np.sqrt(n)) * rho_jack_std *
+            norm.ppf(alpha / 2, (0, 1))[0],
+        )
+    elif conf and k and n < 25 and n > 4:
+        from sklearn.utils import resample
+
+        # set up the bootstrapping parameters
+        boot_samples = []
+        for i in range(k):
+            theta_sample = resample(theta, replace=True)
+            phi_sample = resample(phi, replace=True)
+            boot_samples.append(ccc(theta_sample, phi_sample))
+        rho_boot = np.mean(boot_samples)
+        # confidence intervals
+        p = ((1.0 - alpha) / 2.0) * 100
+        lower = max(0.0, np.percentile(boot_samples, p))
+        p = (alpha + ((1.0 - alpha) / 2.0)) * 100
+        upper = min(1.0, np.percentile(boot_samples, p))
+
+        ci = (lower, upper)
+    else:
+        rho_boot = np.nan
+        ci = np.nan
+
+    return rho, p, rho_boot, p_shuff, ci
+
+
+def shuffledPVal(theta, phi, rho, k, hyp):
+    """
+    Calculates shuffled p-values for correlation
+    """
+    n = len(theta)
+    idx = np.zeros((n, k))
+    for i in range(k):
+        idx[:, i] = np.random.permutation(np.arange(n))
+
+    thetaPerms = theta[idx.astype(int)]
+
+    A = np.dot(np.cos(phi), np.cos(thetaPerms))
+    B = np.dot(np.sin(phi), np.sin(thetaPerms))
+    C = np.dot(np.sin(phi), np.cos(thetaPerms))
+    D = np.dot(np.cos(phi), np.sin(thetaPerms))
+    E = np.sum(np.cos(2 * theta))
+    F = np.sum(np.sin(2 * theta))
+    G = np.sum(np.cos(2 * phi))
+    H = np.sum(np.sin(2 * phi))
+
+    rho_sim = (
+        4
+        * (A * B - C * D)
+        / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
+    )
+
+    if hyp == 1:
+        p_shuff = np.sum(rho_sim >= rho) / float(k)
+    elif hyp == -1:
+        p_shuff = np.sum(rho_sim <= rho) / float(k)
+    elif hyp == 0:
+        p_shuff = np.sum(np.fabs(rho_sim) > np.fabs(rho)) / float(k)
+    else:
+        p_shuff = np.nan
+
+    return p_shuff
+
+
+def circRegress(x, t):
+    """
+    Finds approximation to circular-linear regression for phase precession.
+
+    Args:
+        x (list): n-by-1 list of in-field positions (linear variable)
+        t (list): n-by-1 list of phases, in degrees (converted to radians)
+
+    Note:
+        Neither x nor t can contain NaNs, must be paired (of equal length).
+    """
+    # transform the linear co-variate to the range -1 to 1
+    if not np.any(x) or not np.any(t):
+        return x, t
+    mnx = np.mean(x)
+    xn = x - mnx
+    mxx = np.max(np.fabs(xn))
+    xn = xn / mxx
+    # keep tn between 0 and 2pi
+    tn = np.remainder(t, 2 * np.pi)
+    # constrain max slope to give at most 720 degrees of phase precession
+    # over the field
+    max_slope = (2 * np.pi) / (np.max(xn) - np.min(xn))
+
+    # perform slope optimisation and find intercept
+    def _cost(m, x, t):
+        return -np.abs(np.sum(np.exp(1j * (t - m * x)))) / len(t - m * x)
+
+    slope = optimize.fminbound(
+        _cost, -1 * max_slope, max_slope, args=(xn, tn))
+    intercept = np.arctan2(
+        np.sum(np.sin(tn - slope * xn)), np.sum(np.cos(tn - slope * xn))
+    )
+    intercept = intercept + ((0 - slope) * (mnx / mxx))
+    slope = slope / mxx
+    return slope, intercept
+
+
 # There are a lot of parameters here so lets keep them outside the main
 # class and define them as a module level dictionary
 phase_precession_config = {
@@ -144,330 +469,6 @@ class phasePrecession2D(object):
         self.spk_weights = spk_weights
 
         self.spike_ts = spike_ts
-
-    @staticmethod
-    def labelledCumSum(X, L):
-        X = np.ravel(X)
-        L = np.ravel(L)
-        if len(X) != len(L):
-            print("The two inputs need to be of the same length")
-            return
-        X[np.isnan(X)] = 0
-        S = np.cumsum(X)
-
-        mask = L.astype(bool)
-        LL = L[:-1] != L[1::]
-        LL = np.insert(LL, 0, True)
-        isStart = np.logical_and(mask, LL)
-        startInds = np.nonzero(isStart)[0]
-        if len(startInds) == 0:
-            return S
-        if startInds[0] == 0:
-            S_starts = S[startInds[1::] - 1]
-            S_starts = np.insert(S_starts, 0, 0)
-        else:
-            S_starts = S[startInds - 1]
-
-        L_safe = np.cumsum(isStart)
-        S[mask] = S[mask] - S_starts[L_safe[mask] - 1]
-        S[L == 0] = np.nan
-        return S
-
-    @staticmethod
-    def cart2pol(x, y):
-        r = np.hypot(x, y)
-        th = np.arctan2(y, x)
-        return r, th
-
-    @staticmethod
-    def pol2cart(r, theta):
-        x = r * np.cos(theta)
-        y = r * np.sin(theta)
-        return x, y
-
-    @staticmethod
-    def applyFilter2Labels(M, x):
-        """
-        M is a logical mask specifying which label numbers to keep
-        x is an array of positive integer labels
-
-        This method sets the undesired labels to 0 and renumbers the remaining
-        labels 1 to n when n is the number of trues in M
-        """
-        newVals = M * np.cumsum(M)
-        x[x > 0] = newVals[x[x > 0] - 1]
-        return x
-
-    @staticmethod
-    def getLabelStarts(x):
-        x = np.ravel(x)
-        xx = np.ones(len(x) + 1)
-        xx[1::] = x
-        xx = xx[:-1] != xx[1::]
-        xx[0] = True
-        return np.nonzero(np.logical_and(x, xx))[0]
-
-    @staticmethod
-    def getLabelEnds(x):
-        x = np.ravel(x)
-        xx = np.ones(len(x) + 1)
-        xx[:-1] = x
-        xx = xx[:-1] != xx[1::]
-        xx[-1] = True
-        return np.nonzero(np.logical_and(x, xx))[0]
-
-    @staticmethod
-    def circ_abs(x):
-        return np.abs(np.mod(x + np.pi, 2 * np.pi) - np.pi)
-
-    @staticmethod
-    def labelContigNonZeroRuns(x):
-        x = np.ravel(x)
-        xx = np.ones(len(x) + 1)
-        xx[1::] = x
-        xx = xx[:-1] != xx[1::]
-        xx[0] = True
-        L = np.cumsum(np.logical_and(x, xx))
-        L[np.logical_not(x)] = 0
-        return L
-
-    @staticmethod
-    def getPhaseOfMinSpiking(spkPhase):
-        kernelLen = 180
-        kernelSig = kernelLen / 4
-
-        k = signal.gaussian(kernelLen, kernelSig)
-        bins = np.arange(-179.5, 180, 1)
-        phaseDist, _ = np.histogram(spkPhase / np.pi * 180, bins=bins)
-        phaseDist = ndimage.convolve(phaseDist, k)
-        phaseMin = bins[
-            int(np.ceil(np.nanmean(np.nonzero(
-                phaseDist == np.min(phaseDist))[0])))
-        ]
-        return phaseMin
-
-    @staticmethod
-    def fixAngle(a):
-        """
-        Ensure angles lie between -pi and pi
-        a must be in radians
-        """
-        b = np.mod(a + np.pi, 2 * np.pi) - np.pi
-        return b
-
-    @staticmethod
-    def ccc(t, p):
-        """
-        Calculates correlation between two random circular variables
-        """
-        n = len(t)
-        A = np.sum(np.cos(t) * np.cos(p))
-        B = np.sum(np.sin(t) * np.sin(p))
-        C = np.sum(np.cos(t) * np.sin(p))
-        D = np.sum(np.sin(t) * np.cos(p))
-        E = np.sum(np.cos(2 * t))
-        F = np.sum(np.sin(2 * t))
-        G = np.sum(np.cos(2 * p))
-        H = np.sum(np.sin(2 * p))
-        rho = (
-            4
-            * (A * B - C * D)
-            / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
-        )
-        return rho
-
-    @staticmethod
-    def ccc_jack(t, p):
-        """
-        Function used to calculate jackknife estimates of correlation
-        """
-        n = len(t) - 1
-        A = np.cos(t) * np.cos(p)
-        A = np.sum(A) - A
-        B = np.sin(t) * np.sin(p)
-        B = np.sum(B) - B
-        C = np.cos(t) * np.sin(p)
-        C = np.sum(C) - C
-        D = np.sin(t) * np.cos(p)
-        D = np.sum(D) - D
-        E = np.cos(2 * t)
-        E = np.sum(E) - E
-        F = np.sin(2 * t)
-        F = np.sum(F) - F
-        G = np.cos(2 * p)
-        G = np.sum(G) - G
-        H = np.sin(2 * p)
-        H = np.sum(H) - H
-        rho = (
-            4
-            * (A * B - C * D)
-            / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
-        )
-        return rho
-
-    @staticmethod
-    def circCircCorrTLinear(theta,
-                            phi,
-                            k=1000,
-                            alpha=0.05,
-                            hyp=0,
-                            conf=True):
-        """
-        An almost direct copy from AJs Matlab fcn to perform correlation
-        between 2 circular random variables.
-
-        Returns the correlation value (rho), p-value, bootstrapped correlation
-        values, shuffled p values and correlation values.
-
-        Args:
-            theta, phi (array_like): mx1 array containing circular data (radians)
-                whose correlation is to be measured
-            k (int, optional): number of permutations to use to calculate p-value
-                from randomisation and bootstrap estimation of confidence
-                intervals.
-                Leave empty to calculate p-value analytically (NB confidence
-                intervals will not be calculated). Default is 1000.
-            alpha (float, optional): hypothesis test level e.g. 0.05, 0.01 etc.
-                Default is 0.05.
-            hyp (int, optional): hypothesis to test; -1/ 0 / 1 (-ve correlated /
-                correlated in either direction / positively correlated).
-                Default is 0.
-            conf (bool, optional): True or False to calculate confidence intervals
-                via jackknife or bootstrap. Default is True.
-
-        References:
-            Fisher (1993), Statistical Analysis of Circular Data,
-                Cambridge University Press, ISBN: 0 521 56890 0
-        """
-        theta = theta.ravel()
-        phi = phi.ravel()
-
-        if not len(theta) == len(phi):
-            print("theta and phi not same length - try again!")
-            raise ValueError()
-
-        # estimate correlation
-        rho = ccc(theta, phi)
-        n = len(theta)
-
-        # derive p-values
-        if k:
-            p_shuff = shuffledPVal(theta, phi, rho, k, hyp)
-            p = np.nan
-
-        # estimtate ci's for correlation
-        if n >= 25 and conf:
-            # obtain jackknife estimates of rho and its ci's
-            rho_jack = ccc_jack(theta, phi)
-            rho_jack = n * rho - (n - 1) * rho_jack
-            rho_boot = np.mean(rho_jack)
-            rho_jack_std = np.std(rho_jack)
-            ci = (
-                rho_boot
-                - (1 / np.sqrt(n)) * rho_jack_std *
-                norm.ppf(alpha / 2, (0, 1))[0],
-                rho_boot
-                + (1 / np.sqrt(n)) * rho_jack_std *
-                norm.ppf(alpha / 2, (0, 1))[0],
-            )
-        elif conf and k and n < 25 and n > 4:
-            from sklearn.utils import resample
-
-            # set up the bootstrapping parameters
-            boot_samples = []
-            for i in range(k):
-                theta_sample = resample(theta, replace=True)
-                phi_sample = resample(phi, replace=True)
-                boot_samples.append(ccc(theta_sample, phi_sample))
-            rho_boot = np.mean(boot_samples)
-            # confidence intervals
-            p = ((1.0 - alpha) / 2.0) * 100
-            lower = max(0.0, np.percentile(boot_samples, p))
-            p = (alpha + ((1.0 - alpha) / 2.0)) * 100
-            upper = min(1.0, np.percentile(boot_samples, p))
-
-            ci = (lower, upper)
-        else:
-            rho_boot = np.nan
-            ci = np.nan
-
-        return rho, p, rho_boot, p_shuff, ci
-
-    @staticmethod
-    def shuffledPVal(theta, phi, rho, k, hyp):
-        """
-        Calculates shuffled p-values for correlation
-        """
-        n = len(theta)
-        idx = np.zeros((n, k))
-        for i in range(k):
-            idx[:, i] = np.random.permutation(np.arange(n))
-
-        thetaPerms = theta[idx.astype(int)]
-
-        A = np.dot(np.cos(phi), np.cos(thetaPerms))
-        B = np.dot(np.sin(phi), np.sin(thetaPerms))
-        C = np.dot(np.sin(phi), np.cos(thetaPerms))
-        D = np.dot(np.cos(phi), np.sin(thetaPerms))
-        E = np.sum(np.cos(2 * theta))
-        F = np.sum(np.sin(2 * theta))
-        G = np.sum(np.cos(2 * phi))
-        H = np.sum(np.sin(2 * phi))
-
-        rho_sim = (
-            4
-            * (A * B - C * D)
-            / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
-        )
-
-        if hyp == 1:
-            p_shuff = np.sum(rho_sim >= rho) / float(k)
-        elif hyp == -1:
-            p_shuff = np.sum(rho_sim <= rho) / float(k)
-        elif hyp == 0:
-            p_shuff = np.sum(np.fabs(rho_sim) > np.fabs(rho)) / float(k)
-        else:
-            p_shuff = np.nan
-
-        return p_shuff
-
-    @staticmethod
-    def circRegress(x, t):
-        """
-        Finds approximation to circular-linear regression for phase precession.
-
-        Args:
-            x (list): n-by-1 list of in-field positions (linear variable)
-            t (list): n-by-1 list of phases, in degrees (converted to radians)
-
-        Note:
-            Neither x nor t can contain NaNs, must be paired (of equal length).
-        """
-        # transform the linear co-variate to the range -1 to 1
-        if not np.any(x) or not np.any(t):
-            return x, t
-        mnx = np.mean(x)
-        xn = x - mnx
-        mxx = np.max(np.fabs(xn))
-        xn = xn / mxx
-        # keep tn between 0 and 2pi
-        tn = np.remainder(t, 2 * np.pi)
-        # constrain max slope to give at most 720 degrees of phase precession
-        # over the field
-        max_slope = (2 * np.pi) / (np.max(xn) - np.min(xn))
-
-        # perform slope optimisation and find intercept
-        def _cost(m, x, t):
-            return -np.abs(np.sum(np.exp(1j * (t - m * x)))) / len(t - m * x)
-
-        slope = optimize.fminbound(
-            _cost, -1 * max_slope, max_slope, args=(xn, tn))
-        intercept = np.arctan2(
-            np.sum(np.sin(tn - slope * xn)), np.sum(np.cos(tn - slope * xn))
-        )
-        intercept = intercept + ((0 - slope) * (mnx / mxx))
-        slope = slope / mxx
-        return slope, intercept
 
     @property
     def pos_ts(self):
