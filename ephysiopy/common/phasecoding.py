@@ -697,11 +697,9 @@ class phasePrecession2D(object):
         xydir = np.squeeze(xydir)
         xydir_old = xydir.copy()
 
-        rmap, (x_bins_in_pixels, y_bins_in_pixels) = self.RateMap.getMap(
+        rmap, (ye, xe) = self.RateMap.getMap(
             self.spk_weights
         )
-        xe = x_bins_in_pixels
-        ye = y_bins_in_pixels
 
         # The large number of bins combined with the super-smoothed ratemap
         # will lead to fields labelled with lots of small holes in. Fill those
