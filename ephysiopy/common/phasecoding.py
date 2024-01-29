@@ -987,7 +987,6 @@ class phasePrecession2D(object):
 # and labelled data
 
 
-@staticmethod
 def labelledCumSum(X, L):
     X = np.ravel(X)
     L = np.ravel(L)
@@ -1016,21 +1015,18 @@ def labelledCumSum(X, L):
     return S
 
 
-@staticmethod
 def cart2pol(x, y):
     r = np.hypot(x, y)
     th = np.arctan2(y, x)
     return r, th
 
 
-@staticmethod
 def pol2cart(r, theta):
     x = r * np.cos(theta)
     y = r * np.sin(theta)
     return x, y
 
 
-@staticmethod
 def applyFilter2Labels(M, x):
     """
     M is a logical mask specifying which label numbers to keep
@@ -1044,7 +1040,6 @@ def applyFilter2Labels(M, x):
     return x
 
 
-@staticmethod
 def getLabelStarts(x):
     x = np.ravel(x)
     xx = np.ones(len(x) + 1)
@@ -1054,7 +1049,6 @@ def getLabelStarts(x):
     return np.nonzero(np.logical_and(x, xx))[0]
 
 
-@staticmethod
 def getLabelEnds(x):
     x = np.ravel(x)
     xx = np.ones(len(x) + 1)
@@ -1064,12 +1058,10 @@ def getLabelEnds(x):
     return np.nonzero(np.logical_and(x, xx))[0]
 
 
-@staticmethod
 def circ_abs(x):
     return np.abs(np.mod(x + np.pi, 2 * np.pi) - np.pi)
 
 
-@staticmethod
 def labelContigNonZeroRuns(x):
     x = np.ravel(x)
     xx = np.ones(len(x) + 1)
@@ -1081,7 +1073,6 @@ def labelContigNonZeroRuns(x):
     return L
 
 
-@staticmethod
 def getPhaseOfMinSpiking(spkPhase):
     kernelLen = 180
     kernelSig = kernelLen / 4
@@ -1097,7 +1088,6 @@ def getPhaseOfMinSpiking(spkPhase):
     return phaseMin
 
 
-@staticmethod
 def fixAngle(a):
     """
     Ensure angles lie between -pi and pi
@@ -1107,7 +1097,6 @@ def fixAngle(a):
     return b
 
 
-@staticmethod
 def ccc(t, p):
     """
     Calculates correlation between two random circular variables
@@ -1129,7 +1118,6 @@ def ccc(t, p):
     return rho
 
 
-@staticmethod
 def ccc_jack(t, p):
     """
     Function used to calculate jackknife estimates of correlation
@@ -1159,7 +1147,6 @@ def ccc_jack(t, p):
     return rho
 
 
-@staticmethod
 def circCircCorrTLinear(theta,
                         phi,
                         k=1000,
@@ -1248,7 +1235,6 @@ def circCircCorrTLinear(theta,
     return rho, p, rho_boot, p_shuff, ci
 
 
-@staticmethod
 def shuffledPVal(theta, phi, rho, k, hyp):
     """
     Calculates shuffled p-values for correlation
