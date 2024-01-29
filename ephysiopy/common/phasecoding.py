@@ -708,8 +708,8 @@ class phasePrecession2D(object):
         labels, n_labels = ndimage.label(ndimage.binary_fill_holes(labels))
 
         rmap[np.isnan(rmap)] = 0
-        xBins = np.digitize(xy[0], ye[:-1])
-        yBins = np.digitize(xy[1], xe[:-1])
+        xBins = np.digitize(xy[0], xe[:-1])
+        yBins = np.digitize(xy[1], ye[:-1])
         fieldLabel = labels[xBins - 1, yBins - 1]
         fl_counts, fl_bins = np.histogram(fieldLabel, bins=np.unique(labels))
         for i, fl in enumerate(fl_bins[1::]):
@@ -919,7 +919,9 @@ class phasePrecession2D(object):
             angleCMInd = np.round(perimAngleFromPeak / np.pi * 180) + 180
             angleCMInd[angleCMInd == 0] = 360
             im = np.zeros_like(fieldPerimMask)
-            im[fieldPerimMask] = angleCMInd
+            for fl in fl_bins[1::]:
+                xi, yi = np.nonzero(fieldPerimMask == fl)
+                im[xi, yi] = angleCMInd[xi, yi]
             imM = np.ma.MaskedArray(im, mask=~fieldPerimMask, copy=True)
             #############################################
             # create custom colormap
