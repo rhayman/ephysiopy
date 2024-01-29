@@ -712,7 +712,7 @@ class phasePrecession2D(object):
         rmap[np.isnan(rmap)] = 0
         xBins = np.digitize(xy[0], ye[:-1])
         yBins = np.digitize(xy[1], xe[:-1])
-        fieldLabel = labels[yBins - 1, xBins - 1]
+        fieldLabel = labels[xBins - 1, yBins - 1]
         fl_counts, fl_bins = np.histogram(fieldLabel, bins=np.unique(labels))
         for i, fl in enumerate(fl_bins[1::]):
             print("Field {} has {} samples".format(i, fl_counts[i]))
