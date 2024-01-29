@@ -1191,8 +1191,7 @@ class phasePrecession2D(object):
             reg = regressors[k]["values"][np.logical_and(
                 goodRegressor, goodPhase)]
             pha = phase[np.logical_and(goodRegressor, goodPhase)]
-            regressors[k]["slope"],
-            regressors[k]["intercept"] = circRegress(
+            regressors[k]["slope"], regressors[k]["intercept"] = circRegress(
                 reg, pha
             )
             regressors[k]["pha"] = pha
@@ -1201,7 +1200,7 @@ class phasePrecession2D(object):
             mxx = np.max(np.abs(reg)) + np.spacing(1)
             reg = reg / mxx
             # problem regressors = instFR, pos_d_cum
-            breakpoint()
+            # breakpoint()
             theta = np.mod(np.abs(regressors[k]["slope"]) * reg, 2 * np.pi)
             rho, p, rho_boot, p_shuff, ci = circCircCorrTLinear(
                 theta, pha, self.k, self.alpha, self.hyp, self.conf
