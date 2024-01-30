@@ -1025,15 +1025,15 @@ class RateMap(object):
         cx = x1 + radius
         cy = y1 + radius
         # get the position map and the valid locations within it
-        pos_map, (ybin_edges, xbin_edges) = self.getMap(np.ones_like(self.dir),
-                                                        varType=VariableToBin.XY,
-                                                        mapType=MapType.POS,
-                                                        smoothing=False)
+        pos_map, (ye, xe) = self.getMap(np.ones_like(self.dir),
+                                        varType=VariableToBin.XY,
+                                        mapType=MapType.POS,
+                                        smoothing=False)
         yvalid, xvalid = np.nonzero(~np.isnan(pos_map))
 
         # preallocate the array to hold distances
         distances = np.full(
-            (len(xbin_edges), len(ybin_edges), len(angles)), np.nan)
+            (len(xe), len(ye), len(angles)), np.nan)
 
         # Now iterate through valid locations in the pos map and calculate the
         # distances and the indices of the lines that intersect with the
@@ -1042,8 +1042,8 @@ class RateMap(object):
         # but it will only need to be done once per session as it's creating
         # a lookup table for the distances
         for xi, yi in zip(xvalid, yvalid):
-            i_point = Point((xbin_edges[xi]+xy_binsize,
-                             ybin_edges[yi]+xy_binsize))
+            i_point = Point((xe[xi]+xy_binsize,
+                             ye[yi]+xy_binsize))
             ipx, ipy = i_point.xy
             new_point = Point(cx-ipx[0], cy-ipy[0])
             t_arena = translate(arena_boundary, -new_point.x, -new_point.y)

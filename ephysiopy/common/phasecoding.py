@@ -8,6 +8,7 @@ from ephysiopy.common.rhythmicity import LFPOscillations
 from ephysiopy.common.utils import bwperim
 from scipy import ndimage, optimize, signal
 from scipy.stats import norm
+from collections import defaultdict
 
 
 def labelledCumSum(X, L):
@@ -375,6 +376,18 @@ phase_precession_config = {
 }
 
 
+all_regressors = [
+    "spk_numWithinRun",
+    "pos_exptdRate_cum",
+    "pos_instFR",
+    "pos_timeInRun",
+    "pos_d_cum",
+    "pos_d_meanDir",
+    "pos_d_currentdir",
+    "spk_thetaBatchLabelInRun",
+]
+
+
 class phasePrecession2D(object):
     """
     Performs phase precession analysis for single unit data
@@ -406,45 +419,14 @@ class phasePrecession2D(object):
         spike_ts: np.array,
         pos_ts: np.array,
         pp_config: dict = phase_precession_config,
+        regressors=None
     ):
         # Set up the parameters
         # this sets a bunch of member attributes from the pp_config dict
         self.update_config(pp_config)
         self._pos_ts = pos_ts
 
-        # Create a dict to hold the stats values
-        stats_dict = {
-            "values": None,
-            "pha": None,
-            "slope": None,
-            "intercept": None,
-            "cor": None,
-            "p": None,
-            "cor_boot": None,
-            "p_shuffled": None,
-            "ci": None,
-            "reg": None,
-        }
-        # Create a dict of regressors to hold stat values
-        # for each regressor
-        from collections import defaultdict
-
-        self.regressors = {}
-        self.regressors = defaultdict(
-            lambda: stats_dict.copy(), self.regressors)
-        regressor_keys = [
-            "spk_numWithinRun",
-            "pos_exptdRate_cum",
-            "pos_instFR",
-            "pos_timeInRun",
-            "pos_d_cum",
-            "pos_d_meanDir",
-            "pos_d_currentdir",
-            "spk_thetaBatchLabelInRun",
-        ]
-        [self.regressors[k] for k in regressor_keys]
-        # each of the regressors in regressor_keys is a key with a value
-        # of stats_dict
+        self.update_regressors(regressors)
 
         self.k = 1000
         self.alpha = 0.05
@@ -485,6 +467,52 @@ class phasePrecession2D(object):
     @xy.setter
     def xy(self, value):
         self.PosData.xy = value
+
+    def update_regressors(self, reg_keys: list = None):
+        '''
+        Create a dict to hold the stats values for
+        each regressor
+        Default regressors are:
+            "spk_numWithinRun",
+            "pos_exptdRate_cum",
+            "pos_instFR",
+            "pos_timeInRun",
+            "pos_d_cum",
+            "pos_d_meanDir",
+            "pos_d_currentdir",
+            "spk_thetaBatchLabelInRun"
+        '''
+        if reg_keys is None:
+            reg_keys = all_regressors
+        else:
+            assert all([k in all_regressors for k in reg_keys])
+
+        # Create a dict to hold the stats values for
+        # each regressor
+        stats_dict = {
+            "values": None,
+            "pha": None,
+            "slope": None,
+            "intercept": None,
+            "cor": None,
+            "p": None,
+            "cor_boot": None,
+            "p_shuffled": None,
+            "ci": None,
+            "reg": None,
+        }
+        self.regressors = {}
+        self.regressors = defaultdict(
+            lambda: stats_dict.copy(), self.regressors)
+        [self.regressors[k] for k in reg_keys]
+        # each of the regressors in regressor_keys is a key with a value
+        # of stats_dict
+
+    def get_regressors(self):
+        return self.regressors.keys()
+
+    def get_regressor(self, key):
+        return self.regressors[key]
 
     def update_config(self, pp_config):
         [setattr(self, k, pp_config[k]) for k in pp_config.keys()]
