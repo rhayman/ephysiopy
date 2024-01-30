@@ -671,7 +671,7 @@ class phasePrecession2D(object):
         if plot:
             fig = plt.figure()
             ax = fig.add_subplot(211)
-            ax.pcolormesh(xe, ye, rmap, cmap=matplotlib.cm.get_cmap("jet"),
+            ax.pcolormesh(ye, xe, rmap, cmap=matplotlib.cm.get_cmap("jet"),
                           edgecolors="face")
             ax.set_title("Smoothed ratemap + peaks")
             ax.xaxis.set_visible(False)
@@ -679,7 +679,7 @@ class phasePrecession2D(object):
             ax.set_aspect("equal")
             xlim = ax.get_xlim()
             ylim = ax.get_ylim()
-            ax.plot(peaksXY[:, 0], peaksXY[:, 1], "ko")
+            ax.plot(peaksXY[:, 1], peaksXY[:, 0], "ko")
             ax.set_ylim(ylim)
             ax.set_xlim(xlim)
 
