@@ -960,15 +960,17 @@ class phasePrecession2D(object):
             ax.set_aspect("equal")
             ax.set_xlim([-1, 1])
             ax.set_ylim([-1, 1])
+
             ax = fig.add_subplot(222)
             ax.plot(fieldPerimX, fieldPerimY, "k.")
-            ax.set_title("Field perim and laser on events")
-            ax.plot(xy[0, fieldLabel > 0], xy[1, fieldLabel > 0], "y.")
+            ax.set_title("Field perim and\n laser on events")
+            ax.plot(xy[1, fieldLabel > 0], xy[0, fieldLabel > 0], "y.")
             if laserEvents is not None:
                 validOns = np.setdiff1d(
                     laserEvents, np.nonzero(~np.isnan(r))[0])
                 ax.plot(xy[0, validOns], xy[1, validOns], "rx")
             ax.set_aspect("equal")
+
             angleCMInd = np.round(perimAngleFromPeak / np.pi * 180) + 180
             angleCMInd[angleCMInd == 0] = 360
             im = np.zeros_like(fieldPerimMask)
@@ -1026,13 +1028,6 @@ class phasePrecession2D(object):
             ax.set_aspect("equal")
             ax.set_title("Smoothed ratemap")
 
-        # update the regressor dict from __init__ with relevant values
-        # self.regressors["pos_exptdRate_cum"]["values"] = exptdRate_cumulative
-        # self.regressors["pos_instFR"]["values"] = instFiringRate
-        # self.regressors["pos_timeInRun"]["values"] = timeInRun
-        # self.regressors["pos_d_cum"]["values"] = d_cumulative
-        # self.regressors["pos_d_meanDir"]["values"] = d_meandir
-        # self.regressors["pos_d_currentdir"]["values"] = d_currentdir
         posKeys = (
             "xy",
             "xydir",
