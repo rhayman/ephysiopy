@@ -963,7 +963,7 @@ class phasePrecession2D(object):
             norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N)
             # add the runs through the fields
             runVals = np.zeros_like(im)
-            runVals[yBins[isRun] - 1, xBins[isRun] - 1] = r[isRun]
+            runVals[xBins[isRun] - 1, yBins[isRun] - 1] = r[isRun]
             runVals = runVals
             ax = fig.add_subplot(223)
             imm = ax.imshow(
