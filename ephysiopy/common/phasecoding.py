@@ -508,6 +508,9 @@ class phasePrecession2D(object):
         # each of the regressors in regressor_keys is a key with a value
         # of stats_dict
 
+    def update_regressor_values(self, key, values):
+        self.regressors[key]["values"] = values
+
     def get_regressors(self):
         return self.regressors.keys()
 
@@ -583,9 +586,13 @@ class phasePrecession2D(object):
         )
 
         # Do the regressions
-        regress_dict = self._ppRegress(spkD, plot=True)
+        self._ppRegress(spkD)
 
-        self.plotPPRegression(regress_dict)
+        # Plot the results
+        n_regressors = len(self.get_regressors())
+        fig, ax = plt.subplots(n_regressors, 1, figsize=(10, 10))
+        for ra in zip(self.get_regressors(), ax):
+            self.plotRegressor(ra[0], ra[1])
 
     def partitionFields(self, ftype="g", plot=False, **kwargs):
         """
@@ -893,33 +900,47 @@ class phasePrecession2D(object):
         xydir_new[runEndIdx] = xydir_new[runEndIdx - 1]
 
         # project the distance value onto the current direction
-        d_currentdir = r * np.cos(xydir_new - phi)
+        if "pos_d_currentdir" in self.regressors.keys():
+            d_currentdir = r * np.cos(xydir_new - phi)
+            self.update_regressor_values("pos_d_currentdir", d_currentdir)
 
         # calculate the cumulative distance travelled on each run
-        dr = np.sqrt(np.diff(np.power(r, 2), 1))
-        d_cumulative = labelledCumSum(np.insert(dr, 0, 0), runLabel)
+        if "pos_d_cum" in self.regressors.keys():
+            dr = np.sqrt(np.diff(np.power(r, 2), 1))
+            d_cumulative = labelledCumSum(np.insert(dr, 0, 0), runLabel)
+            self.update_regressor_values("pos_d_cum", d_cumulative)
 
         # calculate cumulative sum of the expected normalised firing rate
-        exptdRate_cumulative = labelledCumSum(1 - r, runLabel)
+        if "pos_exptdRate_cum" in self.regressors.keys():
+            exptdRate_cumulative = labelledCumSum(1 - r, runLabel)
+            self.update_regressor_values(
+                "pos_exptdRate_cum", exptdRate_cumulative)
 
         # direction projected onto the run mean direction is just the x coord
-        d_meandir = xy_new[0]
+        if "pos_d_meanDir" in self.regressors.keys():
+            d_meandir = xy_new[0]
+            self.update_regressor_values("pos_d_meanDir", d_meandir)
 
         # smooth binned spikes to get an instantaneous firing rate
         # set up the smoothing kernel
-        kernLenInBins = np.round(self.ifr_kernel_len * self.bins_per_second)
-        kernSig = self.ifr_kernel_sigma * self.bins_per_second
-        k = signal.gaussian(kernLenInBins, kernSig)
-        # get a count of spikes to smooth over
-        spkCount = np.bincount(spkPosInd, minlength=nPos)
-        # apply the smoothing kernel
-        instFiringRate = signal.convolve(spkCount, k, mode="same")
-        instFiringRate[~isRun] = np.nan
+        if "pos_instFR" in self.regressors.keys():
+            kernLenInBins = np.round(
+                self.ifr_kernel_len * self.bins_per_second)
+            kernSig = self.ifr_kernel_sigma * self.bins_per_second
+            k = signal.gaussian(kernLenInBins, kernSig)
+            # get a count of spikes to smooth over
+            spkCount = np.bincount(spkPosInd, minlength=nPos)
+            # apply the smoothing kernel
+            instFiringRate = signal.convolve(spkCount, k, mode="same")
+            instFiringRate[~isRun] = np.nan
+            self.update_regressor_values("pos_instFR", instFiringRate)
 
         # find time spent within run
-        time = np.ones(nPos)
-        time = labelledCumSum(time, runLabel)
-        timeInRun = time / self.pos_sample_rate
+        if "pos_timeInRun" in self.regressors.keys():
+            time = np.ones(nPos)
+            time = labelledCumSum(time, runLabel)
+            timeInRun = time / self.pos_sample_rate
+            self.update_regressor_values("pos_timeInRun", timeInRun)
 
         fieldNum = fieldLabel[runStartIdx]
         mnSpd = np.squeeze(np.zeros_like(fieldNum))
@@ -1004,12 +1025,12 @@ class phasePrecession2D(object):
             ax.set_title("Smoothed ratemap")
 
         # update the regressor dict from __init__ with relevant values
-        self.regressors["pos_exptdRate_cum"]["values"] = exptdRate_cumulative
-        self.regressors["pos_instFR"]["values"] = instFiringRate
-        self.regressors["pos_timeInRun"]["values"] = timeInRun
-        self.regressors["pos_d_cum"]["values"] = d_cumulative
-        self.regressors["pos_d_meanDir"]["values"] = d_meandir
-        self.regressors["pos_d_currentdir"]["values"] = d_currentdir
+        # self.regressors["pos_exptdRate_cum"]["values"] = exptdRate_cumulative
+        # self.regressors["pos_instFR"]["values"] = instFiringRate
+        # self.regressors["pos_timeInRun"]["values"] = timeInRun
+        # self.regressors["pos_d_cum"]["values"] = d_cumulative
+        # self.regressors["pos_d_meanDir"]["values"] = d_meandir
+        # self.regressors["pos_d_currentdir"]["values"] = d_currentdir
         posKeys = (
             "xy",
             "xydir",
@@ -1019,12 +1040,12 @@ class phasePrecession2D(object):
             "xydir_old",
             "fieldLabel",
             "runLabel",
-            "d_currentdir",
-            "d_cumulative",
-            "exptdRate_cumulative",
-            "d_meandir",
-            "instFiringRate",
-            "timeInRun",
+            # "d_currentdir",
+            # "d_cumulative",
+            # "exptdRate_cumulative",
+            # "d_meandir",
+            # "instFiringRate",
+            # "timeInRun",
             "fieldPerimMask",
             "perimAngleFromPeak",
             "posAngleFromPeak",
@@ -1144,9 +1165,12 @@ class phasePrecession2D(object):
             spkRunLabel[spkRunLabel > 0], minlength=len(meanDir))
         rateInPosBins = spkCount[1::] / durationInPosBins.astype(float)
         # update the regressor dict from __init__ with relevant values
-        self.regressors["spk_numWithinRun"]["values"] = numWithinRun
-        self.regressors[
-            "spk_thetaBatchLabelInRun"]["values"] = thetaBatchLabelInRun
+        if "spk_numWithinRun" in self.regressors.keys():
+            self.update_regressor_values("spk_numWithinRun", numWithinRun)
+        if "spk_thetaBatchLabelInRun" in self.regressors.keys():
+            self.update_regressor_values(
+                "spk_thetaBatchLabelInRun", thetaBatchLabelInRun
+            )
         spkKeys = (
             "spikeTS",
             "spkPosIdx",
@@ -1165,7 +1189,7 @@ class phasePrecession2D(object):
             spkDict[thiskey] = locals()[thiskey]
         return spkDict
 
-    def _ppRegress(self, spkDict, whichSpk="first", plot=False, **kwargs):
+    def _ppRegress(self, spkDict, whichSpk="first", **kwargs):
 
         phase = self.phaseAdj
         newSpkRunLabel = spkDict["spkRunLabel"].copy()
@@ -1184,11 +1208,12 @@ class phasePrecession2D(object):
         regressors = self.regressors.copy()
         for k in regressors.keys():
             if k.startswith("spk_"):
-                regressors[k]["values"] = regressors[k]["values"][spkUsed]
+                self.update_regressor_values(
+                    k, regressors[k]["values"][spkUsed])
             elif k.startswith("pos_"):
-                regressors[k]["values"] = regressors[k]["values"][
-                    spkPosIdxUsed[spkUsed]
-                ]
+                self.update_regressor_values(
+                    k, regressors[k]["values"][spkPosIdxUsed[spkUsed]]
+                )
         phase = phase[spkDict["spkEEGIdx"][spkUsed]]
         phase = phase.astype(np.double)
         if "mean" in whichSpk:
@@ -1242,45 +1267,34 @@ class phasePrecession2D(object):
             regressors[k]["p_shuffled"] = p_shuff
             regressors[k]["ci"] = ci
 
-        if plot:
-            fig = plt.figure()
-
-            ax = fig.add_subplot(2, 1, 1)
-            ax.plot(regressors["pos_d_currentdir"]["values"], phase, "k.")
-            ax.plot(regressors["pos_d_currentdir"]
-                    ["values"], phase + 2 * np.pi, "k.")
-            slope = regressors["pos_d_currentdir"]["slope"]
-            intercept = regressors["pos_d_currentdir"]["intercept"]
-            mm = (0, -2 * np.pi, 2 * np.pi, 4 * np.pi)
-            for m in mm:
-                ax.plot(
-                    (-1, 1),
-                    (-slope + intercept + m, slope + intercept + m), "r", lw=3
-                )
-            ax.set_xlim(-1, 1)
-            ax.set_ylim(-np.pi, 3 * np.pi)
-            ax.set_title("pos_d_currentdir")
-            ax.set_ylabel("Phase")
-
-            ax = fig.add_subplot(2, 1, 2)
-            ax.plot(regressors["pos_d_meanDir"]["values"], phase, "k.")
-            ax.plot(regressors["pos_d_meanDir"]
-                    ["values"], phase + 2 * np.pi, "k.")
-            slope = regressors["pos_d_meanDir"]["slope"]
-            intercept = regressors["pos_d_meanDir"]["intercept"]
-            mm = (0, -2 * np.pi, 2 * np.pi, 4 * np.pi)
-            for m in mm:
-                ax.plot(
-                    (-1, 1),
-                    (-slope + intercept + m, slope + intercept + m), "r", lw=3
-                )
-            ax.set_xlim(-1, 1)
-            ax.set_ylim(-np.pi, 3 * np.pi)
-            ax.set_title("pos_d_meanDir")
-            ax.set_ylabel("Phase")
-            ax.set_xlabel("Normalised position")
         self.reg_phase = phase
         return regressors
+
+    def plotRegressor(self, regressor: str, ax=None):
+        assert regressor in self.regressors.keys()
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+        else:
+            ax = ax
+        vals = self.regressors[regressor]["values"]
+        pha = self.regressors[regressor]["pha"]
+        ax.plot(vals, pha, 'k')
+        ax.plot(vals, pha + 2 * np.pi, 'k')
+        slope = self.regressors[regressor]["slope"]
+        intercept = self.regressors[regressor]["intercept"]
+        mm = (0, -2 * np.pi, 2 * np.pi, 4 * np.pi)
+        for m in mm:
+            ax.plot(
+                (-1, 1), (-slope + intercept + m, slope + intercept + m),
+                "r", lw=3
+            )
+        ax.set_xlim(-1, 1)
+        ax.set_ylim(-np.pi, 3 * np.pi)
+        ax.set_title(regressor)
+        ax.set_ylabel("Phase")
+        ax.set_xlabel("Normalised position")
+        return ax
 
     def plotPPRegression(self,
                          regressorDict,
@@ -1291,7 +1305,8 @@ class phasePrecession2D(object):
         x = self.RateMap.xy[0, self.spk_times_in_pos_samples]
         from ephysiopy.common import fieldcalcs
 
-        rmap, (xe, _) = self.RateMap.getMap(self.spk_weights)
+        rmap, (ye, xe) = self.RateMap.getMap(self.spk_weights)
+        rmap = rmap.T
         label = fieldcalcs.field_lims(rmap)
         xInField = xe[label.nonzero()[1]]
         mask = np.logical_and(x > np.min(xInField), x < np.max(xInField))
