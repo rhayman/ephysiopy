@@ -1278,7 +1278,7 @@ class phasePrecession2D(object):
         else:
             ax = ax
         vals = self.regressors[regressor]["values"]
-        pha = self.regressors[regressor]["pha"]
+        pha = self.reg_phase
         ax.plot(vals, pha, 'k')
         ax.plot(vals, pha + 2 * np.pi, 'k')
         slope = self.regressors[regressor]["slope"]
