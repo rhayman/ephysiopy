@@ -590,7 +590,9 @@ class phasePrecession2D(object):
 
         # Plot the results
         n_regressors = len(self.get_regressors())
-        fig, ax = plt.subplots(n_regressors, 1, figsize=(10, 10))
+        fig, ax = plt.subplots(1, n_regressors, figsize=(10, 10))
+        if n_regressors == 1:
+            ax = [ax]
         for ra in zip(self.get_regressors(), ax):
             self.plotRegressor(ra[0], ra[1])
 
@@ -1279,8 +1281,8 @@ class phasePrecession2D(object):
             ax = ax
         vals = self.regressors[regressor]["values"]
         pha = self.reg_phase
-        ax.plot(vals, pha, 'k')
-        ax.plot(vals, pha + 2 * np.pi, 'k')
+        ax.plot(vals, pha, 'k.')
+        ax.plot(vals, pha + 2 * np.pi, 'k.')
         slope = self.regressors[regressor]["slope"]
         intercept = self.regressors[regressor]["intercept"]
         mm = (0, -2 * np.pi, 2 * np.pi, 4 * np.pi)
