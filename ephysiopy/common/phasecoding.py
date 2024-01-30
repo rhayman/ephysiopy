@@ -609,6 +609,7 @@ class phasePrecession2D(object):
             rmap (numpy.ndarray): The ratemap of the tetrode / cluster
         """
         rmap, (ye, xe) = self.RateMap.getMap(self.spk_weights)
+        rmap = rmap.T
         nan_idx = np.isnan(rmap)
         rmap[nan_idx] = 0
         # start image processing:
@@ -728,6 +729,7 @@ class phasePrecession2D(object):
         rmap, (ye, xe) = self.RateMap.getMap(
             self.spk_weights
         )
+        rmap = rmap.T
 
         # The large number of bins combined with the super-smoothed ratemap
         # will lead to fields labelled with lots of small holes in. Fill those
