@@ -6,6 +6,7 @@ from ephysiopy.common.binning import RateMap
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.common.rhythmicity import LFPOscillations
 from ephysiopy.common.utils import bwperim
+from ephysiopy.common.utils import count_runs_and_unique_numbers
 from scipy import ndimage, optimize, signal
 from scipy.stats import norm
 from collections import defaultdict
@@ -817,6 +818,9 @@ class phasePrecession2D(object):
                 np.sum(posRUnsmthd >= 1) / posRUnsmthd.size
             )
         )
+        runs_count, _ = count_runs_and_unique_numbers(fieldLabel)
+        for k in runs_count.keys():
+            print(f"Field {k} has {runs_count[k]} runs through it")
         posRUnsmthd[posRUnsmthd >= 1] = 1
         # label non-zero contiguous runs with a unique id
         runLabel = labelContigNonZeroRuns(fieldLabel)

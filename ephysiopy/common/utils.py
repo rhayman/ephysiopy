@@ -1,5 +1,6 @@
 import numpy as np
 import astropy.convolution as cnv
+from collections import defaultdict
 
 
 def get_z_score(x: np.ndarray,
@@ -263,3 +264,29 @@ def bwperim(bw, n=4):
                (south_west == bw) & \
                (north_west == bw)
     return ~idx * bw
+
+
+def count_runs_and_unique_numbers(arr):
+    """
+    Counts the number of continuous runs of numbers in a 1D numpy array
+    and returns the count of runs for each unique number and the unique
+    numbers.
+
+    Args:
+        arr (np.ndarray): The input 1D numpy array of numbers.
+
+    Returns:
+        tuple: A tuple containing a dictionary with the count of runs for
+        each unique number and the set of unique numbers in the array.
+    """
+    if arr.size == 0:
+        return {}, set()
+
+    unique_numbers = set(arr)
+    runs_count = defaultdict(int)
+    for num in unique_numbers:
+        runs = np.diff(np.where(arr == num)) != 1
+        # Add 1 because diff reduces the size by 1
+        runs_count[num] = np.count_nonzero(runs) + 1
+
+    return runs_count, unique_numbers
