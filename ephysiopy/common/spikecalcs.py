@@ -574,6 +574,156 @@ class SpikeCalcsGeneric(object):
             result[:, i] = counts[1:]
         return result
 
+    def ifr_sp_corr(
+        self,
+        x1,
+        speed,
+        minSpeed=2.0,
+        maxSpeed=40.0,
+        sigma=3,
+        shuffle=False,
+        nShuffles=100,
+        minTime=30,
+        plot=False,
+    ):
+        """
+        Calculates the correlation between the instantaneous firing rate and
+        speed.
+
+        Args:
+            x1 (np.array): The indices of pos at which the cluster fired.
+            speed (np.array): Instantaneous speed (1 x nSamples).
+            minSpeed (float, optional): Speeds below this value are ignored.
+                Defaults to 2.0 cm/s as with Kropff et al., 2015.
+            maxSpeed (float, optional): Speeds above this value are ignored.
+                Defaults to 40.0 cm/s.
+            sigma (int, optional): The standard deviation of the gaussian used
+                to smooth the spike train. Defaults to 3.
+            shuffle (bool, optional): Whether to shuffle the spike train.
+                Defaults to False.
+            nShuffles (int, optional): The number of resamples to feed into
+                the permutation test. Defaults to 9999.
+                See scipy.stats.PermutationMethod.
+            minTime (int, optional): The minimum time for which the spike
+                train should be considered. Defaults to 30.
+            plot (bool, optional): Whether to plot the result.
+                Defaults to False.
+        """
+        speed = speed.ravel()
+        posSampRate = self.sample_rate
+        nSamples = len(speed)
+        # position is sampled at 50Hz and so is 'automatically' binned into
+        # 20ms bins
+        spk_hist = np.bincount(x1, minlength=nSamples)
+        # smooth the spk_hist (which is a temporal histogram) with a 250ms
+        # gaussian as with Kropff et al., 2015
+        h = signal.windows.gaussian(13, sigma)
+        h = h / float(np.sum(h))
+        # filter for low speeds
+        lowSpeedIdx = speed < minSpeed
+        highSpeedIdx = speed > maxSpeed
+        speed_filt = speed[~np.logical_or(lowSpeedIdx, highSpeedIdx)]
+        spk_hist_filt = spk_hist[~np.logical_or(lowSpeedIdx, highSpeedIdx)]
+        spk_sm = signal.filtfilt(h.ravel(), 1, spk_hist_filt)
+        sm_spk_rate = spk_sm * posSampRate
+        # the permutation test for significance
+        rng = np.random.default_rng()
+        method = stats.PermutationMethod(
+            n_resamples=nShuffles, random_state=rng)
+        res = stats.pearsonr(sm_spk_rate, speed_filt, method=method)
+        if plot:
+            # do some fancy plotting stuff
+            _, sp_bin_edges = np.histogram(speed_filt, bins=50)
+            sp_dig = np.digitize(speed_filt, sp_bin_edges, right=True)
+            spks_per_sp_bin = [
+                spk_hist_filt[sp_dig == i] for i in range(len(sp_bin_edges))
+            ]
+            rate_per_sp_bin = []
+            variance_per_sp_bin = []
+            for x in spks_per_sp_bin:
+                rate_per_sp_bin.append(np.mean(x) * posSampRate)
+                variance_per_sp_bin.append((np.var(x) * posSampRate)/len(x))
+            rate_filter = signal.gaussian(5, 1.0)
+            rate_filter = rate_filter / np.sum(rate_filter)
+            binned_spk_rate = signal.filtfilt(rate_filter, 1, rate_per_sp_bin)
+            # instead of plotting a scatter plot of the firing rate at each
+            # speed bin, plot a log normalised heatmap and overlay results
+
+            spk_binning_edges = np.linspace(
+                np.min(sm_spk_rate), np.max(sm_spk_rate), len(sp_bin_edges)
+            )
+            speed_mesh, spk_mesh = np.meshgrid(sp_bin_edges, spk_binning_edges)
+            binned_rate, _, _ = np.histogram2d(
+                speed_filt, sm_spk_rate, bins=[sp_bin_edges, spk_binning_edges]
+            )
+            # blur the binned rate a bit to make it look nicer
+            from ephysiopy.common.utils import blurImage
+
+            sm_binned_rate = blurImage(binned_rate, 5)
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            from matplotlib.colors import LogNorm
+
+            speed_mesh = speed_mesh[:-1, :-1]
+            spk_mesh = spk_mesh[:-1, :-1]
+            ax.pcolormesh(
+                speed_mesh,
+                spk_mesh,
+                sm_binned_rate,
+                norm=LogNorm(),
+                alpha=0.5,
+                shading="nearest",
+                edgecolors="None",
+            )
+            # overlay the smoothed binned rate against speed
+            ax.plot(sp_bin_edges, binned_spk_rate, "r")
+            ax.plot(sp_bin_edges, binned_spk_rate +
+                    np.sqrt(variance_per_sp_bin), "r--")
+            ax.plot(sp_bin_edges, binned_spk_rate -
+                    np.sqrt(variance_per_sp_bin), "r--")
+            # do the linear regression and plot the fit too
+            # TODO: linear regression is broken ie not regressing the correct
+            # variables
+            lr = stats.linregress(speed_filt, sm_spk_rate)
+            end_point = lr.intercept + \
+                ((sp_bin_edges[-1]-sp_bin_edges[0]) * lr.slope)
+            ax.plot(
+                [np.min(sp_bin_edges), np.max(sp_bin_edges)],
+                [lr.intercept, end_point],
+                "r--",
+            )
+            ax.set_xlim(np.min(sp_bin_edges), np.max(sp_bin_edges[-2]))
+            ax.set_ylim(0, np.nanmax(binned_spk_rate) * 1.1)
+            ax.set_ylabel("Firing rate(Hz)")
+            ax.set_xlabel("Running speed(cm/s)")
+            ax.set_title(
+                "Intercept: {0:.3f}   Slope: {1:.5f}\nPearson: {2:.5f}".format(
+                    lr.intercept, lr.slope, lr.rvalue
+                )
+            )
+        # do some shuffling of the data to see if the result is signficant
+        if shuffle:
+            # shift spikes by at least 30 seconds after trial start and
+            # 30 seconds before trial end
+            timeSteps = np.random.randint(
+                30 * posSampRate, nSamples - (30 * posSampRate), nShuffles
+            )
+            shuffled_results = []
+            for t in timeSteps:
+                spk_count = np.roll(spk_hist, t)
+                spk_count_filt = spk_count[~np.logical_or(
+                    lowSpeedIdx, highSpeedIdx)]
+                spk_count_sm = signal.filtfilt(h.ravel(), 1, spk_count_filt)
+                shuffled_results.append(stats.pearsonr(
+                    spk_count_sm, speed_filt)[0])
+            if plot:
+                fig = plt.figure()
+                ax = fig.add_subplot(1, 1, 1)
+                ax.hist(np.abs(shuffled_results), 20)
+                ylims = ax.get_ylim()
+                ax.vlines(res, ylims[0], ylims[1], "r")
+        return res
+
     def responds_to_stimulus(self,
                              threshold: float,
                              min_contiguous: int,
@@ -823,7 +973,7 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
         maxSpeed=40.0,
         sigma=3,
         shuffle=False,
-        nShuffles=9999,
+        nShuffles=100,
         minTime=30,
         plot=False,
     ):
