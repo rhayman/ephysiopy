@@ -823,7 +823,7 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
         maxSpeed=40.0,
         sigma=3,
         shuffle=False,
-        nShuffles=100,
+        nShuffles=9999,
         minTime=30,
         plot=False,
     ):
@@ -842,8 +842,9 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
                 to smooth the spike train. Defaults to 3.
             shuffle (bool, optional): Whether to shuffle the spike train.
                 Defaults to False.
-            nShuffles (int, optional): The number of times to shuffle the
-                spike train. Defaults to 100.
+            nShuffles (int, optional): The number of resamples to feed into
+                the permutation test. Defaults to 9999.
+                See scipy.stats.PermutationMethod.
             minTime (int, optional): The minimum time for which the spike
                 train should be considered. Defaults to 30.
             plot (bool, optional): Whether to plot the result.
@@ -866,7 +867,11 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
         spk_hist_filt = spk_hist[~np.logical_or(lowSpeedIdx, highSpeedIdx)]
         spk_sm = signal.filtfilt(h.ravel(), 1, spk_hist_filt)
         sm_spk_rate = spk_sm * posSampRate
-        res = stats.pearsonr(sm_spk_rate, speed_filt)
+        # the permutation test for significance
+        rng = np.random.default_rng()
+        method = stats.PermutationMethod(
+            n_resamples=nShuffles, random_state=rng)
+        res = stats.pearsonr(sm_spk_rate, speed_filt, method=method)
         if plot:
             # do some fancy plotting stuff
             _, sp_bin_edges = np.histogram(speed_filt, bins=50)
