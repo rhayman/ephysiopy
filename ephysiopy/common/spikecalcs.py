@@ -941,7 +941,8 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
             shuffled_results = []
             for t in timeSteps:
                 spk_count = np.roll(spk_hist, t)
-                spk_count_filt = spk_count[~lowSpeedIdx]
+                spk_count_filt = spk_count[~np.logical_or(
+                    lowSpeedIdx, highSpeedIdx)]
                 spk_count_sm = signal.filtfilt(h.ravel(), 1, spk_count_filt)
                 shuffled_results.append(stats.pearsonr(
                     spk_count_sm, speed_filt)[0])
