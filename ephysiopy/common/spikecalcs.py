@@ -875,8 +875,10 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
                 spk_hist_filt[sp_dig == i] for i in range(len(sp_bin_edges))
             ]
             rate_per_sp_bin = []
+            variance_per_sp_bin = []
             for x in spks_per_sp_bin:
                 rate_per_sp_bin.append(np.mean(x) * posSampRate)
+                variance_per_sp_bin.append(np.var(x) * posSampRate)
             rate_filter = signal.gaussian(5, 1.0)
             rate_filter = rate_filter / np.sum(rate_filter)
             binned_spk_rate = signal.filtfilt(rate_filter, 1, rate_per_sp_bin)
@@ -911,6 +913,10 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
             )
             # overlay the smoothed binned rate against speed
             ax.plot(sp_bin_edges, binned_spk_rate, "r")
+            ax.plot(sp_bin_edges, binned_spk_rate +
+                    np.sqrt(variance_per_sp_bin), "r--")
+            ax.plot(sp_bin_edges, binned_spk_rate -
+                    np.sqrt(variance_per_sp_bin), "r--")
             # do the linear regression and plot the fit too
             # TODO: linear regression is broken ie not regressing the correct
             # variables
