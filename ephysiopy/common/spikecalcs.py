@@ -878,7 +878,7 @@ class SpikeCalcsTetrode(SpikeCalcsGeneric):
             variance_per_sp_bin = []
             for x in spks_per_sp_bin:
                 rate_per_sp_bin.append(np.mean(x) * posSampRate)
-                variance_per_sp_bin.append(np.var(x) * posSampRate)
+                variance_per_sp_bin.append((np.var(x) * posSampRate)/len(x))
             rate_filter = signal.gaussian(5, 1.0)
             rate_filter = rate_filter / np.sum(rate_filter)
             binned_spk_rate = signal.filtfilt(rate_filter, 1, rate_per_sp_bin)
