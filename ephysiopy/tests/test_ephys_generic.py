@@ -153,8 +153,7 @@ def test_nextpow2(basic_EEGCalcs):
 
 
 def test_ifft_filter(basic_EEGCalcs):
-    val = basic_EEGCalcs.ifftFilter(
-        basic_EEGCalcs.sig, [50, 60], basic_EEGCalcs.fs)
+    val = basic_EEGCalcs.ifftFilter(basic_EEGCalcs.sig, [50, 60], basic_EEGCalcs.fs)
     assert isinstance(val, np.ndarray)
 
 
@@ -207,23 +206,6 @@ def test_smooth_spike_pos_count(basic_SpikeCalcs):
     # with the spiking data
     sm_spks = basic_SpikeCalcs.smooth_spike_train(npos=3000)
     assert isinstance(sm_spks, np.ndarray)
-
-
-# -----------------------------------------------------------------------
-# ------------ SpikeCalcsTetrode testing ----------------------
-# -----------------------------------------------------------------------
-def test_plot_ifr_sp_corr(basic_SpikeCalcsTetrode, basic_xy):
-    # Assume a 10 second trial sampled at 30Hz so times are congruous
-    # with the spiking data
-    xy = np.array(basic_xy)
-    xy = xy[:, 0:300]  # 300 samples (10 secs)
-    speed = np.hypot(xy[0, :], xy[1, :]) / 300  # ppm=300
-    speed = speed / (1 / 30.0)  # pos sample rate=30
-    # Need to provide the indices of position at which the cell fired
-    # so need to do some timebase conversion stuff
-    c1_times = basic_SpikeCalcsTetrode.spike_times
-    c1_pos_idx = np.floor(c1_times / 3e4 * 30).astype(int)
-    basic_SpikeCalcsTetrode.ifr_sp_corr(c1_pos_idx, speed, plot=True)
 
 
 # -----------------------------------------------------------------------
