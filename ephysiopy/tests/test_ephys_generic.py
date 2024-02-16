@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from ephysiopy.common.ephys_generic import EEGCalcsGeneric, EventsGeneric
+from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 
 
@@ -20,13 +20,6 @@ def basic_SpikeCalcs(basic_spike_times_and_cluster_ids):
     S.event_ts = event_ts / S.sample_rate
     S.duration = 10
     return S
-
-
-# -----------------------------------------------------------------------
-# ------------ EventsGeneric testing ----------------------
-# -----------------------------------------------------------------------
-def test_events_class():
-    EventsGeneric()
 
 
 # -----------------------------------------------------------------------
