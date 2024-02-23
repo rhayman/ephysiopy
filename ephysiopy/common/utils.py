@@ -12,9 +12,11 @@ def get_z_score(x: np.ndarray,
     and standard deviation in that sample, unless stated
     '''
     if mean is None:
-        mean = np.mean(x, axis=axis)
+        mean = np.nanmean(x, axis=axis)
     if sd is None:
-        sd = np.std(x, axis=axis)
+        sd = np.nanstd(x, axis=axis)
+    if axis == -1:
+        return (x - mean[...,None]) / sd[...,None]
     return (x - mean) / sd
 
 
@@ -27,9 +29,11 @@ def mean_norm(x: np.ndarray, mn=None, axis=0) -> np.ndarray:
 
 def min_max_norm(x: np.ndarray, min=None, max=None, axis=0) -> np.ndarray:
     if min is None:
-        min = np.min(x, axis)
+        min = np.nanmin(x, axis)
     if max is None:
-        max = np.max(x, axis)
+        max = np.nanmax(x, axis)
+    if axis == -1:
+        return (x - min[...,None]) / (max - min)[...,None]
     return (x - min) / (max - min)
 
 

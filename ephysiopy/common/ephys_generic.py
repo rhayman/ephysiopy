@@ -114,7 +114,7 @@ class EEGCalcsGeneric(object):
     """
 
     def __init__(self, sig, fs):
-        self.sig = sig
+        self.sig = np.ma.MaskedArray(sig)
         self.fs = fs
         self.thetaRange = [6, 12]
         self.outsideRange = [3, 125]
@@ -124,6 +124,30 @@ class EEGCalcsGeneric(object):
         self.sn2Width = 2
         self.maxFreq = 125
         self.maxPow = None
+
+    def apply_mask(self, mask: list):
+        """
+        Applies a mask to the signal
+
+        Args:
+            mask (list): The mask to be applied
+
+        Returns:
+            Nothing. Sets the mask of self.sig
+
+        Notes:
+            If mask is empty, the mask is removed
+            The mask should be a list of tuples, each tuple containing
+            the start and end times of the mask i.e. [(start1, end1), (start2, end2)]
+            everything inside of these times is masked
+        """
+        if len(mask) > 0:  # if mask is empty, remove mask
+            self.sig.mask = False
+        else:
+            times = np.arange(0, len(self.sig), 1 / self.fs)
+            mask = [np.ma.masked_inside(times, m[0], m[1]).mask for m in mask]
+            mask = np.any(mask, axis=0)
+            self.sig = np.ma.masked_array(self.sig, mask)
 
     def _nextpow2(self, val: int):
         """
@@ -299,19 +323,19 @@ class PosCalcsGeneric(object):
         self._xy: np.ma.MaskedArray = value
 
     @property
-    def convert2cm(self):
+    def convert2cm(self) -> bool:
         return self._convert2cm
 
     @convert2cm.setter
-    def convert2cm(self, val):
+    def convert2cm(self, val) -> None:
         self._convert2cm = val
 
     @property
-    def xyTS(self):
+    def xyTS(self) -> np.ma.MaskedArray:
         return self._xyTS
 
     @xyTS.setter
-    def xyTS(self, val):
+    def xyTS(self, val) -> None:
         self._xyTS = val
 
     @property
@@ -332,28 +356,28 @@ class PosCalcsGeneric(object):
         self.postprocesspos(self.tracker_params)
 
     @property
-    def jumpmax(self):
+    def jumpmax(self) -> float:
         return self._jumpmax
 
     @jumpmax.setter
-    def jumpmax(self, val):
+    def jumpmax(self, val) -> None:
         self._jumpmax = val
         self.postprocesspos(self.tracker_params)
 
     @property
-    def speed(self):
+    def speed(self) -> np.ma.MaskedArray:
         return self._speed
 
     @speed.setter
-    def speed(self, value):
+    def speed(self, value) -> None:
         self._speed = value
 
     @property
-    def sample_rate(self):
+    def sample_rate(self) -> int:
         return self._sample_rate
 
     @sample_rate.setter
-    def sample_rate(self, val):
+    def sample_rate(self, val) -> None:
         self._sample_rate = val
 
     def postprocesspos(
@@ -539,6 +563,36 @@ class PosCalcsGeneric(object):
         new_y = signal.resample_poly(
             xy[1, :], upsample_rate / denom, 30 / denom)
         return np.array([new_x, new_y])
+    
+    def apply_mask(self, mask: list):
+        """
+        Applies a mask to the position data
+
+        Args:
+            mask (list): The mask to be applied
+
+        Returns:
+            Nothing. Sets the mask of pos data
+
+        Notes:
+            If mask is empty, the mask is removed
+            The mask should be a list of tuples, each tuple containing
+            the start and end times of the mask i.e. [(start1, end1), (start2, end2)]
+            everything inside of these times is masked
+        """
+        if len(mask) > 0:  # if mask is empty, remove mask
+            self.xy.mask = False
+            self.xyTS.mask = False
+            self.dir.mask = False
+            self.speed.mask = False
+        else:
+            times = np.arange(0, len(self.sig), 1 / self.sample_rate)
+            mask = [np.ma.masked_inside(times, m[0], m[1]).mask for m in mask]
+            mask = np.any(mask, axis=0)
+            self.xy.mask = mask
+            self.xyTS.mask = mask
+            self.dir.mask = mask
+            self.speed.mask = mask
 
     def filterPos(self, filt: dict = {}):
         """

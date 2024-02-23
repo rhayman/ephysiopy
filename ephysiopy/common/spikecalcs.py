@@ -307,7 +307,7 @@ def contamination_percent(
     return c, Qi, Q00, Q01, Ri
 
 
-# a namedtuple to hold some metrics from the KS run
+# a namedtuple to hold some metrics from the KiloSort run
 KSMetaTuple = namedtuple(
     'KSMeta', 'Amplitude group KSLabel ContamPct ')
 
@@ -330,8 +330,8 @@ class SpikeCalcsGeneric(object):
                  cluster: int,
                  waveforms: np.ndarray = None,
                  **kwargs):
-        self.spike_times = spike_times  # IN SECONDS
-        self._waves = waveforms
+        self.spike_times = np.ma.MaskedArray(spike_times)  # IN SECONDS
+        self._waves = np.ma.MaskedArray(waveforms)
         self.cluster = cluster
         self._event_ts = None  # the times that events occured IN SECONDS
         # window, in seconds, either side of the stimulus, to examine
@@ -351,35 +351,35 @@ class SpikeCalcsGeneric(object):
         self.__dict__.update(kwargs)
 
     @property
-    def sample_rate(self):
+    def sample_rate(self) -> int | float:
         return self._sample_rate
 
     @sample_rate.setter
-    def sample_rate(self, value):
+    def sample_rate(self, value: int | float) -> None:
         self._sample_rate = value
 
     @property
-    def pos_sample_rate(self):
+    def pos_sample_rate(self) -> int | float:
         return self._pos_sample_rate
 
     @pos_sample_rate.setter
-    def pos_sample_rate(self, value):
+    def pos_sample_rate(self, value: int | float) -> None:
         self._pos_sample_rate = value
 
     @property
-    def pre_spike_samples(self):
+    def pre_spike_samples(self) -> int:
         return self._pre_spike_samples
 
     @pre_spike_samples.setter
-    def pre_spike_samples(self, value):
-        self._pre_spike_samples = int(self._pre_spike_samples)
+    def pre_spike_samples(self, value: int) -> None:
+        self._pre_spike_samples = int(value)
 
     @property
-    def post_spike_samples(self):
+    def post_spike_samples(self) -> int:
         return self._post_spike_samples
 
     @post_spike_samples.setter
-    def post_spike_samples(self, value):
+    def post_spike_samples(self, value: int) -> None:
         self._post_spike_samples = int(self._post_spike_samples)
 
     def waveforms(self, channel_id: Sequence = None):
@@ -401,29 +401,29 @@ class SpikeCalcsGeneric(object):
         Returns:
             int: The number of spikes in the cluster
         """
-        return len(self.spike_times)
+        return np.ma.count(self.spike_times)
 
     @property
-    def event_ts(self):
+    def event_ts(self) -> np.ndarray:
         return self._event_ts
 
     @event_ts.setter
-    def event_ts(self, value):
+    def event_ts(self, value: np.ndarray) -> None:
         self._event_ts = value
 
     @property
-    def duration(self):
+    def duration(self) -> float | int | None:
         return self._duration
 
     @duration.setter
-    def duration(self, value):
+    def duration(self, value: float | int | None):
         self._duration = value
 
     @property
-    def KSMeta(self):
+    def KSMeta(self) -> KSMetaTuple:
         return self._ksmeta
 
-    def update_KSMeta(self, value: dict):
+    def update_KSMeta(self, value: dict) -> None:
         """
         Takes in a TemplateModel instance from a phy session and
         parses out the relevant metrics for the cluster and places
@@ -438,28 +438,44 @@ class SpikeCalcsGeneric(object):
         self._ksmeta = KSMetaTuple(*metavals)
 
     @property
-    def event_window(self):
+    def event_window(self) -> np.ndarray:
         return self._event_window
 
     @event_window.setter
-    def event_window(self, value):
+    def event_window(self, value: np.ndarray):
         self._event_window = value
 
     @property
-    def stim_width(self):
+    def stim_width(self) -> int | float | None:
         return self._stim_width
 
     @stim_width.setter
-    def stim_width(self, value):
+    def stim_width(self, value: int | float | None):
         self._stim_width = value
 
     @property
-    def secs_per_bin(self):
+    def secs_per_bin(self) -> float | int:
         return self._secs_per_bin
 
     @secs_per_bin.setter
-    def secs_per_bin(self, value):
+    def secs_per_bin(self, value: float | int):
         self._secs_per_bin = value
+
+    def apply_mask(self, mask: list | tuple) -> None:
+        """
+        Applies a mask to the spike times
+
+        Args:
+            mask (list or tuple): The mask to apply to the spike times
+        """
+        if len(mask) == 0:
+            self.spike_times.mask = False
+            self.waveforms.mask = False
+        else:
+            mask = [np.ma.masked_inside(self.spike_times, m[0], m[1]).mask for m in mask]
+            mask = np.any(mask, axis=0)
+            self.spike_times.mask = mask
+            self.waveforms.mask = mask
 
     def acorr(self, Trange: np.ndarray = None) -> tuple:
         """
@@ -555,7 +571,6 @@ class SpikeCalcsGeneric(object):
         against event times.
 
         Args:
-            cluster_id (int): The cluster for which to calculate the psth.
             bin_width_secs (float): The width of each bin in seconds.
 
         Returns:
@@ -575,7 +590,7 @@ class SpikeCalcsGeneric(object):
         dts = np.searchsorted(self.spike_times, irange)
         bins = np.arange(self.event_window[0],
                          self.event_window[1], bin_width_secs)
-        result = np.zeros(shape=(len(bins)-1, len(event_ts)))
+        result = np.empty(shape=(len(bins)-1, len(event_ts)), dtype=np.int64)
         for i, t in enumerate(dts):
             tmp = self.spike_times[t[0]:t[1]] - event_ts[i]
             indices = np.digitize(tmp, bins=bins)
@@ -621,17 +636,20 @@ class SpikeCalcsGeneric(object):
         speed = speed.ravel()
         posSampRate = self.pos_sample_rate
         nSamples = len(speed)
-        x1 = np.round(ts * posSampRate).astype(int)
+        x1 = np.floor(ts * posSampRate).astype(int)
+        # crop the end of the timestamps if longer than the pos data
+        x1 = np.delete(x1, np.nonzero(x1 >= nSamples))
         spk_hist = np.bincount(x1, minlength=nSamples)
         # smooth the spk_hist (which is a temporal histogram) with a 250ms
         # gaussian as with Kropff et al., 2015
         h = signal.windows.gaussian(13, sigma)
         h = h / float(np.sum(h))
         # filter for low speeds
-        lowSpeedIdx = speed < minSpeed
-        highSpeedIdx = speed > maxSpeed
-        speed_filt = speed[~np.logical_or(lowSpeedIdx, highSpeedIdx)]
-        spk_hist_filt = spk_hist[~np.logical_or(lowSpeedIdx, highSpeedIdx)]
+        speed_mask = np.logical_or(speed < minSpeed, speed > maxSpeed)
+        ## speed might contain nans so mask these too
+        speed_mask = np.logical_or(speed_mask, np.isnan(speed))
+        speed_filt = np.ma.MaskedArray(speed, speed_mask)
+        spk_hist_filt = np.ma.MaskedArray(spk_hist, speed_mask)
         spk_sm = signal.filtfilt(h.ravel(), 1, spk_hist_filt)
         sm_spk_rate = spk_sm * posSampRate
         # the permutation test for significance
@@ -674,7 +692,7 @@ class SpikeCalcsGeneric(object):
 
             speed_mesh = speed_mesh[:-1, :-1]
             spk_mesh = spk_mesh[:-1, :-1]
-            ax.pcolormesh(
+            pc = ax.pcolormesh(
                 speed_mesh,
                 spk_mesh,
                 sm_binned_rate,
@@ -683,6 +701,7 @@ class SpikeCalcsGeneric(object):
                 shading="nearest",
                 edgecolors="None",
             )
+            plt.colorbar(pc)
             # overlay the smoothed binned rate against speed
             ax.plot(sp_bin_edges, binned_spk_rate, "r")
             ax.plot(sp_bin_edges, binned_spk_rate +
@@ -719,8 +738,7 @@ class SpikeCalcsGeneric(object):
             shuffled_results = []
             for t in timeSteps:
                 spk_count = np.roll(spk_hist, t)
-                spk_count_filt = spk_count[~np.logical_or(
-                    lowSpeedIdx, highSpeedIdx)]
+                spk_count_filt = np.ma.MaskedArray(spk_count, speed_mask)
                 spk_count_sm = signal.filtfilt(h.ravel(), 1, spk_count_filt)
                 shuffled_results.append(stats.pearsonr(
                     spk_count_sm, speed_filt)[0])

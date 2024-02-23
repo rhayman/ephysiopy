@@ -351,7 +351,7 @@ class Tetrode(IO):
         self.header = self.getHeader(
             self.filename_root.with_suffix("." + str(tetrode)))
         data = self.getData(filename_root.with_suffix("." + str(tetrode)))
-        self.spk_ts = data["ts"][::4]
+        self.spk_ts = np.ma.MaskedArray(data["ts"][::4])
         self.nChans = self.getHeaderVal(self.header, "num_chans")
         self.samples = self.getHeaderVal(self.header, "samples_per_spike")
         self.nSpikes = self.getHeaderVal(self.header, "num_spikes")
@@ -360,9 +360,9 @@ class Tetrode(IO):
             self.getHeader(
                 self.filename_root.with_suffix(".pos")), "sample_rate"
         )
-        self.waveforms = data["waveform"].reshape(
+        self.waveforms = np.ma.MaskedArray(data["waveform"].reshape(
             self.nSpikes, self.nChans, self.samples
-        )
+        ))
         del data
         if volts:
             set_header = self.getHeader(self.filename_root.with_suffix(".set"))
@@ -377,7 +377,7 @@ class Tetrode(IO):
             self.waveforms = (self.waveforms / 128.0) * scaling[:, np.newaxis]
         self.timebase = self.getHeaderVal(self.header, "timebase")
         cut = np.array(self.getCut(self.tetrode), dtype=int)
-        self.cut = cut
+        self.cut = np.ma.MaskedArray(cut)
         self.clusters = np.unique(self.cut)
         self.pos_samples = None
 
@@ -476,6 +476,34 @@ class Tetrode(IO):
             cut = np.array(self.getCut(self.tetrode), dtype=int)
             self.cut = cut
         return np.unique(self.cut)
+    
+    def apply_mask(self, mask: list) -> None:
+        """Apply a mask to the data
+        
+        Args:
+            mask (tuple): (start, end) in seconds
+
+        Returns:
+            None
+
+        Note:
+        mask can be a list of tuples, in which case the mask is applied
+        for each tuple in the list.
+        mask can be an empty tuple, in which case the mask is removed
+
+        """
+        if len(mask) == 0:
+            self.waveforms.mask = False
+            self.spk_ts.mask = False
+            self.cut.mask = False
+        else:
+            mask = [np.ma.masked_inside(
+                self.spk_ts, m[0]*self.timebase, m[1]*self.timebase).mask
+                for m in mask]
+            mask = np.any(mask, axis=0)
+            self.spk_ts.mask = mask
+            self.waveforms.mask = mask
+            self.cut.mask = mask
 
 
 class EEG(IO):
@@ -576,7 +604,7 @@ class Stim(dict, IO):
         tb = int(self["timebase"].split(" ")[0])
         self.timebase = tb
         times = times / tb
-        self.__setitem__("ttl_timestamps", times * 1000)  # in ms
+        self.__setitem__("ttl_timestamps", times )  # in SECONDS
         # the 'duration' value in the header of the .stm file
         # is not correct so we need to read this from the .set
         # file and update

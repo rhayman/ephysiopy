@@ -958,9 +958,9 @@ class FigureMaker(object):
             strip_axes = kwargs.pop("strip_axes")
         else:
             strip_axes = False
-        x1 = spk_times / sample_rate * 1000.0  # get into ms
+        x1 = spk_times * 1000.0  # get into ms
         x1.sort()
-        on_good = self.ttl_data["ttl_timestamps"]
+        on_good = self.ttl_data["ttl_timestamps"] * 1000 # ms
         dt = np.array(dt)
         irange = on_good[:, np.newaxis] + dt[np.newaxis, :]
         dts = np.searchsorted(x1, irange)

@@ -41,6 +41,8 @@ class KiloSortSession(object):
         self.cluster_id = None
         self.spk_clusters = None
         self.spk_times = None
+        self.amplitudes = None
+        self.contamPct = None
         self.good_clusters = []
 
     def load(self):
@@ -124,9 +126,20 @@ class KiloSortSession(object):
                 skiprows=1,
                 dtype=dtype,
             )
+        if fileExists(self.fname_root, "cluster_ContamPct.tsv"):
+            _, self.contamPct = np.loadtxt(
+                os.path.join(self.fname_root, "cluster_ContamPct.tsv"),
+                unpack=True,
+                skiprows=1,
+                dtype=dtype,
+            )
         if fileExists(self.fname_root, "spike_clusters.npy"):
             self.spk_clusters = np.squeeze(
                 np.load(os.path.join(self.fname_root, "spike_clusters.npy"))
+            )
+        if fileExists(self.fname_root, "amplitudes.npy"):
+            self.amplitudes = np.squeeze(
+                np.load(os.path.join(self.fname_root, "amplitudes.npy"))
             )
         if fileExists(self.fname_root, "spike_times.npy"):
             self.spk_times = np.squeeze(

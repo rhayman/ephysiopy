@@ -288,6 +288,25 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     def get_spike_times(self, cluster: int, tetrode: int, *args, **kwargs):
         """Returns the times of an individual cluster"""
         raise NotImplementedError
+    
+    @abc.abstractmethod
+    def apply_mask(self, mask: list, *args, **kwargs):
+        """Apply a mask to the data
+        
+        Args:
+            mask (tuple): (start, end) in seconds
+
+        Returns:
+            None
+
+        Note:
+        mask can be a list of tuples, in which case the mask is applied
+        for each tuple in the list.
+        mask can be an empty tuple, in which case the mask is removed
+
+        """
+        raise NotImplementedError
+
 
 
 class AxonaTrial(TrialInterface):
@@ -372,7 +391,28 @@ class AxonaTrial(TrialInterface):
         """
         if tetrode is not None:
             return self.TETRODE.get_spike_samples(int(tetrode), int(cluster))
+        
+    def apply_mask(self, mask: tuple | list, *args, **kwargs):
+        """Apply a mask to the data
+        
+        Args:
+            mask (tuple): (start, end) in seconds
 
+        Returns:
+            None
+
+        Note:
+        mask can be a list of tuples, in which case the mask is applied
+        for each tuple in the list.
+        mask can be an empty tuple, in which case the mask is removed
+
+        """
+        if isinstance(mask, tuple):
+            mask = [mask]
+        for tetrode in self.TETRODE.keys():
+            self.TETRODE[tetrode].apply_mask(mask)
+        self.EEGCalcs.apply_mask(mask)
+        self.PosCalcs.apply_mask(mask)
 
 class OpenEphysBase(TrialInterface):
     def __init__(self, pname: Path, **kwargs) -> None:
@@ -457,6 +497,10 @@ class OpenEphysBase(TrialInterface):
         ts = self.clusterData.spk_times
         if cluster in self.clusterData.spk_clusters:
             times = ts[self.clusterData.spk_clusters == cluster]
+            if len(self.mask) > 0:
+                m = [np.ma.masked_inside(times, *mask) for mask in self.mask]
+                mask = np.all(m, 0)
+                times = np.ma.MaskedArray(times, mask)
             return times.astype(np.int64) / self.sample_rate
         else:
             warnings.warn("Cluster not present")
@@ -686,6 +730,31 @@ class OpenEphysBase(TrialInterface):
             return False
         print("Loaded ttl data")
         return True
+    
+    def apply_mask(self, mask: list, *args, **kwargs):
+        """Apply a mask to the data
+        
+        Args:
+            mask (tuple): (start, end) in seconds
+
+        Returns:
+            None
+
+        Note:
+        mask can be a list of tuples, in which case the mask is applied
+        for each tuple in the list.
+        mask can be an empty tuple, in which case the mask is removed
+
+        """
+        if isinstance(mask, tuple):
+            mask = [mask]
+        # the mask is not applied to the kilosort data here
+        # as it will be applied when the methods are called within
+        # this class for grabbing waveforms from the template_model
+        # class
+        self.mask = mask
+        self.EEGCalcs.apply_mask(mask)
+        self.PosCalcs.apply_mask(mask)
 
     @cache
     def find_files(
