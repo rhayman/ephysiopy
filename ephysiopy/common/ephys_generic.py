@@ -125,7 +125,7 @@ class EEGCalcsGeneric(object):
         self.maxFreq = 125
         self.maxPow = None
 
-    def apply_mask(self, mask: list):
+    def apply_mask(self, mask):
         """
         Applies a mask to the signal
 
@@ -141,13 +141,14 @@ class EEGCalcsGeneric(object):
             the start and end times of the mask i.e. [(start1, end1), (start2, end2)]
             everything inside of these times is masked
         """
-        if len(mask) > 0:  # if mask is empty, remove mask
-            self.sig.mask = False
+        self.sig.mask = False
+        if not mask or len(mask[0]) == 0:
+            return
         else:
-            times = np.arange(0, len(self.sig), 1 / self.fs)
+            times = np.arange(0, len(self.sig) / self.fs, 1 / self.fs)
             mask = [np.ma.masked_inside(times, m[0], m[1]).mask for m in mask]
             mask = np.any(mask, axis=0)
-            self.sig = np.ma.masked_array(self.sig, mask)
+            self.sig.mask = mask
 
     def _nextpow2(self, val: int):
         """
@@ -320,7 +321,7 @@ class PosCalcsGeneric(object):
 
     @xy.setter
     def xy(self, value) -> None:
-        self._xy: np.ma.MaskedArray = value
+        self._xy = np.ma.MaskedArray(value)
 
     @property
     def convert2cm(self) -> bool:
@@ -336,7 +337,7 @@ class PosCalcsGeneric(object):
 
     @xyTS.setter
     def xyTS(self, val) -> None:
-        self._xyTS = val
+        self._xyTS = np.ma.MaskedArray(val)
 
     @property
     def dir(self) -> np.ma.MaskedArray:
@@ -564,7 +565,7 @@ class PosCalcsGeneric(object):
             xy[1, :], upsample_rate / denom, 30 / denom)
         return np.array([new_x, new_y])
     
-    def apply_mask(self, mask: list):
+    def apply_mask(self, mask):
         """
         Applies a mask to the position data
 
@@ -580,14 +581,14 @@ class PosCalcsGeneric(object):
             the start and end times of the mask i.e. [(start1, end1), (start2, end2)]
             everything inside of these times is masked
         """
-        if len(mask) > 0:  # if mask is empty, remove mask
-            self.xy.mask = False
-            self.xyTS.mask = False
-            self.dir.mask = False
-            self.speed.mask = False
+        self.xy.mask = False
+        self.xyTS.mask = False
+        self.dir.mask = False
+        self.speed.mask = False
+        if not mask or len(mask[0]) == 0:
+            return
         else:
-            times = np.arange(0, len(self.sig), 1 / self.sample_rate)
-            mask = [np.ma.masked_inside(times, m[0], m[1]).mask for m in mask]
+            mask = [np.ma.masked_inside(self.xyTS, m[0], m[1]).mask for m in mask]
             mask = np.any(mask, axis=0)
             self.xy.mask = mask
             self.xyTS.mask = mask

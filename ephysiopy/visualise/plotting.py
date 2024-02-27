@@ -692,11 +692,21 @@ class FigureMaker(object):
             strip_axes = False
         if not self.RateMap:
             self.initialise()
-        spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
+        # spk_times_in_pos_samples = self.getSpikePosIndices(spk_times)
 
         speed = np.ravel(self.PosCalcs.speed)
         if np.nanmax(speed) < maxSpeed:
             maxSpeed = np.nanmax(speed)
+
+        S = SpikeCalcsGeneric(spk_times, 1)
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+        S.ifr_sp_corr(spk_times, speed,
+                      minSpeed, maxSpeed,
+                      sigma, plot=True, ax=ax,
+                      **kwargs)
+        '''
         spd_bins = np.arange(minSpeed, maxSpeed, 1.0)
         # Construct the mask
         speed_filt = np.ma.MaskedArray(speed)
@@ -705,9 +715,8 @@ class FigureMaker(object):
         from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 
         x1 = spk_times_in_pos_samples
-        S = SpikeCalcsGeneric(x1)
-        spk_sm = S.smooth_spike_train(x1,
-                                      self.PosCalcs.xyTS.shape[0],
+        S = SpikeCalcsGeneric(x1, 1)
+        spk_sm = S.smooth_spike_train(self.PosCalcs.xyTS.shape[0],
                                       sigma, None)
         spk_sm = np.ma.MaskedArray(spk_sm, mask=np.ma.getmask(speed_filt))
         spd_dig = np.digitize(speed_filt, spd_bins, right=True)
@@ -739,6 +748,7 @@ class FigureMaker(object):
         )
         if strip_axes:
             return stripAxes(ax)
+        '''
         return ax
 
     def makeSpeedVsHeadDirectionPlot(

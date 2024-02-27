@@ -290,7 +290,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         raise NotImplementedError
     
     @abc.abstractmethod
-    def apply_mask(self, mask: list, *args, **kwargs):
+    def apply_mask(self, *mask, **kwargs):
         """Apply a mask to the data
         
         Args:
@@ -300,7 +300,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             None
 
         Note:
-        mask can be a list of tuples, in which case the mask is applied
+        The times inside the bounds are masked ie the mask is set to True
+        The mask can be a list of tuples, in which case the mask is applied
         for each tuple in the list.
         mask can be an empty tuple, in which case the mask is removed
 
@@ -392,7 +393,7 @@ class AxonaTrial(TrialInterface):
         if tetrode is not None:
             return self.TETRODE.get_spike_samples(int(tetrode), int(cluster))
         
-    def apply_mask(self, mask: tuple | list, *args, **kwargs):
+    def apply_mask(self, *mask):
         """Apply a mask to the data
         
         Args:
@@ -407,12 +408,13 @@ class AxonaTrial(TrialInterface):
         mask can be an empty tuple, in which case the mask is removed
 
         """
-        if isinstance(mask, tuple):
-            mask = [mask]
         for tetrode in self.TETRODE.keys():
-            self.TETRODE[tetrode].apply_mask(mask)
-        self.EEGCalcs.apply_mask(mask)
-        self.PosCalcs.apply_mask(mask)
+            if self.TETRODE[tetrode] is not None:
+                self.TETRODE[tetrode].apply_mask(mask)
+        if self.EEGCalcs:
+            self.EEGCalcs.apply_mask(mask)
+        if self.PosCalcs:
+            self.PosCalcs.apply_mask(mask)
 
 class OpenEphysBase(TrialInterface):
     def __init__(self, pname: Path, **kwargs) -> None:
@@ -479,7 +481,6 @@ class OpenEphysBase(TrialInterface):
                     recording_start_time = start_time / float(sample_rate)
         return recording_start_time
 
-    @cache
     def get_spike_times(self,
                         tetrode: int = None,
                         cluster: int = None,
@@ -494,18 +495,13 @@ class OpenEphysBase(TrialInterface):
         """
         if not self.clusterData:
             self.load_cluster_data()
-        ts = self.clusterData.spk_times
         if cluster in self.clusterData.spk_clusters:
-            times = ts[self.clusterData.spk_clusters == cluster]
-            if len(self.mask) > 0:
-                m = [np.ma.masked_inside(times, *mask) for mask in self.mask]
-                mask = np.all(m, 0)
-                times = np.ma.MaskedArray(times, mask)
+            all_ts = self.clusterData.spk_times
+            times = all_ts[self.clusterData.spk_clusters == cluster]
             return times.astype(np.int64) / self.sample_rate
         else:
             warnings.warn("Cluster not present")
 
-    @cache
     def load_lfp(self, *args, **kwargs):
         """
         Valid kwargs are:
@@ -532,7 +528,6 @@ class OpenEphysBase(TrialInterface):
             )
             self.EEGCalcs = EEGCalcsGeneric(sig, target_sample_rate)
 
-    @cache
     def load_neural_data(self, *args, **kwargs) -> None:
         if "path2APdata" in kwargs.keys():
             self.path2APdata: Path = Path(kwargs["path2APdata"])
@@ -548,7 +543,6 @@ class OpenEphysBase(TrialInterface):
         except Exception:
             warnings.warn("Could not find raw data file")
 
-    @cache
     def load_settings(self, *args, **kwargs):
         if self._settings is None:
             # pname_root gets walked through and over-written with
@@ -556,7 +550,6 @@ class OpenEphysBase(TrialInterface):
             self.settings = Settings(self.pname)
             print("Loaded settings data")
 
-    @cache
     def load_cluster_data(
             self, removeNoiseClusters=True, *args, **kwargs) -> bool:
         if self.path2KiloSortData is not None:
@@ -577,7 +570,6 @@ class OpenEphysBase(TrialInterface):
         self.clusterData = clusterData
         return True
 
-    @cache
     def load_pos_data(
         self, ppm: int = 300, jumpmax: int = 100, *args, **kwargs
     ) -> None:
@@ -684,7 +676,6 @@ class OpenEphysBase(TrialInterface):
             )
         self.recording_start_time = recording_start_time
 
-    @cache
     def load_ttl(self, *args, **kwargs) -> bool:
         """
         Args:
@@ -731,7 +722,7 @@ class OpenEphysBase(TrialInterface):
         print("Loaded ttl data")
         return True
     
-    def apply_mask(self, mask: list, *args, **kwargs):
+    def apply_mask(self, *mask):
         """Apply a mask to the data
         
         Args:
@@ -746,17 +737,17 @@ class OpenEphysBase(TrialInterface):
         mask can be an empty tuple, in which case the mask is removed
 
         """
-        if isinstance(mask, tuple):
-            mask = [mask]
         # the mask is not applied to the kilosort data here
         # as it will be applied when the methods are called within
         # this class for grabbing waveforms from the template_model
         # class
-        self.mask = mask
-        self.EEGCalcs.apply_mask(mask)
-        self.PosCalcs.apply_mask(mask)
+        if self.EEGCalcs:
+            self.EEGCalcs.apply_mask(mask)
+        if self.PosCalcs:
+            self.PosCalcs.apply_mask(mask)
+        if self.clusterData:
+            self.clusterData.apply_mask(mask)
 
-    @cache
     def find_files(
         self,
         pname_root: str,

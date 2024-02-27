@@ -477,7 +477,7 @@ class Tetrode(IO):
             self.cut = cut
         return np.unique(self.cut)
     
-    def apply_mask(self, mask: list) -> None:
+    def apply_mask(self, mask) -> None:
         """Apply a mask to the data
         
         Args:
@@ -487,15 +487,18 @@ class Tetrode(IO):
             None
 
         Note:
-        mask can be a list of tuples, in which case the mask is applied
+        The times inside the bounds are masked ie the mask is set to True
+        The mask can be a list of tuples, in which case the mask is applied
         for each tuple in the list.
         mask can be an empty tuple, in which case the mask is removed
 
         """
-        if len(mask) == 0:
-            self.waveforms.mask = False
-            self.spk_ts.mask = False
-            self.cut.mask = False
+        
+        self.waveforms.mask = False
+        self.spk_ts.mask = False
+        self.cut.mask = False
+        if not mask or len(mask[0]) == 0:
+            return
         else:
             mask = [np.ma.masked_inside(
                 self.spk_ts, m[0]*self.timebase, m[1]*self.timebase).mask

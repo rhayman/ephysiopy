@@ -134,17 +134,17 @@ class KiloSortSession(object):
                 dtype=dtype,
             )
         if fileExists(self.fname_root, "spike_clusters.npy"):
-            self.spk_clusters = np.squeeze(
+            self.spk_clusters = np.ma.MaskedArray(np.squeeze(
                 np.load(os.path.join(self.fname_root, "spike_clusters.npy"))
-            )
+            ))
         if fileExists(self.fname_root, "amplitudes.npy"):
-            self.amplitudes = np.squeeze(
+            self.amplitudes = np.ma.MaskedArray(np.squeeze(
                 np.load(os.path.join(self.fname_root, "amplitudes.npy"))
-            )
+            ))
         if fileExists(self.fname_root, "spike_times.npy"):
-            self.spk_times = np.squeeze(
+            self.spk_times = np.ma.MaskedArray(np.squeeze(
                 np.load(os.path.join(self.fname_root, "spike_times.npy"))
-            )
+            ))
             return True
         warnings.warn(
             "No spike times or clusters were found \
@@ -180,3 +180,33 @@ class KiloSortSession(object):
         '''
         if cluster in self.good_clusters:
             return self.spk_times[self.spk_clusters == cluster]
+        
+    def apply_mask(self, mask):
+        """Apply a mask to the data
+        
+        Args:
+            mask (tuple): (start, end) in seconds
+
+        Returns:
+            None
+
+        Note:
+        The times inside the bounds are masked ie the mask is set to True
+        The mask can be a list of tuples, in which case the mask is applied
+        for each tuple in the list.
+        mask can be an empty tuple, in which case the mask is removed
+
+        """
+        self.spk_times.mask = False
+        self.spk_clusters.mask = False
+        self.amplitudes.mask = False
+        if not mask or len(mask[0]) == 0:
+            return
+        else:
+            mask = [np.ma.masked_inside(
+                self.spk_times, m[0], m[1]).mask
+                for m in mask]
+            mask = np.any(mask, axis=0)
+            self.spk_times.mask = mask
+            self.spk_clusters.mask = mask
+            self.amplitudes.mask = mask
