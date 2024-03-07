@@ -204,7 +204,7 @@ class KiloSortSession(object):
             return
         else:
             mask = [np.ma.masked_inside(
-                self.spk_times, m[0], m[1]).mask
+                self.spk_times, m[0]*3e4, m[1]*3e4).mask
                 for m in mask]
             mask = np.any(mask, axis=0)
             self.spk_times.mask = mask

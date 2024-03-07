@@ -15,7 +15,7 @@ def standard_Ratemap(basic_PosCalcs):
     # P.dir = P.dir[0:10 * P.sample_rate]
     # P.speed = P.speed[0:10 * P.sample_rate]
     # P.npos = 10 * P.sample_rate
-    return RateMap(P.xy, P.dir, P.speed)
+    return RateMap(P)
 
 
 def test_calc_bin_size(standard_Ratemap):

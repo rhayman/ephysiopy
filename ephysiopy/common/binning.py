@@ -12,7 +12,8 @@ from scipy import signal
 from shapely import MultiLineString, prepare
 from shapely.affinity import rotate, translate
 from shapely.geometry import LineString, Point
-from ephysiopy.common.utils import blurImage, flatten_list
+from ephysiopy.common.ephys_generic import PosCalcsGeneric
+from ephysiopy.common.utils import blur_image, flatten_list
 
 warnings.filterwarnings(
     "ignore", message="invalid value encountered in sqrt")
@@ -32,6 +33,8 @@ class VariableToBin(Enum):
     DIR = 2
     SPEED = 3
     XY_TIME = 4
+    SPEED_DIR = 5
+    EGO_BOUNDARY = 6
 
 
 class MapType(Enum):
@@ -71,25 +74,18 @@ class RateMap(object):
 
     def __init__(
         self,
-        xy: np.array = None,
-        hdir: np.array = None,
-        speed: np.array = None,
+        PosCalcs: PosCalcsGeneric,
         pos_weights: np.array = None,
-        pos_times: np.array = None,
-        ppm: int = 430,
         xyInCms: bool = False,
         binsize: int = 3,
         smooth_sz: int = 5,
     ):
-        self.xy = xy
-        self.dir = hdir
-        self.speed = speed
+        self.PosCalcs = PosCalcs
         self._pos_weights = pos_weights
-        self._pos_times = pos_times
         self._pos_time_splits = None
         self._spike_weights = None
-        self._ppm = ppm  # pixels per metre
         self._binsize = binsize
+        self._binsize2d = None
         self._inCms = xyInCms
         self._nBins = None
         self._binedges = None  # has setter and getter - see below
@@ -103,6 +99,22 @@ class RateMap(object):
         self._calcBinEdges()
 
     @property
+    def xy(self):
+        return self.PosCalcs.xy
+    
+    @property
+    def dir(self):
+        return self.PosCalcs.dir
+    
+    @property
+    def speed(self):
+        return self.PosCalcs.speed
+    
+    @property
+    def pos_times(self):
+        return self.PosCalcs.xyTS
+
+    @property
     def inCms(self):
         # Whether the units are in cms or not
         return self._inCms
@@ -110,16 +122,18 @@ class RateMap(object):
     @inCms.setter
     def inCms(self, value):
         self._inCms = value
+        # will trigger a recalculation of position vars
+        self.PosCalcs.convert2cm = value
 
     @property
     def ppm(self):
         # Get the current pixels per metre (ppm)
-        return self._ppm
+        return self.PosCalcs.ppm
 
     @ppm.setter
     def ppm(self, value):
-        self._ppm = value
-        # self._binedges = self._calcBinEdges(self.binsize)
+        # will trigger a recalculation of position vars
+        self._ppm = self.PosCalcs.ppm = value
 
     @property
     def var2Bin(self):
@@ -165,6 +179,7 @@ class RateMap(object):
                                        y_lims[1],
                                        int(value[0]),
                                        retstep=True)
+                self.binsize = np.mean([bs_x, bs_y])
             elif len(value) == 2:
                 _x, bs_x = np.linspace(x_lims[0],
                                        x_lims[1],
@@ -174,8 +189,8 @@ class RateMap(object):
                                        y_lims[1],
                                        int(value[1]),
                                        retstep=True)
+                self.binsize = bs_y, bs_x
             self._binedges = _y, _x
-            self.binsize = np.mean([bs_x, bs_y])
         elif self.var2Bin == VariableToBin.DIR:
             self._binedges, binsize = np.linspace(0,
                                                   360 + self.binsize,
@@ -183,13 +198,35 @@ class RateMap(object):
                                                   retstep=True)
             self.binsize = binsize
         elif self.var2Bin == VariableToBin.SPEED:
-            maxspeed = np.max(self.speed)
+            maxspeed = np.max(self.PosCalcs.speed)
             self._binedges, binsize = np.linspace(0,
                                                   maxspeed,
                                                   value[0],
                                                   retstep=True)
             self.binsize = binsize
-
+        elif self.var2Bin == VariableToBin.SPEED_DIR:
+            maxspeed = np.max(self.PosCalcs.speed)
+            if len(value) == 1:
+                speed_binedges, speed_binsize = np.linspace(0,
+                                                    maxspeed,
+                                                    value[0],
+                                                    retstep=True)
+                dir_binedges, dir_binsize = np.linspace(0,
+                                                  360 + value[0],
+                                                  value[0],
+                                                  retstep=True)
+            elif len(value) == 2:
+                speed_binedges, speed_binsize = np.linspace(0,
+                                                    maxspeed,
+                                                    value[0],
+                                                    retstep=True)
+                dir_binedges, dir_binsize = np.linspace(0,
+                                                  360 + value[1],
+                                                  value[1],
+                                                  retstep=True)
+            self._binedges = speed_binedges, dir_binedges
+            self.binsize = speed_binsize, dir_binsize
+                
     @property
     def binedges(self):
         return self._binedges
@@ -230,22 +267,6 @@ class RateMap(object):
     @pos_weights.setter
     def pos_weights(self, value):
         self._pos_weights = value
-
-    @property
-    def pos_times(self):
-        return self._pos_times
-
-    @pos_times.setter
-    def pos_times(self, value):
-        self._pos_times = value
-
-    @property
-    def pos_time_splits(self):
-        return self._pos_times
-
-    @pos_time_splits.setter
-    def pos_time_splits(self, value):
-        self._pos_times = value
 
     @property
     def spike_weights(self):
@@ -290,9 +311,11 @@ class RateMap(object):
         x_lims = getattr(self, "x_lims", None)
         y_lims = getattr(self, "y_lims", None)
         if x_lims is None:
-            x_lims = (np.nanmin(self.xy[0]), np.nanmax(self.xy[0]))
+            x_lims = (np.nanmin(self.xy[0]),
+                      np.nanmax(self.xy[0]))
         if y_lims is None:
-            y_lims = (np.nanmin(self.xy[1]), np.nanmax(self.xy[1]))
+            y_lims = (np.nanmin(self.xy[1]),
+                      np.nanmax(self.xy[1]))
         self.x_lims = x_lims
         self.y_lims = y_lims
         return x_lims, y_lims
@@ -303,7 +326,7 @@ class RateMap(object):
         except TypeError:
             self._binDims = len(self._binedges)
 
-    def _calcBinEdges(self, binsize: int = 3) -> tuple:
+    def _calcBinEdges(self, binsize: int | tuple = 3) -> tuple:
         """
         Aims to get the right number of bins for the variable to be binned
 
@@ -337,6 +360,12 @@ class RateMap(object):
             be = [_y, _x]
             be.append(self.pos_time_splits)
             self.binedges = be
+        elif self.var2Bin == VariableToBin.SPEED_DIR:
+            maxspeed = np.max(self.speed)
+            if isinstance(binsize, int):
+                self.binedges = np.arange(0, maxspeed, binsize), np.arange(0, 360 + binsize, binsize)
+            elif isinstance(binsize, tuple):
+                self.binedges = np.arange(0, maxspeed, binsize[0]), np.arange(0, 360 + binsize[1], binsize[1])
         self._calcBinDims()
         return self.binedges
 
@@ -410,6 +439,12 @@ class RateMap(object):
             sample = np.concatenate((np.atleast_2d(self.xy),
                                     np.atleast_2d(self.pos_times)))
             keep_these = np.isfinite(self.xy[0])
+        elif varType.value == VariableToBin.SPEED_DIR.value:
+            sample = np.concatenate((np.atleast_2d(self.dir),
+                                    np.atleast_2d(self.speed)))
+            keep_these = np.isfinite(self.speed)
+        elif varType.value == VariableToBin.EGO_BOUNDARY.value:
+            return self.get_egocentric_boundary_map(spkWeights, **kwargs)
         else:
             raise ValueError("Unrecognized variable to bin.")
         assert sample is not None
@@ -431,7 +466,7 @@ class RateMap(object):
                     binned_pos = self._circPadSmooth(
                         binned_pos, n=self.smooth_sz)
                 else:
-                    binned_pos = blurImage(binned_pos,
+                    binned_pos = blur_image(binned_pos,
                                            self.smooth_sz,
                                            ftype=self.smoothingType,
                                            **kwargs)
@@ -439,7 +474,7 @@ class RateMap(object):
 
         binned_spk, _ = self._binData(
             sample, self._binedges, spkWeights, keep_these)
-        if mapType.value == MapType.SPK:
+        if mapType.value == MapType.SPK.value:
             return binned_spk
         # binned_spk is returned as a tuple of the binned data and the bin
         # edges
@@ -448,7 +483,7 @@ class RateMap(object):
             if varType.value == VariableToBin.DIR.value:
                 rmap = self._circPadSmooth(rmap, self.smooth_sz)
             else:
-                rmap = blurImage(rmap,
+                rmap = blur_image(rmap,
                                  self.smooth_sz,
                                  ftype=self.smoothingType,
                                  **kwargs)
@@ -460,20 +495,11 @@ class RateMap(object):
                 binned_spk = self._circPadSmooth(binned_spk, self.smooth_sz)
                 rmap = binned_spk / binned_pos
             else:
-                binned_pos = blurImage(binned_pos,
+                binned_pos = blur_image(binned_pos,
                                        self.smooth_sz,
                                        ftype=self.smoothingType,
                                        **kwargs)
-                if binned_spk.ndim == 2:
-                    pass
-                elif binned_spk.ndim == 1:
-                    binned_spk_tmp = np.zeros(
-                        [binned_spk.shape[0], binned_spk.shape[0], 1]
-                    )
-                    for i in range(binned_spk.shape[0]):
-                        binned_spk_tmp[i, :, :] = binned_spk[i]
-                    binned_spk = binned_spk_tmp
-                binned_spk = blurImage(
+                binned_spk = blur_image(
                     binned_spk,
                     self.smooth_sz,
                     ftype=self.smoothingType,
@@ -540,8 +566,6 @@ class RateMap(object):
         dims = weights.ndim
         if dims == 1 and var.ndim == 1:
             var = var[np.newaxis, :]
-            # if self.var2Bin != VariableToBin.XY and len(bin_edges) != 1:
-            #     bin_edges = self._calcBinEdges(self.binsize)
             bin_edges = bin_edges[np.newaxis, :]
         elif dims > 1 and var.ndim == 1:
             var = var[np.newaxis, :]
@@ -990,8 +1014,8 @@ class RateMap(object):
         Hp = np.swapaxes(Hp, 1, 0)
         Hs = np.swapaxes(Hs, 1, 0)
 
-        fHp = blurImage(Hp, boxcar)
-        fHs = blurImage(Hs, boxcar)
+        fHp = blur_image(Hp, boxcar)
+        fHs = blur_image(Hs, boxcar)
 
         H = fHs / fHp
         H[Hp < Pthresh] = np.nan
@@ -1051,8 +1075,9 @@ class RateMap(object):
             di = [(startpoint.distance(t_arena.intersection(line)), idx)
                   for idx, line in enumerate(lines.geoms) if
                   t_arena.intersects(line)]
-            d, i = zip(*di)
-            distances[xi, yi, i] = d
+            if len(di) > 0:
+                d, i = zip(*di)
+                distances[xi, yi, i] = d
         return distances
 
     def get_egocentric_boundary_map(self,
@@ -1077,7 +1102,6 @@ class RateMap(object):
         # and the angular positions
         self.binsize = xy_binsize  # this will trigger a
         # re-calculation of the bin edges
-
         angles = np.arange(0, 360, degs_per_bin)
 
         # Use the shaeply package to specify some geometry for the arena
@@ -1239,16 +1263,16 @@ class RateMap(object):
         bp, bpe = np.histogramdd(sample.T, bins=edges)
         map1_pos, map2_pos = np.squeeze(bp[:, :, 0]), np.squeeze(bp[:, :, 1])
         # smooth position
-        map1_pos = blurImage(map1_pos, 7, ftype='gaussian')
-        map2_pos = blurImage(map2_pos, 7, ftype='gaussian')
+        map1_pos = blur_image(map1_pos, 7, ftype='gaussian')
+        map2_pos = blur_image(map2_pos, 7, ftype='gaussian')
         # bin spk - ie the histogram is weighted by spike count
         # in bin i
         spk = [np.histogramdd(sample.T, bins=edges, weights=w)
                for w in spkW]
         map1_spk, map2_spk = self._splitStackedCorrelations(spk)
-        map1_sm_spk = np.array([blurImage(m, 7, ftype='gaussian')
+        map1_sm_spk = np.array([blur_image(m, 7, ftype='gaussian')
                                 for m in map1_spk])
-        map2_sm_spk = np.array([blurImage(m, 7, ftype='gaussian')
+        map2_sm_spk = np.array([blur_image(m, 7, ftype='gaussian')
                                 for m in map2_spk])
         map1_rmaps = map1_sm_spk / map1_pos
         map2_rmaps = map2_sm_spk / map2_pos

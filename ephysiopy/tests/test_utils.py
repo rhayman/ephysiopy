@@ -25,10 +25,10 @@ def test_blur_image(basic_ratemap):
     rmap2D = basic_ratemap
     rmap3D = np.atleast_3d(rmap2D)
     rmaps = [rmap1D, rmap2D, rmap3D]
-    b = utils.blurImage(rmap2D, 3, 4)
+    b = utils.blur_image(rmap2D, 3, 4)
     for f in filt:
         for rmap in rmaps:
-            b = utils.blurImage(rmap, 3, ftype=f)
+            b = utils.blur_image(rmap, 3, ftype=f)
             assert isinstance(b, np.ndarray)
 
 

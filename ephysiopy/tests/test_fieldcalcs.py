@@ -48,8 +48,8 @@ def test_field_props(basic_ratemap):
     mask_circle1 = (x - x1)**2 + (y - y1)**2 < r1**2
     mask_circle2 = (x - x2)**2 + (y - y2)**2 < r2**2
     image = np.logical_or(mask_circle1, mask_circle2)
-    from ephysiopy.common.utils import blurImage
-    im = blurImage(image, 15)
+    from ephysiopy.common.utils import blur_image
+    im = blur_image(image, 15)
     im[im < 0.1] = 0
     fieldcalcs.field_props(im)
 
@@ -67,7 +67,7 @@ def test_corr_maps(basic_ratemap):
 
 
 def test_coherence(basic_ratemap):
-    blurred = fieldcalcs.blurImage(basic_ratemap, n=15)
+    blurred = fieldcalcs.blur_image(basic_ratemap, n=15)
     coh = fieldcalcs.coherence(basic_ratemap, blurred)
     assert isinstance(coh, float)
 

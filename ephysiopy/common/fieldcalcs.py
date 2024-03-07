@@ -6,7 +6,7 @@ from scipy import stats
 import skimage
 import warnings
 from skimage.segmentation import watershed
-from ephysiopy.common.utils import blurImage
+from ephysiopy.common.utils import blur_image
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 
@@ -38,7 +38,7 @@ def field_lims(A):
     nan_idx = np.isnan(A)
     A[nan_idx] = 0
     h = int(np.max(A.shape) / 2)
-    sm_rmap = blurImage(A, h, ftype='gaussian')
+    sm_rmap = blur_image(A, h, ftype='gaussian')
     thresh = np.max(sm_rmap.ravel()) * 0.2  # select area > 20% of peak
     distance = ndimage.distance_transform_edt(sm_rmap > thresh)
     peak_idx = skimage.feature.peak_local_max(

@@ -16,56 +16,56 @@
 # def test_plot_axona_path(path_to_axona_data):
 #     T = AxonaTrial(path_to_axona_data)
 #     get_spike_times(T)
-#     T.makeSpikePathPlot()
+#     T._getSpikePathPlot()
 
 
 # def test_plot_axona_spikes_on_path(path_to_axona_data):
 #     T = AxonaTrial(path_to_axona_data)
 #     ts = get_spike_times(T)
-#     T.makeSpikePathPlot(ts)
+#     T._getSpikePathPlot(ts)
 
 
 # def test_plot_axona_ratemap(path_to_axona_data):
 #     T = AxonaTrial(path_to_axona_data)
 #     ts = get_spike_times(T)
-#     T.makeRateMap(ts)
+#     T._getRateMapPlot(ts)
 
 
 # def test_plot_axona_HD_map(path_to_axona_data):
 #     T = AxonaTrial(path_to_axona_data)
 #     ts = get_spike_times(T)
-#     T.makeHDPlot(ts)
+#     T._getHDPlot(ts)
 
 
 # def test_plot_axona_HD_map_with_mrv(path_to_axona_data):
 #     T = AxonaTrial(path_to_axona_data)
 #     ts = get_spike_times(T)
-#     T.makeHDPlot(ts, add_mrv=True, fill=True)
+#     T._getHDPlot(ts, add_mrv=True, fill=True)
 
 
 # # def test_plot_axona_SAC(path_to_axona_data):
 # #     T = AxonaTrial(path_to_axona_data)
 # #     ts = get_spike_times(T)
-# #     T.makeSAC(ts)
+# #     T._getSACPlot(ts)
 
 
 # def test_plot_axona_speed_vs_rate(path_to_axona_data):
 #     T = AxonaTrial(path_to_axona_data)
 #     ts = get_spike_times(T)
-#     T.makeSpeedVsRatePlot(ts, maxSpeed=1e6)
+#     T._getSpeedVsRatePlot(ts, maxSpeed=1e6)
 
 
 # def test_plot_axona_speed_vs_HD(path_to_axona_data):
 #     T = AxonaTrial(path_to_axona_data)
 #     ts = get_spike_times(T)
-#     T.makeSpeedVsHeadDirectionPlot(ts)
+#     T._getSpeedVsHeadDirectionPlot(ts)
 
 
 # def test_plot_axona_EEG_power(path_to_axona_data):
 #     T = AxonaTrial(path_to_axona_data)
 #     T.load_lfp(Path(path_to_axona_data))
 #     T.EEGCalcs.calcEEGPowerSpectrum()
-#     T.makePowerSpectrum(T.EEGCalcs.freqs,
+#     T._getPowerSpectrumPlot(T.EEGCalcs.freqs,
 #                         T.EEGCalcs.power,
 #                         T.EEGCalcs.sm_power,
 #                         T.EEGCalcs.bandmaxpower,
@@ -76,7 +76,7 @@
 #     T = AxonaTrial(path_to_axona_data)
 #     T.load_lfp(Path(path_to_axona_data), "egf")
 #     T.EEGCalcs.calcEEGPowerSpectrum()
-#     T.makePowerSpectrum(T.EEGCalcs.freqs,
+#     T._getPowerSpectrumPlot(T.EEGCalcs.freqs,
 #                         T.EEGCalcs.power,
 #                         T.EEGCalcs.sm_power,
 #                         T.EEGCalcs.bandmaxpower,
@@ -86,16 +86,16 @@
 # def test_plot_axona_xcorr(path_to_axona_data):
 #     T = AxonaTrial(path_to_axona_data)
 #     ts = get_spike_times(T)
-#     T.makeXCorr(ts)
+#     T._getXCorrPlot(ts)
 
 
 # # # def test_plot_raster(path_to_axona_data):
 # #     T = AxonaTrial(path_to_axona_data)
 # #     ts = get_spike_times(T)
 # #     ax = plt.gca()
-# #     T.makeRaster(ts, ax=ax, histtype='rate')
+# #     T._getRasterPlot(ts, ax=ax, histtype='rate')
 # #     plt.close('all')
-# #     T.makeRaster(ts, histtype='rate')
+# #     T._getRasterPlot(ts, histtype='rate')
 # #     fig = plt.gcf()
     
 # #     return fig
@@ -115,9 +115,3 @@
 #         T.TETRODE[16]
 #     with pytest.raises(Exception):
 #         T.get_spike_times(99, 99)
-
-
-# # def test_plot_summary(path_to_axona_data):
-# #     T = AxonaTrial(path_to_axona_data)
-# #     ts = get_spike_times(T)
-# #     T.makeSummaryPlot(ts)

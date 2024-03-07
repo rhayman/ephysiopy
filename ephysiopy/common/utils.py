@@ -1,6 +1,26 @@
 import numpy as np
 import astropy.convolution as cnv
 from collections import defaultdict
+import inspect
+
+
+def clean_kwargs(func, kwargs):
+    """
+    This function is used to remove any keyword arguments that are not
+    accepted by the function. It is useful for passing keyword arguments
+    to other functions without having to worry about whether they are
+    accepted by the function or not.
+
+    Args:
+        func (function): The function to check for keyword arguments.
+        kwargs (dict): The keyword arguments to check.
+
+    Returns:
+        dict: A dictionary containing only the keyword arguments that are
+        accepted by the function.
+    """
+    valid_kwargs = inspect.getfullargspec(func).kwonlyargs
+    return {k: v for k, v in kwargs.items() if k in valid_kwargs}
 
 
 def get_z_score(x: np.ndarray,
@@ -104,7 +124,7 @@ def smooth(x, window_len=9, window='hanning'):
     return y
 
 
-def blurImage(im, n, ny=None, ftype='boxcar', **kwargs):
+def blur_image(im, n, ny=None, ftype='boxcar', **kwargs):
     """
     Smooths a 2D image by convolving with a filter.
 
@@ -144,6 +164,31 @@ def blurImage(im, n, ny=None, ftype='boxcar', **kwargs):
             g = cnv.Gaussian2DKernel(stddev, x_size=n, y_size=ny)
             g = np.atleast_3d(g).T
     return cnv.convolve(im, g, boundary='extend')
+
+
+def shift_vector(v, shift, maxlen=None):
+    """
+    Shifts the elements of a vector by a given amount.
+    A bit like numpys roll function but when the shift goes
+    beyond some limit that limit is subtracted from the shift.
+    The result is then sorted and returned.
+
+    Args:
+        v (array_like): The input vector.
+        shift (int): The amount to shift the elements.
+        fill_value (int): The value to fill the empty spaces.
+
+    Returns:
+        array_like: The shifted vector.
+    """
+    if shift == 0:
+        return v
+    if maxlen is None:
+        return v
+    if shift > 0:
+        shifted = v + shift
+        shifted[shifted >= maxlen] -= maxlen
+    return np.sort(shifted)
 
 
 def count_to(n):

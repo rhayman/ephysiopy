@@ -74,4 +74,4 @@ Plotting data
 =============
 
 A mixin class called FigureMaker allows consistent plots, regardless of recording technique. All plotting functions
-there begin with "make" e.g "makeRateMap" and return an instance of a matplotlib axis
+there begin with "make" e.g "_getRateMapPlot" and return an instance of a matplotlib axis

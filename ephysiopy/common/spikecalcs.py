@@ -331,7 +331,10 @@ class SpikeCalcsGeneric(object):
                  waveforms: np.ndarray = None,
                  **kwargs):
         self.spike_times = np.ma.MaskedArray(spike_times)  # IN SECONDS
-        self._waves = np.ma.MaskedArray(waveforms)
+        if waveforms is not None:
+            self._waves = np.ma.MaskedArray(waveforms)
+        else:
+            self._waves = None
         self.cluster = cluster
         self._event_ts = None  # the times that events occured IN SECONDS
         # window, in seconds, either side of the stimulus, to examine
@@ -461,23 +464,26 @@ class SpikeCalcsGeneric(object):
     def secs_per_bin(self, value: float | int):
         self._secs_per_bin = value
 
-    def apply_mask(self, mask: list | tuple) -> None:
+    def apply_mask(self, mask) -> None:
         """
         Applies a mask to the spike times
 
         Args:
             mask (list or tuple): The mask to apply to the spike times
         """
-        if len(mask) == 0:
-            self.spike_times.mask = False
-            self.waveforms.mask = False
+        self.spike_times.mask = False
+        if self._waves and self._waves is not None:
+            self._waves.mask = False
+        if not mask or len(mask[0]) == 0:
+            return
         else:
             mask = [np.ma.masked_inside(self.spike_times, m[0], m[1]).mask for m in mask]
             mask = np.any(mask, axis=0)
             self.spike_times.mask = mask
-            self.waveforms.mask = mask
+            if self._waves is not None:
+                self._waves.mask = mask
 
-    def acorr(self, Trange: np.ndarray = None) -> tuple:
+    def acorr(self, Trange: np.ndarray = None, **kwargs) -> tuple:
         """
         Calculates the autocorrelogram of a spike train
 
@@ -491,7 +497,7 @@ class SpikeCalcsGeneric(object):
             bins (np.ndarray): The bins used to calculate the
                 autocorrelogram
         """
-        return xcorr(self.spike_times, Trange=Trange)
+        return xcorr(self.spike_times, Trange=Trange, **kwargs)
 
     def trial_mean_fr(self) -> float:
         # Returns the trial mean firing rate for the cluster
@@ -598,10 +604,11 @@ class SpikeCalcsGeneric(object):
             result[:, i] = counts[1:]
         return result
 
-    def ifr_sp_corr(
+    def ifr_sp_hd_corr(
         self,
         ts,
         speed,
+        head_direction,
         minSpeed=2.0,
         maxSpeed=40.0,
         sigma=3,
@@ -658,51 +665,68 @@ class SpikeCalcsGeneric(object):
             n_resamples=nShuffles, random_state=rng)
         res = stats.pearsonr(sm_spk_rate.compressed(), speed_filt.compressed(), method=method)
         if plot:
-            # do some fancy plotting stuff
+            # A1) get the bin edges and digitize the speed data
             _, sp_bin_edges = np.histogram(speed_filt.compressed(), bins=int(maxSpeed))
             sp_dig = np.digitize(speed_filt, sp_bin_edges, right=True)
+            # A2) get the spikes per speed bin
             spks_per_sp_bin = [
                 spk_hist_filt[sp_dig == i] for i in range(len(sp_bin_edges))
             ]
+            # A3) put into a list a get the rates and variances
             rate_per_sp_bin = []
             variance_per_sp_bin = []
             for x in spks_per_sp_bin:
                 rate_per_sp_bin.append(np.mean(x) * posSampRate)
                 variance_per_sp_bin.append((np.var(x) * posSampRate))
+            # A4) smooth the result
             rate_filter = signal.windows.gaussian(5, 1.0)
             rate_filter = rate_filter / np.sum(rate_filter)
             binned_spk_rate = signal.filtfilt(rate_filter, 1, rate_per_sp_bin)
             # instead of plotting a scatter plot of the firing rate at each
             # speed bin, plot a log normalised heatmap and overlay results
 
-            spk_binning_edges = np.linspace(
-                np.nanmin(sm_spk_rate), np.nanmax(sm_spk_rate), len(sp_bin_edges)
+            # do some fancy plotting stuff, adding head direction vs firing rate
+            # as a heat map in the background
+            hd = np.ma.MaskedArray(head_direction, speed_mask)
+            # number of bins for hd a bit weird but its so it'll fit on the
+            # speed vs rate plot
+            _, hd_bin_edges = np.histogram(hd.compressed(), bins=int(maxSpeed))
+            _, spk_bin_edges = np.histogram(sm_spk_rate.compressed(), bins=int(maxSpeed))
+            hd_mesh, spk_mesh = np.meshgrid(hd_bin_edges, spk_bin_edges)
+            # B1) create a 2D histogram of the speed vs head direction
+            # B1a) get the "dwell" time map
+            binned_hd_dwell, _, _ = np.histogram2d(
+                hd.compressed(), sm_spk_rate.compressed(),
+                bins=[hd_bin_edges, spk_bin_edges]
             )
-            speed_mesh, spk_mesh = np.meshgrid(sp_bin_edges, spk_binning_edges)
-            # NB call compressed() on the masked array to get the data and
-            # ignore the masked values
-            binned_rate, _, _ = np.histogram2d(
-                speed_filt.compressed(), sm_spk_rate.compressed(),
-                bins=[sp_bin_edges, spk_binning_edges]
+            # B1b) get the spike map
+            weights = np.bincount(x1, minlength=nSamples)
+            weights = np.ma.MaskedArray(weights, speed_mask)
+            binned_hd_spike, _, _ = np.histogram2d(
+                hd.compressed(), sm_spk_rate.compressed(),
+                bins=[hd_bin_edges, spk_bin_edges], weights=weights.compressed()
             )
+            binned_hd_rate = binned_hd_spike / binned_hd_dwell
             # blur the binned rate a bit to make it look nicer
-            from ephysiopy.common.utils import blurImage
+            from ephysiopy.common.utils import blur_image
 
-            sm_binned_rate = blurImage(binned_rate, 5)
+            # sm_binned_rate = blur_image(binned_hd_rate, 1)
+            sm_binned_rate = np.ma.MaskedArray(binned_hd_rate)
+            # sm_binned_rate = np.ma.masked_where(sm_binned_rate <= 1, sm_binned_rate)
             if "ax" not in kwargs.keys():
                 fig = plt.figure()
                 ax = fig.add_subplot(111)
             else:
                 ax = kwargs["ax"]
-            from matplotlib.colors import LogNorm
 
-            speed_mesh = speed_mesh[:-1, :-1]
             spk_mesh = spk_mesh[:-1, :-1]
-            pc = ax.pcolormesh(
-                speed_mesh,
+            hd_mesh = hd_mesh[:-1, :-1]
+            ax2 = ax.twinx()
+            ax2.set_ylabel("Heading direction ($^\circ$)")
+            pc = ax2.pcolormesh(
                 spk_mesh,
-                sm_binned_rate,
-                norm=LogNorm(),
+                hd_mesh,
+                binned_hd_spike.T,
                 alpha=0.5,
                 shading="nearest",
                 edgecolors="None",

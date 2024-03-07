@@ -533,8 +533,7 @@ class phasePrecession2D(object):
         self.PosData = P
 
     def update_rate_map(self):
-        R = RateMap(self.PosData.xy, self.PosData.dir,
-                    self.PosData.speed, xyInCms=self.convert_xy_2_cm)
+        R = RateMap(self.PosData, xyInCms=self.convert_xy_2_cm)
         R.binsize = self.cms_per_bin
         R.smooth_sz = self.field_smoothing_kernel_len
         R.ppm = self.ppm

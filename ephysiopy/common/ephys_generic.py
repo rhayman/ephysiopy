@@ -125,7 +125,7 @@ class EEGCalcsGeneric(object):
         self.maxFreq = 125
         self.maxPow = None
 
-    def apply_mask(self, mask):
+    def apply_mask(self, mask) -> None:
         """
         Applies a mask to the signal
 
@@ -330,6 +330,7 @@ class PosCalcsGeneric(object):
     @convert2cm.setter
     def convert2cm(self, val) -> None:
         self._convert2cm = val
+        self.postprocesspos(self.tracker_params)
 
     @property
     def xyTS(self) -> np.ma.MaskedArray:
