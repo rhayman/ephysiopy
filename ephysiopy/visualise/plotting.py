@@ -101,9 +101,7 @@ class FigureMaker(object):
         ratemap = np.ma.MaskedArray(rmap[0], np.isnan(rmap[0]), copy=True)
         x, y = np.meshgrid(rmap[1][1][0:-1].data, rmap[1][0][0:-1].data)
         vmax = np.nanmax(np.ravel(ratemap))
-        ax = None
-        if 'ax' in kwargs.keys():
-            ax = kwargs['ax']
+        ax = kwargs.pop("ax", None)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
@@ -135,9 +133,7 @@ class FigureMaker(object):
             add_mrv = kwargs.pop("add_mrv")
         else:
             add_mrv = False
-        ax = None
-        if 'ax' in kwargs.keys():
-            ax = kwargs['ax']
+        ax = kwargs.pop("ax", None)
         kwargs = clean_kwargs(plt.pcolormesh, kwargs)
         if ax is None:
             fig = plt.figure()
@@ -183,6 +179,7 @@ class FigureMaker(object):
             col = kwargs["c"]
         else:
             col = tcols.colours[1]
+        ax = kwargs.pop("ax", None)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
@@ -217,9 +214,7 @@ class FigureMaker(object):
         if 'return_ratemap' in kwargs.keys():
             return_ratemap = kwargs.pop('return_ratemap')
         rmap = self.get_eb_map(cluster, channel, **kwargs)
-        ax = None
-        if 'ax' in kwargs.keys():
-            ax = kwargs.pop('ax')
+        ax = kwargs.pop("ax", None)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(projection='polar')
@@ -253,9 +248,7 @@ class FigureMaker(object):
         """
         if not self.RateMap:
             self.initialise()
-        ax = None
-        if 'ax' in kwargs.keys():
-            ax = kwargs['ax']
+        ax = kwargs.pop("ax", None)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
@@ -325,9 +318,7 @@ class FigureMaker(object):
         """
         rmap = self.get_speed_v_rate_map(cluster, channel, **kwargs)
         # rmap is linear
-        ax = None
-        if 'ax' in kwargs.keys():
-            ax = kwargs.pop('ax')
+        ax = kwargs.pop("ax", None)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
@@ -357,9 +348,7 @@ class FigureMaker(object):
         # ... and where less than 0.5% of data is accounted for
         x, y = np.meshgrid(rmap[1][0], rmap[1][1])
         vmax = np.max(np.ravel(im))
-        ax = None
-        if 'ax' in kwargs.keys():
-            ax = kwargs.pop('ax')
+        ax = kwargs.pop("ax", None)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
