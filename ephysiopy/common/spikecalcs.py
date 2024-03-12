@@ -464,7 +464,7 @@ class SpikeCalcsGeneric(object):
     def secs_per_bin(self, value: float | int):
         self._secs_per_bin = value
 
-    def apply_mask(self, mask) -> None:
+    def apply_filter(self, mask) -> None:
         """
         Applies a mask to the spike times
 

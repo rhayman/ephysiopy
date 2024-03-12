@@ -19,7 +19,7 @@ def standard_Ratemap(basic_PosCalcs):
 
 
 def test_calc_bin_size(standard_Ratemap):
-    bs = standard_Ratemap._calcBinEdges()
+    bs = standard_Ratemap._calc_bin_edges()
     print(f"Using {standard_Ratemap.ppm} ppm")
     assert isinstance(bs, (np.ndarray, list, Sequence))
 
@@ -40,17 +40,17 @@ def test_bin_data(standard_Ratemap):
     pw = [R.pos_weights, pw2d]
     keep = np.arange(len(hd))
     for sample in zip(samples, bins, pw):
-        ret = R._binData(sample[0], sample[1], sample[2], keep)
+        ret = R._bin_data(sample[0], sample[1], sample[2], keep)
         assert isinstance(ret, tuple)
         assert isinstance(ret[0][0], np.ndarray)
-    R._binData(xy, xy_bins, None, keep)
+    R._bin_data(xy, xy_bins, None, keep)
     R.pos_weights = np.random.randn(100)
     R.smoothingType = "gaussian"
 
 
 def test_get_map(standard_Ratemap):
     # A large number of the methods in RateMap are
-    # called within the method getMap()
+    # called within the method get_map()
     n_pos = len(standard_Ratemap.pos_weights)
     spk_weights = np.random.rand(n_pos)
     spk_weights[spk_weights >= 0.95] = 1
@@ -71,7 +71,7 @@ def test_get_map(standard_Ratemap):
             for smooth in do_smooth:
                 for when2smooth in smoothing_when:
                     standard_Ratemap.whenToSmooth = when2smooth
-                    ret = standard_Ratemap.getMap(
+                    ret = standard_Ratemap.get_map(
                         spk_weights,
                         varType=var,
                         mapType=map_type,
@@ -88,8 +88,8 @@ def test_get_adaptive_map(standard_Ratemap):
     spk_weights[spk_weights >= 0.99] = 3
     spk_weights[spk_weights < 0.95] = 0
 
-    rmap = standard_Ratemap.getMap(spk_weights)
-    pos_binned, _ = standard_Ratemap.getMap(spk_weights, mapType=MapType.POS)
+    rmap = standard_Ratemap.get_map(spk_weights)
+    pos_binned, _ = standard_Ratemap.get_map(spk_weights, mapType=MapType.POS)
     pos_binned[~np.isfinite(pos_binned)] = 0
     smthdRate, _, _ = standard_Ratemap.getAdaptiveMap(rmap[0], pos_binned)
     assert isinstance(smthdRate, np.ndarray)

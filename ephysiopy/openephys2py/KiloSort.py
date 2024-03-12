@@ -40,7 +40,7 @@ class KiloSortSession(object):
                         self.fname_root = d
         self.cluster_id = None
         self.spk_clusters = None
-        self.spk_times = None
+        self.spike_times = None
         self.amplitudes = None
         self.contamPct = None
         self.good_clusters = []
@@ -142,7 +142,7 @@ class KiloSortSession(object):
                 np.load(os.path.join(self.fname_root, "amplitudes.npy"))
             ))
         if fileExists(self.fname_root, "spike_times.npy"):
-            self.spk_times = np.ma.MaskedArray(np.squeeze(
+            self.spike_times = np.ma.MaskedArray(np.squeeze(
                 np.load(os.path.join(self.fname_root, "spike_times.npy"))
             ))
             return True
@@ -179,9 +179,9 @@ class KiloSortSession(object):
         Returns the spike times for cluster in samples
         '''
         if cluster in self.good_clusters:
-            return self.spk_times[self.spk_clusters == cluster]
+            return self.spike_times[self.spk_clusters == cluster]
         
-    def apply_mask(self, mask):
+    def apply_mask(self, mask, **kwargs):
         """Apply a mask to the data
         
         Args:
@@ -197,16 +197,12 @@ class KiloSortSession(object):
         mask can be an empty tuple, in which case the mask is removed
 
         """
-        self.spk_times.mask = False
-        self.spk_clusters.mask = False
-        self.amplitudes.mask = False
-        if not mask or len(mask[0]) == 0:
-            return
-        else:
-            mask = [np.ma.masked_inside(
-                self.spk_times, m[0]*3e4, m[1]*3e4).mask
-                for m in mask]
-            mask = np.any(mask, axis=0)
-            self.spk_times.mask = mask
-            self.spk_clusters.mask = mask
-            self.amplitudes.mask = mask
+        # get spike and pos times into position sample units
+        xy_ts = kwargs.get("xy_ts", None)
+        sample_rate = kwargs.get("sample_rate", 50)
+        spike_pos_samples = np.ma.MaskedArray(self.spike_times / 30000 * sample_rate, dtype=int)
+        pos_times_in_samples = np.ma.MaskedArray(xy_ts * sample_rate, dtype=int)
+        mask = np.isin(spike_pos_samples, pos_times_in_samples)
+        self.spike_times = np.ma.MaskedArray(self.spike_times, mask)
+        self.spk_clusters = np.ma.MaskedArray(self.spk_clusters, mask)
+        self.amplitudes = np.ma.MaskedArray(self.amplitudes, mask)

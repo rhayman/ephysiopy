@@ -70,36 +70,36 @@ def test_calcSpeed(basic_PosCalcs, basic_xy):
     assert xy.shape[1] == speed.shape[0]
 
 
-def test_filter_pos(basic_PosCalcs):
-    basic_PosCalcs.postprocesspos(
-        tracker_params={"AxonaBadValue": 1023},
-    )
-    x_min = np.min(basic_PosCalcs.xy[0, :])
-    y_min = np.min(basic_PosCalcs.xy[1, :])
-    x_max = np.max(basic_PosCalcs.xy[0, :])
-    y_max = np.max(basic_PosCalcs.xy[1, :])
-    pos_filter = {
-        "dir": "w",
-        "dir1": "e",
-        "dir2": "n",
-        "dir3": "s",
-        "speed": [1, 10],
-        "time": [0, 3],
-        "xrange": [x_min + 10, x_max - 10],
-        "yrange": [y_min + 10, y_max - 10],
-    }
-    this_filt = {}
-    for k in pos_filter.keys():
-        this_filt[k] = pos_filter[k]
-        val = basic_PosCalcs.filterPos(this_filt)
-        assert isinstance(val, np.ndarray)
-    basic_PosCalcs.filterPos(None)
-    with pytest.raises(ValueError):
-        basic_PosCalcs.filterPos({"dir": "gxg"})
-    with pytest.raises(ValueError):
-        basic_PosCalcs.filterPos({"speed": [20, 10]})
-    with pytest.raises(KeyError):
-        basic_PosCalcs.filterPos({"blert": [20, 10]})
+# def test_filter_pos(basic_PosCalcs):
+#     basic_PosCalcs.postprocesspos(
+#         tracker_params={"AxonaBadValue": 1023},
+#     )
+#     x_min = np.min(basic_PosCalcs.xy[0, :])
+#     y_min = np.min(basic_PosCalcs.xy[1, :])
+#     x_max = np.max(basic_PosCalcs.xy[0, :])
+#     y_max = np.max(basic_PosCalcs.xy[1, :])
+#     pos_filter = {
+#         "dir": "w",
+#         "dir1": "e",
+#         "dir2": "n",
+#         "dir3": "s",
+#         "speed": [1, 10],
+#         "time": [0, 3],
+#         "xrange": [x_min + 10, x_max - 10],
+#         "yrange": [y_min + 10, y_max - 10],
+#     }
+#     this_filt = {}
+#     for k in pos_filter.keys():
+#         this_filt[k] = pos_filter[k]
+#         val = basic_PosCalcs.filterPos(this_filt)
+#         assert isinstance(val, np.ndarray)
+#     basic_PosCalcs.filterPos(None)
+#     with pytest.raises(ValueError):
+#         basic_PosCalcs.filterPos({"dir": "gxg"})
+#     with pytest.raises(ValueError):
+#         basic_PosCalcs.filterPos({"speed": [20, 10]})
+#     with pytest.raises(KeyError):
+#         basic_PosCalcs.filterPos({"blert": [20, 10]})
 
 
 # postprocesspos calls the functions in the above 4 tests

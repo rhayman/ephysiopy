@@ -130,7 +130,8 @@ class EEGCalcsGeneric(object):
         Applies a mask to the signal
 
         Args:
-            mask (list): The mask to be applied
+            mask (np.ndarray): The mask to be applied. For use with
+                               np.ma.MaskedArray's mask attribute
 
         Returns:
             Nothing. Sets the mask of self.sig
@@ -141,14 +142,15 @@ class EEGCalcsGeneric(object):
             the start and end times of the mask i.e. [(start1, end1), (start2, end2)]
             everything inside of these times is masked
         """
-        self.sig.mask = False
-        if not mask or len(mask[0]) == 0:
-            return
-        else:
-            times = np.arange(0, len(self.sig) / self.fs, 1 / self.fs)
-            mask = [np.ma.masked_inside(times, m[0], m[1]).mask for m in mask]
-            mask = np.any(mask, axis=0)
+        if mask:
+            ratio = int(len(self.sig) / len(mask))
+            mask = np.repeat(mask, ratio)
+            # mask now might be shorter than self.sig so we need to pad it
+            if len(mask) < len(self.sig):
+                mask = np.pad(mask, (0, len(self.sig) - len(mask)))
             self.sig.mask = mask
+        else:
+            self.sig.mask = False
 
     def _nextpow2(self, val: int):
         """
@@ -571,7 +573,8 @@ class PosCalcsGeneric(object):
         Applies a mask to the position data
 
         Args:
-            mask (list): The mask to be applied
+            mask (np.ndarray): The mask to be applied. For use with
+                               np.ma.MaskedArray's mask attribute
 
         Returns:
             Nothing. Sets the mask of pos data
@@ -582,103 +585,7 @@ class PosCalcsGeneric(object):
             the start and end times of the mask i.e. [(start1, end1), (start2, end2)]
             everything inside of these times is masked
         """
-        self.xy.mask = False
-        self.xyTS.mask = False
-        self.dir.mask = False
-        self.speed.mask = False
-        if not mask or len(mask[0]) == 0:
-            return
-        else:
-            mask = [np.ma.masked_inside(self.xyTS, m[0], m[1]).mask for m in mask]
-            mask = np.any(mask, axis=0)
-            self.xy.mask = mask
-            self.xyTS.mask = mask
-            self.dir.mask = mask
-            self.speed.mask = mask
-
-    def filterPos(self, filt: dict = {}):
-        """
-        Filters data based on key/ values in filt
-        Meant to replicate a similar function in axona_util.Trial
-        called filterPos
-
-        Args:
-            filterDict (dict): Contains the type(s) of filter to be used and
-                the range of values to filter for. Values are pairs specifying
-                the range of values to filter for NB can take multiple filters
-                and iteratively apply them
-                legal values are:
-                * 'dir' - the directional range to filter for NB this can
-                    contain 'w','e','s' or 'n'
-                * 'speed' - min and max speed to filter for
-                * 'xrange' - min and max values to filter x pos values
-                * 'yrange' - same as xrange but for y pos
-                * 'time' - the times to keep / remove specified in ms
-
-        Returns:
-            pos_index_to_keep (ndarray): The position indices that should be
-            kept
-        """
-        if filt is None:
-            self.xy.mask = False
-            self.dir.mask = False
-            self.speed.mask = False
-            return False
-        bool_arr = np.ones(shape=(len(filt), self.npos), dtype=bool)
-        for idx, key in enumerate(filt):
-            if isinstance(filt[key], str):
-                if len(filt[key]) == 1 and "dir" in key:
-                    if "w" in filt[key]:
-                        filt[key] = (135, 225)
-                    elif "e" in filt[key]:
-                        filt[key] = (315, 45)
-                    elif "s" in filt[key]:
-                        filt[key] = (225, 315)
-                    elif "n" in filt[key]:
-                        filt[key] = (45, 135)
-                else:
-                    raise ValueError("filter must contain a key / value pair")
-            if "speed" in key:
-                if filt[key][0] > filt[key][1]:
-                    raise ValueError(
-                        "First value must be less \
-                        than the second one"
-                    )
-                else:
-                    bool_arr[idx, :] = np.logical_and(
-                        self.speed > filt[key][0],
-                        self.speed < filt[key][1],
-                    )
-            elif "dir" in key:
-                if filt[key][0] < filt[key][1]:
-                    bool_arr[idx, :] = np.logical_and(
-                        self.dir > filt[key][0], self.dir < filt[key][1]
-                    )
-                else:
-                    bool_arr[idx, :] = np.logical_or(
-                        self.dir > filt[key][0], self.dir < filt[key][1]
-                    )
-            elif "xrange" in key:
-                bool_arr[idx, :] = np.logical_and(
-                    self.xy[0, :] > filt[key][0],
-                    self.xy[0, :] < filt[key][1],
-                )
-            elif "yrange" in key:
-                bool_arr[idx, :] = np.logical_and(
-                    self.xy[1, :] > filt[key][0],
-                    self.xy[1, :] < filt[key][1],
-                )
-            elif "time" in key:
-                # takes the form of 'from' - 'to' times in SECONDS
-                # such that only pos's between these ranges are KEPT
-                for i in filt[key]:
-                    bool_arr[idx, i * self.sample_rate: i *
-                             self.sample_rate] = False
-                bool_arr = ~bool_arr
-            else:
-                raise KeyError("Unrecognised key")
-        mask = np.expand_dims(np.any(~bool_arr, axis=0), 0)
         self.xy.mask = mask
+        self.xyTS.mask = mask
         self.dir.mask = mask
         self.speed.mask = mask
-        return mask

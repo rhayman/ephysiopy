@@ -448,7 +448,7 @@ class phasePrecession2D(object):
         spk_times_in_pos_samples = self.getSpikePosIndices(spike_ts)
         spk_weights = np.bincount(
             spk_times_in_pos_samples, minlength=len(self.pos_ts))
-        self.spk_times_in_pos_samples = spk_times_in_pos_samples
+        self.spike_times_in_pos_samples = spk_times_in_pos_samples
         self.spk_weights = spk_weights
 
         self.spike_ts = spike_ts
@@ -617,7 +617,7 @@ class phasePrecession2D(object):
             each field (starting at 1)
             rmap (numpy.ndarray): The ratemap of the tetrode / cluster
         """
-        rmap, (ye, xe) = self.RateMap.getMap(self.spk_weights)
+        rmap, (ye, xe) = self.RateMap.get_map(self.spk_weights)
         rmap = rmap.T
         nan_idx = np.isnan(rmap)
         rmap[nan_idx] = 0
@@ -735,7 +735,7 @@ class phasePrecession2D(object):
         xydir = np.squeeze(xydir)
         xydir_old = xydir.copy()
 
-        rmap, (ye, xe) = self.RateMap.getMap(
+        rmap, (ye, xe) = self.RateMap.get_map(
             self.spk_weights
         )
         rmap = rmap.T
@@ -1302,10 +1302,10 @@ class phasePrecession2D(object):
                          ax=None):
 
         t = self.getLFPPhaseValsForSpikeTS()
-        x = self.RateMap.xy[0, self.spk_times_in_pos_samples]
+        x = self.RateMap.xy[0, self.spike_times_in_pos_samples]
         from ephysiopy.common import fieldcalcs
 
-        rmap, (ye, xe) = self.RateMap.getMap(self.spk_weights)
+        rmap, (ye, xe) = self.RateMap.get_map(self.spk_weights)
         rmap = rmap.T
         label = fieldcalcs.field_lims(rmap)
         xInField = xe[label.nonzero()[1]]
@@ -1346,7 +1346,7 @@ class phasePrecession2D(object):
         }
 
     def getLFPPhaseValsForSpikeTS(self):
-        ts = self.spk_times_in_pos_samples * (
+        ts = self.spike_times_in_pos_samples * (
             self.lfp_sample_rate / self.pos_sample_rate
         )
         ts_idx = np.array(np.floor(ts), dtype=int)

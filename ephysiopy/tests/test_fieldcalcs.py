@@ -122,7 +122,7 @@ def test_skaggs_info(basic_ratemap):
 #     n_pos = len(R.pos_weights)
 #     spk_weights = np.random.rand(n_pos)
 #     spk_weights[spk_weights >= 0.95] = 1
-#     basic_ratemap, _ = R.getMap(spk_weights)
+#     basic_ratemap, _ = R.get_map(spk_weights)
 #     sac = R.autoCorr2D(
 #         basic_ratemap, ~np.isfinite(basic_ratemap))
 #     from skimage import transform
@@ -144,7 +144,7 @@ def test_skaggs_info(basic_ratemap):
 #     n_pos = len(standard_Ratemap.pos_weights)
 #     spk_weights = np.random.rand(n_pos)
 #     spk_weights[spk_weights >= 0.95] = 1
-#     basic_ratemap, _ = standard_Ratemap.getMap(spk_weights)
+#     basic_ratemap, _ = standard_Ratemap.get_map(spk_weights)
 #     sac = standard_Ratemap.autoCorr2D(
 #         basic_ratemap, ~np.isfinite(basic_ratemap))
 #     measures = fieldcalcs.grid_field_props(sac, allProps=True)

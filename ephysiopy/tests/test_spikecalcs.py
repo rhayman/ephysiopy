@@ -9,7 +9,7 @@ def get_spikecalcs_instance(path_to_axona_data) -> SpikeCalcsGeneric:
     T = AxonaTrial(path_to_axona_data)
     T.load_pos_data()
     cut = T.TETRODE[1].cut
-    spk_ts = T.TETRODE[1].spk_ts[cut == 1]
+    spk_ts = T.TETRODE[1].spike_times[cut == 1]
     waves = T.TETRODE[1].waveforms[cut == 1]
     S = SpikeCalcsGeneric(spk_ts, 1, waveforms=waves)
     return S

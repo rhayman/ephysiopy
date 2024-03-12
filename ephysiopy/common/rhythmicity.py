@@ -700,7 +700,7 @@ class LFPOscillations(object):
         '''
         _, phase, _, _ = self.getFreqPhase(
             lfp_data.sig, [6, 12])
-        cluster_times = KSdata.spk_times[KSdata.spk_clusters == cluster]
+        cluster_times = KSdata.spike_times[KSdata.spk_clusters == cluster]
         # cluster_times in samples (@30000Hz)
         # get indices into the phase vector
         phase_idx = np.array(cluster_times/(3e4/self.fs), dtype=int)

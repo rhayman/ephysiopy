@@ -983,14 +983,14 @@ class FigureMaker(object):
         for d in zip(dirs_st, dirs_en):
             self.posFilter = {'dir': (d[0], d[1])}
             if 'polar' in maptype:
-                rmap = self._getMap(
+                rmap = self._get_map(
                     tetrode=tetrode, cluster=cluster, var2bin='dir')[0]
             elif 'xcorr' in maptype:
                 x1 = self.TETRODE[tetrode].getClustTS(cluster) / (96000/1000)
                 rmap = self.spikecalcs.acorr(
                     x1, x1, Trange=np.array([-500, 500]))
             else:
-                rmap = self._getMap(tetrode=tetrode, cluster=cluster)[0]
+                rmap = self._get_map(tetrode=tetrode, cluster=cluster)[0]
             if np.nanmax(rmap) > max_rate:
                 max_rate = np.nanmax(rmap)
 

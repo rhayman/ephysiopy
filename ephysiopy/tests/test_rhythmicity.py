@@ -8,7 +8,7 @@ def test_cosine_init(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     T.load_pos_data()
     C = CosineDirectionalTuning(
-        T.TETRODE[1].spk_ts,
+        T.TETRODE[1].spike_times,
         T.PosCalcs.xyTS,
         T.TETRODE[1].cut,
         T.PosCalcs.xy[0, :],
@@ -43,7 +43,7 @@ def test_the_rest_of_CDT(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     T.load_pos_data()
     C = CosineDirectionalTuning(
-        T.TETRODE[1].spk_ts,
+        T.TETRODE[1].spike_times,
         T.PosCalcs.xyTS,
         T.TETRODE[1].cut,
         T.PosCalcs.xy[0, :],

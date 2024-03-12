@@ -351,7 +351,7 @@ class Tetrode(IO):
         self.header = self.getHeader(
             self.filename_root.with_suffix("." + str(tetrode)))
         data = self.getData(filename_root.with_suffix("." + str(tetrode)))
-        self.spk_ts = np.ma.MaskedArray(data["ts"][::4])
+        self.spike_times = np.ma.MaskedArray(data["ts"][::4])
         self.nChans = self.getHeaderVal(self.header, "num_chans")
         self.samples = self.getHeaderVal(self.header, "samples_per_spike")
         self.nSpikes = self.getHeaderVal(self.header, "num_spikes")
@@ -385,7 +385,7 @@ class Tetrode(IO):
         """
         Return all the timestamps for all the spikes on the tetrode
         """
-        return np.ma.compressed(self.spk_ts)
+        return np.ma.compressed(self.spike_times)
 
     def getClustTS(self, cluster: int = None):
         """
@@ -414,7 +414,7 @@ class Tetrode(IO):
                 cut = np.array(self.getCut(self.tetrode), dtype=int)
                 self.cut = cut
             if self.cut is not None:
-                clustTS = np.ma.compressed(self.spk_ts[self.cut == cluster])
+                clustTS = np.ma.compressed(self.spike_times[self.cut == cluster])
         return clustTS
 
     def getPosSamples(self):
@@ -477,11 +477,12 @@ class Tetrode(IO):
             self.cut = cut
         return np.unique(self.cut)
     
-    def apply_mask(self, mask) -> None:
+    def apply_mask(self, mask, **kwargs) -> None:
         """Apply a mask to the data
         
         Args:
-            mask (tuple): (start, end) in seconds
+            mask (np.ndarray): The mask to be applied. For use with
+                               np.ma.MaskedArray's mask attribute
 
         Returns:
             None
@@ -493,20 +494,14 @@ class Tetrode(IO):
         mask can be an empty tuple, in which case the mask is removed
 
         """
-        
-        self.waveforms.mask = False
-        self.spk_ts.mask = False
-        self.cut.mask = False
-        if not mask or len(mask[0]) == 0:
-            return
-        else:
-            mask = [np.ma.masked_inside(
-                self.spk_ts, m[0]*self.timebase, m[1]*self.timebase).mask
-                for m in mask]
-            mask = np.any(mask, axis=0)
-            self.spk_ts.mask = mask
-            self.waveforms.mask = mask
-            self.cut.mask = mask
+        xy_ts = kwargs.get("xy_ts", None)
+        sample_rate = kwargs.get("sample_rate", 50)
+        spike_pos_samples = np.ma.MaskedArray(self.spike_times / 30000 * sample_rate, dtype=int)
+        pos_times_in_samples = np.ma.MaskedArray(xy_ts * sample_rate, dtype=int)
+        mask = np.isin(spike_pos_samples, pos_times_in_samples)
+        self.spike_times = np.ma.MaskedArray(self.spike_times, mask)
+        self.waveforms = np.ma.MaskedArray(self.waveforms, mask)
+        self.cut = np.ma.MaskedArray(self.cut, mask)
 
 
 class EEG(IO):
@@ -645,7 +640,7 @@ class ClusterSession(object):
 
         self.cluster_id = None
         self.spk_clusters = None
-        self.spk_times = None
+        self.spike_times = None
         self.good_clusters = {}
 
     def load(self):

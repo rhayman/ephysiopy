@@ -291,7 +291,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """Returns the times of an individual cluster"""
         raise NotImplementedError
     
-    def apply_mask(self, *mask):
+    def apply_filter(self, filt: dict = None) -> np.ma.MaskedArray:
         """Apply a mask to the data
         
         Args:
@@ -307,12 +307,93 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         mask can be an empty tuple, in which case the mask is removed
 
         """
+        """
+        Filters data based on key/ values in filt
+        Meant to replicate a similar function in axona_util.Trial
+        called filterPos
+
+        Args:
+            filterDict (dict): Contains the type(s) of filter to be used and
+                the range of values to filter for. Values are pairs specifying
+                the range of values to filter for NB can take multiple filters
+                and iteratively apply them
+                legal values are:
+                * 'dir' - the directional range to filter for NB this can
+                    contain 'w','e','s' or 'n'
+                * 'speed' - min and max speed to filter for
+                * 'xrange' - min and max values to filter x pos values
+                * 'yrange' - same as xrange but for y pos
+                * 'time' - the times to keep / remove specified in ms
+
+        Returns:
+            pos_index_to_keep (ndarray): The position indices that should be
+            kept
+        """
+        if filt is not None:
+            bool_arr = np.ones(shape=(len(filt), self.PosCalcs.npos), dtype=bool)
+            for idx, key in enumerate(filt):
+                if isinstance(filt[key], str):
+                    if len(filt[key]) == 1 and "dir" in key:
+                        if "w" in filt[key]:
+                            filt[key] = (135, 225)
+                        elif "e" in filt[key]:
+                            filt[key] = (315, 45)
+                        elif "s" in filt[key]:
+                            filt[key] = (225, 315)
+                        elif "n" in filt[key]:
+                            filt[key] = (45, 135)
+                    else:
+                        raise ValueError("filter must contain a key / value pair")
+                if "speed" in key:
+                    if filt[key][0] > filt[key][1]:
+                        raise ValueError(
+                            "First value must be less \
+                            than the second one"
+                        )
+                    else:
+                        bool_arr[idx, :] = np.logical_and(
+                            self.PosCalcs.speed > filt[key][0],
+                            self.PosCalcs.speed < filt[key][1],
+                        )
+                elif "dir" in key:
+                    if filt[key][0] < filt[key][1]:
+                        bool_arr[idx, :] = np.logical_and(
+                            self.PosCalcs.dir > filt[key][0], self.PosCalcs.dir < filt[key][1]
+                        )
+                    else:
+                        bool_arr[idx, :] = np.logical_or(
+                            self.PosCalcs.dir > filt[key][0], self.PosCalcs.dir < filt[key][1]
+                        )
+                elif "xrange" in key:
+                    bool_arr[idx, :] = np.logical_and(
+                        self.PosCalcs.xy[0, :] > filt[key][0],
+                        self.PosCalcs.xy[0, :] < filt[key][1],
+                    )
+                elif "yrange" in key:
+                    bool_arr[idx, :] = np.logical_and(
+                        self.PosCalcs.xy[1, :] > filt[key][0],
+                        self.PosCalcs.xy[1, :] < filt[key][1],
+                    )
+                elif "time" in key:
+                    # takes the form of 'from' - 'to' times in SECONDS
+                    # such that only pos's between these ranges are KEPT
+                    from_time = filt[key][0] * self.PosCalcs.sample_rate
+                    to_time = filt[key][1] * self.PosCalcs.sample_rate
+                    bool_arr[idx, from_time:to_time] = False
+                else:
+                    raise KeyError("Unrecognised key")
+            mask = np.expand_dims(np.any(~bool_arr, axis=0), 0)
+        else:
+            mask = False
         if self.EEGCalcs:
             self.EEGCalcs.apply_mask(mask)
         if self.PosCalcs:
             self.PosCalcs.apply_mask(mask)
         if self.clusterData:
-            self.clusterData.apply_mask(mask)
+            self.clusterData.apply_mask(mask,
+                                        xy_ts=self.PosCalcs.xyTS,
+                                        sample_rate=self.PosCalcs.sample_rate)
+        return mask
 
     def initialise(self):
         self.RateMap = RateMap(self.PosCalcs)
@@ -381,13 +462,13 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
                     spk_times_in_pos_samples, shift, maxlen=self.PosCalcs.npos)
                 weights.append(np.bincount(
                     shifted_samples, minlength=self.PosCalcs.npos))
-            rmaps = self.RateMap.getMap(np.array(weights),
+            rmaps = self.RateMap.get_map(np.array(weights),
                                         varType=var2bin,
                                         **kwargs)
             return rmaps
         spk_weights = np.bincount(
             spk_times_in_pos_samples, minlength=self.PosCalcs.npos)
-        rmap = self.RateMap.getMap(spk_weights,
+        rmap = self.RateMap.get_map(spk_weights,
                                    varType=var2bin,
                                    **kwargs)
         return rmap
@@ -532,7 +613,7 @@ class AxonaTrial(TrialInterface):
         if tetrode is not None:
             return self.TETRODE.get_spike_samples(int(tetrode), int(cluster))
         
-    def apply_mask(self, *mask):
+    def apply_filter(self, filt: dict = None):
         """Apply a mask to the data
         
         Args:
@@ -547,7 +628,7 @@ class AxonaTrial(TrialInterface):
         mask can be an empty tuple, in which case the mask is removed
 
         """
-        super().apply_mask(mask)
+        mask = super().apply_filter(filt)
         for tetrode in self.TETRODE.keys():
             if self.TETRODE[tetrode] is not None:
                 self.TETRODE[tetrode].apply_mask(mask)
@@ -632,7 +713,7 @@ class OpenEphysBase(TrialInterface):
         if not self.clusterData:
             self.load_cluster_data()
         if cluster in self.clusterData.spk_clusters:
-            all_ts = self.clusterData.spk_times
+            all_ts = self.clusterData.spike_times
             times = all_ts[self.clusterData.spk_clusters == cluster]
             return times.astype(np.int64) / self.sample_rate
         else:
@@ -651,12 +732,10 @@ class OpenEphysBase(TrialInterface):
                 os.path.join(self.path2LFPdata, "continuous.dat"),
                 n_channels=self.channel_count,
             )
-            channel = 0
-            if "channel" in kwargs.keys():
-                channel = kwargs["channel"]
-            target_sample_rate = 500
-            if "target_sample_rate" in kwargs.keys():
-                target_sample_rate = kwargs["target_sample_rate"]
+            channel = kwargs.get("channel", 0)
+            # set the target sample rate to 250Hz by default to match
+            # Axona EEG data
+            target_sample_rate = kwargs.get("target_sample_rate", 250)
             n_samples = np.shape(lfp[channel, :])[0]
             sig = signal.resample(
                 lfp[channel, :], int(
@@ -858,7 +937,7 @@ class OpenEphysBase(TrialInterface):
         print("Loaded ttl data")
         return True
     
-    def apply_mask(self, *mask):
+    def apply_filter(self, filt: dict = None):
         """Apply a mask to the data
         
         Args:
@@ -877,7 +956,7 @@ class OpenEphysBase(TrialInterface):
         # as it will be applied when the methods are called within
         # this class for grabbing waveforms from the template_model
         # class
-        super().apply_mask(mask)
+        super().apply_filter(filt)
 
     def find_files(
         self,
