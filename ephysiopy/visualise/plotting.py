@@ -61,11 +61,9 @@ class FigureMaker(object):
         self.RateMap = RateMap(self.PosCalcs)
         self.npos = self.PosCalcs.xy.shape[1]
 
-    def _plot_multiple_clusters(self,
-                                func,
-                                clusters: list,
-                                channel: int,
-                                **kwargs) -> matplotlib.figure.Figure:
+    def _plot_multiple_clusters(
+        self, func, clusters: list, channel: int, **kwargs
+    ) -> matplotlib.figure.Figure:
         """
         Plots multiple clusters.
 
@@ -77,12 +75,12 @@ class FigureMaker(object):
         """
         fig = plt.figure()
         nrows = int(np.ceil(len(clusters) / 5))
-        if 'projection' in kwargs.keys():
-            proj = kwargs.pop('projection')
+        if "projection" in kwargs.keys():
+            proj = kwargs.pop("projection")
         else:
             proj = None
         for i, c in enumerate(clusters):
-            ax = fig.add_subplot(nrows, 5, i+1, projection=proj)
+            ax = fig.add_subplot(nrows, 5, i + 1, projection=proj)
             ts = self.get_spike_times(c, channel)
             func(ts, ax=ax, **kwargs)
         return fig
@@ -107,7 +105,9 @@ class FigureMaker(object):
             ax = fig.add_subplot(111)
         kwargs = clean_kwargs(plt.pcolormesh, kwargs)
         ax.pcolormesh(
-            x, y, ratemap,
+            x,
+            y,
+            ratemap,
             cmap=jet_cmap,
             edgecolors="face",
             vmax=vmax,
@@ -117,7 +117,6 @@ class FigureMaker(object):
         ax.set_aspect("equal")
         return ax
 
-    @stripAxes
     def plot_hd_map(self, cluster: int, channel: int, **kwargs):
         """
         Gets the head direction map for the specified cluster(s) and channel.
@@ -129,37 +128,45 @@ class FigureMaker(object):
             **kwargs: Additional keyword arguments for the function.
         """
         rmap = self.get_hd_map(cluster, channel, **kwargs)
-        if "add_mrv" in kwargs.keys():
-            add_mrv = kwargs.pop("add_mrv")
-        else:
-            add_mrv = False
+        add_mrv = kwargs.pop("add_mrv", False)
+        add_guides = kwargs.pop("add_guides", False)
+        strip_axes = kwargs.pop("strip_axes", False)
+        fill = kwargs.pop("fill", False)
         ax = kwargs.pop("ax", None)
         kwargs = clean_kwargs(plt.pcolormesh, kwargs)
         if ax is None:
             fig = plt.figure()
-            ax = fig.add_subplot(111, projection='polar', **kwargs)
+            ax = fig.add_subplot(111, projection="polar", **kwargs)
         ax.set_theta_zero_location("N")
         # need to deal with the case where the axis is supplied but
         # is not polar. deal with polar first
         theta = np.deg2rad(rmap[1][0])
         ax.clear()
-        r = rmap[0] * self.PosCalcs.sample_rate # in samples so * pos sample_rate
+        r = rmap[0] * self.PosCalcs.sample_rate  # in samples so * pos sample_rate
         r = np.insert(r, -1, r[0])
         if "polar" in ax.name:
             ax.plot(theta, r)
-            if "fill" in kwargs:
+            if fill:
                 ax.fill(theta, r, alpha=0.5)
             ax.set_aspect("equal")
+
+        if add_guides:
+            ax.set_rgrids([])
 
         # See if we should add the mean resultant vector (mrv)
         if add_mrv:
             from ephysiopy.common.statscalcs import mean_resultant_vector
+
             idx = self._get_spike_pos_idx(cluster, channel)
             angles = self.PosCalcs.dir[idx]
             veclen, th = mean_resultant_vector(np.deg2rad(angles))
-            ax.plot([th, th], [0, veclen * np.max(rmap[0]) * self.PosCalcs.sample_rate], "r")
+            ax.plot(
+                [th, th], [0, veclen * np.max(rmap[0]) * self.PosCalcs.sample_rate], "r"
+            )
         if "polar" in ax.name:
             ax.set_thetagrids([0, 90, 180, 270])
+        if strip_axes:
+            return stripAxes(ax)
         return ax
 
     @stripAxes
@@ -184,18 +191,14 @@ class FigureMaker(object):
             fig = plt.figure()
             ax = fig.add_subplot(111)
         ax.plot(
-            self.PosCalcs.xy[0, :],
-            self.PosCalcs.xy[1, :],
-            c=tcols.colours[0], zorder=1
+            self.PosCalcs.xy[0, :], self.PosCalcs.xy[1, :], c=tcols.colours[0], zorder=1
         )
         ax.set_aspect("equal")
         if cluster is not None:
             idx = self._get_spike_pos_idx(cluster, channel)
             kwargs = clean_kwargs(plt.plot, kwargs)
             ax.plot(
-                self.PosCalcs.xy[0, idx],
-                self.PosCalcs.xy[1, idx],
-                "s", c=col, **kwargs
+                self.PosCalcs.xy[0, idx], self.PosCalcs.xy[1, idx], "s", c=col, **kwargs
             )
         return ax
 
@@ -211,25 +214,25 @@ class FigureMaker(object):
             channel (int): The channel number.
             **kwargs: Additional keyword arguments for the function.
         """
-        if 'return_ratemap' in kwargs.keys():
-            return_ratemap = kwargs.pop('return_ratemap')
+        return_ratemap = kwargs.pop("return_ratemap", False)
         rmap = self.get_eb_map(cluster, channel, **kwargs)
+        rmap = blur_image(rmap, 5, ftype="gaussian")
         ax = kwargs.pop("ax", None)
         if ax is None:
             fig = plt.figure()
-            ax = fig.add_subplot(projection='polar')
-        theta = np.arange(0, 2*np.pi, 2*np.pi/rmap.shape[1])
-        phi = np.arange(0, rmap.shape[0]*2.5, 2.5)
+            ax = fig.add_subplot(projection="polar")
+        theta = np.arange(0, 2 * np.pi, 2 * np.pi / rmap.shape[1])
+        phi = np.arange(0, rmap.shape[0] * 2.5, 2.5)
         X, Y = np.meshgrid(theta, phi)
         # sanitise kwargs before passing on to pcolormesh
         kwargs = clean_kwargs(plt.pcolormesh, kwargs)
         ax.pcolormesh(X, Y, rmap, **kwargs)
-        ax.set_xticks(np.arange(0, 2*np.pi, np.pi/4))
+        ax.set_xticks(np.arange(0, 2 * np.pi, np.pi / 4))
         # ax.set_xticklabels(np.arange(0, 2*np.pi, np.pi/4))
         ax.set_yticks(np.arange(0, 50, 10))
         ax.set_yticklabels(np.arange(0, 50, 10))
-        ax.set_xlabel('Angle (deg)')
-        ax.set_ylabel('Distance (cm)')
+        ax.set_xlabel("Angle (deg)")
+        ax.set_ylabel("Distance (cm)")
         if return_ratemap:
             return ax, rmap
         return ax
@@ -252,40 +255,55 @@ class FigureMaker(object):
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-        ax.set_aspect('equal')
+        ax.set_aspect("equal")
         # Parse kwargs
         num_dir_bins = kwargs("dir_bins", 60)
         rect_size = kwargs("ms", 1)
         add_colour_wheel = kwargs("add_colour_wheel", False)
-        dir_colours = sns.color_palette('hls', num_dir_bins)
+        dir_colours = sns.color_palette("hls", num_dir_bins)
         # Process dirrectional data
         idx = self._get_spike_pos_idx(cluster, channel)
         dir_spike_fired_at = self.RateMap.dir[idx]
         idx_of_dir_to_colour = np.floor(
-            dir_spike_fired_at / (360 / num_dir_bins)).astype(int)
-        rects = [Rectangle(self.RateMap.xy[:, i],
-                           width=rect_size, height=rect_size,
-                           bbox=ax.bbox,
-                           facecolor=dir_colours[idx_of_dir_to_colour[i]],
-                           rasterized=True)
-                 for i in range(len(idx))]
-        ax.plot(self.PosCalcs.xy[0], self.PosCalcs.xy[1], c=tcols.colours[0],
-                zorder=1, alpha=0.3)
+            dir_spike_fired_at / (360 / num_dir_bins)
+        ).astype(int)
+        rects = [
+            Rectangle(
+                self.RateMap.xy[:, i],
+                width=rect_size,
+                height=rect_size,
+                bbox=ax.bbox,
+                facecolor=dir_colours[idx_of_dir_to_colour[i]],
+                rasterized=True,
+            )
+            for i in range(len(idx))
+        ]
+        ax.plot(
+            self.PosCalcs.xy[0],
+            self.PosCalcs.xy[1],
+            c=tcols.colours[0],
+            zorder=1,
+            alpha=0.3,
+        )
         ax.add_collection(PatchCollection(rects, match_original=True))
         if add_colour_wheel:
-            ax_col = inset_axes(ax, width="100%", height="100%",
-                                bbox_to_anchor=(0.75, 0.75, 0.15, 0.15),
-                                axes_class=get_projection_class("polar"),
-                                bbox_transform=fig.transFigure)
+            ax_col = inset_axes(
+                ax,
+                width="100%",
+                height="100%",
+                bbox_to_anchor=(0.75, 0.75, 0.15, 0.15),
+                axes_class=get_projection_class("polar"),
+                bbox_transform=fig.transFigure,
+            )
             ax_col.set_theta_zero_location("N")
-            theta = np.linspace(0, 2*np.pi, 1000)
+            theta = np.linspace(0, 2 * np.pi, 1000)
             phi = np.linspace(0, 1, 2)
             X, Y = np.meshgrid(phi, theta)
-            norm = matplotlib.colors.Normalize(0, 2*np.pi)
-            col_map = sns.color_palette('hls', as_cmap=True)
+            norm = matplotlib.colors.Normalize(0, 2 * np.pi)
+            col_map = sns.color_palette("hls", as_cmap=True)
             ax_col.pcolormesh(theta, phi, Y.T, norm=norm, cmap=col_map)
             ax_col.set_yticklabels([])
-            ax_col.spines['polar'].set_visible(False)
+            ax_col.spines["polar"].set_visible(False)
             ax_col.set_thetagrids([0, 90])
         return ax
 
@@ -328,7 +346,7 @@ class FigureMaker(object):
         ax.set_ylabel("Rate (Hz)")
         return ax
 
-    @stripAxes
+    # @stripAxes
     def plot_speed_v_hd(self, cluster: int, channel: int, **kwargs):
         """
         Gets the speed versus head direction plot for the specified cluster(s)
@@ -341,24 +359,29 @@ class FigureMaker(object):
             **kwargs: Additional keyword arguments for the function.
         """
         rmap = self.get_speed_v_hd_map(cluster, channel, **kwargs)
-        im = blur_image(rmap[0], 5, ftype="gaussian")
-        im = np.ma.MaskedArray(im)
+        # im = blur_image(rmap[0], 5, ftype="gaussian")
+        im = np.ma.MaskedArray(rmap[0])
         # mask low rates...
-        im = np.ma.masked_where(im <= 1, im)
+        # im = np.ma.masked_where(im <= 1, im)
         # ... and where less than 0.5% of data is accounted for
-        x, y = np.meshgrid(rmap[1][0], rmap[1][1])
-        vmax = np.max(np.ravel(im))
+        y, x = np.meshgrid(rmap[1][0], rmap[1][1])
+        vmax = np.nanmax(np.ravel(im))
         ax = kwargs.pop("ax", None)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-        ax.pcolormesh(x, y, im.T,
-                      cmap=jet_cmap, edgecolors="face",
-                      vmax=vmax, shading="auto")
-        ax.set_xticks([90, 180, 270], labels=['90', '180', '270'],
-                      fontweight="normal", size=6)
-        ax.set_yticks([10, 20], labels=['10', '20'],
-                      fontweight="normal", size=6)
+        ax.pcolormesh(
+            x, y, im.T, cmap=jet_cmap, edgecolors="face", vmax=vmax, shading="auto"
+        )
+        ax.set_xticks(
+            [90, 180, 270], labels=["90", "180", "270"], fontweight="normal", size=6
+        )
+        ax.set_yticks(
+            [10, 20, 30, 40],
+            labels=["10", "20", "30", "40"],
+            fontweight="normal",
+            size=6,
+        )
         ax.set_xlabel("Heading", fontweight="normal", size=6)
         return ax
 
@@ -372,11 +395,11 @@ class FigureMaker(object):
             channel (int): The channel number.
             **kwargs: Additional keyword arguments for the function.
         """
-        
+
         ts = self.get_spike_times(cluster, channel)
         ax = self._getXCorrPlot(ts, **kwargs)
         return ax
-        
+
     def plot_raster(self, cluster: int, channel: int, **kwargs):
         """
         Gets the raster plot for the specified cluster(s) and channel.
@@ -401,10 +424,9 @@ class FigureMaker(object):
         ax = self._getPowerSpectrumPlot(p[0], p[1], p[2], p[3], p[4], **kwargs)
         return ax
 
-    def makeWaveformPlot(self,
-                      mean_waveform: bool = True,
-                      ax: matplotlib.axes = None,
-                      **kwargs) -> matplotlib.figure:
+    def makeWaveformPlot(
+        self, mean_waveform: bool = True, ax: matplotlib.axes = None, **kwargs
+    ) -> matplotlib.figure:
         if not self.SpikeCalcs:
             Warning("No spike data loaded")
             return
@@ -414,30 +436,31 @@ class FigureMaker(object):
         spike_at = np.shape(waves)[2] // 2
         if spike_at > 25:  # OE data
             # this should be equal to range(25, 75)
-            t = range(spike_at - self.SpikeCalcs.pre_spike_samples,
-                      spike_at + self.SpikeCalcs.post_spike_samples)
+            t = range(
+                spike_at - self.SpikeCalcs.pre_spike_samples,
+                spike_at + self.SpikeCalcs.post_spike_samples,
+            )
         else:  # Axona data
             t = range(50)
         if mean_waveform:
             for i in range(4):
-                ax = fig.add_subplot(2, 2, i+1)
-                ax = self._plotWaves(np.mean(
-                    waves[:, :, t], 0)[i, :], ax=ax, **kwargs)
+                ax = fig.add_subplot(2, 2, i + 1)
+                ax = self._plotWaves(np.mean(waves[:, :, t], 0)[i, :], ax=ax, **kwargs)
                 if spike_at > 25:  # OE data
                     ax.invert_yaxis()
         else:
             for i in range(4):
-                ax = fig.add_subplot(2, 2, i+1)
+                ax = fig.add_subplot(2, 2, i + 1)
                 ax = self._plotWaves(waves[:, i, t], ax=ax, **kwargs)
                 if spike_at > 25:  # OE data
                     ax.invert_yaxis()
         return fig
 
     @stripAxes
-    def _plotWaves(self, waves: np.ndarray,
-                    ax: matplotlib.axes,
-                    **kwargs) -> matplotlib.axes:
-        ax.plot(waves, c='k', **kwargs)
+    def _plotWaves(
+        self, waves: np.ndarray, ax: matplotlib.axes, **kwargs
+    ) -> matplotlib.axes:
+        ax.plot(waves, c="k", **kwargs)
         return ax
 
     @stripAxes
@@ -460,8 +483,7 @@ class FigureMaker(object):
         if not self.RateMap:
             self.initialise()
         spk_times_in_pos_samples = self._get_spike_pos_idx(spk_times)
-        spk_weights = np.bincount(
-            spk_times_in_pos_samples, minlength=self.npos)
+        spk_weights = np.bincount(spk_times_in_pos_samples, minlength=self.npos)
         sac = self.RateMap.getSAC(spk_weights)
         from ephysiopy.common.gridcell import SAC
 
@@ -576,8 +598,8 @@ class FigureMaker(object):
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-        if 'binsize' in kwargs.keys():
-            binsize = kwargs['binsize']
+        if "binsize" in kwargs.keys():
+            binsize = kwargs["binsize"]
         else:
             binsize = 0.001
         if "Trange" in kwargs.keys():
@@ -589,8 +611,9 @@ class FigureMaker(object):
         ax.set_xlim(xrange)
         ax.set_xticks((xrange[0], 0, xrange[1]))
         ax.set_xticklabels("")
-        ax.tick_params(axis="both", which="both", left=False, right=False,
-                       bottom=False, top=False)
+        ax.tick_params(
+            axis="both", which="both", left=False, right=False, bottom=False, top=False
+        )
         ax.set_yticklabels("")
         ax.xaxis.set_ticks_position("bottom")
         if strip_axes:
@@ -636,14 +659,14 @@ class FigureMaker(object):
             strip_axes = False
         x1 = spk_times * 1000.0  # get into ms
         x1.sort()
-        on_good = self.ttl_data["ttl_timestamps"] * 1000 # ms
+        on_good = self.ttl_data["ttl_timestamps"] * 1000  # ms
         dt = np.array(dt)
         irange = on_good[:, np.newaxis] + dt[np.newaxis, :]
         dts = np.searchsorted(x1, irange)
         y = []
         x = []
         for i, t in enumerate(dts):
-            tmp = x1[t[0]:t[1]] - on_good[i]
+            tmp = x1[t[0] : t[1]] - on_good[i]
             x.extend(tmp)
             y.extend(np.repeat(i, len(tmp)))
         if ax is None:
@@ -652,14 +675,13 @@ class FigureMaker(object):
         else:
             axScatter = ax
         histColor = [1 / 255.0, 1 / 255.0, 1 / 255.0]
-        axScatter.scatter(x, y, marker=".", s=2,
-                          rasterized=False, color=histColor)
+        axScatter.scatter(x, y, marker=".", s=2, rasterized=False, color=histColor)
         divider = make_axes_locatable(axScatter)
         axScatter.set_xticks((dt[0], 0, dt[1]))
         axScatter.set_xticklabels((str(dt[0]), "0", str(dt[1])))
-        axHistx = divider.append_axes("top", 0.95, pad=0.2,
-                                      sharex=axScatter,
-                                      transform=axScatter.transAxes)
+        axHistx = divider.append_axes(
+            "top", 0.95, pad=0.2, sharex=axScatter, transform=axScatter.transAxes
+        )
         scattTrans = transforms.blended_transform_factory(
             axScatter.transData, axScatter.transAxes
         )
@@ -756,17 +778,16 @@ class FigureMaker(object):
         Am = A.copy()
         Am[~inDict["dist_to_centre"]] = np.nan
         Am = np.ma.masked_invalid(np.atleast_2d(Am))
-        x, y = np.meshgrid(np.arange(0, np.shape(A)[1]),
-                           np.arange(0, np.shape(A)[0]))
+        x, y = np.meshgrid(np.arange(0, np.shape(A)[1]), np.arange(0, np.shape(A)[0]))
         vmax = np.nanmax(np.ravel(A))
-        ax.pcolormesh(x, y, A, cmap=grey_cmap, edgecolors="face",
-                      vmax=vmax, shading="auto")
+        ax.pcolormesh(
+            x, y, A, cmap=grey_cmap, edgecolors="face", vmax=vmax, shading="auto"
+        )
         import copy
 
         cmap = copy.copy(jet_cmap)
         cmap.set_bad("w", 0)
-        ax.pcolormesh(x, y, Am, cmap=cmap,
-                      edgecolors="face", vmax=vmax, shading="auto")
+        ax.pcolormesh(x, y, Am, cmap=cmap, edgecolors="face", vmax=vmax, shading="auto")
         # horizontal green line at 3 o'clock
         _y = (np.shape(A)[0] / 2, np.shape(A)[0] / 2)
         _x = (np.shape(A)[1] / 2, np.shape(A)[0])
@@ -823,7 +844,7 @@ class FigureMaker(object):
                 out to. Maximum is 1250. Default is 125.
             channels (list): The channels to plot separately on the top plot.
             frequencies (list): The specific frequencies to examine across
-                all channels. The mean from frequency: 
+                all channels. The mean from frequency:
                 frequency+frequencyIncrement is calculated and plotted on
                 the left hand side of the plot.
             frequencyIncrement (int): The amount to add to each value of
@@ -844,15 +865,14 @@ class FigureMaker(object):
         lfp_file = os.path.join(self.path2LFPdata, "continuous.dat")
         status = os.stat(lfp_file)
         nsamples = int(status.st_size / 2 / nchannels)
-        mmap = np.memmap(lfp_file, np.int16, "r", 0,
-                         (nchannels, nsamples), order="F")
+        mmap = np.memmap(lfp_file, np.int16, "r", 0, (nchannels, nsamples), order="F")
         # Load the channel map NB assumes this is in the AP data
         # location and that kilosort was run there
         channel_map = np.squeeze(
             np.load(os.path.join(self.path2APdata, "channel_map.npy"))
         )
         lfp_sample_rate = 2500
-        data = np.array(mmap[channel_map, 0:nseconds * lfp_sample_rate])
+        data = np.array(mmap[channel_map, 0 : nseconds * lfp_sample_rate])
         from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 
         E = EEGCalcsGeneric(data[0, :], lfp_sample_rate)
@@ -869,21 +889,20 @@ class FigureMaker(object):
         from mpl_toolkits.axes_grid1 import make_axes_locatable
 
         _, spectoAx = plt.subplots()
-        spectoAx.pcolormesh(x, y, spec_data,
-                            edgecolors="face", cmap="bone",
-                            norm=colors.LogNorm())
+        spectoAx.pcolormesh(
+            x, y, spec_data, edgecolors="face", cmap="bone", norm=colors.LogNorm()
+        )
         spectoAx.set_xlim(0, maxFreq)
         spectoAx.set_ylim(channel_map[0], channel_map[-1])
         spectoAx.set_xlabel("Frequency (Hz)")
         spectoAx.set_ylabel("Channel")
         divider = make_axes_locatable(spectoAx)
-        channel_spectoAx = divider.append_axes("top", 1.2, pad=0.1,
-                                               sharex=spectoAx)
-        meanfreq_powerAx = divider.append_axes("right", 1.2, pad=0.1,
-                                               sharey=spectoAx)
-        plt.setp(channel_spectoAx.get_xticklabels()
-                 + meanfreq_powerAx.get_yticklabels(),
-                 visible=False)
+        channel_spectoAx = divider.append_axes("top", 1.2, pad=0.1, sharex=spectoAx)
+        meanfreq_powerAx = divider.append_axes("right", 1.2, pad=0.1, sharey=spectoAx)
+        plt.setp(
+            channel_spectoAx.get_xticklabels() + meanfreq_powerAx.get_yticklabels(),
+            visible=False,
+        )
 
         # plot mean power across some channels
         mn_power = np.mean(spec_data, 0)
@@ -924,8 +943,7 @@ class FigureMaker(object):
             freq_mask = np.logical_and(
                 E.freqs[0::50] > freqs[0], E.freqs[0::50] < freqs[1]
             )
-            mean_power = 10 * np.log10(np.mean(
-                spec_data[:, freq_mask], 1) / mn_power)
+            mean_power = 10 * np.log10(np.mean(spec_data[:, freq_mask], 1) / mn_power)
             c = next(cols)
             meanfreq_powerAx.plot(
                 mean_power,

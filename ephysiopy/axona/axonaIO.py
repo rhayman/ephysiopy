@@ -494,14 +494,15 @@ class Tetrode(IO):
         mask can be an empty tuple, in which case the mask is removed
 
         """
-        xy_ts = kwargs.get("xy_ts", None)
-        sample_rate = kwargs.get("sample_rate", 50)
-        spike_pos_samples = np.ma.MaskedArray(self.spike_times / 30000 * sample_rate, dtype=int)
-        pos_times_in_samples = np.ma.MaskedArray(xy_ts * sample_rate, dtype=int)
-        mask = np.isin(spike_pos_samples, pos_times_in_samples)
-        self.spike_times = np.ma.MaskedArray(self.spike_times, mask)
-        self.waveforms = np.ma.MaskedArray(self.waveforms, mask)
-        self.cut = np.ma.MaskedArray(self.cut, mask)
+        if mask is not False:
+            sample_rate = kwargs.get("sample_rate", 50)
+            timebase = self.getHeaderVal(self.header, "timebase")
+            spike_pos_samples = np.ma.MaskedArray(self.spike_times.data / timebase * sample_rate, dtype=int)
+            pos_times_in_samples = np.nonzero(mask)[1]
+            mask = np.ma.isin(spike_pos_samples, pos_times_in_samples)
+        self.spike_times.mask = mask
+        self.waveforms.mask = mask
+        self.cut.mask = mask
 
 
 class EEG(IO):

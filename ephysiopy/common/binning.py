@@ -9,22 +9,18 @@ from collections import namedtuple
 import numpy as np
 from astropy import convolution  # deals with nans unlike other convs
 from scipy import signal
+from scipy.spatial import distance
 from shapely import MultiLineString, prepare
 from shapely.affinity import rotate, translate
 from shapely.geometry import LineString, Point
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.common.utils import blur_image, flatten_list
 
-warnings.filterwarnings(
-    "ignore", message="invalid value encountered in sqrt")
-warnings.filterwarnings(
-    "ignore", message="invalid value encountered in subtract")
-warnings.filterwarnings(
-    "ignore", message="invalid value encountered in greater")
-warnings.filterwarnings(
-    "ignore", message="invalid value encountered in true_divide")
-warnings.filterwarnings(
-    "ignore", message="divide by zero encountered in true_divide")
+warnings.filterwarnings("ignore", message="invalid value encountered in sqrt")
+warnings.filterwarnings("ignore", message="invalid value encountered in subtract")
+warnings.filterwarnings("ignore", message="invalid value encountered in greater")
+warnings.filterwarnings("ignore", message="invalid value encountered in true_divide")
+warnings.filterwarnings("ignore", message="divide by zero encountered in true_divide")
 np.seterr(divide="ignore", invalid="ignore")
 
 
@@ -100,15 +96,15 @@ class RateMap(object):
     @property
     def xy(self):
         return self.PosCalcs.xy
-    
+
     @property
     def dir(self):
         return self.PosCalcs.dir
-    
+
     @property
     def speed(self):
         return self.PosCalcs.speed
-    
+
     @property
     def pos_times(self):
         return self.PosCalcs.xyTS
@@ -149,7 +145,7 @@ class RateMap(object):
     @mapType.setter
     def mapType(self, value):
         self._mapType = value
-                
+
     @property
     def binedges(self):
         return self._binedges
@@ -227,18 +223,20 @@ class RateMap(object):
     def smoothingType(self, value):
         self._smoothingType = value
 
+    def apply_mask(self, mask):
+        self.PosCalcs.apply_mask(mask)
+        self.pos_weights.mask = mask
+
     def _getXYLimits(self):
-        '''
+        """
         Gets the min/max of the x/y data
-        '''
+        """
         x_lims = getattr(self, "x_lims", None)
         y_lims = getattr(self, "y_lims", None)
         if x_lims is None:
-            x_lims = (np.nanmin(self.xy[0]),
-                      np.nanmax(self.xy[0]))
+            x_lims = (np.nanmin(self.xy[0]), np.nanmax(self.xy[0]))
         if y_lims is None:
-            y_lims = (np.nanmin(self.xy[1]),
-                      np.nanmax(self.xy[1]))
+            y_lims = (np.nanmin(self.xy[1]), np.nanmax(self.xy[1]))
         self.x_lims = x_lims
         self.y_lims = y_lims
         return x_lims, y_lims
@@ -262,40 +260,43 @@ class RateMap(object):
         if self.var2Bin.value == VariableToBin.DIR.value:
             self.binedges = np.arange(0, 360 + binsize, binsize)
         elif self.var2Bin.value == VariableToBin.SPEED.value:
-            maxspeed = np.max(self.speed)
+            maxspeed = np.nanmax(self.speed)
             # assume min speed = 0
             self.binedges = np.arange(0, maxspeed, binsize)
-        elif self.var2Bin == VariableToBin.XY:
+        elif self.var2Bin.value == VariableToBin.XY.value:
             x_lims, y_lims = self._getXYLimits()
-            nxbins = int(np.ceil((x_lims[1]-x_lims[0])/binsize))
-            nybins = int(np.ceil((y_lims[1]-y_lims[0])/binsize))
+            nxbins = int(np.ceil((x_lims[1] - x_lims[0]) / binsize))
+            nybins = int(np.ceil((y_lims[1] - y_lims[0]) / binsize))
             _x = np.linspace(x_lims[0], x_lims[1], nxbins)
             _y = np.linspace(y_lims[0], y_lims[1], nybins)
             self.binedges = _y, _x
-        elif self.var2Bin == VariableToBin.XY_TIME:
+        elif self.var2Bin.value == VariableToBin.XY_TIME.value:
             if self._pos_time_splits is None:
                 raise ValueError("Need pos times to bin up XY_TIME")
             x_lims, y_lims = self._getXYLimits()
-            nxbins = int(np.ceil((x_lims[1]-x_lims[0])/binsize))
-            nybins = int(np.ceil((y_lims[1]-y_lims[0])/binsize))
+            nxbins = int(np.ceil((x_lims[1] - x_lims[0]) / binsize))
+            nybins = int(np.ceil((y_lims[1] - y_lims[0]) / binsize))
             _x = np.linspace(x_lims[0], x_lims[1], nxbins)
             _y = np.linspace(y_lims[0], y_lims[1], nybins)
             be = [_y, _x]
             be.append(self.pos_time_splits)
             self.binedges = be
-        elif self.var2Bin == VariableToBin.SPEED_DIR:
-            maxspeed = np.max(self.speed)
+        elif self.var2Bin.value == VariableToBin.SPEED_DIR.value:
+            maxspeed = np.nanmax(self.speed)
             if isinstance(binsize, int):
-                self.binedges = np.arange(0, maxspeed, binsize), np.arange(0, 360 + binsize, binsize)
+                self.binedges = (
+                    np.arange(0, maxspeed, binsize),
+                    np.arange(0, 360 + binsize, binsize),
+                )
             elif isinstance(binsize, tuple):
-                self.binedges = np.arange(0, maxspeed, binsize[0]), np.arange(0, 360 + binsize[1], binsize[1])
+                self.binedges = (
+                    np.arange(0, maxspeed, binsize[0]),
+                    np.arange(0, 360 + binsize[1], binsize[1]),
+                )
         self._calc_bin_dims()
         return self.binedges
 
-    def getSpatialSparsity(self,
-                           spkWeights,
-                           sample_rate=50,
-                           **kwargs):
+    def getSpatialSparsity(self, spkWeights, sample_rate=50, **kwargs):
         """
         Gets the spatial sparsity measure - closer to 1 means
         sparser firing field.
@@ -310,24 +311,21 @@ class RateMap(object):
         self._calc_bin_edges()
         sample = self.xy
         keep_these = np.isfinite(sample[0])
-        pos, _ = self._bin_data(sample,
-                               self._binedges,
-                               self.pos_weights,
-                               keep_these)
+        pos, _ = self._bin_data(sample, self._binedges, self.pos_weights, keep_these)
         npos = len(self.dir)
         p_i = np.count_nonzero(pos) / npos / sample_rate
-        spk, _ = self._bin_data(sample,
-                               self._binedges,
-                               spkWeights,
-                               keep_these)
-        res = 1-(np.nansum(p_i*spk)**2) / np.nansum(p_i*spk**2)
+        spk, _ = self._bin_data(sample, self._binedges, spkWeights, keep_these)
+        res = 1 - (np.nansum(p_i * spk) ** 2) / np.nansum(p_i * spk**2)
         return res
 
-    def get_map(self, spkWeights,
-               varType=VariableToBin.XY,
-               mapType=MapType.RATE,
-               smoothing=True,
-               **kwargs):
+    def get_map(
+        self,
+        spkWeights,
+        varType=VariableToBin.XY,
+        mapType=MapType.RATE,
+        smoothing=True,
+        **kwargs
+    ):
         """
         Bins up the variable type varType and returns a tuple of
         (rmap, binnedPositionDir) or
@@ -359,44 +357,48 @@ class RateMap(object):
             sample = self.xy
             keep_these = np.isfinite(sample[0])
         elif varType.value == VariableToBin.XY_TIME.value:
-            sample = np.concatenate((np.atleast_2d(self.xy),
-                                    np.atleast_2d(self.pos_times)))
+            sample = np.concatenate(
+                (np.atleast_2d(self.xy), np.atleast_2d(self.pos_times))
+            )
             keep_these = np.isfinite(self.xy[0])
         elif varType.value == VariableToBin.SPEED_DIR.value:
-            sample = np.concatenate((np.atleast_2d(self.dir),
-                                    np.atleast_2d(self.speed)))
+            sample = np.concatenate(
+                (np.atleast_2d(self.dir), np.atleast_2d(self.speed))
+            )
             keep_these = np.isfinite(self.speed)
         elif varType.value == VariableToBin.EGO_BOUNDARY.value:
             return self.get_egocentric_boundary_map(spkWeights, **kwargs)
         else:
             raise ValueError("Unrecognized variable to bin.")
         assert sample is not None
+        keep = np.logical_or(~keep_these.mask, ~sample.mask)
+        if keep.ndim > 1:
+            keep = np.all(keep, axis=0)
+        sample = sample[..., keep]
+
+        spkWeights = spkWeights[keep]
 
         self.var2Bin = varType
         self._spike_weights = spkWeights
-        self._calc_bin_edges(self.binsize)
-
+        binsize = kwargs.pop("binsize", self.binsize)
+        self._calc_bin_edges(binsize)
         binned_pos, binned_pos_edges = self._bin_data(
-            sample,
-            self._binedges,
-            self.pos_weights,
-            keep_these)
+            sample, self._binedges, self.pos_weights[keep]
+        )
+        binned_pos = binned_pos / self.PosCalcs.sample_rate
         nanIdx = binned_pos == 0
 
         if mapType.value == MapType.POS.value:  # return binned up position
             if smoothing:
                 if varType.value == VariableToBin.DIR.value:
-                    binned_pos = self._circ_pad_smooth(
-                        binned_pos, n=self.smooth_sz)
+                    binned_pos = self._circ_pad_smooth(binned_pos, n=self.smooth_sz)
                 else:
-                    binned_pos = blur_image(binned_pos,
-                                           self.smooth_sz,
-                                           ftype=self.smoothingType,
-                                           **kwargs)
+                    binned_pos = blur_image(
+                        binned_pos, self.smooth_sz, ftype=self.smoothingType, **kwargs
+                    )
             return binned_pos, binned_pos_edges
 
-        binned_spk, _ = self._bin_data(
-            sample, self._binedges, spkWeights, keep_these)
+        binned_spk, _ = self._bin_data(sample, self._binedges, spkWeights)
         if mapType.value == MapType.SPK.value:
             return binned_spk
         # binned_spk is returned as a tuple of the binned data and the bin
@@ -406,10 +408,9 @@ class RateMap(object):
             if varType.value == VariableToBin.DIR.value:
                 rmap = self._circ_pad_smooth(rmap, self.smooth_sz)
             else:
-                rmap = blur_image(rmap,
-                                 self.smooth_sz,
-                                 ftype=self.smoothingType,
-                                 **kwargs)
+                rmap = blur_image(
+                    rmap, self.smooth_sz, ftype=self.smoothingType, **kwargs
+                )
         else:  # default case
             if not smoothing:
                 return binned_spk / binned_pos, binned_pos_edges
@@ -418,15 +419,12 @@ class RateMap(object):
                 binned_spk = self._circ_pad_smooth(binned_spk, self.smooth_sz)
                 rmap = binned_spk / binned_pos
             else:
-                binned_pos = blur_image(binned_pos,
-                                       self.smooth_sz,
-                                       ftype=self.smoothingType,
-                                       **kwargs)
+                binned_pos = blur_image(
+                    binned_pos, self.smooth_sz, ftype=self.smoothingType, **kwargs
+                )
                 binned_spk = blur_image(
-                    binned_spk,
-                    self.smooth_sz,
-                    ftype=self.smoothingType,
-                    **kwargs)
+                    binned_spk, self.smooth_sz, ftype=self.smoothingType, **kwargs
+                )
                 rmap = binned_spk / binned_pos
                 if rmap.ndim <= 2:
                     rmap[nanIdx] = np.nan
@@ -434,14 +432,14 @@ class RateMap(object):
         return rmap, binned_pos_edges
 
     def getSAC(self, spkWeights, **kwargs):
-        '''
+        """
         Returns the SAC - convenience function
-        '''
+        """
         rmap = self.get_map(spkWeights=spkWeights, **kwargs)
         nodwell = ~np.isfinite(rmap[0])
         return self.autoCorr2D(rmap[0], nodwell)
 
-    def _bin_data(self, var, bin_edges, weights, good_indices=None):
+    def _bin_data(self, var, bin_edges, weights):
         """
         Bins data taking account of possible multi-dimensionality
 
@@ -497,10 +495,10 @@ class RateMap(object):
             var = np.flipud(var)
         weights = np.atleast_2d(weights)  # needed for list comp below
         var = np.array(var.data.T.tolist())
-        ndhist = [np.histogramdd(
-            sample=var[good_indices],
-            bins=bin_edges,
-            weights=np.ravel(w[good_indices])) for w in weights]
+        ndhist = [
+            np.histogramdd(sample=var, bins=bin_edges, weights=np.ravel(w))
+            for w in weights
+        ]
         if np.shape(weights)[0] == 1:
             return ndhist[0][0], ndhist[0][1]
         else:
@@ -527,13 +525,13 @@ class RateMap(object):
         var = np.concatenate((var[t2:tn], var, var[0:t2]))
         if ny is None:
             ny = n
-        x, y = np.mgrid[-n: n + 1, 0 - ny: ny + 1]
+        x, y = np.mgrid[-n : n + 1, 0 - ny : ny + 1]
         g = np.exp(-(x**2 / float(n) + y**2 / float(ny)))
         if np.ndim(var) == 1:
             g = g[n, :]
         g = g / g.sum()
-        improc = signal.convolve(var, g, mode="same")
-        improc = improc[tn - t2: tn - t2 + tn]
+        improc = convolution.convolve(var, g, normalize_kernel=False)
+        improc = improc[tn - t2 : tn - t2 + tn]
         return improc
 
     def _circularStructure(self, radius):
@@ -677,25 +675,21 @@ class RateMap(object):
         # [Step 2] Multiply the relevant transforms and invert to obtain the
         # equivalent convolutions
         rawCorr = np.fft.fftshift(
-            np.real(np.fft.ifft(
-                np.fft.ifft(Fx * np.conj(Fx), axis=1), axis=0)),
+            np.real(np.fft.ifft(np.fft.ifft(Fx * np.conj(Fx), axis=1), axis=0)),
             axes=(0, 1),
         )
         sums_x = np.fft.fftshift(
-            np.real(np.fft.ifft(
-                np.fft.ifft(np.conj(Fx) * Fn, axis=1), axis=0)),
+            np.real(np.fft.ifft(np.fft.ifft(np.conj(Fx) * Fn, axis=1), axis=0)),
             axes=(0, 1),
         )
         sumOfSquares_x = np.fft.fftshift(
             np.real(
-                np.fft.ifft(
-                    np.fft.ifft(Fn * np.conj(FsumOfSquares_x), axis=1), axis=0)
+                np.fft.ifft(np.fft.ifft(Fn * np.conj(FsumOfSquares_x), axis=1), axis=0)
             ),
             axes=(0, 1),
         )
         N = np.fft.fftshift(
-            np.real(np.fft.ifft(
-                np.fft.ifft(Fn * np.conj(Fn), axis=1), axis=0)),
+            np.real(np.fft.ifft(np.fft.ifft(Fn * np.conj(Fn), axis=1), axis=0)),
             axes=(0, 1),
         )
         # [Step 3] Account for rounding errors.
@@ -706,11 +700,9 @@ class RateMap(object):
         N[N <= 1] = np.nan
         # [Step 4] Compute correlation matrix
         mapStd = np.sqrt((sumOfSquares_x * N) - sums_x**2)
-        mapCovar = (rawCorr * N) - sums_x * \
-            sums_x[::-1, :, :][:, ::-1, :][:, :, :]
+        mapCovar = (rawCorr * N) - sums_x * sums_x[::-1, :, :][:, ::-1, :][:, :, :]
 
-        return np.squeeze(
-            mapCovar / mapStd / mapStd[::-1, :, :][:, ::-1, :][:, :, :])
+        return np.squeeze(mapCovar / mapStd / mapStd[::-1, :, :][:, ::-1, :][:, :, :])
 
     def crossCorr2D(self, A, B, A_nodwell, B_nodwell, tol=1e-10):
         """
@@ -771,32 +763,27 @@ class RateMap(object):
             np.real(np.fft.ifft(np.fft.ifft(Fa * np.conj(Fb), axis=1), axis=0))
         )
         sums_a = np.fft.fftshift(
-            np.real(np.fft.ifft(np.fft.ifft(
-                Fa * np.conj(Fn_b), axis=1), axis=0))
+            np.real(np.fft.ifft(np.fft.ifft(Fa * np.conj(Fn_b), axis=1), axis=0))
         )
         sums_b = np.fft.fftshift(
-            np.real(np.fft.ifft(np.fft.ifft(
-                Fn_a * np.conj(Fb), axis=1), axis=0))
+            np.real(np.fft.ifft(np.fft.ifft(Fn_a * np.conj(Fb), axis=1), axis=0))
         )
         sumOfSquares_a = np.fft.fftshift(
             np.real(
                 np.fft.ifft(
-                    np.fft.ifft(
-                        FsumOfSquares_a * np.conj(Fn_b), axis=1), axis=0
+                    np.fft.ifft(FsumOfSquares_a * np.conj(Fn_b), axis=1), axis=0
                 )
             )
         )
         sumOfSquares_b = np.fft.fftshift(
             np.real(
                 np.fft.ifft(
-                    np.fft.ifft(
-                        Fn_a * np.conj(FsumOfSquares_b), axis=1), axis=0
+                    np.fft.ifft(Fn_a * np.conj(FsumOfSquares_b), axis=1), axis=0
                 )
             )
         )
         N = np.fft.fftshift(
-            np.real(np.fft.ifft(np.fft.ifft(
-                Fn_a * np.conj(Fn_b), axis=1), axis=0))
+            np.real(np.fft.ifft(np.fft.ifft(Fn_a * np.conj(Fn_b), axis=1), axis=0))
         )
         # [Step 3] Account for rounding errors.
         rawCorr[np.abs(rawCorr) < tol] = 0
@@ -861,7 +848,7 @@ class RateMap(object):
         # 1b. Keep looping until we have dealt with all spikes
         for i, s in enumerate(spkIdx):
             t = np.searchsorted(spkIdx, (s, s + winSizeBins))
-            nSpikesInWin[i] = len(spkIdx[t[0]: t[1]]) - 1  # ignore ith spike
+            nSpikesInWin[i] = len(spkIdx[t[0] : t[1]]) - 1  # ignore ith spike
 
         # [Stage 2] Prepare for main loop
         # 2a. Work out offset inidices to be used when storing spike data
@@ -892,19 +879,17 @@ class RateMap(object):
                 dtype=int,
             )
             WL = len(winInd_dwell)
-            dwell[:, filled_pvals: filled_pvals + WL] = np.rot90(
+            dwell[:, filled_pvals : filled_pvals + WL] = np.rot90(
                 np.array(np.rot90(xy[:, winInd_dwell]) - xy[:, spkIdx[i]])
             )
             filled_pvals = filled_pvals + WL
             # calculate spike displacements
             winInd_spks = (
-                i + np.nonzero(spkIdx[i + 1: n_spks] <
-                               spkIdx[i] + winSizeBins)[0]
+                i + np.nonzero(spkIdx[i + 1 : n_spks] < spkIdx[i] + winSizeBins)[0]
             )
             WL = len(winInd_spks)
-            spike[:, filled_svals: filled_svals + WL] = np.rot90(
-                np.array(
-                    np.rot90(xy[:, spkIdx[winInd_spks]]) - xy[:, spkIdx[i]])
+            spike[:, filled_svals : filled_svals + WL] = np.rot90(
+                np.array(np.rot90(xy[:, spkIdx[winInd_spks]]) - xy[:, spkIdx[i]])
             )
             filled_svals = filled_svals + WL
 
@@ -928,10 +913,8 @@ class RateMap(object):
 
         binsize = np.max(dwell, axis=1).astype(int)
         binedges = np.array(((-0.5, -0.5), binsize + 0.5)).T
-        Hp = np.histogram2d(dwell[0, :], dwell[1, :],
-                            range=binedges, bins=binsize)[0]
-        Hs = np.histogram2d(spike[0, :], spike[1, :],
-                            range=binedges, bins=binsize)[0]
+        Hp = np.histogram2d(dwell[0, :], dwell[1, :], range=binedges, bins=binsize)[0]
+        Hs = np.histogram2d(spike[0, :], spike[1, :], range=binedges, bins=binsize)[0]
 
         # reverse y,x order
         Hp = np.swapaxes(Hp, 1, 0)
@@ -945,174 +928,79 @@ class RateMap(object):
 
         return H
 
-    @cache
-    def _create_boundary_distance_lookup(self,
-                                         arena_boundary: MultiLineString,
-                                         degs_per_bin: float,
-                                         xy_binsize: float,
-                                         **kwargs):
-        # Now we generate lines radiating out from a point as a
-        # multilinestring geometry collection - this looks
-        # like a 360/degs_per_bin
-        # star. We will move this to each valid location in the position map
-        # and then calculate the distance to the nearest intersection with the
-        # arena boundary.
-        # get the arena boundaries to figure out the radius of the arena,
-        # regardless of its actual shape
-        x1, y1, x2, y2 = arena_boundary.bounds
-        radius = max(x2-x1, y2-y1)/2
-        startpoint = Point((x1+radius, y1+radius))
-        endpoint = Point([x2, y1+radius])
-        angles = np.arange(0, 360, degs_per_bin)
-        lines = MultiLineString(
-            [rotate(LineString([startpoint, endpoint]), ang, origin=startpoint)
-             for ang in angles])
-        prepare(lines)
-        # arena centre
-        cx = x1 + radius
-        cy = y1 + radius
-        # get the position map and the valid locations within it
-        pos_map, (ye, xe) = self.get_map(np.ones_like(self.dir),
-                                        varType=VariableToBin.XY,
-                                        mapType=MapType.POS,
-                                        smoothing=False)
-        yvalid, xvalid = np.nonzero(~np.isnan(pos_map))
-
-        # preallocate the array to hold distances
-        distances = np.full(
-            (len(xe), len(ye), len(angles)), np.nan)
-
-        # Now iterate through valid locations in the pos map and calculate the
-        # distances and the indices of the lines that intersect with the
-        # arena boundary. The indices are equivalent to the angle of the
-        # line in the lines geometry collection. This iteration is a bit slow
-        # but it will only need to be done once per session as it's creating
-        # a lookup table for the distances
-        for xi, yi in zip(xvalid, yvalid):
-            i_point = Point((xe[xi]+xy_binsize,
-                             ye[yi]+xy_binsize))
-            ipx, ipy = i_point.xy
-            new_point = Point(cx-ipx[0], cy-ipy[0])
-            t_arena = translate(arena_boundary, -new_point.x, -new_point.y)
-            prepare(t_arena)
-            di = [(startpoint.distance(t_arena.intersection(line)), idx)
-                  for idx, line in enumerate(lines.geoms) if
-                  t_arena.intersects(line)]
-            if len(di) > 0:
-                d, i = zip(*di)
-                distances[xi, yi, i] = d
-        return distances
-
-    def get_egocentric_boundary_map(self,
-                                    spk_weights,
-                                    degs_per_bin: float = 3,
-                                    xy_binsize: float = 2.5,
-                                    arena_type: str = "circle",
-                                    return_dists: bool = False,
-                                    return_raw_spk: bool = False,
-                                    return_raw_occ: bool = False) -> namedtuple:
+    def _calc_ego_angles(self, radius=50) -> None:
         """
-        Helps construct dwell time/spike counts maps with respect to boundaries at given egocentric directions and distances.
+        Calculate the angles between the segments of the arena wall
+        and the positions of the animal throughout the trial.
 
-        Note:
-            For the directional input, the 0 degree reference is horizontal pointing East and moves counter-clockwise.
+        Returns the angles as well as the arena x-y coordinates.
+        NB The angles are in radians
         """
+        circle_centre = Point(
+            np.nanmin(self.xy[0] + radius), np.nanmin(self.xy[1] + radius)
+        )
+        arena_boundary = circle_centre.buffer(radius).boundary
+        arena_xy = np.array(arena_boundary.xy).T
+        animal_xy = self.xy
+        dx = np.atleast_2d(animal_xy[0]) - np.atleast_2d(arena_xy[:, 0]).T
+        dy = np.atleast_2d(animal_xy[1]) - np.atleast_2d(arena_xy[:, 1]).T
+        # make sure angles are in range [0-2PI]
+        angles = np.arctan2(dy, dx) + np.pi
+        animal_hd = np.radians(self.dir)
+        ego_angles = (angles - animal_hd) % (np.pi * 2)
+        # ego_angles in range [0-2PI]
+        # and with size arena_xy_ncoords x npos
+        return ego_angles, arena_xy
+
+    def get_egocentric_boundary_map(
+        self,
+        spk_weights,
+        degs_per_bin: float = 3,
+        xy_binsize: float = 2.5,
+        arena_type: str = "circle",
+        return_dists: bool = False,
+        return_angles: bool = False,
+        return_raw_spk: bool = False,
+        return_raw_occ: bool = False,
+    ) -> namedtuple:
         assert self.dir is not None, "No direction data available"
-        # initially do some binning to get valid locations
-        # (some might be nans due to
-        # arena shape and/or poor sampling) and then digitize
-        # the x and y positions
-        # and the angular positions
-        self.binsize = xy_binsize  # this will trigger a
-        # re-calculation of the bin edges
-        angles = np.arange(0, 360, degs_per_bin)
-
-        # Use the shaeply package to specify some geometry for the arena
-        # boundary and the lines radiating out
-        # from the current location of the animal. The geometry for the
-        # arena should be user specified but for now I'll just use a circle
-        if arena_type == "circle":
-            radius = 50
-            circle_centre = Point(
-                np.nanmin(self.xy[0])+radius, np.nanmin(self.xy[1])+radius)
-            arena_boundary = circle_centre.buffer(radius).boundary
-        # now we have a circle with its centre at the centre of the arena
-        # i.e. the circle defines the arena edges. Calling .boundary on the
-        # circle geometry actually gives us a 65-gon polygon
-        distances = self._create_boundary_distance_lookup(
-            arena_boundary, degs_per_bin, xy_binsize)
-        # iterate through the digitized locations (x/y and angular), using the
-        # lookup table to get the distances to the arena boundary and then
-        # increment the appropriate bin in the egocentric boundary map
-        good_idx = np.isfinite(self.xy[0])
-        xy_by_heading, _ = np.histogramdd([self.xy[0][good_idx],
-                                           self.xy[1][good_idx],
-                                           self.dir[good_idx]],
-                                          bins=distances.shape,
-                                          weights=self.pos_weights[good_idx])
-        spk_xy_by_hd, _ = np.histogramdd([self.xy[0][good_idx],
-                                          self.xy[1][good_idx],
-                                          self.dir[good_idx]],
-                                         bins=distances.shape,
-                                         weights=spk_weights[good_idx])
-        assert xy_by_heading.shape == distances.shape
-        distlist = []
-        anglist = []
-        spkdists = []
-        spkangs = []
-        for i_bin in np.ndindex(distances.shape[:2]):
-            i_dist = distances[i_bin]
-            valid_dist = np.isfinite(i_dist)
-            nonzero_bincounts = np.nonzero(xy_by_heading[i_bin])[0]
-            nonzero_spkbins = np.nonzero(spk_xy_by_hd[i_bin])[0]
-            for i_angle in nonzero_bincounts:
-                ego_angles = np.roll(angles, i_angle)[valid_dist]
-                n_repeats = xy_by_heading[i_bin][i_angle]
-                ego_angles_repeats = np.repeat(ego_angles, n_repeats)
-                dist_repeats = np.repeat(i_dist[valid_dist], n_repeats)
-                distlist.append(dist_repeats)
-                anglist.append(ego_angles_repeats)
-                if i_angle in nonzero_spkbins:
-                    n_repeats = spk_xy_by_hd[i_bin][i_angle]
-                    ego_angles_repeats = np.repeat(ego_angles, n_repeats)
-                    dist_repeats = np.repeat(i_dist[valid_dist], n_repeats)
-                    spkdists.append(dist_repeats)
-                    spkangs.append(ego_angles_repeats)
-        flat_angs = flatten_list(anglist)
-        flat_dists = flatten_list(distlist)
-        flat_spk_dists = flatten_list(spkdists)
-        flat_spk_angs = flatten_list(spkangs)
-        bins = [int(radius/xy_binsize), len(angles)]
-        ego_boundary_occ, _, _ = np.histogram2d(x=flat_dists, y=flat_angs,
-                                                bins=bins)
-        ego_boundary_spk, _, _ = np.histogram2d(x=flat_spk_dists,
-                                                y=flat_spk_angs,
-                                                bins=bins)
-        kernel = convolution.Gaussian2DKernel(5, x_size=3, y_size=5)
-        sm_occ = convolution.convolve(ego_boundary_occ,
-                                      kernel,
-                                      boundary='extend')
-        sm_spk = convolution.convolve(ego_boundary_spk,
-                                      kernel,
-                                      boundary='extend')
-        ego_boundary_map = sm_spk / sm_occ
-        EgoMap = namedtuple("EgoMap", ['rmap', 'occ', 'spk', 'dists'],
-                            defaults=None)
-        em = EgoMap(None, None, None, None)
-        em = em._replace(rmap=ego_boundary_map)
+        ego_angles, arena_xy = self._calc_ego_angles()
+        ego_dists = distance.cdist(arena_xy, self.xy.T, "euclidean")
+        occ = np.histogramdd(
+            np.stack((np.ravel(ego_dists.T), np.ravel(ego_angles.T))).T,
+            range=((0, 50), (0, 2 * np.pi)),
+            bins=(int(50 / xy_binsize), int(360 / degs_per_bin)),
+        )
+        spk_weights = np.repeat(spk_weights, arena_xy.shape[0])
+        spk = np.histogramdd(
+            np.stack((np.ravel(ego_dists.T), np.ravel(ego_angles.T))).T,
+            range=((0, 50), (0, 2 * np.pi)),
+            bins=(int(50 / xy_binsize), int(360 / degs_per_bin)),
+            weights=spk_weights,
+        )
+        rmap = spk[0] / occ[0]
+        EgoMap = namedtuple(
+            "EgoMap", ["rmap", "occ", "spk", "dists", "angles"], defaults=None
+        )
+        em = EgoMap(None, None, None, None, None)
+        em = em._replace(rmap=rmap)
         if return_dists:
-            em = em._replace(dists=distances)
+            em = em._replace(dists=ego_dists)
         if return_raw_occ:
-            em = em._replace(occ=ego_boundary_occ)
+            em = em._replace(occ=occ[0])
         if return_raw_spk:
-            em = em._replace(spk=ego_boundary_spk)
+            em = em._replace(spk=spk[0])
+        if return_angles:
+            em = em._replace(angles=ego_angles)
         return em
 
-    def getAllSpikeWeights(self,
-                           spike_times: np.ndarray,
-                           spike_clusters: np.ndarray,
-                           pos_times: np.ndarray,
-                           **kwargs):
+    def getAllSpikeWeights(
+        self,
+        spike_times: np.ndarray,
+        spike_clusters: np.ndarray,
+        pos_times: np.ndarray,
+        **kwargs
+    ):
         """
         Args:
             spike_times (np.ndarray): Spike times in seconds
@@ -1126,26 +1014,29 @@ class RateMap(object):
         clusters = np.unique(spike_clusters)
         npos = len(self.dir)
         idx = np.searchsorted(pos_times, spike_times) - 1
-        weights = [np.bincount(idx[spike_clusters == c], minlength=npos)
-                   for c in clusters]
+        weights = [
+            np.bincount(idx[spike_clusters == c], minlength=npos) for c in clusters
+        ]
         return np.array(weights)
 
     def _splitStackedCorrelations(self, binned_data: list) -> tuple:
-        '''
+        """
         Takes in the result of doStackedCorrelations() and splits into
         two arrays and returns these as a 2-tuple
-        '''
+        """
         result = [(s[0][:, :, 0], s[0][:, :, 1]) for s in binned_data]
         result = np.array(result)
         return np.squeeze(result[:, 0, :, :]), np.squeeze(result[:, 1, :, :])
 
-    def doStackedCorrelations(self,
-                              spkW: np.ndarray,
-                              times: np.ndarray,
-                              splits: np.ndarray,
-                              var2bin: Enum = VariableToBin.XY,
-                              maptype: Enum = MapType.RATE,
-                              **kwargs):
+    def doStackedCorrelations(
+        self,
+        spkW: np.ndarray,
+        times: np.ndarray,
+        splits: np.ndarray,
+        var2bin: Enum = VariableToBin.XY,
+        maptype: Enum = MapType.RATE,
+        **kwargs
+    ):
         """
         Returns a list of binned data where each item in the list
         is the result of running np.histogramdd on a spatial
@@ -1178,25 +1069,21 @@ class RateMap(object):
         assert sample is not None
         self.pos_time_splits = splits
 
-        sample = np.concatenate((np.atleast_2d(sample),
-                                np.atleast_2d(times)))
+        sample = np.concatenate((np.atleast_2d(sample), np.atleast_2d(times)))
         edges = [b for b in self._binedges][::-1]
         edges.append(splits)
         # bin pos
         bp, bpe = np.histogramdd(sample.T, bins=edges)
         map1_pos, map2_pos = np.squeeze(bp[:, :, 0]), np.squeeze(bp[:, :, 1])
         # smooth position
-        map1_pos = blur_image(map1_pos, 7, ftype='gaussian')
-        map2_pos = blur_image(map2_pos, 7, ftype='gaussian')
+        map1_pos = blur_image(map1_pos, 7, ftype="gaussian")
+        map2_pos = blur_image(map2_pos, 7, ftype="gaussian")
         # bin spk - ie the histogram is weighted by spike count
         # in bin i
-        spk = [np.histogramdd(sample.T, bins=edges, weights=w)
-               for w in spkW]
+        spk = [np.histogramdd(sample.T, bins=edges, weights=w) for w in spkW]
         map1_spk, map2_spk = self._splitStackedCorrelations(spk)
-        map1_sm_spk = np.array([blur_image(m, 7, ftype='gaussian')
-                                for m in map1_spk])
-        map2_sm_spk = np.array([blur_image(m, 7, ftype='gaussian')
-                                for m in map2_spk])
+        map1_sm_spk = np.array([blur_image(m, 7, ftype="gaussian") for m in map1_spk])
+        map2_sm_spk = np.array([blur_image(m, 7, ftype="gaussian") for m in map2_spk])
         map1_rmaps = map1_sm_spk / map1_pos
         map2_rmaps = map2_sm_spk / map2_pos
         return map1_rmaps, map2_rmaps
