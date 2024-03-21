@@ -40,10 +40,10 @@ def test_bin_data(standard_Ratemap):
     pw = [R.pos_weights, pw2d]
     keep = np.arange(len(hd))
     for sample in zip(samples, bins, pw):
-        ret = R._bin_data(sample[0], sample[1], sample[2], keep)
+        ret = R._bin_data(sample[0], sample[1], sample[2])
         assert isinstance(ret, tuple)
         assert isinstance(ret[0][0], np.ndarray)
-    R._bin_data(xy, xy_bins, None, keep)
+    R._bin_data(xy, xy_bins, None)
     R.pos_weights = np.random.randn(100)
     R.smoothingType = "gaussian"
 
@@ -72,10 +72,7 @@ def test_get_map(standard_Ratemap):
                 for when2smooth in smoothing_when:
                     standard_Ratemap.whenToSmooth = when2smooth
                     ret = standard_Ratemap.get_map(
-                        spk_weights,
-                        varType=var,
-                        mapType=map_type,
-                        smoothing=smooth
+                        spk_weights, varType=var, mapType=map_type, smoothing=smooth
                     )
                     assert isinstance(ret[0], np.ndarray)
 
