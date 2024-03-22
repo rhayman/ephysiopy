@@ -72,7 +72,7 @@ def test_get_map(standard_Ratemap):
                 for when2smooth in smoothing_when:
                     standard_Ratemap.whenToSmooth = when2smooth
                     ret = standard_Ratemap.get_map(
-                        spk_weights, varType=var, mapType=map_type, smoothing=smooth
+                        spk_weights, var_type=var, map_type=map_type, smoothing=smooth
                     )
                     assert isinstance(ret[0], np.ndarray)
 
@@ -86,7 +86,7 @@ def test_get_adaptive_map(standard_Ratemap):
     spk_weights[spk_weights < 0.95] = 0
 
     rmap = standard_Ratemap.get_map(spk_weights)
-    pos_binned, _ = standard_Ratemap.get_map(spk_weights, mapType=MapType.POS)
+    pos_binned, _ = standard_Ratemap.get_map(spk_weights, map_type=MapType.POS)
     pos_binned[~np.isfinite(pos_binned)] = 0
     smthdRate, _, _ = standard_Ratemap.getAdaptiveMap(rmap[0], pos_binned)
     assert isinstance(smthdRate, np.ndarray)

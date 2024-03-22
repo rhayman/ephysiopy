@@ -7,6 +7,7 @@ from functools import cache
 from collections import namedtuple
 
 import numpy as np
+import boost_histogram as bh
 from astropy import convolution  # deals with nans unlike other convs
 from scipy import signal
 from scipy.spatial import distance
@@ -293,6 +294,11 @@ class RateMap(object):
                     np.arange(0, maxspeed, binsize[0]),
                     np.arange(0, 360 + binsize[1], binsize[1]),
                 )
+        elif self.var2Bin.value == VariableToBin.EGO_BOUNDARY.value:
+            if isinstance(binsize, (float, int)):
+                self.binedges = (int(50 / 2.5), int(360 / 3))
+            elif (binsize, tuple):
+                self.binedges = (int(50 / binsize[0]), int(360 / binsize[1]))
         self._calc_bin_dims()
         return self.binedges
 
@@ -320,14 +326,14 @@ class RateMap(object):
 
     def get_map(
         self,
-        spkWeights,
-        varType=VariableToBin.XY,
-        mapType=MapType.RATE,
+        spk_weights,
+        var_type=VariableToBin.XY,
+        map_type=MapType.RATE,
         smoothing=True,
         **kwargs
     ):
         """
-        Bins up the variable type varType and returns a tuple of
+        Bins up the variable type var_type and returns a tuple of
         (rmap, binnedPositionDir) or
         (rmap, binnedPostionX, binnedPositionY)
 
@@ -337,8 +343,8 @@ class RateMap(object):
                 recorded and a cell spiked once in position 2 and 5 times in
                 position 3 and nothing anywhere else then pos_weights looks
                 like: [0 0 1 5 0]
-            varType (Enum value - see Variable2Bin defined at top of this file): The variable to bin up. Legal values are: XY, DIR and SPEED
-            mapType (enum value - see MapType defined at top of this file): If RATE then the binned up spikes are divided by varType.
+            var_type (Enum value - see Variable2Bin defined at top of this file): The variable to bin up. Legal values are: XY, DIR and SPEED
+            mapType (enum value - see MapType defined at top of this file): If RATE then the binned up spikes are divided by var_type.
                 Otherwise return binned up position. Options are RATE or POS
             smoothing (bool, optional): Whether to smooth the data or not. Defaults to True.
 
@@ -347,50 +353,52 @@ class RateMap(object):
                 pos (mapType 'pos') or binned spikes (mapType 'rate') is asked
                 for respectively
         """
-        if varType.value == VariableToBin.DIR.value:
+        pos_weights = self.pos_weights
+        if var_type.value == VariableToBin.DIR.value:
             sample = self.dir
-            keep_these = np.isfinite(sample)
-        elif varType.value == VariableToBin.SPEED.value:
+        elif var_type.value == VariableToBin.SPEED.value:
             sample = self.speed
-            keep_these = np.isfinite(sample)
-        elif varType.value == VariableToBin.XY.value:
+        elif var_type.value == VariableToBin.XY.value:
             sample = self.xy
-            keep_these = np.isfinite(sample[0])
-        elif varType.value == VariableToBin.XY_TIME.value:
+        elif var_type.value == VariableToBin.XY_TIME.value:
             sample = np.concatenate(
                 (np.atleast_2d(self.xy), np.atleast_2d(self.pos_times))
             )
-            keep_these = np.isfinite(self.xy[0])
-        elif varType.value == VariableToBin.SPEED_DIR.value:
+        elif var_type.value == VariableToBin.SPEED_DIR.value:
             sample = np.concatenate(
                 (np.atleast_2d(self.dir), np.atleast_2d(self.speed))
             )
-            keep_these = np.isfinite(self.speed)
-        elif varType.value == VariableToBin.EGO_BOUNDARY.value:
-            return self.get_egocentric_boundary_map(spkWeights, **kwargs)
+        elif var_type.value == VariableToBin.EGO_BOUNDARY.value:
+            arena_shape = kwargs.get("arena_shape", "circle")
+            binsize = kwargs.get("binsize", 5)
+            if isinstance(binsize, tuple):
+                binsize = binsize[0]
+            ego_angles, arena_xy = self._calc_ego_angles(arena_shape, binsize)
+            ego_dists = distance.cdist(arena_xy, self.xy.T, "euclidean")
+            sample = np.stack((np.ravel(ego_dists.T), np.ravel(ego_angles.T)))
+            spk_weights = np.atleast_2d(spk_weights)
+            spk_weights = np.repeat(spk_weights, arena_xy.shape[0], -1)
+            pos_weights = np.repeat(self.pos_weights, arena_xy.shape[0])
+            hist_range = ((0, 50), (0, 2 * np.pi))
         else:
             raise ValueError("Unrecognized variable to bin.")
+
         assert sample is not None
-        keep = np.logical_or(~keep_these.mask, ~sample.mask)
-        if keep.ndim > 1:
-            keep = np.all(keep, axis=0)
-        sample = sample[..., keep]
 
-        spkWeights = spkWeights[keep]
-
-        self.var2Bin = varType
-        self._spike_weights = spkWeights
+        self.var2Bin = var_type
+        # self._spike_weights = spk_weights
         binsize = kwargs.pop("binsize", self.binsize)
+        hist_range = kwargs.pop("range", None)
         self._calc_bin_edges(binsize)
         binned_pos, binned_pos_edges = self._bin_data(
-            sample, self._binedges, self.pos_weights[keep]
+            sample, self._binedges, pos_weights, hist_range
         )
         binned_pos = binned_pos / self.PosCalcs.sample_rate
         nanIdx = binned_pos == 0
 
-        if mapType.value == MapType.POS.value:  # return binned up position
+        if map_type.value == MapType.POS.value:  # return binned up position
             if smoothing:
-                if varType.value == VariableToBin.DIR.value:
+                if var_type.value == VariableToBin.DIR.value:
                     binned_pos = self._circ_pad_smooth(binned_pos, n=self.smooth_sz)
                 else:
                     binned_pos = blur_image(
@@ -398,14 +406,14 @@ class RateMap(object):
                     )
             return binned_pos, binned_pos_edges
 
-        binned_spk, _ = self._bin_data(sample, self._binedges, spkWeights)
-        if mapType.value == MapType.SPK.value:
+        binned_spk, _ = self._bin_data(sample, self._binedges, spk_weights, hist_range)
+        if map_type.value == MapType.SPK.value:
             return binned_spk
         # binned_spk is returned as a tuple of the binned data and the bin
         # edges
         if "after" in self.whenToSmooth:
             rmap = binned_spk / binned_pos
-            if varType.value == VariableToBin.DIR.value:
+            if var_type.value == VariableToBin.DIR.value:
                 rmap = self._circ_pad_smooth(rmap, self.smooth_sz)
             else:
                 rmap = blur_image(
@@ -414,7 +422,7 @@ class RateMap(object):
         else:  # default case
             if not smoothing:
                 return binned_spk / binned_pos, binned_pos_edges
-            if varType.value == VariableToBin.DIR.value:
+            if var_type.value == VariableToBin.DIR.value:
                 binned_pos = self._circ_pad_smooth(binned_pos, self.smooth_sz)
                 binned_spk = self._circ_pad_smooth(binned_spk, self.smooth_sz)
                 rmap = binned_spk / binned_pos
@@ -426,8 +434,7 @@ class RateMap(object):
                     binned_spk, self.smooth_sz, ftype=self.smoothingType, **kwargs
                 )
                 rmap = binned_spk / binned_pos
-                if rmap.ndim <= 2:
-                    rmap[nanIdx] = np.nan
+                rmap[..., nanIdx] = np.nan
 
         return rmap, binned_pos_edges
 
@@ -439,7 +446,7 @@ class RateMap(object):
         nodwell = ~np.isfinite(rmap[0])
         return self.autoCorr2D(rmap[0], nodwell)
 
-    def _bin_data(self, var, bin_edges, weights):
+    def _bin_data(self, var, bin_edges, weights, range=None):
         """
         Bins data taking account of possible multi-dimensionality
 
@@ -494,9 +501,9 @@ class RateMap(object):
         else:
             var = np.flipud(var)
         weights = np.atleast_2d(weights)  # needed for list comp below
-        var = np.array(var.data.T.tolist())
+        var = np.array(var.data.T)
         ndhist = [
-            np.histogramdd(sample=var, bins=bin_edges, weights=np.ravel(w))
+            bh.numpy.histogramdd(var, bins=bin_edges, range=range, weights=np.ravel(w))
             for w in weights
         ]
         if np.shape(weights)[0] == 1:
@@ -928,7 +935,7 @@ class RateMap(object):
 
         return H
 
-    def _calc_ego_angles(self, radius=50) -> None:
+    def _calc_ego_angles(self, arena_shape="circle", xy_binsize=2.5) -> None:
         """
         Calculate the angles between the segments of the arena wall
         and the positions of the animal throughout the trial.
@@ -936,10 +943,15 @@ class RateMap(object):
         Returns the angles as well as the arena x-y coordinates.
         NB The angles are in radians
         """
-        circle_centre = Point(
-            np.nanmin(self.xy[0] + radius), np.nanmin(self.xy[1] + radius)
-        )
-        arena_boundary = circle_centre.buffer(radius).boundary
+        arena_width = np.ceil(np.mean(np.ptp(self.xy.data, 1) / 2))
+        arena_width = arena_width.tolist()
+        arena_centre = Point(np.nanmin(self.xy.data, 1) + arena_width)
+
+        if "circle" in arena_shape:
+            arena_boundary = arena_centre.buffer(arena_width).boundary
+        elif "square" in arena_shape:
+            arena_boundary = arena_centre.buffer(arena_width, cap_style=3).boundary
+        arena_boundary = arena_boundary.segmentize(max_segment_length=xy_binsize)
         arena_xy = np.array(arena_boundary.xy).T
         animal_xy = self.xy
         dx = np.atleast_2d(animal_xy[0]) - np.atleast_2d(arena_xy[:, 0]).T
@@ -962,6 +974,7 @@ class RateMap(object):
         return_angles: bool = False,
         return_raw_spk: bool = False,
         return_raw_occ: bool = False,
+        **kwargs
     ) -> namedtuple:
         assert self.dir is not None, "No direction data available"
         ego_angles, arena_xy = self._calc_ego_angles()

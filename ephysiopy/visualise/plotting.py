@@ -182,23 +182,27 @@ class FigureMaker(object):
         """
         if not self.RateMap:
             self.initialise()
-        if "c" in kwargs:
-            col = kwargs["c"]
-        else:
-            col = tcols.colours[1]
+        col = kwargs.pop("c", tcols.colours[1])
         ax = kwargs.pop("ax", None)
+        marker = kwargs.pop("marker", "s")
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
         ax.plot(
-            self.PosCalcs.xy[0, :], self.PosCalcs.xy[1, :], c=tcols.colours[0], zorder=1
+            self.PosCalcs.xy[0, :],
+            self.PosCalcs.xy[1, :],
+            c=tcols.colours[0],
+            zorder=1,
         )
         ax.set_aspect("equal")
         if cluster is not None:
             idx = self._get_spike_pos_idx(cluster, channel)
-            kwargs = clean_kwargs(plt.plot, kwargs)
-            ax.plot(
-                self.PosCalcs.xy[0, idx], self.PosCalcs.xy[1, idx], "s", c=col, **kwargs
+            ax.scatter(
+                self.PosCalcs.xy[0, idx],
+                self.PosCalcs.xy[1, idx],
+                marker=marker,
+                c=col,
+                **kwargs
             )
         return ax
 
@@ -216,7 +220,7 @@ class FigureMaker(object):
         """
         return_ratemap = kwargs.pop("return_ratemap", False)
         rmap = self.get_eb_map(cluster, channel, **kwargs)
-        rmap = blur_image(rmap, 5, ftype="gaussian")
+        rmap = blur_image(rmap[0], 5, ftype="gaussian")
         ax = kwargs.pop("ax", None)
         if ax is None:
             fig = plt.figure()
