@@ -220,7 +220,7 @@ class FigureMaker(object):
         """
         return_ratemap = kwargs.pop("return_ratemap", False)
         rmap = self.get_eb_map(cluster, channel, **kwargs)
-        rmap = blur_image(rmap[0], 5, ftype="gaussian")
+        # rmap = blur_image(rmap[0], 5, ftype="gaussian", boundary="wrap")
         ax = kwargs.pop("ax", None)
         if ax is None:
             fig = plt.figure()
@@ -323,8 +323,16 @@ class FigureMaker(object):
             channel (int): The channel number.
             **kwargs: Additional keyword arguments for the function.
         """
-        ts = self.get_spike_times(cluster, channel)
-        ax = self._getSACPlot(ts, **kwargs)
+        sac = self.get_grid_map(cluster, channel)
+        from ephysiopy.common.gridcell import SAC
+
+        S = SAC()
+        measures = S.getMeasures(sac)
+        ax = kwargs.pop("ax", None)
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+        ax = self.show_SAC(sac, measures, ax)
         return ax
 
     def plot_speed_v_rate(self, cluster: int, channel: int, **kwargs):
@@ -465,38 +473,6 @@ class FigureMaker(object):
         self, waves: np.ndarray, ax: matplotlib.axes, **kwargs
     ) -> matplotlib.axes:
         ax.plot(waves, c="k", **kwargs)
-        return ax
-
-    @stripAxes
-    def _getSACPlot(
-        self, spk_times: np.array = None, ax: matplotlib.axes = None, **kwargs
-    ) -> matplotlib.axes:
-        """
-        Creates a spatial autocorrelation plot.
-
-        Args:
-            spk_times (np.array, optional): The spike times in seconds. If
-                None, no spikes are plotted.
-            ax (matplotlib.axes, optional): The axes to plot on. If None,
-                new axes are created.
-            **kwargs: Additional keyword arguments for the function.
-
-        Returns:
-            matplotlib.axes: The axes with the plot.
-        """
-        if not self.RateMap:
-            self.initialise()
-        spk_times_in_pos_samples = self._get_spike_pos_idx(spk_times)
-        spk_weights = np.bincount(spk_times_in_pos_samples, minlength=self.npos)
-        sac = self.RateMap.getSAC(spk_weights)
-        from ephysiopy.common.gridcell import SAC
-
-        S = SAC()
-        measures = S.getMeasures(sac)
-        if ax is None:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-        ax = self.show_SAC(sac, measures, ax)
         return ax
 
     def _getPowerSpectrumPlot(

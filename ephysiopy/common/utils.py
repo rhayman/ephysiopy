@@ -23,20 +23,17 @@ def clean_kwargs(func, kwargs):
     return {k: v for k, v in kwargs.items() if k in valid_kwargs}
 
 
-def get_z_score(x: np.ndarray,
-                mean=None,
-                sd=None,
-                axis=0) -> np.ndarray:
-    '''
+def get_z_score(x: np.ndarray, mean=None, sd=None, axis=0) -> np.ndarray:
+    """
     Calculate the z-scores for array x based on the mean
     and standard deviation in that sample, unless stated
-    '''
+    """
     if mean is None:
         mean = np.nanmean(x, axis=axis)
     if sd is None:
         sd = np.nanstd(x, axis=axis)
     if axis == -1:
-        return (x - mean[...,None]) / sd[...,None]
+        return (x - mean[..., None]) / sd[..., None]
     return (x - mean) / sd
 
 
@@ -53,7 +50,7 @@ def min_max_norm(x: np.ndarray, min=None, max=None, axis=0) -> np.ndarray:
     if max is None:
         max = np.nanmax(x, axis)
     if axis == -1:
-        return (x - min[...,None]) / (max - min)[...,None]
+        return (x - min[..., None]) / (max - min)[..., None]
     return (x - min) / (max - min)
 
 
@@ -61,7 +58,7 @@ def flatten_list(list_to_flatten: list) -> list:
     return [item for sublist in list_to_flatten for item in sublist]
 
 
-def smooth(x, window_len=9, window='hanning'):
+def smooth(x, window_len=9, window="hanning"):
     """
     Smooth the data using a window with requested size.
 
@@ -73,8 +70,8 @@ def smooth(x, window_len=9, window='hanning'):
     Args:
         x (array_like): The input signal.
         window_len (int): The length of the smoothing window.
-        window (str): The type of window from 'flat', 'hanning', 'hamming', 
-            'bartlett', 'blackman'. 'flat' window will produce a moving average 
+        window (str): The type of window from 'flat', 'hanning', 'hamming',
+            'bartlett', 'blackman'. 'flat' window will produce a moving average
             smoothing.
 
     Returns:
@@ -110,21 +107,22 @@ def smooth(x, window_len=9, window='hanning'):
     if (window_len % 2) == 0:
         window_len = window_len + 1
 
-    if window not in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
+    if window not in ["flat", "hanning", "hamming", "bartlett", "blackman"]:
         raise ValueError(
             "Window is on of 'flat', 'hanning', \
-                'hamming', 'bartlett', 'blackman'")
+                'hamming', 'bartlett', 'blackman'"
+        )
 
-    if window == 'flat':  # moving average
-        w = np.ones(window_len, 'd')
+    if window == "flat":  # moving average
+        w = np.ones(window_len, "d")
     else:
-        w = eval('np.'+window+'(window_len)')
-    y = cnv.convolve(x, w/w.sum(), normalize_kernel=False, boundary='extend')
+        w = eval("np." + window + "(window_len)")
+    y = cnv.convolve(x, w / w.sum(), normalize_kernel=False, boundary="extend")
     # return the smoothed signal
     return y
 
 
-def blur_image(im, n, ny=None, ftype='boxcar', **kwargs):
+def blur_image(im, n, ny=None, ftype="boxcar", **kwargs):
     """
     Smooths a 2D image by convolving with a filter.
 
@@ -137,25 +135,20 @@ def blur_image(im, n, ny=None, ftype='boxcar', **kwargs):
     Returns:
         res (array_like): The smoothed vector with shape the same as im.
     """
-    if 'stddev' in kwargs.keys():
-        stddev = kwargs.pop('stddev')
-    else:
-        stddev = 5
+    stddev = kwargs.pop("stddev", 5)
+    boundary = kwargs.pop("boundary", "extend")
     n = int(n)
     if not ny:
         ny = n
     else:
         ny = int(ny)
     ndims = im.ndim
-    if 'box' in ftype:
-        if ndims == 1:
-            g = cnv.Box1DKernel(n)
-        elif ndims == 2:
-            g = cnv.Box2DKernel(n)
-        elif ndims == 3:  # mutlidimensional binning
+    if "box" in ftype:
+        g = cnv.Box2DKernel(n)
+        if ndims == 3:  # mutlidimensional binning
             g = cnv.Box2DKernel(n)
             g = np.atleast_3d(g).T
-    elif 'gaussian' in ftype:
+    elif "gaussian" in ftype:
         if ndims == 1:
             g = cnv.Gaussian1DKernel(stddev, x_size=n)
         if ndims == 2:
@@ -163,7 +156,7 @@ def blur_image(im, n, ny=None, ftype='boxcar', **kwargs):
         if ndims == 3:
             g = cnv.Gaussian2DKernel(stddev, x_size=n, y_size=ny)
             g = np.atleast_3d(g).T
-    return cnv.convolve(im, g, boundary='extend')
+    return cnv.convolve(im, g, boundary=boundary)
 
 
 def shift_vector(v, shift, maxlen=None):
@@ -206,7 +199,7 @@ def count_to(n):
 
     n_mask = n.astype(bool)
     n_cumsum = np.cumsum(n)
-    ret = np.ones(n_cumsum[-1]+1, dtype=int)
+    ret = np.ones(n_cumsum[-1] + 1, dtype=int)
     ret[n_cumsum[n_mask]] -= n[n_mask]
     ret[0] -= 1
     return np.cumsum(ret)[:-1]
@@ -230,7 +223,7 @@ def repeat_ind(n: np.array):
     if n.ndim != 1:
         raise Exception("n is supposed to be 1d array.")
 
-    res = [[idx]*a for idx, a in enumerate(n) if a != 0]
+    res = [[idx] * a for idx, a in enumerate(n) if a != 0]
     return np.concatenate(res)
 
 
@@ -282,7 +275,7 @@ def bwperim(bw, n=4):
     """
 
     if n not in (4, 8):
-        raise ValueError('mahotas.bwperim: n must be 4 or 8')
+        raise ValueError("mahotas.bwperim: n must be 4 or 8")
     rows, cols = bw.shape
 
     # Translate image by one pixel in all directions
@@ -295,10 +288,7 @@ def bwperim(bw, n=4):
     south[1:, :] = bw[:-1, :]
     west[:, :-1] = bw[:, 1:]
     east[:, 1:] = bw[:, :-1]
-    idx = (north == bw) & \
-          (south == bw) & \
-          (west == bw) & \
-          (east == bw)
+    idx = (north == bw) & (south == bw) & (west == bw) & (east == bw)
     if n == 8:
         north_east = np.zeros((rows, cols))
         north_west = np.zeros((rows, cols))
@@ -308,10 +298,12 @@ def bwperim(bw, n=4):
         north_west[:-1, :-1] = bw[1:, 1:]
         south_east[1:, 1:] = bw[:-1, :-1]
         south_west[1:, :-1] = bw[:-1, 1:]
-        idx &= (north_east == bw) & \
-               (south_east == bw) & \
-               (south_west == bw) & \
-               (north_west == bw)
+        idx &= (
+            (north_east == bw)
+            & (south_east == bw)
+            & (south_west == bw)
+            & (north_west == bw)
+        )
     return ~idx * bw
 
 

@@ -6,6 +6,7 @@ from enum import Enum
 from pathlib import Path, PurePath
 from typing import NoReturn
 from collections import namedtuple
+from dataclasses import dataclass
 
 import h5py
 import numpy as np
@@ -14,11 +15,11 @@ from phylib.io.model import TemplateModel
 from ephysiopy.axona.axonaIO import IO, Pos
 from ephysiopy.axona.tetrode_dict import TetrodeDict
 from ephysiopy.common.ephys_generic import EEGCalcsGeneric, PosCalcsGeneric
-from ephysiopy.common.binning import RateMap, VariableToBin
+from ephysiopy.common.binning import RateMap, VariableToBin, MapType
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.visualise.plotting import FigureMaker
-from ephysiopy.common.utils import shift_vector
+from ephysiopy.common.utils import shift_vector, clean_kwargs
 
 
 def fileContainsString(pname: str, searchStr: str) -> bool:
@@ -118,8 +119,24 @@ Xml2RecordingKind = {
 }
 
 
-# a named tuple for holding filter values
-FilterEntry = namedtuple("FilterEntry", "name start end")
+# a basic dataclass for holding filter values
+@dataclass(eq=True)
+class TrialFilter:
+    name: str
+    start: float | str
+    end: float | str
+
+    def __init__(self, name: str, start: float | str, end: float | str):
+        assert name in [
+            "time",
+            "dir",
+            "speed",
+            "xrange",
+            "yrange",
+        ], "name must be one of 'time', 'dir', 'speed', 'xrange', 'yrange'"
+        self.name = name
+        self.start = start
+        self.end = end
 
 
 class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
@@ -142,7 +159,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self._ttl_data = None  # dict
         self._accelerometer_data = None
         self._path2PosData = None  # Path or str
-        self._filter: dict = {}
+        self._filter: list = []
         self._mask_array = None
 
     @classmethod
@@ -257,14 +274,12 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     def filter(self):
         return self._filter
 
-    def _update_filter(self, val: FilterEntry):
-        if val.name is not None:
-            if val.name in self._filter.keys():
-                self.filter[val.name].append([val.start, val.end])
-            else:
-                self._filter[val.name] = [[val.start, val.end]]
+    def _update_filter(self, val: TrialFilter):
+        if val is None:
+            self._filter = []
         else:
-            self._filter = {}
+            if val not in self._filter:
+                self.filter.append(val)
         return self._filter
 
     @abc.abstractmethod
@@ -311,115 +326,104 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """Returns the times of an individual cluster"""
         raise NotImplementedError
 
-    def apply_filter(
-        self, name: str = None, start: int = None, end: int = None
-    ) -> np.ma.MaskedArray:
+    def apply_filter(self, *trial_filter: TrialFilter) -> np.ma.MaskedArray:
         """Apply a mask to the data
 
         Args:
-            mask (dict): valid keys are:
+            trial_filter (TrialFilter): A namedtuple containing the filter
+                name, start and end values
+            name (str): The name of the filter
+            start (float): The start value of the filter
+            end (float): The end value of the filter
+
+            Valid names are:
                 'dir' - the directional range to filter for
                 'speed' - min and max speed to filter for
                 'xrange' - min and max values to filter x pos values
                 'yrange' - same as xrange but for y pos
                 'time' - the times to keep / remove specified in ms
 
-                Values are pairs specifying the range of values to filter for
-                from the namedtuple FilterEntry that has fields 'filter', 'from' and 'to'
-                'filter' is one of the valid keys above, 'from' and 'to are the ranges
-                of the relevant filter to mask data for
+            Values are pairs specifying the range of values to filter for
+            from the namedtuple TrialFilter that has fields 'start' and 'end'
+            where 'start' and 'end' are the ranges to filter for
 
         Returns:
-            None
-
-        Note:
-            The times inside the bounds are masked ie the mask is set to True
-            The mask can be a list of tuples, in which case the mask is applied
-            for each tuple in the list.
-            mask can be an empty tuple, in which case the mask is removed
-
-        filterDict (dict): Contains the type(s) of filter to be used and
-            the range of values to filter for. Values are pairs specifying
-            the range of values to filter for NB can take multiple filters
-            and iteratively apply them
-            legal values are:
-            * 'dir' - the directional range to filter for NB this can
-                contain 'w','e','s' or 'n'
-            * 'speed' - min and max speed to filter for
-            * 'xrange' - min and max values to filter x pos values
-            * 'yrange' - same as xrange but for y pos
-            * 'time' - the times to keep / remove specified in ms
-
-        Returns:
-            pos_index_to_keep (ndarray): The position indices that should be
-            kept
+            np.array: An array of bools that is True where the mask is applied
         """
-        if name is None:
-            mask = False
+        if len(trial_filter) == 0:
+            bool_arr = False
+            orig_bool_arr = False
+            self._update_filter(None)
         else:
-            if self._mask_array is None or self._mask_array is False:
-                orig_bool_arr = np.zeros(shape=(1, self.PosCalcs.npos), dtype=bool)
-            else:
-                orig_bool_arr = self._mask_array
-
-            if "dir" in name and isinstance(start, str):
-                if len(start) == 1:
-                    if "w" in start:
-                        start = 135
-                        end = 225
-                    elif "e" in start:
-                        start = 315
-                        end = 45
-                    elif "s" in start:
-                        start = 225
-                        end = 315
-                    elif "n" in start:
-                        start = 45
-                        end = 135
+            orig_bool_arr = np.zeros(shape=(1, self.PosCalcs.npos), dtype=bool)
+            for i_filter in trial_filter:
+                self._update_filter(i_filter)
+                if i_filter is None:
+                    mask = False
+                elif i_filter.name is None:
+                    mask = False
+                else:
+                    if "dir" in i_filter.name and isinstance(i_filter.start, str):
+                        if len(i_filter.start) == 1:
+                            if "w" in i_filter.start:
+                                start = 135
+                                end = 225
+                            elif "e" in i_filter.start:
+                                start = 315
+                                end = 45
+                            elif "s" in i_filter.start:
+                                start = 225
+                                end = 315
+                            elif "n" in i_filter.start:
+                                start = 45
+                                end = 135
+                            else:
+                                raise ValueError("Invalid direction")
+                        else:
+                            raise ValueError("filter must contain a key / value pair")
+                    if "speed" in i_filter.name:
+                        if i_filter.start > i_filter.end:
+                            raise ValueError(
+                                "First value must be less than the second one"
+                            )
+                        else:
+                            bool_arr = np.logical_and(
+                                self.PosCalcs.speed > i_filter.start,
+                                self.PosCalcs.speed < i_filter.end,
+                            )
+                    elif "dir" in i_filter.name:
+                        if i_filter.start < i_filter.end:
+                            bool_arr = np.logical_and(
+                                self.PosCalcs.dir > i_filter.start,
+                                self.PosCalcs.dir < i_filter.end,
+                            )
+                        else:
+                            bool_arr = np.logical_or(
+                                self.PosCalcs.dir > i_filter.start,
+                                self.PosCalcs.dir < i_filter.end,
+                            )
+                    elif "xrange" in i_filter.name:
+                        bool_arr = np.logical_and(
+                            self.PosCalcs.xy[0, :] > i_filter.start,
+                            self.PosCalcs.xy[0, :] < i_filter.end,
+                        )
+                    elif "yrange" in i_filter.name:
+                        bool_arr = np.logical_and(
+                            self.PosCalcs.xy[1, :] > i_filter.start,
+                            self.PosCalcs.xy[1, :] < i_filter.end,
+                        )
+                    elif "time" in i_filter.name:
+                        # takes the form of 'from' - 'to' times in SECONDS
+                        # such that only pos's between these ranges are KEPT
+                        from_time = int(i_filter.start * self.PosCalcs.sample_rate)
+                        to_time = int(i_filter.end * self.PosCalcs.sample_rate)
+                        bool_arr = np.zeros_like(orig_bool_arr)
+                        bool_arr[:, from_time:to_time] = True
                     else:
-                        raise ValueError("Invalid direction")
-                else:
-                    raise ValueError("filter must contain a key / value pair")
-            if "speed" in name:
-                if start > end:
-                    raise ValueError("First value must be less than the second one")
-                else:
-                    bool_arr = np.logical_and(
-                        self.PosCalcs.speed > start, self.PosCalcs.speed < end
-                    )
-            elif "dir" in name:
-                if start < end:
-                    bool_arr = np.logical_and(
-                        self.PosCalcs.dir > start, self.PosCalcs.dir < end
-                    )
-                else:
-                    bool_arr = np.logical_or(
-                        self.PosCalcs.dir > start, self.PosCalcs.dir < end
-                    )
-            elif "xrange" in name:
-                bool_arr = np.logical_and(
-                    self.PosCalcs.xy[0, :] > start, self.PosCalcs.xy[0, :] < end
-                )
-            elif "yrange" in name:
-                bool_arr = np.logical_and(
-                    self.PosCalcs.xy[1, :] > start, self.PosCalcs.xy[1, :] < end
-                )
-            elif "time" in name:
-                # takes the form of 'from' - 'to' times in SECONDS
-                # such that only pos's between these ranges are KEPT
-                from_time = int(start * self.PosCalcs.sample_rate)
-                to_time = int(end * self.PosCalcs.sample_rate)
-                bool_arr = np.zeros_like(orig_bool_arr)
-                bool_arr[:, from_time:to_time] = True
-            else:
-                raise KeyError("Unrecognised key")
-            mask = np.logical_or(orig_bool_arr, bool_arr)
-            # mask = np.expand_dims(np.any(mask_array, axis=0), 0)
+                        raise KeyError("Unrecognised key")
+        mask_array = np.logical_or(orig_bool_arr, bool_arr)
+        mask = np.expand_dims(np.any(mask_array, axis=0), 0)
 
-        # update filter dict, adding new filter if necessary
-        # used for reporting the filter settings
-        filter = FilterEntry(name, start, end)
-        self._update_filter(filter)
         self._mask_array = mask
         if self.EEGCalcs:
             self.EEGCalcs.apply_mask(mask)
@@ -429,7 +433,9 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             self.RateMap.apply_mask(mask)
         if self.clusterData:
             self.clusterData.apply_mask(
-                mask, xy_ts=self.PosCalcs.xyTS, sample_rate=self.PosCalcs.sample_rate
+                mask,
+                xy_ts=self.PosCalcs.xyTS,
+                sample_rate=self.PosCalcs.sample_rate,
             )
         return mask
 
@@ -568,6 +574,25 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             cluster, channel, VariableToBin.SPEED_DIR, **dict(kwargs, binsize=binsize)
         )
 
+    def get_grid_map(self, cluster: int, channel: int, **kwargs):
+        rmap = self.get_rate_map(cluster, channel, **kwargs)
+        if "shuffle" in kwargs.keys():
+            kwargs = clean_kwargs(self.RateMap.autoCorr2D, kwargs)
+            n_maps = np.shape(rmap[0])[0]
+            sac = []
+            for i in range(n_maps):
+                r = np.squeeze(rmap[0][i, ...])
+                s = self.RateMap.autoCorr2D(r, **kwargs)
+                sac.append(s)
+        else:
+            sac = self.RateMap.autoCorr2D(rmap[0], **kwargs)
+        return sac
+
+    def get_adaptive_map(self, cluster: int, channel: int, **kwargs):
+        return self._get_map(
+            cluster, channel, VariableToBin.XY, map_type=MapType.ADAPTIVE, **kwargs
+        )
+
 
 class AxonaTrial(TrialInterface):
     def __init__(self, pname: Path, **kwargs) -> None:
@@ -647,7 +672,7 @@ class AxonaTrial(TrialInterface):
         if tetrode is not None:
             return self.TETRODE.get_spike_samples(int(tetrode), int(cluster))
 
-    def apply_filter(self, name: str = None, start: int = None, end: int = None):
+    def apply_filter(self, *trial_filter: TrialFilter):
         """Apply a mask to the data
 
         Args:
@@ -662,7 +687,7 @@ class AxonaTrial(TrialInterface):
         mask can be an empty tuple, in which case the mask is removed
 
         """
-        mask = super().apply_filter(name, start, end)
+        mask = super().apply_filter(*trial_filter)
         for tetrode in self.TETRODE.keys():
             if self.TETRODE[tetrode] is not None:
                 self.TETRODE[tetrode].apply_mask(
@@ -968,7 +993,7 @@ class OpenEphysBase(TrialInterface):
         print("Loaded ttl data")
         return True
 
-    def apply_filter(self, name: str = None, start: int = None, end: int = None):
+    def apply_filter(self, *trial_filter: TrialFilter):
         """Apply a mask to the data
 
         Args:
@@ -987,7 +1012,7 @@ class OpenEphysBase(TrialInterface):
         # as it will be applied when the methods are called within
         # this class for grabbing waveforms from the template_model
         # class
-        super().apply_filter(name, start, end)
+        super().apply_filter(*trial_filter)
 
     def find_files(
         self,

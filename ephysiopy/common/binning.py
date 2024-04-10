@@ -38,6 +38,7 @@ class MapType(Enum):
     RATE = 1
     POS = 2
     SPK = 3
+    ADAPTIVE = 4
 
 
 class RateMap(object):
@@ -296,9 +297,15 @@ class RateMap(object):
                 )
         elif self.var2Bin.value == VariableToBin.EGO_BOUNDARY.value:
             if isinstance(binsize, (float, int)):
-                self.binedges = (int(50 / 2.5), int(360 / 3))
+                self.binedges = (
+                    np.arange(0, 2 * np.pi, 2 * np.pi / 120),
+                    np.arange(0, 50, 2.5),
+                )
             elif (binsize, tuple):
-                self.binedges = (int(50 / binsize[0]), int(360 / binsize[1]))
+                self.binedges = (
+                    np.arange(0, 2 * np.pi, binsize[1]),
+                    np.arange(0, 50, binsize[0]),
+                )
         self._calc_bin_dims()
         return self.binedges
 
@@ -318,10 +325,9 @@ class RateMap(object):
         sample = self.xy
         keep_these = np.isfinite(sample[0])
         pos, _ = self._bin_data(sample, self._binedges, self.pos_weights, keep_these)
-        npos = len(self.dir)
-        p_i = np.count_nonzero(pos) / npos / sample_rate
+        npos = self.PosCalcs.npos
         spk, _ = self._bin_data(sample, self._binedges, spkWeights, keep_these)
-        res = 1 - (np.nansum(p_i * spk) ** 2) / np.nansum(p_i * spk**2)
+        res = fieldcalcs.spatial_sparsity(pos, spk, npos, sample_rate)
         return res
 
     def get_map(
@@ -343,6 +349,11 @@ class RateMap(object):
                 recorded and a cell spiked once in position 2 and 5 times in
                 position 3 and nothing anywhere else then pos_weights looks
                 like: [0 0 1 5 0]
+                spkWeights can also be list-like where each entry in the list is a different set of
+                weights - these are enumerated through in a list comp in the ._bin_data function. In
+                this case the returned tuple will consist of a 2-tuple where the first entry is an
+                array of the ratemaps (binned_spk / binned_pos) and the second part is the binned pos data (as it's common to all
+                the spike weights)
             var_type (Enum value - see Variable2Bin defined at top of this file): The variable to bin up. Legal values are: XY, DIR and SPEED
             mapType (enum value - see MapType defined at top of this file): If RATE then the binned up spikes are divided by var_type.
                 Otherwise return binned up position. Options are RATE or POS
@@ -380,6 +391,8 @@ class RateMap(object):
             spk_weights = np.repeat(spk_weights, arena_xy.shape[0], -1)
             pos_weights = np.repeat(self.pos_weights, arena_xy.shape[0])
             hist_range = ((0, 50), (0, 2 * np.pi))
+            if "range" not in kwargs.keys():
+                kwargs["range"] = hist_range
         else:
             raise ValueError("Unrecognized variable to bin.")
 
@@ -389,6 +402,13 @@ class RateMap(object):
         # self._spike_weights = spk_weights
         binsize = kwargs.pop("binsize", self.binsize)
         hist_range = kwargs.pop("range", None)
+        if (
+            var_type.value == VariableToBin.DIR.value
+            or var_type.value == VariableToBin.EGO_BOUNDARY
+        ):
+            boundary = "wrap"
+        else:
+            boundary = "extend"
         self._calc_bin_edges(binsize)
         binned_pos, binned_pos_edges = self._bin_data(
             sample, self._binedges, pos_weights, hist_range
@@ -398,43 +418,56 @@ class RateMap(object):
 
         if map_type.value == MapType.POS.value:  # return binned up position
             if smoothing:
-                if var_type.value == VariableToBin.DIR.value:
-                    binned_pos = self._circ_pad_smooth(binned_pos, n=self.smooth_sz)
-                else:
-                    binned_pos = blur_image(
-                        binned_pos, self.smooth_sz, ftype=self.smoothingType, **kwargs
-                    )
+                binned_pos = blur_image(
+                    binned_pos,
+                    self.smooth_sz,
+                    ftype=self.smoothingType,
+                    boundary=boundary,
+                    **kwargs
+                )
             return binned_pos, binned_pos_edges
 
         binned_spk, _ = self._bin_data(sample, self._binedges, spk_weights, hist_range)
+
         if map_type.value == MapType.SPK.value:
             return binned_spk
+        if map_type.value == MapType.ADAPTIVE.value:
+            alpha = kwargs.pop("alpha", 4)
+            smthd_rate, smthd_spk, smthd_pos = self.getAdaptiveMap(
+                binned_pos, binned_spk, alpha
+            )
+            return smthd_rate
+
         # binned_spk is returned as a tuple of the binned data and the bin
         # edges
         if "after" in self.whenToSmooth:
             rmap = binned_spk / binned_pos
-            if var_type.value == VariableToBin.DIR.value:
-                rmap = self._circ_pad_smooth(rmap, self.smooth_sz)
-            else:
-                rmap = blur_image(
-                    rmap, self.smooth_sz, ftype=self.smoothingType, **kwargs
-                )
+            rmap = blur_image(
+                rmap,
+                self.smooth_sz,
+                ftype=self.smoothingType,
+                boundary=boundary,
+                **kwargs
+            )
         else:  # default case
             if not smoothing:
                 return binned_spk / binned_pos, binned_pos_edges
-            if var_type.value == VariableToBin.DIR.value:
-                binned_pos = self._circ_pad_smooth(binned_pos, self.smooth_sz)
-                binned_spk = self._circ_pad_smooth(binned_spk, self.smooth_sz)
-                rmap = binned_spk / binned_pos
-            else:
-                binned_pos = blur_image(
-                    binned_pos, self.smooth_sz, ftype=self.smoothingType, **kwargs
-                )
-                binned_spk = blur_image(
-                    binned_spk, self.smooth_sz, ftype=self.smoothingType, **kwargs
-                )
-                rmap = binned_spk / binned_pos
-                rmap[..., nanIdx] = np.nan
+            binned_pos = blur_image(
+                binned_pos,
+                self.smooth_sz,
+                ftype=self.smoothingType,
+                boundary=boundary,
+                **kwargs
+            )
+            binned_spk = blur_image(
+                binned_spk,
+                self.smooth_sz,
+                ftype=self.smoothingType,
+                boundary=boundary,
+                **kwargs
+            )
+            rmap = binned_spk / binned_pos
+            rmap[..., nanIdx] = np.nan
 
         return rmap, binned_pos_edges
 
@@ -537,7 +570,7 @@ class RateMap(object):
         if np.ndim(var) == 1:
             g = g[n, :]
         g = g / g.sum()
-        improc = convolution.convolve(var, g, normalize_kernel=False)
+        improc = convolution.convolve(var, g, normalize_kernel=False, boundary="wrap")
         improc = improc[tn - t2 : tn - t2 + tn]
         return improc
 
@@ -562,7 +595,7 @@ class RateMap(object):
 
         return disk(radius)
 
-    def getAdaptiveMap(self, pos_binned, spk_binned, alpha=200):
+    def getAdaptiveMap(self, pos_binned, spk_binned, alpha=4):
         """
         Produces a ratemap that has been adaptively binned according to the
         algorithm described in Skaggs et al., 1996) [1]_.
@@ -572,7 +605,9 @@ class RateMap(object):
                 above with mapType as 'pos'
             spk_binned (array_like): The binned spikes
             alpha (int, optional): A scaling parameter determing the amount of occupancy to aim at
-                in each bin. Defaults to 200.
+                in each bin. Defaults to 4. In the original paper this was set to 200.
+                This is 4 here as the pos data is binned in seconds (the original data was in pos
+                samples so this is a factor of 50 smaller than the original paper's value, given 50Hz sample rate)
 
         Returns:
             Returns adaptively binned spike and pos maps. Use to generate Skaggs
@@ -640,7 +675,7 @@ class RateMap(object):
         smthdPos[idx] = np.nan
         return smthdRate, smthdSpk, smthdPos
 
-    def autoCorr2D(self, A, nodwell, tol=1e-10):
+    def autoCorr2D(self, A, nodwell=None, tol=1e-10):
         """
         Performs a spatial autocorrelation on the array A
 
@@ -667,6 +702,8 @@ class RateMap(object):
         m, n = np.shape(A)
         o = 1
         x = np.reshape(A, (m, n, o))
+        if nodwell is None:
+            nodwell = ~np.isfinite(A)
         nodwell = np.reshape(nodwell, (m, n, o))
         x[nodwell] = 0
         # [Step 1] Obtain FFTs of x, the sum of squares and bins visited
