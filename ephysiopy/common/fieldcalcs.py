@@ -317,7 +317,7 @@ def border_score(
                 )
                 fractionOfPixelsOnBorder[:, i - 1] = pixelsOnBorder
                 if pixelsOnBorder > 0.5:
-                    fzoieldAngularCoverage[0, i - 1] = subtended_angle
+                    fieldAngularCoverage[0, i - 1] = subtended_angle
 
             fieldsToKeep = np.logical_or(fieldsToKeep, labels == i)
     fieldAngularCoverage = fieldAngularCoverage / 360.0
@@ -560,22 +560,31 @@ def corr_maps(map1, map2, maptype="normal"):
     return r[1][0]
 
 
-def spatial_sparsity(
-    pos_map: np.ndarray, spk_map: np.ndarray, npos: int, sample_rate: int
-) -> float:
+def spatial_sparsity(rate_map: np.ndarray, pos_map: np.ndarray) -> float:
     """
-    Gets the spatial sparsity measure - closer to 1 means
-    sparser firing field.
+    Calculates the spatial sparsity of a rate map as defined by
+    Markus et al (1994)
+
+    For example, a sparsity score of 0.10 indicates that the cell fired on
+    10% of the maze surface
+
+    Args:
+        rate_map (np.ndarray): The rate map
+        pos_map (np.ndarray): The occupancy map
+
+    Returns:
+        float: The spatial sparsity of the rate map
 
     References:
-        Skaggs, W.E., McNaughton, B.L., Wilson, M.A. & Barnes, C.A.
-        Theta phase precession in hippocampal neuronal populations
-        and the compression of temporal sequences.
-        Hippocampus 6, 149–172 (1996).
+        Markus, E.J., Barnes, C.A., McNaughton, B.L., Gladden, V.L. &
+        Skaggs, W.E. Spatial information content and reliability of
+        hippocampal CA1 neurons: effects of visual input. Hippocampus
+        4, 410–421 (1994).
+
     """
-    p_i = np.count_nonzero(pos_map) / npos / sample_rate
-    res = 1 - (np.nansum(p_i * spk_map) ** 2) / np.nansum(p_i * spk**2)
-    return res
+    p_i = pos_map / np.nansum(pos_map)
+    sparsity = np.nansum(p_i * rate_map) ** 2 / np.nansum(p_i * rate_map**2)
+    return sparsity
 
 
 def coherence(smthd_rate, unsmthd_rate):
@@ -715,10 +724,7 @@ def skaggs_info(ratemap, dwelltimes, **kwargs):
 
         .. math:: I = sum_{x} p(x).r(x).log(r(x)/r)
     """
-    if "sample_rate" in kwargs:
-        sample_rate = kwargs["sample_rate"]
-    else:
-        sample_rate = 50
+    sample_rate = kwargs.get("sample_rate", 50)
 
     dwelltimes = dwelltimes / sample_rate  # assumed sample rate of 50Hz
     if ratemap.ndim > 1:
@@ -1103,3 +1109,27 @@ def get_circular_regions(A: np.ndarray, **kwargs) -> list:
         im[~mask] = np.nan
         result.append(im)
     return result
+
+
+def get_expanding_circle_gridscore(A: np.ndarray, **kwargs):
+    """
+    Calculates the gridscore for each circular sub-region of image A
+    where the circles are centred on the image centre and expanded to
+    the edge of the image. The maximum of the get_basic_gridscore() for
+    each of these circular sub-regions is returned as the gridscore
+    """
+
+    images = get_circular_regions(A, **kwargs)
+    gridscores = [gridness(im) for im in images]
+    return max(gridscores)
+
+
+def get_deformed_sac_gridscore(self, A: np.ndarray, **kwargs):
+    """
+    Deforms a non-circular SAC into a circular SAC (circular meaning
+    the ellipse drawn around the edges of the 6 nearest peaks to the
+    SAC centre) and returns get_basic_griscore() calculated on the
+    deformed (or re-formed?!) SAC
+    """
+    deformed_SAC = deform_SAC(A)
+    return gridness(deformed_SAC)

@@ -145,8 +145,11 @@ def blur_image(im, n, ny=None, ftype="boxcar", **kwargs):
     ndims = im.ndim
     if "box" in ftype:
         g = cnv.Box2DKernel(n)
+        if ndims == 1:
+            g = cnv.Box1DKernel(n)
+        if ndims == 2:
+            g = np.atleast_2d(g)
         if ndims == 3:  # mutlidimensional binning
-            g = cnv.Box2DKernel(n)
             g = np.atleast_3d(g).T
     elif "gaussian" in ftype:
         if ndims == 1:
@@ -156,6 +159,7 @@ def blur_image(im, n, ny=None, ftype="boxcar", **kwargs):
         if ndims == 3:
             g = cnv.Gaussian2DKernel(stddev, x_size=n, y_size=ny)
             g = np.atleast_3d(g).T
+    g = np.array(g)
     return cnv.convolve(im, g, boundary=boundary)
 
 

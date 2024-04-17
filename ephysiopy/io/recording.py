@@ -443,21 +443,44 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self.RateMap = RateMap(self.PosCalcs)
         self.npos = self.PosCalcs.xy.shape[1]
 
-    def _get_spike_pos_idx(self, cluster: int, channel: int):
+    def _get_spike_pos_idx(self, cluster: int, channel: int, **kwargs):
         """
-        Returns the indices into the position data at which some spike times
-        occurred.
+        Returns the indices into the position data at which some cluster
+        on a given channel emitted putative spikes.
 
         Args:
-            spk_times (np.ndarray): The spike times in seconds.
+            cluster (int): The cluster identity. NB this can be None in which
+                    case the "spike times" are equal to the position times, which
+                    means data binned using these indices will be equivalent to
+                    binning up just the position data alone.
+
+            channel (int): The channel identity. Ignored if cluster is None
 
         Returns:
             np.ndarray: The indices into the position data at which the spikes
                 occurred.
         """
-        spk_times = self.get_spike_times(cluster, channel)
+        if cluster is None:
+            spk_times = getattr(self.PosCalcs, "xyTS")
+        else:
+            spk_times = self.get_spike_times(cluster, channel)
         pos_times = getattr(self.PosCalcs, "xyTS")
-        idx = np.searchsorted(pos_times, spk_times) - 1
+        idx = np.searchsorted(pos_times, spk_times)
+
+        if kwargs.get("shuffle", False):
+            n_shuffles = kwargs.get("n_shuffles", 100)
+            random_seed = kwargs.get("random_seed", None)
+            r = np.random.default_rng(random_seed)
+            time_shifts = r.integers(
+                low=30 * self.PosCalcs.sample_rate,
+                high=self.PosCalcs.npos - (30 * self.PosCalcs.sample_rate),
+                size=n_shuffles,
+            )
+            shifted_idx = []
+            for shift in time_shifts:
+                shifted_idx.append(shift_vector(idx, shift, maxlen=self.PosCalcs.npos))
+            return np.array(shifted_idx)
+
         return idx
 
     def _get_map(self, cluster: int, channel: int, var2bin: VariableToBin.XY, **kwargs):
@@ -489,29 +512,17 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         if not self.RateMap:
             self.initialise()
-        spk_times_in_pos_samples = self._get_spike_pos_idx(cluster, channel)
-        if kwargs.get("shuffle", False):
-            n_shuffles = kwargs.get("n_shuffles", 100)
-            random_seed = kwargs.get("random_seed", None)
-            r = np.random.default_rng(random_seed)
-            time_shifts = r.integers(
-                low=30 * self.PosCalcs.sample_rate,
-                high=self.PosCalcs.npos - (30 * self.PosCalcs.sample_rate),
-                size=n_shuffles,
+        spk_times_in_pos_samples = self._get_spike_pos_idx(cluster, channel, **kwargs)
+        if spk_times_in_pos_samples.ndim == 1:
+            spk_weights = np.bincount(
+                spk_times_in_pos_samples, minlength=self.PosCalcs.npos
             )
+        else:
             weights = []
-            for shift in time_shifts:
-                shifted_samples = shift_vector(
-                    spk_times_in_pos_samples, shift, maxlen=self.PosCalcs.npos
-                )
-                weights.append(
-                    np.bincount(shifted_samples, minlength=self.PosCalcs.npos)
-                )
-            rmaps = self.RateMap.get_map(np.array(weights), var_type=var2bin, **kwargs)
-            return rmaps
-        spk_weights = np.bincount(
-            spk_times_in_pos_samples, minlength=self.PosCalcs.npos
-        )
+            for spk_idx in spk_times_in_pos_samples:
+                weights.append(np.bincount(spk_idx, minlength=self.PosCalcs.npos))
+            spk_weights = np.array(weights)
+
         rmap = self.RateMap.get_map(spk_weights, var_type=var2bin, **kwargs)
         return rmap
 
@@ -584,6 +595,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
                 r = np.squeeze(rmap[0][i, ...])
                 s = self.RateMap.autoCorr2D(r, **kwargs)
                 sac.append(s)
+            sac = np.array(sac)
         else:
             sac = self.RateMap.autoCorr2D(rmap[0], **kwargs)
         return sac

@@ -10,8 +10,7 @@ import numpy as np
 from scipy.special import erf
 from phylib.io.model import TemplateModel
 from scipy import signal, stats
-from ephysiopy.common.utils import min_max_norm
-
+from ephysiopy.common.utils import min_max_norm, shift_vector
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 
 
@@ -53,13 +52,11 @@ def get_param(waveforms, param="Amp", t=200, fet=1):
             return waveforms[:, :, int(f(t))]
     elif param == "tP":
         idx = np.argmax(waveforms, axis=-1)
-        m = interpolate.interp1d(
-            [0, waveforms.shape[-1] - 1], [0, 1 / 1000.0])
+        m = interpolate.interp1d([0, waveforms.shape[-1] - 1], [0, 1 / 1000.0])
         return m(idx)
     elif param == "tT":
         idx = np.argmin(waveforms, axis=-1)
-        m = interpolate.interp1d(
-            [0, waveforms.shape[-1] - 1], [0, 1 / 1000.0])
+        m = interpolate.interp1d([0, waveforms.shape[-1] - 1], [0, 1 / 1000.0])
         return m(idx)
     elif param == "PCA":
         pca = PCA(n_components=fet)
@@ -78,9 +75,9 @@ def get_param(waveforms, param="Amp", t=200, fet=1):
                         )
                     )
                     if A.ndim < 2:
-                        out[:, rng[0, i]:rng[1, i]] = np.atleast_2d(A).T
+                        out[:, rng[0, i] : rng[1, i]] = np.atleast_2d(A).T
                     else:
-                        out[:, rng[0, i]:rng[1, i]] = A
+                        out[:, rng[0, i] : rng[1, i]] = A
             return out
 
 
@@ -108,8 +105,10 @@ def mahal(u, v):
     u_sz = u.shape
     v_sz = v.shape
     if u_sz[1] != v_sz[1]:
-        warnings.warn("Input size mismatch: \
-                        matrices must have same num of columns")
+        warnings.warn(
+            "Input size mismatch: \
+                        matrices must have same num of columns"
+        )
     if v_sz[0] < v_sz[1]:
         warnings.warn("Too few rows: v must have more rows than columns")
     if np.any(np.imag(u)) or np.any(np.imag(v)):
@@ -123,10 +122,12 @@ def mahal(u, v):
     return d
 
 
-def cluster_quality(waveforms: np.ndarray = None,
-                    spike_clusters: np.ndarray = None,
-                    cluster_id: int = None,
-                    fet: int = 1):
+def cluster_quality(
+    waveforms: np.ndarray = None,
+    spike_clusters: np.ndarray = None,
+    cluster_id: int = None,
+    fet: int = 1,
+):
     """
     Returns the L-ratio and Isolation Distance measures calculated
     on the principal components of the energy in a spike matrix.
@@ -182,11 +183,7 @@ def cluster_quality(waveforms: np.ndarray = None,
     return L_ratio, isolation_dist
 
 
-def xcorr(x1: np.ndarray,
-          x2=None,
-          Trange=None,
-          binsize=0.001,
-          **kwargs) -> tuple:
+def xcorr(x1: np.ndarray, x2=None, Trange=None, binsize=0.001, **kwargs) -> tuple:
     """
     Calculates the ISIs in x1 or x1 vs x2 within a given range
 
@@ -212,19 +209,16 @@ def xcorr(x1: np.ndarray,
     irange = x1[:, np.newaxis] + Trange[np.newaxis, :]
     dts = np.searchsorted(x2, irange)
     for i, t in enumerate(dts):
-        y.extend((x2[t[0]: t[1]] - x1[i]))
+        y.extend((x2[t[0] : t[1]] - x1[i]))
     y = np.array(y, dtype=float)
-    counts, bins = np.histogram(y[y != 0],
-                                bins=int(np.ptp(Trange)/binsize)+1,
-                                range=Trange)
+    counts, bins = np.histogram(
+        y[y != 0], bins=int(np.ptp(Trange) / binsize) + 1, range=Trange
+    )
     return counts, bins
 
 
-def contamination_percent(
-        x1: np.ndarray,
-        x2: np.ndarray = None,
-        **kwargs) -> tuple:
-    '''
+def contamination_percent(x1: np.ndarray, x2: np.ndarray = None, **kwargs) -> tuple:
+    """
     Computes the cross-correlogram between two sets of spikes and
     estimates how refractory the cross-correlogram is.
 
@@ -247,7 +241,7 @@ def contamination_percent(
         an analysis of the 'shoulders' of the cross-correlogram.
         Specifically, the spike counts in the ranges +/-5-25ms and
         +/-250-500ms are compared for refractoriness
-    '''
+    """
     if x2 is None:
         x2 = x1.copy()
     c, b = xcorr(x1, x2, **kwargs)
@@ -256,8 +250,7 @@ def contamination_percent(
     far = [[-0.5, -0.249], [0.25, 0.501]]
 
     def get_shoulder(bins, vals):
-        all = np.array([np.logical_and(bins >= i[0], bins < i[1])
-                        for i in vals])
+        all = np.array([np.logical_and(bins >= i[0], bins < i[1]) for i in vals])
         return np.any(all, 0)
 
     inner_left = get_shoulder(b, left)
@@ -268,16 +261,16 @@ def contamination_percent(
     Tr = max(np.concatenate([x1, x2])) - min(np.concatenate([x1, x2]))
 
     def get_normd_shoulder(idx):
-        return np.sum(c[idx[:-1]]) / (len(np.nonzero(idx)[0]) *
-                                      tbin * len(x1) * len(x2) / Tr)
+        return np.sum(c[idx[:-1]]) / (
+            len(np.nonzero(idx)[0]) * tbin * len(x1) * len(x2) / Tr
+        )
 
     Q00 = get_normd_shoulder(outer)
-    Q01 = max(get_normd_shoulder(inner_left),
-              get_normd_shoulder(inner_right))
+    Q01 = max(get_normd_shoulder(inner_left), get_normd_shoulder(inner_right))
 
-    R00 = max(np.mean(c[outer[:-1]]),
-              np.mean(c[inner_left[:-1]]),
-              np.mean(c[inner_right[1:]]))
+    R00 = max(
+        np.mean(c[outer[:-1]]), np.mean(c[inner_left[:-1]]), np.mean(c[inner_right[1:]])
+    )
 
     middle_idx = np.nonzero(b == 0)[0]
     a = c[middle_idx]
@@ -292,14 +285,14 @@ def contamination_percent(
         # compute the same normalized ratio as above;
         # this should be 1 if there is no refractoriness
         Qi[i] = get_normd_shoulder(chunk)  # save the normd prob
-        n = np.sum(c[chunk[:-1]])/2
+        n = np.sum(c[chunk[:-1]]) / 2
         lam = R00 * i
         # this is tricky: we approximate the Poisson likelihood with a
         # gaussian of equal mean and variance
         # that allows us to integrate the probability that we would see <N
         # spikes in the center of the
         # cross-correlogram from a distribution with mean R00*i spikes
-        p = 1/2 * (1 + erf((n - lam)/np.sqrt(2*lam)))
+        p = 1 / 2 * (1 + erf((n - lam) / np.sqrt(2 * lam)))
 
         Ri[i] = p  # keep track of p for each bin size i
 
@@ -308,8 +301,7 @@ def contamination_percent(
 
 
 # a namedtuple to hold some metrics from the KiloSort run
-KSMetaTuple = namedtuple(
-    'KSMeta', 'Amplitude group KSLabel ContamPct ')
+KSMetaTuple = namedtuple("KSMeta", "Amplitude group KSLabel ContamPct ")
 
 
 class SpikeCalcsGeneric(object):
@@ -326,10 +318,13 @@ class SpikeCalcsGeneric(object):
 
     """
 
-    def __init__(self, spike_times: np.ndarray,
-                 cluster: int,
-                 waveforms: np.ndarray = None,
-                 **kwargs):
+    def __init__(
+        self,
+        spike_times: np.ndarray,
+        cluster: int,
+        waveforms: np.ndarray = None,
+        **kwargs,
+    ):
         self.spike_times = np.ma.MaskedArray(spike_times)  # IN SECONDS
         if waveforms is not None:
             self._waves = np.ma.MaskedArray(waveforms)
@@ -477,7 +472,9 @@ class SpikeCalcsGeneric(object):
         if not mask or len(mask[0]) == 0:
             return
         else:
-            mask = [np.ma.masked_inside(self.spike_times, m[0], m[1]).mask for m in mask]
+            mask = [
+                np.ma.masked_inside(self.spike_times, m[0], m[1]).mask for m in mask
+            ]
             mask = np.any(mask, axis=0)
             self.spike_times.mask = mask
             if self._waves is not None:
@@ -565,13 +562,12 @@ class SpikeCalcsGeneric(object):
         x = []
         y = []
         for i, t in enumerate(dts):
-            tmp = self.spike_times[t[0]:t[1]] - event_ts[i]
+            tmp = self.spike_times[t[0] : t[1]] - event_ts[i]
             x.extend(tmp)
             y.extend(np.repeat(i, len(tmp)))
         return x, y
 
-    def psch(
-            self, bin_width_secs: float) -> np.ndarray:
+    def psch(self, bin_width_secs: float) -> np.ndarray:
         """
         Calculate the peri-stimulus *count* histogram of a cell's spiking
         against event times.
@@ -594,27 +590,41 @@ class SpikeCalcsGeneric(object):
 
         irange = event_ts[:, np.newaxis] + self.event_window[np.newaxis, :]
         dts = np.searchsorted(self.spike_times, irange)
-        bins = np.arange(self.event_window[0],
-                         self.event_window[1], bin_width_secs)
-        result = np.empty(shape=(len(bins)-1, len(event_ts)), dtype=np.int64)
+        bins = np.arange(self.event_window[0], self.event_window[1], bin_width_secs)
+        result = np.empty(shape=(len(bins) - 1, len(event_ts)), dtype=np.int64)
         for i, t in enumerate(dts):
-            tmp = self.spike_times[t[0]:t[1]] - event_ts[i]
+            tmp = self.spike_times[t[0] : t[1]] - event_ts[i]
             indices = np.digitize(tmp, bins=bins)
             counts = np.bincount(indices, minlength=len(bins))
             result[:, i] = counts[1:]
         return result
 
-    def ifr_sp_hd_corr(
+    def get_shuffled_ifr_sp_corr(
+        self, ts: np.array, speed: np.array, nShuffles: int = 100, **kwargs
+    ):
+        # shift spikes by at least 30 seconds after trial start and
+        # 30 seconds before trial end
+        nSamples = len(speed)
+        random_seed = kwargs.get("random_seed", None)
+        r = np.random.default_rng(random_seed)
+        timeSteps = r.integers(low=30, high=ts[-1] - 30, size=nShuffles)
+        shuffled_ifr_sp_corrs = []
+        for t in timeSteps:
+            shift_ts = shift_vector(ts, t, maxlen=nSamples)
+            res = self.ifr_sp_corr(shift_ts, speed, **kwargs)
+            shuffled_ifr_sp_corrs.append(res.statistic)
+        return np.array(shuffled_ifr_sp_corrs)
+
+    def ifr_sp_corr(
         self,
         ts,
         speed,
-        head_direction,
         minSpeed=2.0,
         maxSpeed=40.0,
         sigma=3,
         nShuffles=100,
         plot=False,
-        **kwargs
+        **kwargs,
     ):
         """
         Calculates the correlation between the instantaneous firing rate and
@@ -634,6 +644,14 @@ class SpikeCalcsGeneric(object):
                 See scipy.stats.PermutationMethod.
             plot (bool, optional): Whether to plot the result.
                 Defaults to False.
+        kwargs:
+            method: how the significance of the speed vs firing rate correlation
+                    is calculated - see the documentation for scipy.stats.PermutationMethod
+
+                    An example of how I was calculating this is:
+
+                    >> rng = np.random.default_rng()
+                    >> method = stats.PermutationMethod(n_resamples=nShuffles, random_state=rng)
         """
         speed = speed.ravel()
         orig_speed_mask = speed.mask
@@ -661,105 +679,109 @@ class SpikeCalcsGeneric(object):
         # the permutation test for significance, only perform
         # on the non-masked data
         rng = np.random.default_rng()
-        method = stats.PermutationMethod(
-            n_resamples=nShuffles, random_state=rng)
-        res = stats.pearsonr(sm_spk_rate.compressed(), speed_filt.compressed(), method=method)
-        if plot:
-            # A1) get the bin edges and digitize the speed data
-            _, sp_bin_edges = np.histogram(speed_filt.compressed(), bins=int(maxSpeed))
-            sp_dig = np.digitize(speed_filt, sp_bin_edges, right=True)
-            # A2) get the spikes per speed bin
-            spks_per_sp_bin = [
-                spk_hist_filt[sp_dig == i] for i in range(len(sp_bin_edges))
-            ]
-            # A3) put into a list a get the rates and variances
-            rate_per_sp_bin = []
-            variance_per_sp_bin = []
-            for x in spks_per_sp_bin:
-                rate_per_sp_bin.append(np.mean(x) * posSampRate)
-                variance_per_sp_bin.append((np.var(x) * posSampRate))
-            # A4) smooth the result
-            rate_filter = signal.windows.gaussian(5, 1.0)
-            rate_filter = rate_filter / np.sum(rate_filter)
-            binned_spk_rate = signal.filtfilt(rate_filter, 1, rate_per_sp_bin)
-            # instead of plotting a scatter plot of the firing rate at each
-            # speed bin, plot a log normalised heatmap and overlay results
-
-            # do some fancy plotting stuff, adding head direction vs firing rate
-            # as a heat map in the background
-            hd = np.ma.MaskedArray(head_direction, speed_mask)
-            # number of bins for hd a bit weird but its so it'll fit on the
-            # speed vs rate plot
-            _, hd_bin_edges = np.histogram(hd.compressed(), bins=int(maxSpeed))
-            _, spk_bin_edges = np.histogram(sm_spk_rate.compressed(), bins=int(maxSpeed))
-            hd_mesh, spk_mesh = np.meshgrid(hd_bin_edges, spk_bin_edges)
-            # B1) create a 2D histogram of the speed vs head direction
-            # B1a) get the "dwell" time map
-            binned_hd_dwell, _, _ = np.histogram2d(
-                hd.compressed(), sm_spk_rate.compressed(),
-                bins=[hd_bin_edges, spk_bin_edges]
-            )
-            # B1b) get the spike map
-            weights = np.bincount(x1, minlength=nSamples)
-            weights = np.ma.MaskedArray(weights, speed_mask)
-            binned_hd_spike, _, _ = np.histogram2d(
-                hd.compressed(), sm_spk_rate.compressed(),
-                bins=[hd_bin_edges, spk_bin_edges], weights=weights.compressed()
-            )
-            binned_hd_rate = binned_hd_spike / binned_hd_dwell
-            # blur the binned rate a bit to make it look nicer
-            from ephysiopy.common.utils import blur_image
-
-            # sm_binned_rate = blur_image(binned_hd_rate, 1)
-            sm_binned_rate = np.ma.MaskedArray(binned_hd_rate)
-            # sm_binned_rate = np.ma.masked_where(sm_binned_rate <= 1, sm_binned_rate)
-            if "ax" not in kwargs.keys():
-                fig = plt.figure()
-                ax = fig.add_subplot(111)
-            else:
-                ax = kwargs["ax"]
-
-            spk_mesh = spk_mesh[:-1, :-1]
-            hd_mesh = hd_mesh[:-1, :-1]
-            ax2 = ax.twinx()
-            ax2.set_ylabel("Heading direction ($^\circ$)")
-            pc = ax2.pcolormesh(
-                spk_mesh,
-                hd_mesh,
-                binned_hd_spike.T,
-                alpha=0.5,
-                shading="nearest",
-                edgecolors="None",
-            )
-            plt.colorbar(pc)
-            # overlay the smoothed binned rate against speed
-            ax.plot(sp_bin_edges, binned_spk_rate, "k")
-            ax.plot(sp_bin_edges, binned_spk_rate +
-                    np.sqrt(variance_per_sp_bin), "k--")
-            ax.plot(sp_bin_edges, binned_spk_rate -
-                    np.sqrt(variance_per_sp_bin), "k--")
-            # do the linear regression and plot the fit too
-            # make sure it's done on the same data as the plots above
-            # be sure to only use the data that isn't masked
-            lr = stats.linregress(speed_filt.compressed(), sm_spk_rate.compressed())
-            end_point = lr.intercept + \
-                ((sp_bin_edges[-1]-sp_bin_edges[0]) * lr.slope)
-            ax.plot(
-                [np.min(sp_bin_edges), np.max(sp_bin_edges)],
-                [lr.intercept, end_point],
-                "r--",
-            )
-            ax.set_xlim(np.min(sp_bin_edges), np.max(sp_bin_edges[-2]))
-            xmax = np.nanmax(binned_spk_rate) + np.nanmax(np.sqrt(variance_per_sp_bin))
-            ax.set_ylim(0, xmax * 1.1)
-            ax.set_ylabel("Firing rate(Hz)")
-            ax.set_xlabel("Running speed(cm/s)")
-            ax.set_title(
-                "Intercept: {0:.3f}   Slope: {1:.5f}\nPearson: {2:.5f}".format(
-                    lr.intercept, lr.slope, lr.rvalue
-                )
-            )
-        # do some shuffling of the data to see if the result is signficant
+        method = stats.PermutationMethod(n_resamples=nShuffles, random_state=rng)
+        method = kwargs.get("method", method)
+        print(f"method: {method}")
+        res = stats.pearsonr(
+            sm_spk_rate.compressed(), speed_filt.compressed(), method=method
+        )
+        return res
+        # if plot:
+        #     # A1) get the bin edges and digitize the speed data
+        #     _, sp_bin_edges = np.histogram(speed_filt.compressed(), bins=int(maxSpeed))
+        #     sp_dig = np.digitize(speed_filt, sp_bin_edges, right=True)
+        #     # A2) get the spikes per speed bin
+        #     spks_per_sp_bin = [
+        #         spk_hist_filt[sp_dig == i] for i in range(len(sp_bin_edges))
+        #     ]
+        #     # A3) put into a list a get the rates and variances
+        #     rate_per_sp_bin = []
+        #     variance_per_sp_bin = []
+        #     for x in spks_per_sp_bin:
+        #         rate_per_sp_bin.append(np.mean(x) * posSampRate)
+        #         variance_per_sp_bin.append((np.var(x) * posSampRate))
+        #     # A4) smooth the result
+        #     rate_filter = signal.windows.gaussian(5, 1.0)
+        #     rate_filter = rate_filter / np.sum(rate_filter)
+        #     binned_spk_rate = signal.filtfilt(rate_filter, 1, rate_per_sp_bin)
+        #     # instead of plotting a scatter plot of the firing rate at each
+        #     # speed bin, plot a log normalised heatmap and overlay results
+        #
+        #     # do some fancy plotting stuff, adding head direction vs firing rate
+        #     # as a heat map in the background
+        #     hd = np.ma.MaskedArray(head_direction, speed_mask)
+        #     # number of bins for hd a bit weird but its so it'll fit on the
+        #     # speed vs rate plot
+        #     _, hd_bin_edges = np.histogram(hd.compressed(), bins=int(maxSpeed))
+        #     _, spk_bin_edges = np.histogram(sm_spk_rate.compressed(), bins=int(maxSpeed))
+        #     hd_mesh, spk_mesh = np.meshgrid(hd_bin_edges, spk_bin_edges)
+        #     # B1) create a 2D histogram of the speed vs head direction
+        #     # B1a) get the "dwell" time map
+        #     binned_hd_dwell, _, _ = np.histogram2d(
+        #         hd.compressed(), sm_spk_rate.compressed(),
+        #         bins=[hd_bin_edges, spk_bin_edges]
+        #     )
+        #     # B1b) get the spike map
+        #     weights = np.bincount(x1, minlength=nSamples)
+        #     weights = np.ma.MaskedArray(weights, speed_mask)
+        #     binned_hd_spike, _, _ = np.histogram2d(
+        #         hd.compressed(), sm_spk_rate.compressed(),
+        #         bins=[hd_bin_edges, spk_bin_edges], weights=weights.compressed()
+        #     )
+        #     binned_hd_rate = binned_hd_spike / binned_hd_dwell
+        #     # blur the binned rate a bit to make it look nicer
+        #     from ephysiopy.common.utils import blur_image
+        #
+        # sm_binned_rate = blur_image(binned_hd_rate, 1)
+        #     sm_binned_rate = np.ma.MaskedArray(binned_hd_rate)
+        #     # sm_binned_rate = np.ma.masked_where(sm_binned_rate <= 1, sm_binned_rate)
+        #     if "ax" not in kwargs.keys():
+        #         fig = plt.figure()
+        #         ax = fig.add_subplot(111)
+        #     else:
+        #         ax = kwargs["ax"]
+        #
+        #     spk_mesh = spk_mesh[:-1, :-1]
+        #     hd_mesh = hd_mesh[:-1, :-1]
+        #     ax2 = ax.twinx()
+        #     ax2.set_ylabel("Heading direction ($^\circ$)")
+        #     pc = ax2.pcolormesh(
+        #         spk_mesh,
+        #         hd_mesh,
+        #         binned_hd_spike.T,
+        #         alpha=0.5,
+        #         shading="nearest",
+        #         edgecolors="None",
+        #     )
+        #     plt.colorbar(pc)
+        #     # overlay the smoothed binned rate against speed
+        #     ax.plot(sp_bin_edges, binned_spk_rate, "k")
+        #     ax.plot(sp_bin_edges, binned_spk_rate +
+        #             np.sqrt(variance_per_sp_bin), "k--")
+        #     ax.plot(sp_bin_edges, binned_spk_rate -
+        #             np.sqrt(variance_per_sp_bin), "k--")
+        #     # do the linear regression and plot the fit too
+        #     # make sure it's done on the same data as the plots above
+        #     # be sure to only use the data that isn't masked
+        #     lr = stats.linregress(speed_filt.compressed(), sm_spk_rate.compressed())
+        #     end_point = lr.intercept + \
+        #         ((sp_bin_edges[-1]-sp_bin_edges[0]) * lr.slope)
+        #     ax.plot(
+        #         [np.min(sp_bin_edges), np.max(sp_bin_edges)],
+        #         [lr.intercept, end_point],
+        #         "r--",
+        #     )
+        #     ax.set_xlim(np.min(sp_bin_edges), np.max(sp_bin_edges[-2]))
+        #     xmax = np.nanmax(binned_spk_rate) + np.nanmax(np.sqrt(variance_per_sp_bin))
+        #     ax.set_ylim(0, xmax * 1.1)
+        #     ax.set_ylabel("Firing rate(Hz)")
+        #     ax.set_xlabel("Running speed(cm/s)")
+        #     ax.set_title(
+        #         "Intercept: {0:.3f}   Slope: {1:.5f}\nPearson: {2:.5f}".format(
+        #             lr.intercept, lr.slope, lr.rvalue
+        #         )
+        #     )
+        # # do some shuffling of the data to see if the result is signficant
         # if shuffle:
         #     # shift spikes by at least 30 seconds after trial start and
         #     # 30 seconds before trial end
@@ -779,14 +801,15 @@ class SpikeCalcsGeneric(object):
         #         ax.hist(np.abs(shuffled_results), 20)
         #         ylims = ax.get_ylim()
         #         ax.vlines(res, ylims[0], ylims[1], "r")
-        return res
 
-    def responds_to_stimulus(self,
-                             threshold: float,
-                             min_contiguous: int,
-                             return_activity: bool = False,
-                             return_magnitude: bool = False,
-                             **kwargs) -> tuple:
+    def responds_to_stimulus(
+        self,
+        threshold: float,
+        min_contiguous: int,
+        return_activity: bool = False,
+        return_magnitude: bool = False,
+        **kwargs,
+    ) -> tuple:
         """
         Checks whether a cluster responds to a laser stimulus.
 
@@ -823,31 +846,29 @@ class SpikeCalcsGeneric(object):
             window = kwargs["window"]
         else:
             window = "flat"
-        if 'flat' in window:
+        if "flat" in window:
             kernel = Box1DKernel(window_len)
-        if 'gauss' in window:
+        if "gauss" in window:
             kernel = Gaussian1DKernel(1, window_len)
-        if 'do_smooth' in kwargs.keys():
-            do_smooth = kwargs.get('do_smooth')
+        if "do_smooth" in kwargs.keys():
+            do_smooth = kwargs.get("do_smooth")
         else:
             do_smooth = True
 
         if do_smooth:
-            smoothed_binned_spikes = convolve(mean_firing_rate,
-                                              kernel,
-                                              boundary='wrap')
+            smoothed_binned_spikes = convolve(mean_firing_rate, kernel, boundary="wrap")
         else:
             smoothed_binned_spikes = mean_firing_rate
         nbins = np.floor(np.sum(np.abs(self.event_window)) / self.secs_per_bin)
-        bins = np.linspace(self.event_window[0],
-                           self.event_window[1],
-                           int(nbins))
+        bins = np.linspace(self.event_window[0], self.event_window[1], int(nbins))
         # normalize all activity by activity in the time before
         # the laser onset
         idx = bins < 0
-        normd = min_max_norm(smoothed_binned_spikes,
-                             np.min(smoothed_binned_spikes[idx]),
-                             np.max(smoothed_binned_spikes[idx]))
+        normd = min_max_norm(
+            smoothed_binned_spikes,
+            np.min(smoothed_binned_spikes[idx]),
+            np.max(smoothed_binned_spikes[idx]),
+        )
         # mask the array outside of a threshold value so that
         # only True values in the masked array are those that
         # exceed the threshold (positively or negatively)
@@ -859,7 +880,7 @@ class SpikeCalcsGeneric(object):
         # pre_stim_min = pre_stim_mean * (threshold-1.0)
         # updated so threshold is double (+ or -) the pre-stim
         # norm (lies between )
-        normd_masked = np.ma.masked_inside(normd, -threshold, 1+threshold)
+        normd_masked = np.ma.masked_inside(normd, -threshold, 1 + threshold)
         # find the contiguous runs in the masked array
         # that are at least as long as the min_contiguous value
         # and classify this as a True response
@@ -879,8 +900,11 @@ class SpikeCalcsGeneric(object):
                     return True
                 else:
                     if return_magnitude:
-                        sl = [slc for slc in slices if
-                              (slc.stop-slc.start) == max_runlength]
+                        sl = [
+                            slc
+                            for slc in slices
+                            if (slc.stop - slc.start) == max_runlength
+                        ]
                         mag = [-1 if np.mean(normd[sl[0]]) < 0 else 1][0]
                         return True, normd, mag
                     else:
@@ -920,7 +944,7 @@ class SpikeCalcsGeneric(object):
             sqd_amp == np.max(sqd_amp[np.logical_and(freqs > 6, freqs < 11)])
         )[0][0]
         # Get the mean theta band power - mtbp
-        mtbp = np.mean(sqd_amp[theta_band_max_idx-1: theta_band_max_idx+1])
+        mtbp = np.mean(sqd_amp[theta_band_max_idx - 1 : theta_band_max_idx + 1])
         # Find the mean amplitude in the 2-50Hz range
         other_band_idx = np.logical_and(freqs > 2, freqs < 50)
         # Get the mean in the other band - mobp
@@ -943,37 +967,38 @@ class SpikeCalcsGeneric(object):
         # normalise corr so max is 1.0
         corr = corr / float(np.max(corr))
         thetaAntiPhase = np.min(
-            corr[np.logical_and(bins > 50/1000., bins < 70/1000.)])
+            corr[np.logical_and(bins > 50 / 1000.0, bins < 70 / 1000.0)]
+        )
         thetaPhase = np.max(
-            corr[np.logical_and(bins > 100/1000., bins < 140/1000.)])
+            corr[np.logical_and(bins > 100 / 1000.0, bins < 140 / 1000.0)]
+        )
         return (thetaPhase - thetaAntiPhase) / (thetaPhase + thetaAntiPhase)
 
     def theta_band_max_freq(self):
         """
-    Calculates the frequency with the maximum power in the theta band (6-12Hz)
-    of a spike train's autocorrelogram.
+        Calculates the frequency with the maximum power in the theta band (6-12Hz)
+        of a spike train's autocorrelogram.
 
-    This function is used to look for differences in theta frequency in
-    different running directions as per Blair.
-    See Welday paper - https://doi.org/10.1523/jneurosci.0712-11.2011
+        This function is used to look for differences in theta frequency in
+        different running directions as per Blair.
+        See Welday paper - https://doi.org/10.1523/jneurosci.0712-11.2011
 
-    Args:
-        x1 (np.ndarray): The spike train for which the autocorrelogram will be
-            calculated.
+        Args:
+            x1 (np.ndarray): The spike train for which the autocorrelogram will be
+                calculated.
 
-    Returns:
-        float: The frequency with the maximum power in the theta band.
+        Returns:
+            float: The frequency with the maximum power in the theta band.
 
-    Raises:
-        ValueError: If the input spike train is not valid.
-    """
+        Raises:
+            ValueError: If the input spike train is not valid.
+        """
         corr, _ = self.acorr()
         # Take the fft of the spike train autocorr (from -500 to +500ms)
         from scipy.signal import periodogram
 
         freqs, power = periodogram(corr, fs=200, return_onesided=True)
-        power_masked = np.ma.MaskedArray(power,
-                                         np.logical_or(freqs < 6, freqs > 12))
+        power_masked = np.ma.MaskedArray(power, np.logical_or(freqs < 6, freqs > 12))
         return freqs[np.argmax(power_masked)]
 
     def smooth_spike_train(self, npos, sigma=3.0, shuffle=None):
@@ -1002,11 +1027,10 @@ class SpikeCalcsGeneric(object):
         h = h / float(np.sum(h))
         return signal.filtfilt(h.ravel(), 1, spk_hist)
 
-    def contamination_percent(self,
-                              **kwargs) -> tuple:
+    def contamination_percent(self, **kwargs) -> tuple:
 
         c, Qi, Q00, Q01, Ri = contamination_percent(self.spike_times, **kwargs)
-        Q = min(Qi/(max(Q00, Q01)))  # this is a measure of refractoriness
+        Q = min(Qi / (max(Q00, Q01)))  # this is a measure of refractoriness
         # this is a second measure of refractoriness (kicks in for very low
         # firing rates)
         R = min(Ri)
@@ -1082,12 +1106,7 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         p2t = np.abs(mn_tP[best_chan] - mn_tT[best_chan])
         return p2t * 1000
 
-    def plotClusterSpace(self,
-                         waveforms,
-                         param="Amp",
-                         clusts=None,
-                         bins=256,
-                         **kwargs):
+    def plotClusterSpace(self, waveforms, param="Amp", clusts=None, bins=256, **kwargs):
         """
         Assumes the waveform data is signed 8-bit ints
         TODO: aspect of plot boxes in ImageGrid not right as scaled by range of
@@ -1115,8 +1134,7 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
             fig = kwargs["fig"]
         else:
             fig = plt.figure(figsize=(8, 6))
-        grid = ImageGrid(fig, 111, nrows_ncols=(2, 3),
-                         axes_pad=0.1, aspect=False)
+        grid = ImageGrid(fig, 111, nrows_ncols=(2, 3), axes_pad=0.1, aspect=False)
         clustCMap0 = np.tile(tcols[0], (bins, 1))
         clustCMap0[0] = (1, 1, 1)
         clustCMap0 = colors.ListedColormap(clustCMap0)
@@ -1124,16 +1142,20 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         clustCMap0._lut[:, -1] = alpha_vals
         for i, c in enumerate(cmb):
             h, ye, xe = np.histogram2d(
-                amps[:, c[0]], amps[:, c[1]],
-                range=((-128, 127), (-128, 127)), bins=bins
+                amps[:, c[0]],
+                amps[:, c[1]],
+                range=((-128, 127), (-128, 127)),
+                bins=bins,
             )
             x, y = np.meshgrid(xe[0:-1], ye[0:-1])
             grid[i].pcolormesh(
                 x, y, h, cmap=clustCMap0, shading="nearest", edgecolors="face"
             )
             h, ye, xe = np.histogram2d(
-                amps[:, c[0]], amps[:, c[1]],
-                range=((-128, 127), (-128, 127)), bins=bins
+                amps[:, c[0]],
+                amps[:, c[1]],
+                range=((-128, 127), (-128, 127)),
+                bins=bins,
             )
             clustCMap = np.tile(tcols[1], (bins, 1))
             clustCMap[0] = (1, 1, 1)
@@ -1174,7 +1196,7 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
         n_waveforms: int = 2000,
         n_channels: int = 64,
         channel_range=None,
-        **kwargs
+        **kwargs,
     ) -> np.ndarray:
         """
         Returns waveforms for a cluster.
@@ -1194,8 +1216,7 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
             self.TemplateModel = TemplateModel(
                 dir_path=os.path.join(cluster_data.fname_root),
                 sample_rate=3e4,
-                dat_path=os.path.join(cluster_data.fname_root,
-                                      "continuous.dat"),
+                dat_path=os.path.join(cluster_data.fname_root, "continuous.dat"),
                 n_channels_dat=n_channels,
             )
         # get the waveforms for the given cluster on the best channel only
@@ -1226,24 +1247,20 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
         templates = np.load(os.path.join(pname, "templates.npy"))
         # Load channel_map and positions
         channel_map = np.load(os.path.join(pname, "channel_map.npy"))
-        channel_positions = np.load(os.path.join(pname,
-                                                 "channel_positions.npy"))
-        map_and_pos = np.array([np.squeeze(channel_map),
-                                channel_positions[:, 1]])
+        channel_positions = np.load(os.path.join(pname, "channel_positions.npy"))
+        map_and_pos = np.array([np.squeeze(channel_map), channel_positions[:, 1]])
         # unwhiten all the templates
         tempsUnW = np.zeros(np.shape(templates))
         for i in np.shape(templates)[0]:
             tempsUnW[i, :, :] = np.squeeze(templates[i, :, :]) @ Winv
 
-        tempAmp = np.squeeze(np.max(tempsUnW, 1)) - \
-            np.squeeze(np.min(tempsUnW, 1))
+        tempAmp = np.squeeze(np.max(tempsUnW, 1)) - np.squeeze(np.min(tempsUnW, 1))
         tempAmpsUnscaled = np.max(tempAmp, 1)
         # need to zero-out the potentially-many low values on distant channels
         threshVals = tempAmpsUnscaled * 0.3
         tempAmp[tempAmp < threshVals[:, None]] = 0
         # Compute the depth as a centre of mass
-        templateDepths = np.sum(tempAmp * map_and_pos[1, :], -1) / \
-            np.sum(tempAmp, 1)
+        templateDepths = np.sum(tempAmp * map_and_pos[1, :], -1) / np.sum(tempAmp, 1)
         maxChanIdx = np.argmin(
             np.abs((templateDepths[:, None] - map_and_pos[1, :].T)), 1
         )
@@ -1262,8 +1279,7 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
         st3 = rez_mat["rez"]["st3"]
         st_spike_times = st3[0, :]
         idx = np.searchsorted(st_spike_times, cluster_times)
-        template_idx, counts = np.unique(spike_templates[idx],
-                                         return_counts=True)
+        template_idx, counts = np.unique(spike_templates[idx], return_counts=True)
         ind = np.argmax(counts)
         return template_idx[ind]
 

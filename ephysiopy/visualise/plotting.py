@@ -15,6 +15,7 @@ from ephysiopy.axona import tintcolours as tcols
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.utils import blur_image, clean_kwargs
+from ephysiopy.common import fieldcalcs as fc
 
 # Decorators
 
@@ -97,7 +98,7 @@ class FigureMaker(object):
         """
         rmap = self.get_rate_map(cluster, channel, **kwargs)
         ratemap = np.ma.MaskedArray(rmap[0], np.isnan(rmap[0]), copy=True)
-        x, y = np.meshgrid(rmap[1][1][0:-1].data, rmap[1][0][0:-1].data)
+        x, y = np.meshgrid(rmap[1][1].data, rmap[1][0].data)
         vmax = np.nanmax(np.ravel(ratemap))
         ax = kwargs.pop("ax", None)
         if ax is None:
@@ -220,17 +221,16 @@ class FigureMaker(object):
         """
         return_ratemap = kwargs.pop("return_ratemap", False)
         rmap = self.get_eb_map(cluster, channel, **kwargs)
-        # rmap = blur_image(rmap[0], 5, ftype="gaussian", boundary="wrap")
         ax = kwargs.pop("ax", None)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(projection="polar")
-        theta = np.arange(0, 2 * np.pi, 2 * np.pi / rmap.shape[1])
-        phi = np.arange(0, rmap.shape[0] * 2.5, 2.5)
+        theta = rmap[1][0]
+        phi = rmap[1][1]
         X, Y = np.meshgrid(theta, phi)
         # sanitise kwargs before passing on to pcolormesh
         kwargs = clean_kwargs(plt.pcolormesh, kwargs)
-        ax.pcolormesh(X, Y, rmap, **kwargs)
+        ax.pcolormesh(X.T, Y.T, rmap[0], edgecolors="face", shading="auto", **kwargs)
         ax.set_xticks(np.arange(0, 2 * np.pi, np.pi / 4))
         # ax.set_xticklabels(np.arange(0, 2*np.pi, np.pi/4))
         ax.set_yticks(np.arange(0, 50, 10))
@@ -324,15 +324,57 @@ class FigureMaker(object):
             **kwargs: Additional keyword arguments for the function.
         """
         sac = self.get_grid_map(cluster, channel)
-        from ephysiopy.common.gridcell import SAC
-
-        S = SAC()
-        measures = S.getMeasures(sac)
+        measures = fc.grid_field_props(sac)
         ax = kwargs.pop("ax", None)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-        ax = self.show_SAC(sac, measures, ax)
+        Am = sac.copy()
+        Am[~inDict["dist_to_centre"]] = np.nan
+        Am = np.ma.masked_invalid(np.atleast_2d(Am))
+        x, y = np.meshgrid(
+            np.arange(0, np.shape(sac)[1]), np.arange(0, np.shape(sac)[0])
+        )
+        vmax = np.nanmax(np.ravel(sac))
+        ax.pcolormesh(
+            x, y, sac, cmap=grey_cmap, edgecolors="face", vmax=vmax, shading="auto"
+        )
+        import copy
+
+        cmap = copy.copy(jet_cmap)
+        cmap.set_bad("w", 0)
+        ax.pcolormesh(x, y, Am, cmap=cmap, edgecolors="face", vmax=vmax, shading="auto")
+        # horizontal green line at 3 o'clock
+        _y = (np.shape(sac)[0] / 2, np.shape(sac)[0] / 2)
+        _x = (np.shape(sac)[1] / 2, np.shape(sac)[0])
+        ax.plot(_x, _y, c="g")
+        mag = inDict["scale"] * 0.5
+        th = np.linspace(0, inDict["orientation"], 50)
+        from ephysiopy.common.utils import rect
+
+        [x, y] = rect(mag, th, deg=1)
+        # angle subtended by orientation
+        ax.plot(
+            x + (inDict["dist_to_centre"].shape[1] / 2),
+            (inDict["dist_to_centre"].shape[0] / 2) - y,
+            "r",
+            **kwargs
+        )
+        # plot lines from centre to peaks above middle
+        for p in inDict["closest_peak_coords"]:
+            if p[0] <= inDict["dist_to_centre"].shape[0] / 2:
+                ax.plot(
+                    (inDict["dist_to_centre"].shape[1] / 2, p[1]),
+                    (inDict["dist_to_centre"].shape[0] / 2, p[0]),
+                    "k",
+                    **kwargs
+                )
+        ax.invert_yaxis()
+        all_ax = ax.axes
+        all_ax.set_aspect("equal")
+        all_ax.set_xlim((0.5, inDict["dist_to_centre"].shape[1] - 1.5))
+        all_ax.set_ylim((inDict["dist_to_centre"].shape[0] - 0.5, -0.5))
+
         return ax
 
     def plot_speed_v_rate(self, cluster: int, channel: int, **kwargs):
@@ -726,79 +768,6 @@ class FigureMaker(object):
         if strip_axes:
             return stripAxes(axScatter)
         return axScatter
-
-    @stripAxes
-    def show_SAC(
-        self, A: np.array, inDict: dict, ax: matplotlib.axes = None, **kwargs
-    ) -> matplotlib.axes:
-        """
-        Displays the result of performing a spatial autocorrelation (SAC)
-        on a grid cell.
-
-        Uses the dictionary containing measures of the grid cell SAC to
-        make a pretty picture
-
-        Args:
-            A (np.array): The spatial autocorrelogram.
-            inDict (dict): The dictionary calculated in getmeasures.
-            ax (matplotlib.axes, optional): If given the plot will get drawn
-                in these axes. Default None.
-            **kwargs: Additional keyword arguments for the function.
-
-        Returns:
-            matplotlib.axes: The axes with the plot.
-
-        See Also:
-            ephysiopy.common.binning.RateMap.autoCorr2D()
-            ephysiopy.common.ephys_generic.FieldCalcs.getMeaures()
-        """
-        if ax is None:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-        Am = A.copy()
-        Am[~inDict["dist_to_centre"]] = np.nan
-        Am = np.ma.masked_invalid(np.atleast_2d(Am))
-        x, y = np.meshgrid(np.arange(0, np.shape(A)[1]), np.arange(0, np.shape(A)[0]))
-        vmax = np.nanmax(np.ravel(A))
-        ax.pcolormesh(
-            x, y, A, cmap=grey_cmap, edgecolors="face", vmax=vmax, shading="auto"
-        )
-        import copy
-
-        cmap = copy.copy(jet_cmap)
-        cmap.set_bad("w", 0)
-        ax.pcolormesh(x, y, Am, cmap=cmap, edgecolors="face", vmax=vmax, shading="auto")
-        # horizontal green line at 3 o'clock
-        _y = (np.shape(A)[0] / 2, np.shape(A)[0] / 2)
-        _x = (np.shape(A)[1] / 2, np.shape(A)[0])
-        ax.plot(_x, _y, c="g")
-        mag = inDict["scale"] * 0.5
-        th = np.linspace(0, inDict["orientation"], 50)
-        from ephysiopy.common.utils import rect
-
-        [x, y] = rect(mag, th, deg=1)
-        # angle subtended by orientation
-        ax.plot(
-            x + (inDict["dist_to_centre"].shape[1] / 2),
-            (inDict["dist_to_centre"].shape[0] / 2) - y,
-            "r",
-            **kwargs
-        )
-        # plot lines from centre to peaks above middle
-        for p in inDict["closest_peak_coords"]:
-            if p[0] <= inDict["dist_to_centre"].shape[0] / 2:
-                ax.plot(
-                    (inDict["dist_to_centre"].shape[1] / 2, p[1]),
-                    (inDict["dist_to_centre"].shape[0] / 2, p[0]),
-                    "k",
-                    **kwargs
-                )
-        ax.invert_yaxis()
-        all_ax = ax.axes
-        all_ax.set_aspect("equal")
-        all_ax.set_xlim((0.5, inDict["dist_to_centre"].shape[1] - 1.5))
-        all_ax.set_ylim((inDict["dist_to_centre"].shape[0] - 0.5, -0.5))
-        return ax
 
     def plotSpectrogramByDepth(
         self,

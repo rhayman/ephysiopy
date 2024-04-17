@@ -92,12 +92,6 @@ def test_get_adaptive_map(standard_Ratemap):
     assert isinstance(smthdRate, np.ndarray)
 
 
-def test_auto_corr_2D(basic_ratemap, standard_Ratemap):
-    nodwell = ~np.isfinite(basic_ratemap)
-    SAC = standard_Ratemap.autoCorr2D(basic_ratemap, nodwell)
-    assert isinstance(SAC, np.ndarray)
-
-
 def test_cross_corr_2D(basic_ratemap, standard_Ratemap):
     A = basic_ratemap
     B = np.rot90(np.rot90(A))

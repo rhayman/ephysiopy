@@ -309,27 +309,6 @@ class RateMap(object):
         self._calc_bin_dims()
         return self.binedges
 
-    def getSpatialSparsity(self, spkWeights, sample_rate=50, **kwargs):
-        """
-        Gets the spatial sparsity measure - closer to 1 means
-        sparser firing field.
-
-        References:
-            Skaggs, W.E., McNaughton, B.L., Wilson, M.A. & Barnes, C.A.
-            Theta phase precession in hippocampal neuronal populations
-            and the compression of temporal sequences.
-            Hippocampus 6, 149–172 (1996).
-        """
-        self.var2Bin = VariableToBin.XY
-        self._calc_bin_edges()
-        sample = self.xy
-        keep_these = np.isfinite(sample[0])
-        pos, _ = self._bin_data(sample, self._binedges, self.pos_weights, keep_these)
-        npos = self.PosCalcs.npos
-        spk, _ = self._bin_data(sample, self._binedges, spkWeights, keep_these)
-        res = fieldcalcs.spatial_sparsity(pos, spk, npos, sample_rate)
-        return res
-
     def get_map(
         self,
         spk_weights,
@@ -399,7 +378,6 @@ class RateMap(object):
         assert sample is not None
 
         self.var2Bin = var_type
-        # self._spike_weights = spk_weights
         binsize = kwargs.pop("binsize", self.binsize)
         hist_range = kwargs.pop("range", None)
         if (
@@ -433,6 +411,13 @@ class RateMap(object):
             return binned_spk
         if map_type.value == MapType.ADAPTIVE.value:
             alpha = kwargs.pop("alpha", 4)
+            if binned_spk.ndim == 3:
+                smthd_rate = []
+                for i in range(binned_spk.shape[0]):
+                    smthd_rate.append(
+                        self.getAdaptiveMap(binned_pos, binned_spk[i, ...], alpha)[0]
+                    )
+                return np.array(smthd_rate)
             smthd_rate, smthd_spk, smthd_pos = self.getAdaptiveMap(
                 binned_pos, binned_spk, alpha
             )
@@ -470,14 +455,6 @@ class RateMap(object):
             rmap[..., nanIdx] = np.nan
 
         return rmap, binned_pos_edges
-
-    def getSAC(self, spkWeights, **kwargs):
-        """
-        Returns the SAC - convenience function
-        """
-        rmap = self.get_map(spkWeights=spkWeights, **kwargs)
-        nodwell = ~np.isfinite(rmap[0])
-        return self.autoCorr2D(rmap[0], nodwell)
 
     def _bin_data(self, var, bin_edges, weights, range=None):
         """
