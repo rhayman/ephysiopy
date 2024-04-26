@@ -301,7 +301,7 @@ class RateMap(object):
                     np.arange(0, 2 * np.pi, 2 * np.pi / 120),
                     np.arange(0, 50, 2.5),
                 )
-            elif (binsize, tuple):
+            elif isinstance(binsize, tuple):
                 self.binedges = (
                     np.arange(0, 2 * np.pi, binsize[1]),
                     np.arange(0, 50, binsize[0]),

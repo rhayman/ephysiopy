@@ -330,7 +330,7 @@ class FigureMaker(object):
             fig = plt.figure()
             ax = fig.add_subplot(111)
         Am = sac.copy()
-        Am[~inDict["dist_to_centre"]] = np.nan
+        Am[~measures["dist_to_centre"]] = np.nan
         Am = np.ma.masked_invalid(np.atleast_2d(Am))
         x, y = np.meshgrid(
             np.arange(0, np.shape(sac)[1]), np.arange(0, np.shape(sac)[0])
@@ -348,32 +348,32 @@ class FigureMaker(object):
         _y = (np.shape(sac)[0] / 2, np.shape(sac)[0] / 2)
         _x = (np.shape(sac)[1] / 2, np.shape(sac)[0])
         ax.plot(_x, _y, c="g")
-        mag = inDict["scale"] * 0.5
-        th = np.linspace(0, inDict["orientation"], 50)
+        mag = measures["scale"] * 0.5
+        th = np.linspace(0, measures["orientation"], 50)
         from ephysiopy.common.utils import rect
 
         [x, y] = rect(mag, th, deg=1)
         # angle subtended by orientation
         ax.plot(
-            x + (inDict["dist_to_centre"].shape[1] / 2),
-            (inDict["dist_to_centre"].shape[0] / 2) - y,
+            x + (measures["dist_to_centre"].shape[1] / 2),
+            (measures["dist_to_centre"].shape[0] / 2) - y,
             "r",
             **kwargs
         )
         # plot lines from centre to peaks above middle
-        for p in inDict["closest_peak_coords"]:
-            if p[0] <= inDict["dist_to_centre"].shape[0] / 2:
+        for p in measures["closest_peak_coords"]:
+            if p[0] <= measures["dist_to_centre"].shape[0] / 2:
                 ax.plot(
-                    (inDict["dist_to_centre"].shape[1] / 2, p[1]),
-                    (inDict["dist_to_centre"].shape[0] / 2, p[0]),
+                    (measures["dist_to_centre"].shape[1] / 2, p[1]),
+                    (measures["dist_to_centre"].shape[0] / 2, p[0]),
                     "k",
                     **kwargs
                 )
         ax.invert_yaxis()
         all_ax = ax.axes
         all_ax.set_aspect("equal")
-        all_ax.set_xlim((0.5, inDict["dist_to_centre"].shape[1] - 1.5))
-        all_ax.set_ylim((inDict["dist_to_centre"].shape[0] - 0.5, -0.5))
+        all_ax.set_xlim((0.5, measures["dist_to_centre"].shape[1] - 1.5))
+        all_ax.set_ylim((measures["dist_to_centre"].shape[0] - 0.5, -0.5))
 
         return ax
 
