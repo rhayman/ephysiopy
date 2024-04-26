@@ -218,7 +218,7 @@ class EEGCalcsGeneric(object):
         binsperhz = (ffthalflen - 1) / nqlim
         kernelsigma = self.smthKernelSigma * binsperhz
         smthkernelsigma = 2 * int(4.0 * kernelsigma + 0.5) + 1
-        gausswin = signal.gaussian(smthkernelsigma, kernelsigma)
+        gausswin = signal.windows.gaussian(smthkernelsigma, kernelsigma)
         sm_power = signal.fftconvolve(power, gausswin, "same")
         sm_power = sm_power / np.sqrt(len(sm_power))
         spectrummaskband = np.logical_and(

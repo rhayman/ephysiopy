@@ -102,13 +102,12 @@ def getPhaseOfMinSpiking(spkPhase):
     kernelLen = 180
     kernelSig = kernelLen / 4
 
-    k = signal.gaussian(kernelLen, kernelSig)
+    k = signal.windows.gaussian(kernelLen, kernelSig)
     bins = np.arange(-179.5, 180, 1)
     phaseDist, _ = np.histogram(spkPhase / np.pi * 180, bins=bins)
     phaseDist = ndimage.convolve(phaseDist, k)
     phaseMin = bins[
-        int(np.ceil(np.nanmean(np.nonzero(
-            phaseDist == np.min(phaseDist))[0])))
+        int(np.ceil(np.nanmean(np.nonzero(phaseDist == np.min(phaseDist))[0])))
     ]
     return phaseMin
 
@@ -135,11 +134,7 @@ def ccc(t, p):
     F = np.sum(np.sin(2 * t))
     G = np.sum(np.cos(2 * p))
     H = np.sum(np.sin(2 * p))
-    rho = (
-        4
-        * (A * B - C * D)
-        / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
-    )
+    rho = 4 * (A * B - C * D) / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
     return rho
 
 
@@ -164,20 +159,11 @@ def ccc_jack(t, p):
     G = np.sum(G) - G
     H = np.sin(2 * p)
     H = np.sum(H) - H
-    rho = (
-        4
-        * (A * B - C * D)
-        / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
-    )
+    rho = 4 * (A * B - C * D) / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
     return rho
 
 
-def circCircCorrTLinear(theta,
-                        phi,
-                        k=1000,
-                        alpha=0.05,
-                        hyp=0,
-                        conf=True):
+def circCircCorrTLinear(theta, phi, k=1000, alpha=0.05, hyp=0, conf=True):
     """
     An almost direct copy from AJs Matlab fcn to perform correlation
     between 2 circular random variables.
@@ -229,12 +215,8 @@ def circCircCorrTLinear(theta,
         rho_boot = np.mean(rho_jack)
         rho_jack_std = np.std(rho_jack)
         ci = (
-            rho_boot
-            - (1 / np.sqrt(n)) * rho_jack_std *
-            norm.ppf(alpha / 2, (0, 1))[0],
-            rho_boot
-            + (1 / np.sqrt(n)) * rho_jack_std *
-            norm.ppf(alpha / 2, (0, 1))[0],
+            rho_boot - (1 / np.sqrt(n)) * rho_jack_std * norm.ppf(alpha / 2, (0, 1))[0],
+            rho_boot + (1 / np.sqrt(n)) * rho_jack_std * norm.ppf(alpha / 2, (0, 1))[0],
         )
     elif conf and k and n < 25 and n > 4:
         from sklearn.utils import resample
@@ -280,11 +262,7 @@ def shuffledPVal(theta, phi, rho, k, hyp):
     G = np.sum(np.cos(2 * phi))
     H = np.sum(np.sin(2 * phi))
 
-    rho_sim = (
-        4
-        * (A * B - C * D)
-        / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
-    )
+    rho_sim = 4 * (A * B - C * D) / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
 
     if hyp == 1:
         p_shuff = np.sum(rho_sim >= rho) / float(k)
@@ -326,8 +304,7 @@ def circRegress(x, t):
     def _cost(m, x, t):
         return -np.abs(np.sum(np.exp(1j * (t - m * x)))) / len(t - m * x)
 
-    slope = optimize.fminbound(
-        _cost, -1 * max_slope, max_slope, args=(xn, tn))
+    slope = optimize.fminbound(_cost, -1 * max_slope, max_slope, args=(xn, tn))
     intercept = np.arctan2(
         np.sum(np.sin(tn - slope * xn)), np.sum(np.cos(tn - slope * xn))
     )
@@ -420,7 +397,7 @@ class phasePrecession2D(object):
         spike_ts: np.array,
         pos_ts: np.array,
         pp_config: dict = phase_precession_config,
-        regressors=None
+        regressors=None,
     ):
         # Set up the parameters
         # this sets a bunch of member attributes from the pp_config dict
@@ -446,8 +423,7 @@ class phasePrecession2D(object):
         self.update_rate_map()
 
         spk_times_in_pos_samples = self.getSpikePosIndices(spike_ts)
-        spk_weights = np.bincount(
-            spk_times_in_pos_samples, minlength=len(self.pos_ts))
+        spk_weights = np.bincount(spk_times_in_pos_samples, minlength=len(self.pos_ts))
         self.spike_times_in_pos_samples = spk_times_in_pos_samples
         self.spk_weights = spk_weights
 
@@ -470,7 +446,7 @@ class phasePrecession2D(object):
         self.PosData.xy = value
 
     def update_regressors(self, reg_keys: list = None):
-        '''
+        """
         Create a dict to hold the stats values for
         each regressor
         Default regressors are:
@@ -482,7 +458,7 @@ class phasePrecession2D(object):
             "pos_d_meanDir",
             "pos_d_currentdir",
             "spk_thetaBatchLabelInRun"
-        '''
+        """
         if reg_keys is None:
             reg_keys = all_regressors
         else:
@@ -503,8 +479,7 @@ class phasePrecession2D(object):
             "reg": None,
         }
         self.regressors = {}
-        self.regressors = defaultdict(
-            lambda: stats_dict.copy(), self.regressors)
+        self.regressors = defaultdict(lambda: stats_dict.copy(), self.regressors)
         [self.regressors[k] for k in reg_keys]
         # each of the regressors in regressor_keys is a key with a value
         # of stats_dict
@@ -625,8 +600,7 @@ class phasePrecession2D(object):
         # get some markers
         from ephysiopy.common import fieldcalcs
 
-        markers = fieldcalcs.local_threshold(
-            rmap, prc=self.field_threshold_percent)
+        markers = fieldcalcs.local_threshold(rmap, prc=self.field_threshold_percent)
         # clear the edges / any invalid positions again
         markers[nan_idx] = 0
         # label these markers so each blob has a unique id
@@ -640,8 +614,7 @@ class phasePrecession2D(object):
         fieldId = fieldId[1::]
         # TODO: come back to this as may need to know field id ordering
         peakCoords = np.array(
-            ndimage.maximum_position(
-                rmap, labels=labels, index=fieldId)
+            ndimage.maximum_position(rmap, labels=labels, index=fieldId)
         ).astype(int)
         # COMCoords = np.array(
         #     ndimage.center_of_mass(
@@ -680,8 +653,9 @@ class phasePrecession2D(object):
         if plot:
             fig = plt.figure()
             ax = fig.add_subplot(211)
-            ax.pcolormesh(ye, xe, rmap, cmap=matplotlib.cm.get_cmap("jet"),
-                          edgecolors="face")
+            ax.pcolormesh(
+                ye, xe, rmap, cmap=matplotlib.cm.get_cmap("jet"), edgecolors="face"
+            )
             ax.set_title("Smoothed ratemap + peaks")
             ax.xaxis.set_visible(False)
             ax.yaxis.set_visible(False)
@@ -701,13 +675,7 @@ class phasePrecession2D(object):
 
         return peaksXY, peaksRate, labels, rmap
 
-    def getPosProps(
-            self,
-            labels,
-            peaksXY,
-            laserEvents=None,
-            plot=False,
-            **kwargs):
+    def getPosProps(self, labels, peaksXY, laserEvents=None, plot=False, **kwargs):
         """
         Uses the output of partitionFields and returns vectors the same
         length as pos.
@@ -735,9 +703,7 @@ class phasePrecession2D(object):
         xydir = np.squeeze(xydir)
         xydir_old = xydir.copy()
 
-        rmap, (ye, xe) = self.RateMap.get_map(
-            self.spk_weights
-        )
+        rmap, (ye, xe) = self.RateMap.get_map(self.spk_weights)
         rmap = rmap.T
 
         # The large number of bins combined with the super-smoothed ratemap
@@ -760,9 +726,7 @@ class phasePrecession2D(object):
         fieldPerimY = xe[fieldPerimYBins]
         fieldPerimXY = np.vstack((fieldPerimX, fieldPerimY))
         peaksXYBins = np.array(
-            ndimage.maximum_position(
-                rmap, labels=labels, index=np.unique(labels)[1::]
-            )
+            ndimage.maximum_position(rmap, labels=labels, index=np.unique(labels)[1::])
         ).astype(int)
         peakY = xe[peaksXYBins[:, 0]]
         peakX = ye[peaksXYBins[:, 1]]
@@ -781,16 +745,14 @@ class phasePrecession2D(object):
                 # calculate angle from the field peak for each point on the
                 # perim and each pos sample that lies within the field
                 thisPerimAngle = np.arctan2(
-                    thisFieldPerim[1, :] -
-                    peak[1], thisFieldPerim[0, :] - peak[0]
+                    thisFieldPerim[1, :] - peak[1], thisFieldPerim[0, :] - peak[0]
                 )
                 thisPosAngle = np.arctan2(
                     this_xy[1, :] - peak[1], this_xy[0, :] - peak[0]
                 )
                 posAngleFromPeak[fieldLabel == i] = thisPosAngle
 
-                perimAngleFromPeak[fieldPerimMask
-                                   == i] = thisPerimAngle
+                perimAngleFromPeak[fieldPerimMask == i] = thisPerimAngle
                 # for each pos sample calculate which point on the perim is
                 # most colinear with the field centre - see _circ_abs for more
                 thisAngleDf = circ_abs(
@@ -803,8 +765,7 @@ class phasePrecession2D(object):
                 distFromPos2Peak = np.hypot(tmp[:, 0], tmp[:, 1])
                 tmp = thisFieldPerim[:, thisPerimInd].T - peak.T
                 distFromPerim2Peak = np.hypot(tmp[:, 0], tmp[:, 1])
-                posRUnsmthd[fieldLabel == i] = distFromPos2Peak / \
-                    distFromPerim2Peak
+                posRUnsmthd[fieldLabel == i] = distFromPos2Peak / distFromPerim2Peak
         # the skimage find_boundaries method combined with the labelled mask
         # strive to make some of the values in thisDistFromPos2Peak larger than
         # those in thisDistFromPerim2Peak which means that some of the vals in
@@ -868,8 +829,7 @@ class phasePrecession2D(object):
         # caculate angular distance between the runs main direction and the
         # pos's direction to the peak centre
         posPhiUnSmthd = np.ones_like(fieldLabel) * np.nan
-        posPhiUnSmthd[isRun] = posAngleFromPeak[isRun] - \
-            meanDir[runLabel[isRun] - 1]
+        posPhiUnSmthd[isRun] = posAngleFromPeak[isRun] - meanDir[runLabel[isRun] - 1]
 
         # smooth r and phi in cartesian space
         # convert to cartesian coords first
@@ -878,22 +838,18 @@ class phasePrecession2D(object):
 
         # filter each run with filter of appropriate length
         filtLen = np.squeeze(
-            np.floor((runEndIdx - runStartIdx + 1)
-                     * self.ifr_smoothing_constant)
+            np.floor((runEndIdx - runStartIdx + 1) * self.ifr_smoothing_constant)
         )
         xy_new = np.zeros_like(xy_old) * np.nan
         for i in range(len(runStartIdx)):
             if filtLen[i] > 2:
                 filt = signal.firwin(
                     int(filtLen[i] - 1),
-                    cutoff=self.spatial_lowpass_cutoff /
-                    self.pos_sample_rate * 2,
+                    cutoff=self.spatial_lowpass_cutoff / self.pos_sample_rate * 2,
                     window="blackman",
                 )
-                xy_new[:, runStartIdx[i]: runEndIdx[i]] = signal.filtfilt(
-                    filt, [1], posXYUnSmthd[:,
-                                            runStartIdx[i]: runEndIdx[i]],
-                    axis=1
+                xy_new[:, runStartIdx[i] : runEndIdx[i]] = signal.filtfilt(
+                    filt, [1], posXYUnSmthd[:, runStartIdx[i] : runEndIdx[i]], axis=1
                 )
 
         r, phi = cart2pol(xy_new[0], xy_new[1])
@@ -918,8 +874,7 @@ class phasePrecession2D(object):
         # calculate cumulative sum of the expected normalised firing rate
         if "pos_exptdRate_cum" in self.regressors.keys():
             exptdRate_cumulative = labelledCumSum(1 - r, runLabel)
-            self.update_regressor_values(
-                "pos_exptdRate_cum", exptdRate_cumulative)
+            self.update_regressor_values("pos_exptdRate_cum", exptdRate_cumulative)
 
         # direction projected onto the run mean direction is just the x coord
         if "pos_d_meanDir" in self.regressors.keys():
@@ -929,10 +884,9 @@ class phasePrecession2D(object):
         # smooth binned spikes to get an instantaneous firing rate
         # set up the smoothing kernel
         if "pos_instFR" in self.regressors.keys():
-            kernLenInBins = np.round(
-                self.ifr_kernel_len * self.bins_per_second)
+            kernLenInBins = np.round(self.ifr_kernel_len * self.bins_per_second)
             kernSig = self.ifr_kernel_sigma * self.bins_per_second
-            k = signal.gaussian(kernLenInBins, kernSig)
+            k = signal.windows.gaussian(kernLenInBins, kernSig)
             # get a count of spikes to smooth over
             spkCount = np.bincount(spkPosInd, minlength=nPos)
             # apply the smoothing kernel
@@ -969,8 +923,7 @@ class phasePrecession2D(object):
             ax.set_title("Field perim and\n laser on events")
             ax.plot(xy[1, fieldLabel > 0], xy[0, fieldLabel > 0], "y.")
             if laserEvents is not None:
-                validOns = np.setdiff1d(
-                    laserEvents, np.nonzero(~np.isnan(r))[0])
+                validOns = np.setdiff1d(laserEvents, np.nonzero(~np.isnan(r))[0])
                 ax.plot(xy[0, validOns], xy[1, validOns], "rx")
             ax.set_aspect("equal")
 
@@ -995,11 +948,7 @@ class phasePrecession2D(object):
             runVals = runVals
             ax = fig.add_subplot(223)
             imm = ax.imshow(
-                runVals,
-                cmap=cmap,
-                norm=norm,
-                origin="lower",
-                interpolation="nearest"
+                runVals, cmap=cmap, norm=norm, origin="lower", interpolation="nearest"
             )
             plt.colorbar(imm, orientation="horizontal")
             ax.set_aspect("equal")
@@ -1014,11 +963,7 @@ class phasePrecession2D(object):
             norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N)
 
             imm = ax.imshow(
-                imM,
-                cmap=cmap,
-                norm=norm,
-                origin="lower",
-                interpolation="nearest"
+                imM, cmap=cmap, norm=norm, origin="lower", interpolation="nearest"
             )
             plt.colorbar(imm)
             ax.set_title("Runs by distance and angle")
@@ -1083,8 +1028,7 @@ class phasePrecession2D(object):
         spkPhase = phase[spkEEGIdx]
         minSpikingPhase = getPhaseOfMinSpiking(spkPhase)
         phaseAdj = fixAngle(
-            phase - minSpikingPhase *
-            (np.pi / 180) + self.allowed_min_spike_phase
+            phase - minSpikingPhase * (np.pi / 180) + self.allowed_min_spike_phase
         )
         isNegFreq = np.diff(np.unwrap(phaseAdj)) < 0
         isNegFreq = np.append(isNegFreq, isNegFreq[-1])
@@ -1141,8 +1085,7 @@ class phasePrecession2D(object):
         xy = self.RateMap.xy
         phase = self.phaseAdj
         cycleLabel = self.cycleLabel
-        spkEEGIdx = np.ceil(
-            spikeTS * self.lfp_sample_rate)
+        spkEEGIdx = np.ceil(spikeTS * self.lfp_sample_rate)
         spkEEGIdx[spkEEGIdx > len(phase)] = len(phase) - 1
         spkEEGIdx = spkEEGIdx.astype(int)
         spkPosIdx = np.ceil(spikeTS * self.pos_sample_rate)
@@ -1155,14 +1098,10 @@ class phasePrecession2D(object):
         firstInTheta = np.insert(firstInTheta, 0, True)
         lastInTheta = firstInTheta[1::]
         # calculate two kinds of numbering for spikes in a run
-        numWithinRun = labelledCumSum(
-            np.ones_like(spkPosIdx), spkRunLabel)
-        thetaBatchLabelInRun = labelledCumSum(
-            firstInTheta.astype(float), spkRunLabel
-        )
+        numWithinRun = labelledCumSum(np.ones_like(spkPosIdx), spkRunLabel)
+        thetaBatchLabelInRun = labelledCumSum(firstInTheta.astype(float), spkRunLabel)
 
-        spkCount = np.bincount(
-            spkRunLabel[spkRunLabel > 0], minlength=len(meanDir))
+        spkCount = np.bincount(spkRunLabel[spkRunLabel > 0], minlength=len(meanDir))
         rateInPosBins = spkCount[1::] / durationInPosBins.astype(float)
         # update the regressor dict from __init__ with relevant values
         if "spk_numWithinRun" in self.regressors.keys():
@@ -1200,16 +1139,14 @@ class phasePrecession2D(object):
             spkUsed[~spkDict["firstInTheta"]] = False
         elif "last" in whichSpk:
             if len(spkDict["lastInTheta"]) < len(spkDict["spkRunLabel"]):
-                spkDict["lastInTheta"] = np.insert(
-                    spkDict["lastInTheta"], -1, False)
+                spkDict["lastInTheta"] = np.insert(spkDict["lastInTheta"], -1, False)
             spkUsed[~spkDict["lastInTheta"]] = False
         spkPosIdxUsed = spkDict["spkPosIdx"].astype(int)
         # copy self.regressors and update with spk/ pos of interest
         regressors = self.regressors.copy()
         for k in regressors.keys():
             if k.startswith("spk_"):
-                self.update_regressor_values(
-                    k, regressors[k]["values"][spkUsed])
+                self.update_regressor_values(k, regressors[k]["values"][spkUsed])
             elif k.startswith("pos_"):
                 self.update_regressor_values(
                     k, regressors[k]["values"][spkPosIdxUsed[spkUsed]]
@@ -1227,8 +1164,7 @@ class phasePrecession2D(object):
                 np.exp(1j * phase[goodPhase]),
             )
             phase = np.angle(cycleComplexPhase)
-            spkCountPerCycle = np.bincount(
-                cycleLabels[goodPhase], minlength=sz)
+            spkCountPerCycle = np.bincount(cycleLabels[goodPhase], minlength=sz)
             for k in regressors.keys():
                 regressors[k]["values"] = (
                     np.bincount(
@@ -1243,12 +1179,9 @@ class phasePrecession2D(object):
         for k in regressors.keys():
             print(f"Doing regression: {k}")
             goodRegressor = ~np.isnan(regressors[k]["values"])
-            reg = regressors[k]["values"][np.logical_and(
-                goodRegressor, goodPhase)]
+            reg = regressors[k]["values"][np.logical_and(goodRegressor, goodPhase)]
             pha = phase[np.logical_and(goodRegressor, goodPhase)]
-            regressors[k]["slope"], regressors[k]["intercept"] = circRegress(
-                reg, pha
-            )
+            regressors[k]["slope"], regressors[k]["intercept"] = circRegress(reg, pha)
             regressors[k]["pha"] = pha
             mnx = np.mean(reg)
             reg = reg - mnx
@@ -1279,16 +1212,13 @@ class phasePrecession2D(object):
             ax = ax
         vals = self.regressors[regressor]["values"]
         pha = self.reg_phase
-        ax.plot(vals, pha, 'k.')
-        ax.plot(vals, pha + 2 * np.pi, 'k.')
+        ax.plot(vals, pha, "k.")
+        ax.plot(vals, pha + 2 * np.pi, "k.")
         slope = self.regressors[regressor]["slope"]
         intercept = self.regressors[regressor]["intercept"]
         mm = (0, -2 * np.pi, 2 * np.pi, 4 * np.pi)
         for m in mm:
-            ax.plot(
-                (-1, 1), (-slope + intercept + m, slope + intercept + m),
-                "r", lw=3
-            )
+            ax.plot((-1, 1), (-slope + intercept + m, slope + intercept + m), "r", lw=3)
         ax.set_xlim(-1, 1)
         ax.set_ylim(-np.pi, 3 * np.pi)
         ax.set_title(regressor)
@@ -1296,10 +1226,7 @@ class phasePrecession2D(object):
         ax.set_xlabel("Normalised position")
         return ax
 
-    def plotPPRegression(self,
-                         regressorDict,
-                         regressor2plot="pos_d_cum",
-                         ax=None):
+    def plotPPRegression(self, regressorDict, regressor2plot="pos_d_cum", ax=None):
 
         t = self.getLFPPhaseValsForSpikeTS()
         x = self.RateMap.xy[0, self.spike_times_in_pos_samples]
@@ -1331,8 +1258,7 @@ class phasePrecession2D(object):
         ax.plot(x, t + 2 * np.pi, ".", color="k")
         mm = (0, -2 * np.pi, 2 * np.pi, 4 * np.pi)
         for m in mm:
-            ax.plot((-1, 1), (-slope + intercept + m,
-                    slope + intercept + m), "r", lw=3)
+            ax.plot((-1, 1), (-slope + intercept + m, slope + intercept + m), "r", lw=3)
         ax.set_xlim((-1, 1))
         ax.set_ylim((-np.pi, 3 * np.pi))
         return {
@@ -1351,6 +1277,7 @@ class phasePrecession2D(object):
         )
         ts_idx = np.array(np.floor(ts), dtype=int)
         return self.phase[ts_idx]
+
 
 # Define a group of static methods for doing various operations on circular
 # and labelled data
