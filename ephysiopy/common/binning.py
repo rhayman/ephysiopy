@@ -380,6 +380,18 @@ class RateMap(object):
         self.var2Bin = var_type
         binsize = kwargs.pop("binsize", self.binsize)
         hist_range = kwargs.pop("range", None)
+
+        if hist_range is None:
+            bin_edges = self._calc_bin_edges(binsize)
+        else:
+            bin_edges = None
+
+        binned_pos, binned_pos_edges = self._bin_data(
+            sample, bin_edges, pos_weights, hist_range
+        )
+        binned_pos = binned_pos / self.PosCalcs.sample_rate
+        nanIdx = binned_pos == 0
+
         if (
             var_type.value == VariableToBin.DIR.value
             or var_type.value == VariableToBin.EGO_BOUNDARY
@@ -387,12 +399,6 @@ class RateMap(object):
             boundary = "wrap"
         else:
             boundary = "extend"
-        self._calc_bin_edges(binsize)
-        binned_pos, binned_pos_edges = self._bin_data(
-            sample, self._binedges, pos_weights, hist_range
-        )
-        binned_pos = binned_pos / self.PosCalcs.sample_rate
-        nanIdx = binned_pos == 0
 
         if map_type.value == MapType.POS.value:  # return binned up position
             if smoothing:
@@ -405,7 +411,7 @@ class RateMap(object):
                 )
             return binned_pos, binned_pos_edges
 
-        binned_spk, _ = self._bin_data(sample, self._binedges, spk_weights, hist_range)
+        binned_spk, _ = self._bin_data(sample, bin_edges, spk_weights, hist_range)
 
         if map_type.value == MapType.SPK.value:
             return binned_spk
@@ -504,18 +510,26 @@ class RateMap(object):
         dims = weights.ndim
         if dims == 1 and var.ndim == 1:
             var = var[np.newaxis, :]
-            bin_edges = bin_edges[np.newaxis, :]
+            if bin_edges is not None:
+                bin_edges = bin_edges[np.newaxis, :]
         elif dims > 1 and var.ndim == 1:
             var = var[np.newaxis, :]
-            bin_edges = bin_edges[np.newaxis, :]
+            if bin_edges is not None:
+                bin_edges = bin_edges[np.newaxis, :]
         else:
             var = np.flipud(var)
         weights = np.atleast_2d(weights)  # needed for list comp below
         var = np.array(var.data.T)
-        ndhist = [
-            bh.numpy.histogramdd(var, bins=bin_edges, range=range, weights=np.ravel(w))
-            for w in weights
-        ]
+        if bin_edges is None:
+            ndhist = [
+                bh.numpy.histogramdd(var, range=[range], weights=np.ravel(w))
+                for w in weights
+            ]
+        else:
+            ndhist = [
+                bh.numpy.histogramdd(var, bins=bin_edges, weights=np.ravel(w))
+                for w in weights
+            ]
         if np.shape(weights)[0] == 1:
             return ndhist[0][0], ndhist[0][1]
         else:

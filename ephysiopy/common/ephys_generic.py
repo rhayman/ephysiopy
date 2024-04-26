@@ -3,6 +3,7 @@ The classes contained in this module are supposed to be agnostic to recording
 format and encapsulate some generic mechanisms for producing
 things like spike timing autocorrelograms, power spectrum calculation and so on
 """
+
 import numpy as np
 import numpy.typing as npt
 from scipy import signal
@@ -29,25 +30,25 @@ class EventsGeneric(object):
 
     Attributes:
         on (np.array): time in samples of the event
-        trial_date (str): 
-        trial_time (str): 
-        experimenter (str): 
-        comments (str): 
-        duration (str): 
-        sw_version (str): 
-        num_chans (str): 
-        timebase (str): 
-        bytes_per_timestamp (str): 
-        data_format (str): 
-        num_stm_samples (str): 
-        posSampRate (int): 
-        eegSampRate (int): 
-        egfSampRate (int): 
-        off (np.array): 
+        trial_date (str):
+        trial_time (str):
+        experimenter (str):
+        comments (str):
+        duration (str):
+        sw_version (str):
+        num_chans (str):
+        timebase (str):
+        bytes_per_timestamp (str):
+        data_format (str):
+        num_stm_samples (str):
+        posSampRate (int):
+        eegSampRate (int):
+        egfSampRate (int):
+        off (np.array):
         stim_params (OrderedDict): This has keys:
-            Phase_1 (str): 
-            Phase_2 (str): 
-            Phase_3 (str): 
+            Phase_1 (str):
+            Phase_2 (str):
+            Phase_3 (str):
             etc
                 Each of these keys is also a dict with keys:
                     startTime: None
@@ -100,8 +101,7 @@ class EventsGeneric(object):
         self._event_dict = dict.fromkeys(level_one_keys)
         self._event_dict["stim_params"] = OrderedDict.fromkeys(level_two_keys)
         for k in self._event_dict["stim_params"].keys():
-            self._event_dict["stim_params"][k] = dict.fromkeys(
-                level_three_keys)
+            self._event_dict["stim_params"][k] = dict.fromkeys(level_three_keys)
 
 
 class EEGCalcsGeneric(object):
@@ -165,11 +165,7 @@ class EEGCalcsGeneric(object):
         val = (val >> 32) | val
         return np.log2(val + 1)
 
-    def butterFilter(
-            self,
-            low: float,
-            high: float,
-            order: int = 5) -> np.ndarray:
+    def butterFilter(self, low: float, high: float, order: int = 5) -> np.ndarray:
         """
         Filters self.sig with a butterworth filter with a bandpass filter
         defined by low and high
@@ -263,8 +259,7 @@ class EEGCalcsGeneric(object):
         idx = np.zeros([len(freqs), len(f)]).astype(bool)
 
         for i, freq in enumerate(freqs):
-            idx[i, :] = np.logical_and(
-                np.abs(f) < freq + band, np.abs(f) > freq - band)
+            idx[i, :] = np.logical_and(np.abs(f) < freq + band, np.abs(f) > freq - band)
 
         pollutedIdx = np.sum(idx, 0)
         fftRes[pollutedIdx] = np.mean(fftRes)
@@ -335,6 +330,10 @@ class PosCalcsGeneric(object):
         self.postprocesspos(self.tracker_params)
 
     @property
+    def duration(self) -> float:
+        return self.npos / self.sample_rate
+
+    @property
     def xyTS(self) -> np.ma.MaskedArray:
         return self._xyTS
 
@@ -384,10 +383,7 @@ class PosCalcsGeneric(object):
     def sample_rate(self, val) -> None:
         self._sample_rate = val
 
-    def postprocesspos(
-            self,
-            tracker_params: "dict[str, float]" = {},
-            **kwargs) -> None:
+    def postprocesspos(self, tracker_params: "dict[str, float]" = {}, **kwargs) -> None:
         """
         Post-process position data
 
@@ -454,7 +450,6 @@ class PosCalcsGeneric(object):
                     np.arctan2(
                         -(xy_f[0, pos2 + 1] - xy_f[0, pos2]),
                         xy_f[1, pos2 + 1] - xy_f[1, pos2],
-
                     )
                 )
             ),
@@ -562,12 +557,10 @@ class PosCalcsGeneric(object):
 
         denom = np.gcd(upsample_rate, 30)
 
-        new_x = signal.resample_poly(
-            xy[0, :], upsample_rate / denom, 30 / denom)
-        new_y = signal.resample_poly(
-            xy[1, :], upsample_rate / denom, 30 / denom)
+        new_x = signal.resample_poly(xy[0, :], upsample_rate / denom, 30 / denom)
+        new_y = signal.resample_poly(xy[1, :], upsample_rate / denom, 30 / denom)
         return np.array([new_x, new_y])
-    
+
     def apply_mask(self, mask):
         """
         Applies a mask to the position data

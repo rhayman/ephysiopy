@@ -430,7 +430,10 @@ class SpikeCalcsGeneric(object):
         metavals = []
         for f in KSMetaTuple._fields:
             if f in value.keys():
-                metavals.append(value[f][self.cluster])
+                if self.cluster in value[f].keys():
+                    metavals.append(value[f][self.cluster])
+                else:
+                    metavals.append(None)
             else:
                 metavals.append(None)
         self._ksmeta = KSMetaTuple(*metavals)
@@ -681,7 +684,6 @@ class SpikeCalcsGeneric(object):
         rng = np.random.default_rng()
         method = stats.PermutationMethod(n_resamples=nShuffles, random_state=rng)
         method = kwargs.get("method", method)
-        print(f"method: {method}")
         res = stats.pearsonr(
             sm_spk_rate.compressed(), speed_filt.compressed(), method=method
         )
@@ -801,6 +803,29 @@ class SpikeCalcsGeneric(object):
         #         ax.hist(np.abs(shuffled_results), 20)
         #         ylims = ax.get_ylim()
         #         ax.vlines(res, ylims[0], ylims[1], "r")
+
+    def get_ifr(self, spike_times: np.array, n_samples: int, **kwargs):
+        """
+        Returns the instantaneous firing rate of the cluster
+
+        Args:
+            ts (np.array): The times in seconds at which the cluster fired.
+            n_samples (int): The number of samples to use in the calculation.
+                             Practically this should be the number of position
+                             samples in the recording.
+
+        Returns:
+            ifr (np.array): The instantaneous firing rate of the cluster
+        """
+        posSampRate = self.pos_sample_rate
+        x1 = np.floor(spike_times * posSampRate).astype(int)
+        spk_hist = np.bincount(x1, minlength=n_samples)
+        sigma = kwargs.get("sigma", 3)
+        h = signal.windows.gaussian(13, sigma)
+        h = h / float(np.sum(h))
+        spk_sm = signal.filtfilt(h.ravel(), 1, spk_hist)
+        ifr = spk_sm * posSampRate
+        return ifr
 
     def responds_to_stimulus(
         self,

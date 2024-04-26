@@ -513,14 +513,19 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         if not self.RateMap:
             self.initialise()
         spk_times_in_pos_samples = self._get_spike_pos_idx(cluster, channel, **kwargs)
+        npos = self._PosCalcs.npos
         if spk_times_in_pos_samples.ndim == 1:
-            spk_weights = np.bincount(
-                spk_times_in_pos_samples, minlength=self.PosCalcs.npos
-            )
+            spk_weights = np.bincount(spk_times_in_pos_samples, minlength=npos)
+            if len(spk_weights) > npos:
+                spk_weights = np.delete(spk_weights, np.s_[npos:], 0)
+
         else:
             weights = []
             for spk_idx in spk_times_in_pos_samples:
-                weights.append(np.bincount(spk_idx, minlength=self.PosCalcs.npos))
+                w = np.bincount(spk_idx, minlength=npos)
+                if len(w) > npos:
+                    w = np.delete(w, np.s_[npos:], 0)
+                weights.append(w)
             spk_weights = np.array(weights)
 
         rmap = self.RateMap.get_map(spk_weights, var_type=var2bin, **kwargs)
@@ -932,14 +937,12 @@ class OpenEphysBase(TrialInterface):
                 pos_ts = np.arange(
                     0, pos_data.shape[0] / sample_rate, 1.0 / sample_rate
                 )
-                print(f"Tracker first and last ts: {pos_ts[0]} & {pos_ts[-1]}")
             if pos_plugin_name != "TrackMe":
                 xyTS = pos_ts - recording_start_time
             else:
                 xyTS = pos_ts
             if self.sync_message_file is not None:
                 recording_start_time = xyTS[0]
-            print(f"First & last ts before PosCalcs: {pos_ts[0]} & {pos_ts[-1]}")
             P = PosCalcsGeneric(
                 pos_data[:, 0],
                 pos_data[:, 1],
@@ -1031,6 +1034,7 @@ class OpenEphysBase(TrialInterface):
         pname_root: str,
         experiment_name: str = "experiment1",
         rec_name: str = "recording1",
+        **kwargs,
     ):
         exp_name = Path(experiment_name)
         PosTracker_match = (
@@ -1084,6 +1088,8 @@ class OpenEphysBase(TrialInterface):
         if pname_root is None:
             pname_root = self.pname_root
 
+        verbose = kwargs.get("verbose", False)
+
         for d, c, f in os.walk(pname_root):
             for ff in f:
                 if "." not in c:  # ignore hidden directories
@@ -1091,46 +1097,56 @@ class OpenEphysBase(TrialInterface):
                         if PurePath(d).match(str(PosTracker_match)):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
-                                print(f"Pos data at: {self.path2PosData}")
+                                if verbose:
+                                    print(f"Pos data at: {self.path2PosData}")
                             self.path2PosOEBin = Path(d).parents[1]
                         if PurePath(d).match("*pos_data*"):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
-                                print(f"Pos data at: {self.path2PosData}")
+                                if verbose:
+                                    print(f"Pos data at: {self.path2PosData}")
                         if PurePath(d).match(str(TrackingPlugin_match)):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
-                                print(f"Pos data at: {self.path2PosData}")
+                                if verbose:
+                                    print(f"Pos data at: {self.path2PosData}")
                     if "continuous.dat" in ff:
                         if PurePath(d).match(str(APdata_match)):
                             self.path2APdata = os.path.join(d)
-                            print(f"Continuous AP data at: {self.path2APdata}")
+                            if verbose:
+                                print(f"Continuous AP data at: {self.path2APdata}")
                             self.path2APOEBin = Path(d).parents[1]
                         if PurePath(d).match(str(LFPdata_match)):
                             self.path2LFPdata = os.path.join(d)
-                            print(f"Continuous LFP data at: {self.path2LFPdata}")
+                            if verbose:
+                                print(f"Continuous LFP data at: {self.path2LFPdata}")
                         if PurePath(d).match(str(Rawdata_match)):
                             self.path2APdata = os.path.join(d)
                             self.path2LFPdata = os.path.join(d)
                         if PurePath(d).match(str(TrackMe_match)):
                             self.path2PosData = os.path.join(d)
-                            print(f"TrackMe posdata at: {self.path2PosData}")
+                            if verbose:
+                                print(f"TrackMe posdata at: {self.path2PosData}")
                     if "sync_messages.txt" in ff:
                         if PurePath(d).match(str(sync_file_match)):
                             sync_file = os.path.join(d, "sync_messages.txt")
                             if fileContainsString(sync_file, "Start Time"):
                                 self.sync_message_file = sync_file
-                                print(f"sync_messages file at: {sync_file}")
+                                if verbose:
+                                    print(f"sync_messages file at: {sync_file}")
                     if "full_words.npy" in ff:
                         if PurePath(d).match(str(Events_match)):
                             self.path2EventsData = os.path.join(d)
-                            print(f"Event data at: {self.path2EventsData}")
+                            if verbose:
+                                print(f"Event data at: {self.path2EventsData}")
                     if ".nwb" in ff:
                         self.path2NWBData = os.path.join(d, ff)
-                        print(f"nwb data at: {self.path2NWBData}")
+                        if verbose:
+                            print(f"nwb data at: {self.path2NWBData}")
                     if "spike_templates.npy" in ff:
                         self.path2KiloSortData = os.path.join(d)
-                        print(f"Found KiloSort data at {self.path2KiloSortData}")
+                        if verbose:
+                            print(f"Found KiloSort data at {self.path2KiloSortData}")
 
 
 class OpenEphysNWB(OpenEphysBase):
