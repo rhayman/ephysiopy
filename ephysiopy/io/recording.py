@@ -296,7 +296,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             elif isinstance(val, bool):
                 self._mask_array.fill(val)
             else:
-                error("Need an array-like input")
+                raise TypeError("Need an array-like input")
         else:
             self._mask_array = val
 
