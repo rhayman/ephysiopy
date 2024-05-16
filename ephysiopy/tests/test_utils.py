@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from ephysiopy.common import utils
+from ephysiopy.tests.conftest import *
 
 
 def test_smooth():
@@ -9,27 +10,27 @@ def test_smooth():
     with pytest.raises(ValueError):
         utils.smooth(np.atleast_2d(x))
     with pytest.raises(ValueError):
-        utils.smooth(x, window_len=len(x)+1)
+        utils.smooth(x, window_len=len(x) + 1)
     utils.smooth(x, window_len=2)
     utils.smooth(x, window_len=6)
     with pytest.raises(ValueError):
-        utils.smooth(x, window='deliberate_error')
-    utils.smooth(x, window='flat')
-    y = utils.smooth(x, window='hamming')
+        utils.smooth(x, window="deliberate_error")
+    utils.smooth(x, window="flat")
+    y = utils.smooth(x, window="hamming")
     assert isinstance(y, np.ndarray)
 
 
-def test_blur_image(basic_ratemap):
-    filt = ['box', 'gaussian']
-    rmap1D = basic_ratemap[0, :]
-    rmap2D = basic_ratemap
-    rmap3D = np.atleast_3d(rmap2D)
-    rmaps = [rmap1D, rmap2D, rmap3D]
-    b = utils.blur_image(rmap2D, 3, 4)
+def test_blur_image(basic_BinnedData):
+    A_2D = basic_BinnedData
+    A_1D = basic_BinnedData
+    A_1D.binned_data[0] = np.atleast_2d(A_1D.binned_data[0][0, :])
+    A_1D.bin_edges = A_1D.bin_edges[0]
+    rmaps = [A_1D, A_2D]
+    filt = ["box", "gaussian"]
     for f in filt:
         for rmap in rmaps:
             b = utils.blur_image(rmap, 3, ftype=f)
-            assert isinstance(b, np.ndarray)
+            assert isinstance(b, BinnedData)
 
 
 def test_count_to():
@@ -52,14 +53,12 @@ def test_repeat_ind():
 
 def test_rect():
     from numpy.random import default_rng
+
     rng = default_rng()
     x = rng.vonmises(0, 0.1, 100)
     y = rng.vonmises(0, 0.1, 100)
     utils.rect(x, y)
-    r, _ = utils.rect(
-        np.rad2deg(x),
-        np.rad2deg(y),
-        deg=True)
+    r, _ = utils.rect(np.rad2deg(x), np.rad2deg(y), deg=True)
     assert isinstance(r, np.ndarray)
 
 

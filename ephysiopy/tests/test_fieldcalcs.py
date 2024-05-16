@@ -1,7 +1,9 @@
 import numpy as np
 import pytest
 from ephysiopy.common import fieldcalcs
+from ephysiopy.common.utils import corr_maps
 from ephysiopy.tests.test_binning import standard_Ratemap
+from ephysiopy.tests.conftest import *
 
 
 def test_limit_to_one(basic_ratemap):
@@ -22,7 +24,7 @@ def test_local_threshold(basic_ratemap):
 
 def test_get_border_score(basic_ratemap):
     fieldcalcs.border_score(basic_ratemap)
-    fieldcalcs.border_score(basic_ratemap, shape='circle')
+    fieldcalcs.border_score(basic_ratemap, shape="circle")
     rmap_copy = basic_ratemap.copy()
     rmap_copy[1::, :] = np.nan
     rmap_copy[:, 2::] = np.nan
@@ -37,43 +39,40 @@ def test_field_props(basic_ratemap):
     fp = fieldcalcs.field_props(basic_ratemap)
     assert isinstance(fp, dict)
     fieldcalcs.field_props(
-        basic_ratemap, clear_border=True,
-        neighbours=100,
-        calc_angs=True,
-        min_distance=5)
+        basic_ratemap, clear_border=True, neighbours=100, calc_angs=True, min_distance=5
+    )
     # test something that should fail as it's poorly formed
     x, y = np.indices((80, 80))
     x1, y1, x2, y2 = 28, 28, 44, 52
     r1, r2 = 16, 20
-    mask_circle1 = (x - x1)**2 + (y - y1)**2 < r1**2
-    mask_circle2 = (x - x2)**2 + (y - y2)**2 < r2**2
+    mask_circle1 = (x - x1) ** 2 + (y - y1) ** 2 < r1**2
+    mask_circle2 = (x - x2) ** 2 + (y - y2) ** 2 < r2**2
     image = np.logical_or(mask_circle1, mask_circle2)
-    from ephysiopy.common.utils import blur_image
-    im = blur_image(image, 15)
-    im[im < 0.1] = 0
-    fieldcalcs.field_props(im)
+    image[image < 0.1] = 0
+    fieldcalcs.field_props(image)
 
 
 def test_corr_maps(basic_ratemap):
     flipped_map = np.rot90(basic_ratemap)
-    cc = fieldcalcs.corr_maps(basic_ratemap, flipped_map)
+    cc = corr_maps(basic_ratemap, flipped_map)
     assert isinstance(cc, float)
     flipped_map = flipped_map[1::, :]
-    fieldcalcs.corr_maps(basic_ratemap, flipped_map, maptype='grid')
-    fieldcalcs.corr_maps(flipped_map, basic_ratemap, maptype='grid')
+    corr_maps(basic_ratemap, flipped_map, maptype="grid")
+    corr_maps(flipped_map, basic_ratemap, maptype="grid")
     flipped_map[:, :] = np.nan
     flipped_map[0, 0] = 0
-    fieldcalcs.corr_maps(flipped_map, basic_ratemap)
+    corr_maps(flipped_map, basic_ratemap)
 
 
-def test_coherence(basic_ratemap):
-    blurred = fieldcalcs.blur_image(basic_ratemap, n=15)
-    coh = fieldcalcs.coherence(basic_ratemap, blurred)
+def test_coherence(basic_BinnedData):
+    M = basic_BinnedData
+    blurred = fieldcalcs.blur_image(M, n=15)
+    coh = fieldcalcs.coherence(M.binned_data[0], blurred.binned_data[0])
     assert isinstance(coh, float)
 
 
 def test_kldiv_dir():
-    t = np.linspace(0, 2*np.pi, 100)
+    t = np.linspace(0, 2 * np.pi, 100)
     y = np.cos(t)
     kldiv = fieldcalcs.kldiv_dir(y)
     assert isinstance(kldiv, float)
@@ -81,23 +80,22 @@ def test_kldiv_dir():
 
 def test_kldiv():
     n = 100
-    X = np.linspace(0, 2*np.pi, n)
+    X = np.linspace(0, 2 * np.pi, n)
     y1 = np.cos(X)
     y2 = np.ones_like(y1) / n
     fieldcalcs.kldiv(X, y1, y2)
     X = X[1::]
     with pytest.raises(ValueError):
         fieldcalcs.kldiv(X, y1, y2)
-    X = np.linspace(0, 2*np.pi, n)
+    X = np.linspace(0, 2 * np.pi, n)
     y2 = np.ones_like(y1)
-    fieldcalcs.kldiv(X, y1, y2, variant='js')
-    fieldcalcs.kldiv(X, y1, y2, variant='sym')
-    fieldcalcs.kldiv(X, y1, y2, variant='error')
+    fieldcalcs.kldiv(X, y1, y2, variant="js")
+    fieldcalcs.kldiv(X, y1, y2, variant="sym")
+    fieldcalcs.kldiv(X, y1, y2, variant="error")
 
 
 def test_skaggs_info(basic_ratemap):
-    dwell_times = np.random.rand(
-        basic_ratemap.shape[0], basic_ratemap.shape[1])
+    dwell_times = np.random.rand(basic_ratemap.shape[0], basic_ratemap.shape[1])
     dwell_times = dwell_times / np.sum(dwell_times)
     dwell_times = dwell_times * 10
     skaggs = fieldcalcs.skaggs_info(basic_ratemap, dwell_times)

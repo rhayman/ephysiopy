@@ -6,7 +6,7 @@ from scipy import stats
 import skimage
 import warnings
 from skimage.segmentation import watershed
-from ephysiopy.common.utils import blur_image
+from ephysiopy.common.utils import blur_image, BinnedData
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 
@@ -17,6 +17,38 @@ concerned with treating rate maps as images as opposed to using
 the spiking information contained within them. They therefore mostly
 deals with spatial rate maps of place and grid cells.
 """
+
+
+def get_mean_resultant(ego_boundary_map: np.ndarray, **kwargs) -> float:
+    """
+    Calculates the mean resultant vector of a boundary map in egocentric coordinates
+
+    See Hinman et al., 2019 for more details
+
+    Args:
+        ego_boundary_map (np.ndarray): The egocentric boundary map
+
+    Returns:
+        float: The mean resultant vector of the egocentric boundary map
+    """
+    if np.nansum(ego_boundary_map) == 0:
+        return np.nan
+    m, n = ego_boundary_map.shape
+    angles = np.linspace(0, 2 * np.pi, n)
+    MR = np.nansum(np.nansum(ego_boundary_map, 0) * np.power(np.e, angles * 1j)) / (
+        n * m
+    )
+    return MR
+
+
+def get_mean_resultant_length(ego_boundary_map: np.ndarray, **kwargs) -> float:
+    MR = get_mean_resultant(ego_boundary_map, **kwargs)
+    return np.abs(MR)
+
+
+def get_mean_resultant_angle(ego_boundary_map: np.ndarray, **kwargs) -> float:
+    MR = get_mean_resultant(ego_boundary_map, **kwargs)
+    return np.rad2deg(np.arctan2(np.imag(MR), np.real(MR)))
 
 
 def getCentreBearingCurve(rmap: RateMap, pos: PosCalcsGeneric) -> np.ndarray:
@@ -506,16 +538,11 @@ def field_props(
                 np.count_nonzero(A_non_field > 0) / float(nValid_bins)
             )
         )
-        print("Peak firing rate: {:.3} Hz".format(np.nanmax(A)))
-        print("Mean firing rate: {:.3} Hz".format(np.nanmean(A)))
-        print("Number of fields: {0}".format(nFields))
-        print("Mean field size: {:.5} cm".format(np.mean(sub_field_size)))
-        print(
-            "Mean inter-peak distance between \
-            fields: {:.4} cm".format(
-                mean_field_distance
-            )
-        )
+        print(f"Peak firing rate: {np.nanmax(A)} Hz")
+        print(f"Mean firing rate: {np.nanmean(A)} Hz")
+        print(f"Number of fields: {nFields}")
+        print(f"Mean field size: {np.mean(sub_field_size)} cm")
+        print(f"Mean inter-peak distance between fields: {mean_field_distance} cm")
     return props
 
 
@@ -537,27 +564,6 @@ def calc_angs(points):
             denom = np.linalg.norm(e1) * np.linalg.norm(e2)
             angs.append(np.arccos(num / denom) * 180 / np.pi)
     return np.array(angs).T
-
-
-def corr_maps(map1, map2, maptype="normal"):
-    """
-    correlates two ratemaps together ignoring areas that have zero sampling
-    """
-    if map1.shape > map2.shape:
-        map2 = skimage.transform.resize(map2, map1.shape, mode="reflect")
-    elif map1.shape < map2.shape:
-        map1 = skimage.transform.resize(map1, map2.shape, mode="reflect")
-    map1 = map1.flatten()
-    map2 = map2.flatten()
-    if "normal" in maptype:
-        valid_map1 = np.logical_or((map1 > 0), ~np.isnan(map1))
-        valid_map2 = np.logical_or((map2 > 0), ~np.isnan(map2))
-    elif "grid" in maptype:
-        valid_map1 = ~np.isnan(map1)
-        valid_map2 = ~np.isnan(map2)
-    valid = np.logical_and(valid_map1, valid_map2)
-    r = np.corrcoef(map1[valid], map2[valid])
-    return r[1][0]
 
 
 def spatial_sparsity(rate_map: np.ndarray, pos_map: np.ndarray) -> float:
@@ -744,12 +750,13 @@ def skaggs_info(ratemap, dwelltimes, **kwargs):
     return bits_per_spike
 
 
-def grid_field_props(A, maxima="centroid", allProps=True, **kwargs):
+def grid_field_props(A: BinnedData, maxima="centroid", allProps=True, **kwargs):
     """
     Extracts various measures from a spatial autocorrelogram
 
     Args:
-        A (array_like): The spatial autocorrelogram (SAC)
+        A: BinnedData object containing the spatial autocorrelogram (SAC) in
+            A.binned_data[0]
         maxima (str, optional): The method used to detect the peaks in the SAC.
             Legal values are 'single' and 'centroid'. Default 'centroid'
         allProps (bool, optional): Whether to return a dictionary that
@@ -772,19 +779,46 @@ def grid_field_props(A, maxima="centroid", allProps=True, **kwargs):
         The output from this method can be used as input to the show() method
         of this class.
         When it is the plot produced will display a lot more informative.
+        The coordinate system internally used is centred on the image centre.
 
     See Also:
         ephysiopy.common.binning.autoCorr2D()
     """
-    A_tmp = A.copy()
-    A_tmp[~np.isfinite(A)] = -1
+    """
+    Assign the output dictionary now as we want to return immediately if
+    the input is bad
+    """
+    dictKeys = (
+        "gridscore",
+        "scale",
+        "orientation",
+        "closest_peak_coords",
+        "dist_to_centre",
+        "ellipse_axes",
+        "ellipse_angle",
+        "ellipseXY",
+        "circleXY",
+        "rotationArr",
+        "rotationCorrVals",
+    )
+
+    outDict = dict.fromkeys(dictKeys, np.nan)
+
+    A_tmp = A.binned_data[0].copy()
+
+    if np.all(np.isnan(A_tmp)):
+        warnings.warn("No data in SAC - returning nans in measures dict")
+        outDict["dist_to_centre"] = np.atleast_2d(np.array([0, 0]))
+        outDict["scale"] = 0
+        outDict["closest_peak_coords"] = np.atleast_2d(np.array([0, 0]))
+        return outDict
+
+    A_tmp[~np.isfinite(A_tmp)] = -1
     A_tmp[A_tmp <= 0] = -1
-    A_sz = np.array(np.shape(A))
+    A_sz = np.array(np.shape(A_tmp))
     # [STAGE 1] find peaks & identify 7 closest to centre
-    if "min_distance" in kwargs:
-        min_distance = kwargs.pop("min_distance")
-    else:
-        min_distance = np.ceil(np.min(A_sz / 2) / 8.0).astype(int)
+    min_distance = np.ceil(np.min(A_sz / 2) / 8.0).astype(int)
+    min_distance = kwargs.get("min_distance", min_distance)
 
     peak_idx, field_labels = _get_field_labels(A_tmp, neighbours=7, **kwargs)
     # a fcn for the labeled_comprehension function that returns
@@ -799,25 +833,25 @@ def grid_field_props(A, maxima="centroid", allProps=True, **kwargs):
         A_tmp, field_labels, np.arange(0, nLbls), fn, np.ndarray, 0, True
     )
     # turn linear indices into coordinates
-    coords = [np.unravel_index(i, np.shape(A)) for i in indices]
-    half_peak_labels = np.zeros_like(A)
+    coords = [np.unravel_index(i, A_sz) for i in indices]
+    half_peak_labels = np.zeros(shape=A_sz)
     for peak_id, coord in enumerate(coords):
         xc, yc = coord
         half_peak_labels[xc, yc] = peak_id
 
     # Get some statistics about the labeled regions
-    # fieldPerim = bwperim(half_peak_labels)
     lbl_range = np.arange(0, nLbls)
-    # meanRInLabel = ndimage.mean(A, half_peak_labels, lbl_range)
-    # nPixelsInLabel = np.bincount(np.ravel(half_peak_labels.astype(int)))
-    # sumRInLabel = ndimage.sum_labels(A, half_peak_labels, lbl_range)
-    # maxRInLabel = ndimage.maximum(A, half_peak_labels, lbl_range)
-    peak_coords = ndimage.maximum_position(A, half_peak_labels, lbl_range)
-
+    peak_coords = ndimage.maximum_position(
+        A.binned_data[0], half_peak_labels, lbl_range
+    )
+    peak_coords = np.array(peak_coords)
+    # Now convert the peak_coords to the image centre coordinate system
+    x_peaks, y_peaks = peak_coords.T
+    x_peaks_ij = A.bin_edges[0][x_peaks]
+    y_peaks_ij = A.bin_edges[1][y_peaks]
+    peak_coords = np.array([x_peaks_ij, y_peaks_ij]).T
     # Get some distance and morphology measures
-    centre = np.floor(np.array(np.shape(A)) / 2)
-    centred_peak_coords = peak_coords - centre
-    peak_dist_to_centre = np.hypot(centred_peak_coords.T[0], centred_peak_coords.T[1])
+    peak_dist_to_centre = np.hypot(peak_coords[:, 0], peak_coords[:, 1])
     closest_peak_idx = np.argsort(peak_dist_to_centre)
     central_peak_label = closest_peak_idx[0]
     closest_peak_idx = closest_peak_idx[1 : np.min((7, len(closest_peak_idx) - 1))]
@@ -825,12 +859,11 @@ def grid_field_props(A, maxima="centroid", allProps=True, **kwargs):
     # surrounding the central peak at the image centre
     scale = np.median(peak_dist_to_centre[closest_peak_idx])
     orientation = np.nan
-    orientation = grid_orientation(centred_peak_coords, closest_peak_idx)
+    orientation = grid_orientation(peak_coords, closest_peak_idx)
 
-    central_pt = peak_coords[central_peak_label]
-    x = np.linspace(-central_pt[0], central_pt[0], A_sz[0])
-    y = np.linspace(-central_pt[1], central_pt[1], A_sz[1])
-    xv, yv = np.meshgrid(x, y, indexing="ij")
+    xv, yv = np.meshgrid(A.bin_edges[0], A.bin_edges[1], indexing="ij")
+    xv = xv[:-1, :-1]  # remove last row and column
+    yv = yv[:-1:, :-1]  # remove last row and column
     dist_to_centre = np.hypot(xv, yv)
     # get the max distance of the half-peak width labeled fields
     # from the centre of the image
@@ -839,8 +872,8 @@ def grid_field_props(A, maxima="centroid", allProps=True, **kwargs):
         if peak_id in closest_peak_idx:
             xc, yc = _coords
             if np.any(xc) and np.any(yc):
-                xc = xc - np.floor(A_sz[0] / 2)
-                yc = yc - np.floor(A_sz[1] / 2)
+                xc = A.bin_edges[0][xc]
+                yc = A.bin_edges[1][yc]
                 d = np.max(np.hypot(xc, yc))
                 if d > max_dist_from_centre:
                     max_dist_from_centre = d
@@ -851,7 +884,7 @@ def grid_field_props(A, maxima="centroid", allProps=True, **kwargs):
     dist_to_centre[half_peak_labels == central_peak_label] = 0
     dist_to_centre[dist_to_centre != 0] = 1
     dist_to_centre = dist_to_centre.astype(bool)
-    sac_middle = A.copy()
+    sac_middle = A.binned_data[0].copy()
     sac_middle[~dist_to_centre] = np.nan
 
     if "step" in kwargs.keys():
@@ -862,8 +895,6 @@ def grid_field_props(A, maxima="centroid", allProps=True, **kwargs):
         gridscore, rotationCorrVals, rotationArr = gridness(sac_middle, step=step)
     except Exception:
         gridscore, rotationCorrVals, rotationArr = np.nan, np.nan, np.nan
-
-    im_centre = central_pt
 
     if allProps:
         # attempt to fit an ellipse around the outer edges of the nearest
@@ -879,7 +910,13 @@ def grid_field_props(A, maxima="centroid", allProps=True, **kwargs):
                 return xc[idx], yc[idx]
 
             ellipse_coords = ndimage.labeled_comprehension(
-                A, half_peak_labels, closest_peak_idx, fn2, tuple, 0, True
+                A.binned_data[0],
+                half_peak_labels,
+                closest_peak_idx,
+                fn2,
+                tuple,
+                0,
+                True,
             )
 
             ellipse_fit_coords = np.array([(x, y) for x, y in ellipse_coords])
@@ -907,21 +944,8 @@ def grid_field_props(A, maxima="centroid", allProps=True, **kwargs):
 
     # collect all the following keywords into a dict for output
     closest_peak_coords = np.array(peak_coords)[closest_peak_idx]
-    dictKeys = (
-        "gridscore",
-        "scale",
-        "orientation",
-        "closest_peak_coords",
-        "dist_to_centre",
-        "ellipse_axes",
-        "ellipse_angle",
-        "ellipseXY",
-        "circleXY",
-        "im_centre",
-        "rotationArr",
-        "rotationCorrVals",
-    )
-    outDict = dict.fromkeys(dictKeys, np.nan)
+
+    # Assign values to the output dictionary created at the start
     for thiskey in outDict.keys():
         outDict[thiskey] = locals()[thiskey]
         # neat trick: locals is a dict holding all locally scoped variables
@@ -950,10 +974,7 @@ def grid_orientation(peakCoords, closestPeakIdx):
     else:
         from ephysiopy.common.utils import polar
 
-        # Assume that the first entry in peakCoords is
-        # the central peak of the SAC
         peaks = peakCoords[closestPeakIdx]
-        peaks = peaks - peakCoords[closestPeakIdx[0]]
         theta = polar(peaks[:, 1], -peaks[:, 0], deg=1)[1]
         return np.sort(theta.compress(theta >= 0))[0]
 
@@ -1109,6 +1130,10 @@ def get_circular_regions(A: np.ndarray, **kwargs) -> list:
         im[~mask] = np.nan
         result.append(im)
     return result
+
+
+def get_basic_gridscore(A: np.ndarray, **kwargs):
+    return gridness(A, **kwargs)[0]
 
 
 def get_expanding_circle_gridscore(A: np.ndarray, **kwargs):

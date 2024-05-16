@@ -26,7 +26,7 @@ class IO(object):
         ["." + str(i) for i in range(1, 17)],
         # ts is a big-endian 32-bit integer
         # waveform is 50 signed 8-bit ints (a signed byte)
-        [("ts", ">i"), ("waveform", "50b")]
+        [("ts", ">i"), ("waveform", "50b")],
     )
     other_files = {
         ".pos": [("ts", ">i"), ("pos", ">8h")],
@@ -119,8 +119,9 @@ class IO(object):
             The data read from the cut file
         """
         a = []
-        filename_root = Path(os.path.splitext(
-            self.filename_root)[0] + "_" + str(tet) + ".cut")
+        filename_root = Path(
+            os.path.splitext(self.filename_root)[0] + "_" + str(tet) + ".cut"
+        )
 
         if not os.path.exists(filename_root):
             cut = self.getCluCut(tet)
@@ -160,9 +161,7 @@ class IO(object):
             f.write("data_end")
             f.write("\r\n")
 
-    def setCut(self, filename_root: str,
-               cut_header: dataclass,
-               cut_data: np.array):
+    def setCut(self, filename_root: str, cut_header: dataclass, cut_data: np.array):
         fpath = Path(filename_root)
         n_clusters = len(np.unique(cut_data))
         cluster_entries = make_cluster_cut_entries(n_clusters)
@@ -170,8 +169,7 @@ class IO(object):
             with redirect_stdout(f):
                 cut_header.print()
             print(cluster_entries, file=f)
-            print(f"Exact_cut_for: {fpath.stem}    spikes: {len(cut_data)}",
-                  file=f)
+            print(f"Exact_cut_for: {fpath.stem}    spikes: {len(cut_data)}", file=f)
             for num in cut_data:
                 f.write(str(num))
                 f.write(" ")
@@ -221,7 +219,7 @@ class IO(object):
             f.close()
         if os.path.splitext(filename_root)[1] != ".set":
             st = data.find(b"data_start") + len("data_start")
-            header = data[0: st - len("data_start") - 2]
+            header = data[0 : st - len("data_start") - 2]
         else:
             header = data
         headerDict = {}
@@ -348,8 +346,7 @@ class Tetrode(IO):
         self.filename_root = filename_root
         self.tetrode = tetrode
         self.volts = volts
-        self.header = self.getHeader(
-            self.filename_root.with_suffix("." + str(tetrode)))
+        self.header = self.getHeader(self.filename_root.with_suffix("." + str(tetrode)))
         data = self.getData(filename_root.with_suffix("." + str(tetrode)))
         self.spike_times = np.ma.MaskedArray(data["ts"][::4])
         self.nChans = self.getHeaderVal(self.header, "num_chans")
@@ -357,12 +354,11 @@ class Tetrode(IO):
         self.nSpikes = self.getHeaderVal(self.header, "num_spikes")
         self.duration = self.getHeaderVal(self.header, "duration")
         self.posSampleRate = self.getHeaderVal(
-            self.getHeader(
-                self.filename_root.with_suffix(".pos")), "sample_rate"
+            self.getHeader(self.filename_root.with_suffix(".pos")), "sample_rate"
         )
-        self.waveforms = np.ma.MaskedArray(data["waveform"].reshape(
-            self.nSpikes, self.nChans, self.samples
-        ))
+        self.waveforms = np.ma.MaskedArray(
+            data["waveform"].reshape(self.nSpikes, self.nChans, self.samples)
+        )
         del data
         if volts:
             set_header = self.getHeader(self.filename_root.with_suffix(".set"))
@@ -476,10 +472,10 @@ class Tetrode(IO):
             cut = np.array(self.getCut(self.tetrode), dtype=int)
             self.cut = cut
         return np.unique(self.cut)
-    
+
     def apply_mask(self, mask, **kwargs) -> None:
         """Apply a mask to the data
-        
+
         Args:
             mask (np.ndarray): The mask to be applied. For use with
                                np.ma.MaskedArray's mask attribute
@@ -494,15 +490,17 @@ class Tetrode(IO):
         mask can be an empty tuple, in which case the mask is removed
 
         """
-        if mask is not False:
+        if np.any(mask):
             sample_rate = kwargs.get("sample_rate", 50)
             timebase = self.getHeaderVal(self.header, "timebase")
-            spike_pos_samples = np.ma.MaskedArray(self.spike_times.data / timebase * sample_rate, dtype=int)
+            spike_pos_samples = np.ma.MaskedArray(
+                self.spike_times.data / timebase * sample_rate, dtype=int
+            )
             pos_times_in_samples = np.nonzero(mask)[1]
             mask = np.ma.isin(spike_pos_samples, pos_times_in_samples)
-        self.spike_times.mask = mask
-        self.waveforms.mask = mask
-        self.cut.mask = mask
+        self.spike_times.mask = mask.data
+        self.waveforms.mask = mask.data
+        self.cut.mask = mask.data
 
 
 class EEG(IO):
@@ -536,8 +534,7 @@ class EEG(IO):
                 eeg_suffix = ".egf"
             else:
                 eeg_suffix = ".egf" + str(eeg_file)
-        self.header = self.getHeader(
-            self.filename_root.with_suffix(eeg_suffix))
+        self.header = self.getHeader(self.filename_root.with_suffix(eeg_suffix))
         self.eeg = self.getData(filename_root.with_suffix(eeg_suffix))["eeg"]
         # sometimes the eeg record is longer than reported in
         # the 'num_EEG_samples'
@@ -545,9 +542,9 @@ class EEG(IO):
         # to match 'num_EEG_samples'
         # TODO: this could be taken care of in the IO base class
         if egf:
-            self.eeg = self.eeg[0: int(self.header["num_EGF_samples"])]
+            self.eeg = self.eeg[0 : int(self.header["num_EGF_samples"])]
         else:
-            self.eeg = self.eeg[0: int(self.header["num_EEG_samples"])]
+            self.eeg = self.eeg[0 : int(self.header["num_EEG_samples"])]
         self.sample_rate = int(self.getHeaderVal(self.header, "sample_rate"))
         set_header = self.getHeader(self.filename_root.with_suffix(".set"))
         eeg_ch = int(set_header["EEG_ch_1"]) - 1
@@ -603,15 +600,15 @@ class Stim(dict, IO):
         tb = int(self["timebase"].split(" ")[0])
         self.timebase = tb
         times = times / tb
-        self.__setitem__("ttl_timestamps", times )  # in SECONDS
+        self.__setitem__("ttl_timestamps", times)  # in SECONDS
         # the 'duration' value in the header of the .stm file
         # is not correct so we need to read this from the .set
         # file and update
         setHdr = self.getHeader(filename_root.with_suffix(".set"))
-        stim_duration = [setHdr[k] for k in setHdr.keys() if 'stim_pwidth' in k][0]
+        stim_duration = [setHdr[k] for k in setHdr.keys() if "stim_pwidth" in k][0]
         stim_duration = int(stim_duration)
         stim_duration = stim_duration / 1000  # in ms now
-        self.__setitem__('stim_duration', stim_duration)
+        self.__setitem__("stim_duration", stim_duration)
 
     def update(self, *args, **kwargs):
         for k, v in dict(*args, **kwargs).items():
@@ -626,13 +623,14 @@ class Stim(dict, IO):
 
 
 class ClusterSession(object):
-    '''
-    Loads all the cut file data and timestamps from the data 
+    """
+    Loads all the cut file data and timestamps from the data
     associated with the *.set filename given to __init__
 
     Meant to be a method-replica of the KiloSortSession class
     but really both should inherit from the same meta-class
-    '''
+    """
+
     def __init__(self, fname_root) -> None:
         fname_root = Path(fname_root)
         assert fname_root.suffix == ".set"
@@ -646,13 +644,19 @@ class ClusterSession(object):
 
     def load(self):
         pname = self.fname_root.parent
-        pattern = re.compile(r'^'+str(
-            self.fname_root.with_suffix(""))+r'_[1-9][0-9].cut')
-        pattern1 = re.compile(r'^'+str(
-            self.fname_root.with_suffix(""))+r'_[1-9]$.cut')
-        cut_files = sorted(list(f for f in pname.iterdir()
-                           if pattern.search(str(f)) or
-                           pattern1.search(str(f))))
+        pattern = re.compile(
+            r"^" + str(self.fname_root.with_suffix("")) + r"_[1-9][0-9].cut"
+        )
+        pattern1 = re.compile(
+            r"^" + str(self.fname_root.with_suffix("")) + r"_[1-9]$.cut"
+        )
+        cut_files = sorted(
+            list(
+                f
+                for f in pname.iterdir()
+                if pattern.search(str(f)) or pattern1.search(str(f))
+            )
+        )
         # extract the clusters from each cut file
         # get the corresponding tetrode files
         tet_files = [str(c.with_suffix("")) for c in cut_files]
@@ -661,7 +665,7 @@ class ClusterSession(object):
         for fname in tet_files:
             T = IO(fname)
             idx = fname.rfind(".")
-            tetnum = int(fname[idx+1:])
+            tetnum = int(fname[idx + 1 :])
             cut = T.getCut(tetnum)
             tetrode_clusters[tetnum] = cut
 

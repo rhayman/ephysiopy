@@ -25,7 +25,7 @@ def circ_r(alpha, w=None, d=0, axis=0):
     r = np.sum(w * np.exp(1j * alpha))
     r = np.abs(r) / np.sum(w)
     if d != 0:
-        c = d/2./np.sin(d/2.)
+        c = d / 2.0 / np.sin(d / 2.0)
         r = c * r
     return r
 
@@ -40,12 +40,17 @@ def mean_resultant_vector(angles):
     Returns:
         r (float): The mean resultant vector length.
         th (float): The mean resultant vector direction.
+
+    Notes:
+    Taken from Directional Statistics by Mardia & Jupp, 2000
     """
-    S = np.sum(np.sin(angles)) * (1/float(len(angles)))
-    C = np.sum(np.cos(angles)) * (1/float(len(angles)))
+    if len(angles) == 0:
+        return 0, 0
+    S = np.sum(np.sin(angles)) * (1 / float(len(angles)))
+    C = np.sum(np.cos(angles)) * (1 / float(len(angles)))
     r = np.hypot(S, C)
-    th = np.arctan(S / C)
-    if (C < 0):
+    th = np.arctan2(S, C)
+    if C < 0:
         th = np.pi + th
     return r, th
 
@@ -69,8 +74,7 @@ def V_test(angles, test_direction):
     y_hat = np.sum(np.sin(np.radians(angles))) / float(n)
     r = np.sqrt(x_hat**2 + y_hat**2)
     theta_hat = np.degrees(np.arctan(y_hat / x_hat))
-    v_squiggle = r * np.cos(
-        np.radians(theta_hat) - np.radians(test_direction))
+    v_squiggle = r * np.cos(np.radians(theta_hat) - np.radians(test_direction))
     V = np.sqrt(2 * n) * v_squiggle
     return V
 
@@ -99,14 +103,14 @@ def duplicates_as_complex(x, already_sorted=False):
         x = np.sort(x)
     is_start = np.empty(len(x), dtype=bool)
     is_start[0], is_start[1:] = True, x[:-1] != x[1:]
-    labels = np.cumsum(is_start)-1
+    labels = np.cumsum(is_start) - 1
     sub_idx = np.arange(len(x)) - np.nonzero(is_start)[0][labels]
-    return x + 1j*sub_idx
+    return x + 1j * sub_idx
 
 
 def watsonsU2(a, b):
     """
-    Tests whether two samples from circular observations differ significantly 
+    Tests whether two samples from circular observations differ significantly
     from each other with regard to mean direction or angular variance.
 
     Args:
@@ -142,9 +146,9 @@ def watsonsU2(a, b):
 
     d_k = (a_ind / float(n_a)) - (b_ind / float(n_b))
 
-    d_k_sq = d_k ** 2
+    d_k_sq = d_k**2
 
-    U2 = ((n_a*n_b) / N**2) * (np.sum(d_k_sq) - ((np.sum(d_k)**2) / N))
+    U2 = ((n_a * n_b) / N**2) * (np.sum(d_k_sq) - ((np.sum(d_k) ** 2) / N))
     return U2
 
 
@@ -170,22 +174,32 @@ def watsonsU2n(angles):
     Vi = angles / float(360)
     sum_Vi = np.sum(Vi)
     sum_sq_Vi = np.sum(Vi**2)
-    Ci = (2 * np.arange(1, n+1)) - 1
+    Ci = (2 * np.arange(1, n + 1)) - 1
     sum_Ci_Vi_ov_n = np.sum(Ci * Vi / n)
     V_bar = (1 / float(n)) * sum_Vi
-    U2n = sum_sq_Vi - sum_Ci_Vi_ov_n + (
-        n * (1/float(3) - (V_bar - 0.5)**2))
+    U2n = sum_sq_Vi - sum_Ci_Vi_ov_n + (n * (1 / float(3) - (V_bar - 0.5) ** 2))
     test_vals = {
-        '0.1': 0.152, '0.05': 0.187, '0.025': 0.221,
-        '0.01': 0.267, '0.005': 0.302}
+        "0.1": 0.152,
+        "0.05": 0.187,
+        "0.025": 0.221,
+        "0.01": 0.267,
+        "0.005": 0.302,
+    }
     for key, val in test_vals.items():
         if U2n > val:
-            print('The Watsons U2 statistic is {0} which is \
-                greater than\n the critical value of {1} at p={2}'.format(
-                    U2n, val, key))
+            print(
+                "The Watsons U2 statistic is {0} which is \
+                greater than\n the critical value of {1} at p={2}".format(
+                    U2n, val, key
+                )
+            )
         else:
-            print('The Watsons U2 statistic is not \
-                significant at p={0}'.format(key))
+            print(
+                "The Watsons U2 statistic is not \
+                significant at p={0}".format(
+                    key
+                )
+            )
     return U2n
 
 
@@ -220,9 +234,10 @@ def watsonWilliams(a, b):
     R = np.hypot(C, S)
     R_hat = (R_1 + R_2) / float(N)
     from ephysiopy.common.mle_von_mises_vals import vals
+
     mle_von_mises = np.array(vals)
     mle_von_mises = np.sort(mle_von_mises, 0)
-    k_hat = mle_von_mises[(np.abs(mle_von_mises[:, 0]-R_hat)).argmin(), 1]
+    k_hat = mle_von_mises[(np.abs(mle_von_mises[:, 0] - R_hat)).argmin(), 1]
     g = 1 - (3 / 8 * k_hat)
-    F = g * (N-2) * ((R_1 + R_2 - R) / (N - (R_1 + R_2)))
+    F = g * (N - 2) * ((R_1 + R_2 - R) / (N - (R_1 + R_2)))
     return F

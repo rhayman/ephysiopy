@@ -14,10 +14,8 @@ import seaborn as sns
 from ephysiopy.axona import tintcolours as tcols
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 from ephysiopy.common.binning import RateMap
-from ephysiopy.common.utils import blur_image, clean_kwargs
+from ephysiopy.common.utils import blur_image, clean_kwargs, BinnedData
 from ephysiopy.common import fieldcalcs as fc
-
-# Decorators
 
 
 def stripAxes(func):
@@ -97,18 +95,16 @@ class FigureMaker(object):
             **kwargs: Additional keyword arguments for the function.
         """
         rmap = self.get_rate_map(cluster, channel, **kwargs)
-        ratemap = np.ma.MaskedArray(rmap[0], np.isnan(rmap[0]), copy=True)
-        x, y = np.meshgrid(rmap[1][1].data, rmap[1][0].data)
-        vmax = np.nanmax(np.ravel(ratemap))
+        vmax = np.nanmax(np.ravel(rmap.binned_data[0]))
         ax = kwargs.pop("ax", None)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
         kwargs = clean_kwargs(plt.pcolormesh, kwargs)
         ax.pcolormesh(
-            x,
-            y,
-            ratemap,
+            rmap.bin_edges[1],
+            rmap.bin_edges[0],
+            rmap.binned_data[0],
             cmap=jet_cmap,
             edgecolors="face",
             vmax=vmax,
@@ -118,6 +114,7 @@ class FigureMaker(object):
         ax.set_aspect("equal")
         return ax
 
+    @stripAxes
     def plot_hd_map(self, cluster: int, channel: int, **kwargs):
         """
         Gets the head direction map for the specified cluster(s) and channel.
@@ -141,11 +138,14 @@ class FigureMaker(object):
         ax.set_theta_zero_location("N")
         # need to deal with the case where the axis is supplied but
         # is not polar. deal with polar first
-        theta = np.deg2rad(rmap[1][0])
+        theta = np.deg2rad(rmap.bin_edges[0])
         ax.clear()
-        r = rmap[0] * self.PosCalcs.sample_rate  # in samples so * pos sample_rate
+        r = (
+            rmap.binned_data[0] * self.PosCalcs.sample_rate
+        )  # in samples so * pos sample_rate
         r = np.insert(r, -1, r[0])
-        if "polar" in ax.name:
+        hasData = np.any(r > 0)
+        if "polar" in ax.name and hasData:
             ax.plot(theta, r)
             if fill:
                 ax.fill(theta, r, alpha=0.5)
@@ -155,14 +155,15 @@ class FigureMaker(object):
             ax.set_rgrids([])
 
         # See if we should add the mean resultant vector (mrv)
-        if add_mrv:
+        if add_mrv and hasData:
             from ephysiopy.common.statscalcs import mean_resultant_vector
 
-            idx = self._get_spike_pos_idx(cluster, channel)
-            angles = self.PosCalcs.dir[idx]
-            veclen, th = mean_resultant_vector(np.deg2rad(angles))
+            veclen = fc.get_mean_resultant_length(rmap.binned_data[0])
+            th = fc.get_mean_resultant_angle(rmap.binned_data[0])
             ax.plot(
-                [th, th], [0, veclen * np.max(rmap[0]) * self.PosCalcs.sample_rate], "r"
+                [0, th],
+                [0, veclen * np.max(rmap.binned_data[0]) * self.PosCalcs.sample_rate],
+                "r",
             )
         if "polar" in ax.name:
             ax.set_thetagrids([0, 90, 180, 270])
@@ -192,7 +193,7 @@ class FigureMaker(object):
         ax.plot(
             self.PosCalcs.xy[0, :],
             self.PosCalcs.xy[1, :],
-            c=tcols.colours[0],
+            color=tcols.colours[0],
             zorder=1,
         )
         ax.set_aspect("equal")
@@ -202,7 +203,7 @@ class FigureMaker(object):
                 self.PosCalcs.xy[0, idx],
                 self.PosCalcs.xy[1, idx],
                 marker=marker,
-                c=col,
+                color=col,
                 **kwargs
             )
         return ax
@@ -220,17 +221,21 @@ class FigureMaker(object):
             **kwargs: Additional keyword arguments for the function.
         """
         return_ratemap = kwargs.pop("return_ratemap", False)
-        rmap = self.get_eb_map(cluster, channel, **kwargs)
+        rmap = self.get_eb_map(cluster, channel, range=None, **kwargs)
         ax = kwargs.pop("ax", None)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(projection="polar")
-        theta = rmap[1][0]
-        phi = rmap[1][1]
-        X, Y = np.meshgrid(theta, phi)
         # sanitise kwargs before passing on to pcolormesh
         kwargs = clean_kwargs(plt.pcolormesh, kwargs)
-        ax.pcolormesh(X.T, Y.T, rmap[0], edgecolors="face", shading="auto", **kwargs)
+        ax.pcolormesh(
+            rmap.bin_edges[1],
+            rmap.bin_edges[0],
+            rmap.binned_data[0],
+            edgecolors="face",
+            shading="auto",
+            **kwargs
+        )
         ax.set_xticks(np.arange(0, 2 * np.pi, np.pi / 4))
         # ax.set_xticklabels(np.arange(0, 2*np.pi, np.pi/4))
         ax.set_yticks(np.arange(0, 50, 10))
@@ -261,9 +266,9 @@ class FigureMaker(object):
             ax = fig.add_subplot(111)
         ax.set_aspect("equal")
         # Parse kwargs
-        num_dir_bins = kwargs("dir_bins", 60)
-        rect_size = kwargs("ms", 1)
-        add_colour_wheel = kwargs("add_colour_wheel", False)
+        num_dir_bins = kwargs.get("dir_bins", 60)
+        rect_size = kwargs.get("ms", 1)
+        add_colour_wheel = kwargs.get("add_colour_wheel", False)
         dir_colours = sns.color_palette("hls", num_dir_bins)
         # Process dirrectional data
         idx = self._get_spike_pos_idx(cluster, channel)
@@ -276,7 +281,7 @@ class FigureMaker(object):
                 self.RateMap.xy[:, i],
                 width=rect_size,
                 height=rect_size,
-                bbox=ax.bbox,
+                clip_box=ax.bbox,
                 facecolor=dir_colours[idx_of_dir_to_colour[i]],
                 rasterized=True,
             )
@@ -329,15 +334,19 @@ class FigureMaker(object):
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-        Am = sac.copy()
+        Am = sac.binned_data[0].copy()
         Am[~measures["dist_to_centre"]] = np.nan
         Am = np.ma.masked_invalid(np.atleast_2d(Am))
-        x, y = np.meshgrid(
-            np.arange(0, np.shape(sac)[1]), np.arange(0, np.shape(sac)[0])
-        )
-        vmax = np.nanmax(np.ravel(sac))
+        x, y = np.meshgrid(sac.bin_edges[1].data, sac.bin_edges[0].data)
+        vmax = np.nanmax(np.ravel(sac.binned_data[0]))
         ax.pcolormesh(
-            x, y, sac, cmap=grey_cmap, edgecolors="face", vmax=vmax, shading="auto"
+            x,
+            y,
+            sac.binned_data[0],
+            cmap=grey_cmap,
+            edgecolors="face",
+            vmax=vmax,
+            shading="auto",
         )
         import copy
 
@@ -345,35 +354,23 @@ class FigureMaker(object):
         cmap.set_bad("w", 0)
         ax.pcolormesh(x, y, Am, cmap=cmap, edgecolors="face", vmax=vmax, shading="auto")
         # horizontal green line at 3 o'clock
-        _y = (np.shape(sac)[0] / 2, np.shape(sac)[0] / 2)
-        _x = (np.shape(sac)[1] / 2, np.shape(sac)[0])
+        _y = 0, 0
+        _x = 0, sac.bin_edges[0][-1]
         ax.plot(_x, _y, c="g")
-        mag = measures["scale"] * 0.5
+        mag = measures["scale"] * 0.75
         th = np.linspace(0, measures["orientation"], 50)
         from ephysiopy.common.utils import rect
 
         [x, y] = rect(mag, th, deg=1)
         # angle subtended by orientation
-        ax.plot(
-            x + (measures["dist_to_centre"].shape[1] / 2),
-            (measures["dist_to_centre"].shape[0] / 2) - y,
-            "r",
-            **kwargs
-        )
+        ax.plot(x, -y, c="r", **kwargs)
         # plot lines from centre to peaks above middle
         for p in measures["closest_peak_coords"]:
             if p[0] <= measures["dist_to_centre"].shape[0] / 2:
-                ax.plot(
-                    (measures["dist_to_centre"].shape[1] / 2, p[1]),
-                    (measures["dist_to_centre"].shape[0] / 2, p[0]),
-                    "k",
-                    **kwargs
-                )
+                ax.plot((0, p[1]), (0, p[0]), "k", **kwargs)
         ax.invert_yaxis()
         all_ax = ax.axes
         all_ax.set_aspect("equal")
-        all_ax.set_xlim((0.5, measures["dist_to_centre"].shape[1] - 1.5))
-        all_ax.set_ylim((measures["dist_to_centre"].shape[0] - 0.5, -0.5))
 
         return ax
 
@@ -395,7 +392,7 @@ class FigureMaker(object):
             fig = plt.figure()
             ax = fig.add_subplot(111)
         kwargs = clean_kwargs(plt.plot, kwargs)
-        ax.plot(rmap[1][0][0:-1], rmap[0], **kwargs)
+        ax.plot(rmap.bin_edges[0][:-1], rmap.binned_data[0], **kwargs)
         ax.set_xlabel("Speed (cm/s)")
         ax.set_ylabel("Rate (Hz)")
         return ax
@@ -413,19 +410,18 @@ class FigureMaker(object):
             **kwargs: Additional keyword arguments for the function.
         """
         rmap = self.get_speed_v_hd_map(cluster, channel, **kwargs)
-        # im = blur_image(rmap[0], 5, ftype="gaussian")
-        im = np.ma.MaskedArray(rmap[0])
+        im = np.ma.MaskedArray(rmap.binned_data[0], np.isnan(rmap.binned_data[0]))
         # mask low rates...
         # im = np.ma.masked_where(im <= 1, im)
         # ... and where less than 0.5% of data is accounted for
-        y, x = np.meshgrid(rmap[1][0], rmap[1][1])
+        y, x = np.meshgrid(rmap.bin_edges[0], rmap.bin_edges[1], indexing="ij")
         vmax = np.nanmax(np.ravel(im))
         ax = kwargs.pop("ax", None)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111)
         ax.pcolormesh(
-            x, y, im.T, cmap=jet_cmap, edgecolors="face", vmax=vmax, shading="auto"
+            x, y, im, cmap=jet_cmap, edgecolors="face", vmax=vmax, shading="auto"
         )
         ax.set_xticks(
             [90, 180, 270], labels=["90", "180", "270"], fontweight="normal", size=6
@@ -628,7 +624,9 @@ class FigureMaker(object):
             xrange = kwargs.pop("Trange")
         else:
             xrange = [-0.5, 0.5]
-        c, b = S.acorr(xrange, **kwargs)
+        ac = S.acorr(xrange, **kwargs)
+        c = ac.binned_data[0]
+        b = ac.bin_edges[0]
         ax.bar(b[:-1], c, width=binsize, color="k", align="edge")
         ax.set_xlim(xrange)
         ax.set_xticks((xrange[0], 0, xrange[1]))

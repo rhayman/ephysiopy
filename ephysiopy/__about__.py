@@ -1,4 +1,4 @@
 __project__ = "ephysiopy"
 __author__ = "Robin Hayman"
-__version__ = "2.0.45"
+__version__ = "2.0.46"
 __license__ = "MIT"

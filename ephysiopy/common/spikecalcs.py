@@ -10,7 +10,13 @@ import numpy as np
 from scipy.special import erf
 from phylib.io.model import TemplateModel
 from scipy import signal, stats
-from ephysiopy.common.utils import min_max_norm, shift_vector
+from ephysiopy.common.utils import (
+    min_max_norm,
+    shift_vector,
+    BinnedData,
+    VariableToBin,
+    MapType,
+)
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 
 
@@ -183,7 +189,13 @@ def cluster_quality(
     return L_ratio, isolation_dist
 
 
-def xcorr(x1: np.ndarray, x2=None, Trange=None, binsize=0.001, **kwargs) -> tuple:
+def xcorr(
+    x1: np.ndarray,
+    x2: np.ndarray = None,
+    Trange: np.ndarray | list = None,
+    binsize: float = 0.001,
+    **kwargs,
+) -> BinnedData:
     """
     Calculates the ISIs in x1 or x1 vs x2 within a given range
 
@@ -195,9 +207,8 @@ def xcorr(x1: np.ndarray, x2=None, Trange=None, binsize=0.001, **kwargs) -> tupl
         binsize (float): The size of the bins in seconds
 
     Returns:
-        counts (np.ndarray): The cross-correlogram of the spike trains
-            x1 and x2
-        bins (np.ndarray): The bins used to calculate the cross-correlogram
+        BinnedData: A BinnedData object containing the binned data and the
+                    bin edges
     """
     if x2 is None:
         x2 = x1.copy()
@@ -214,7 +225,12 @@ def xcorr(x1: np.ndarray, x2=None, Trange=None, binsize=0.001, **kwargs) -> tupl
     counts, bins = np.histogram(
         y[y != 0], bins=int(np.ptp(Trange) / binsize) + 1, range=Trange
     )
-    return counts, bins
+    return BinnedData(
+        variable=VariableToBin.TIME,
+        map_type=MapType.SPK,
+        binned_data=[counts],
+        bin_edges=[bins],
+    )
 
 
 def contamination_percent(x1: np.ndarray, x2: np.ndarray = None, **kwargs) -> tuple:
@@ -244,7 +260,9 @@ def contamination_percent(x1: np.ndarray, x2: np.ndarray = None, **kwargs) -> tu
     """
     if x2 is None:
         x2 = x1.copy()
-    c, b = xcorr(x1, x2, **kwargs)
+    xc = xcorr(x1, x2, **kwargs)
+    b = xc.bin_edges[0]
+    c = xc.binned_data[0]
     left = [[-0.05, -0.01]]
     right = [[0.01, 0.051]]
     far = [[-0.5, -0.249], [0.25, 0.501]]
@@ -483,7 +501,7 @@ class SpikeCalcsGeneric(object):
             if self._waves is not None:
                 self._waves.mask = mask
 
-    def acorr(self, Trange: np.ndarray = None, **kwargs) -> tuple:
+    def acorr(self, Trange: np.ndarray = None, **kwargs) -> BinnedData:
         """
         Calculates the autocorrelogram of a spike train
 
@@ -493,9 +511,7 @@ class SpikeCalcsGeneric(object):
                 autocorrelogram over
 
         Returns:
-            counts (np.ndarray): The autocorrelogram
-            bins (np.ndarray): The bins used to calculate the
-                autocorrelogram
+        result: (BinnedData): Container for the binned data
         """
         return xcorr(self.spike_times, Trange=Trange, **kwargs)
 
@@ -518,7 +534,9 @@ class SpikeCalcsGeneric(object):
         """
         bins = 201
         trange = np.array((-500, 500))
-        counts, bins = self.acorr(Trange=trange)
+        ac = self.acorr(Trange=trange)
+        bins = ac.bin_edges[0]
+        counts = ac.binned_data[0]
         mask = np.logical_and(bins > 0, bins < isi_range)
         return np.mean(counts[mask[1:]])
 
@@ -953,11 +971,11 @@ class SpikeCalcsGeneric(object):
             thetaMod (float): The difference of the values at the first peak
             and trough of the autocorrelogram.
         """
-        corr, _ = self.acorr()
+        ac = self.acorr()
         # Take the fft of the spike train autocorr (from -500 to +500ms)
         from scipy.signal import periodogram
 
-        freqs, power = periodogram(corr, fs=200, return_onesided=True)
+        freqs, power = periodogram(ac.binned_data[0], fs=200, return_onesided=True)
         # Smooth the power over +/- 1Hz
         b = signal.windows.boxcar(3)
         h = signal.filtfilt(b, 3, power)
@@ -986,7 +1004,9 @@ class SpikeCalcsGeneric(object):
 
         Measure used in Cacucci et al., 2004 and Kropff et al 2015
         """
-        corr, bins = self.acorr()
+        ac = self.acorr()
+        bins = ac.bin_edges[0]
+        corr = ac.binned_data[0]
         # 'close' the right-hand bin
         bins = bins[0:-1]
         # normalise corr so max is 1.0
@@ -1018,11 +1038,11 @@ class SpikeCalcsGeneric(object):
         Raises:
             ValueError: If the input spike train is not valid.
         """
-        corr, _ = self.acorr()
+        ac = self.acorr()
         # Take the fft of the spike train autocorr (from -500 to +500ms)
         from scipy.signal import periodogram
 
-        freqs, power = periodogram(corr, fs=200, return_onesided=True)
+        freqs, power = periodogram(ac.binned_data[0], fs=200, return_onesided=True)
         power_masked = np.ma.MaskedArray(power, np.logical_or(freqs < 6, freqs > 12))
         return freqs[np.argmax(power_masked)]
 

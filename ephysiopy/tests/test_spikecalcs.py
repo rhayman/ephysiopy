@@ -3,6 +3,7 @@ import pytest
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric, get_param
 from ephysiopy.common.spikecalcs import SpikeCalcsAxona, cluster_quality
 from ephysiopy.io.recording import AxonaTrial
+from ephysiopy.common.utils import BinnedData
 
 
 def get_spikecalcs_instance(path_to_axona_data) -> SpikeCalcsGeneric:
@@ -33,23 +34,23 @@ def test_spikecalcs_init(path_to_axona_data):
     S.duration
     with pytest.raises(IndexError):
         S.trial_mean_fr()
-    S.duration = 50.
+    S.duration = 50.0
     fr = S.trial_mean_fr()
-    assert (isinstance(fr, float))
+    assert isinstance(fr, float)
     S.spk_clusters = None
 
 
 def test_mean_isi_range(path_to_axona_data):
     S = get_spikecalcs_instance(path_to_axona_data)
     r = S.mean_isi_range(50)
-    assert (isinstance(r, float))
+    assert isinstance(r, float)
 
 
 def test_xcorr(path_to_axona_data):
     S = get_spikecalcs_instance(path_to_axona_data)
     S.acorr()
-    y, bins = S.acorr(Trange=[-100, 100])
-    assert (isinstance(y, np.ndarray))
+    ac = S.acorr(Trange=[-100, 100])
+    assert isinstance(ac, BinnedData)
 
 
 def test_mean_waveforms(path_to_axona_data):
@@ -67,20 +68,20 @@ def test_cluster_quality(path_to_axona_data):
     cut = T.TETRODE[1].cut
     waves = T.TETRODE[1].waveforms
     L_ratio, isolation_dist = cluster_quality(waves, cut, 1)
-    assert (isinstance(L_ratio, float))
-    assert (isinstance(isolation_dist, float))
+    assert isinstance(L_ratio, float)
+    assert isinstance(isolation_dist, float)
 
 
-'''
+"""
                         SPIKECALCSAXONA
-'''
+"""
 
 
 def test_get_param(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     waveforms = T.TETRODE[1].waveforms
     waveforms = waveforms[T.TETRODE[1].cut == 1, :, :]
-    params = ['Amp', 'P', 'T', 'Vt', 'tP', 'tT', 'PCA']
+    params = ["Amp", "P", "T", "Vt", "tP", "tT", "PCA"]
     for param in params:
         get_param(waveforms, param=param)
 

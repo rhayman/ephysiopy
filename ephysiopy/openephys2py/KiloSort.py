@@ -66,7 +66,7 @@ class KiloSortSession(object):
 
         import pandas as pd
 
-        dtype = {'names': ('cluster_id', 'group'), 'formats': ('i4', '<U10')}
+        dtype = {"names": ("cluster_id", "group"), "formats": ("i4", "<U10")}
         # One of these (cluster_groups.csv or cluster_group.tsv) is from
         # kilosort and the other from kilosort2
         # and is updated by the user when doing cluster assignment in phy
@@ -76,7 +76,7 @@ class KiloSortSession(object):
                 os.path.join(self.fname_root, "cluster_groups.csv"),
                 unpack=True,
                 skiprows=1,
-                dtype=dtype
+                dtype=dtype,
             )
         if fileExists(self.fname_root, "cluster_group.tsv"):
             self.cluster_id, self.group = np.loadtxt(
@@ -102,17 +102,13 @@ class KiloSortSession(object):
             self.cluster_info = pd.read_csv(
                 os.path.join(self.fname_root, "cluster_info.tsv"), sep="\t"
             )
-            if fileExists(
-                self.fname_root, "channel_positions.npy") and fileExists(
+            if fileExists(self.fname_root, "channel_positions.npy") and fileExists(
                 self.fname_root, "channel_map.npy"
             ):
-                chXZ = np.load(
-                    os.path.join(self.fname_root, "channel_positions.npy"))
-                chMap = np.load(
-                    os.path.join(self.fname_root, "channel_map.npy"))
+                chXZ = np.load(os.path.join(self.fname_root, "channel_positions.npy"))
+                chMap = np.load(os.path.join(self.fname_root, "channel_map.npy"))
                 chID = np.asarray(
-                    [np.argmax(chMap == x) for x in
-                     self.cluster_info.ch.values]
+                    [np.argmax(chMap == x) for x in self.cluster_info.ch.values]
                 )
                 self.cluster_info["chanX"] = chXZ[chID, 0]
                 self.cluster_info["chanY"] = chXZ[chID, 1]
@@ -134,17 +130,17 @@ class KiloSortSession(object):
                 dtype=dtype,
             )
         if fileExists(self.fname_root, "spike_clusters.npy"):
-            self.spk_clusters = np.ma.MaskedArray(np.squeeze(
-                np.load(os.path.join(self.fname_root, "spike_clusters.npy"))
-            ))
+            self.spk_clusters = np.ma.MaskedArray(
+                np.squeeze(np.load(os.path.join(self.fname_root, "spike_clusters.npy")))
+            )
         if fileExists(self.fname_root, "amplitudes.npy"):
-            self.amplitudes = np.ma.MaskedArray(np.squeeze(
-                np.load(os.path.join(self.fname_root, "amplitudes.npy"))
-            ))
+            self.amplitudes = np.ma.MaskedArray(
+                np.squeeze(np.load(os.path.join(self.fname_root, "amplitudes.npy")))
+            )
         if fileExists(self.fname_root, "spike_times.npy"):
-            self.spike_times = np.ma.MaskedArray(np.squeeze(
-                np.load(os.path.join(self.fname_root, "spike_times.npy"))
-            ))
+            self.spike_times = np.ma.MaskedArray(
+                np.squeeze(np.load(os.path.join(self.fname_root, "spike_times.npy")))
+            )
             return True
         warnings.warn(
             "No spike times or clusters were found \
@@ -160,10 +156,7 @@ class KiloSortSession(object):
         if self.cluster_id is not None:
             self.good_clusters = []
             for id_group in zip(self.cluster_id, self.group):
-                if (
-                    "noise" not in id_group[1]
-                    and "mua" not in id_group[1]
-                ):
+                if "noise" not in id_group[1] and "mua" not in id_group[1]:
                     self.good_clusters.append(id_group[0])
 
     def removeKSNoiseClusters(self):
@@ -175,15 +168,15 @@ class KiloSortSession(object):
                 self.good_clusters.append(cluster_id)
 
     def get_cluster_spike_times(self, cluster: int):
-        '''
+        """
         Returns the spike times for cluster in samples
-        '''
+        """
         if cluster in self.good_clusters:
             return self.spike_times[self.spk_clusters == cluster]
-        
+
     def apply_mask(self, mask, **kwargs):
         """Apply a mask to the data
-        
+
         Args:
             mask (tuple): (start, end) in seconds
 
@@ -200,9 +193,20 @@ class KiloSortSession(object):
         # get spike and pos times into position sample units
         xy_ts = kwargs.get("xy_ts", None)
         sample_rate = kwargs.get("sample_rate", 50)
-        spike_pos_samples = np.ma.MaskedArray(self.spike_times / 30000 * sample_rate, dtype=int)
+        spike_pos_samples = np.ma.MaskedArray(
+            self.spike_times / 30000 * sample_rate, dtype=int
+        )
         pos_times_in_samples = np.ma.MaskedArray(xy_ts * sample_rate, dtype=int)
         mask = np.isin(spike_pos_samples, pos_times_in_samples)
-        self.spike_times = np.ma.MaskedArray(self.spike_times, mask)
-        self.spk_clusters = np.ma.MaskedArray(self.spk_clusters, mask)
-        self.amplitudes = np.ma.MaskedArray(self.amplitudes, mask)
+        if isinstance(self.spike_times, np.ma.MaskedArray):
+            self.spike_times.mask = mask.data
+        else:
+            self.spike_times = np.ma.MaskedArray(self.spike_times, mask)
+        if isinstance(self.spk_clusters, np.ma.MaskedArray):
+            self.spk_clusters.mask = mask.data
+        else:
+            self.spk_clusters = np.ma.MaskedArray(self.spk_clusters, mask)
+        if isinstance(self.amplitudes, np.ma.MaskedArray):
+            self.amplitudes.mask = mask.data
+        else:
+            self.amplitudes = np.ma.MaskedArray(self.amplitudes, mask)

@@ -15,11 +15,14 @@ from phylib.io.model import TemplateModel
 from ephysiopy.axona.axonaIO import IO, Pos
 from ephysiopy.axona.tetrode_dict import TetrodeDict
 from ephysiopy.common.ephys_generic import EEGCalcsGeneric, PosCalcsGeneric
-from ephysiopy.common.binning import RateMap, VariableToBin, MapType
+from ephysiopy.common.binning import RateMap
+from ephysiopy.common.utils import VariableToBin, MapType, BinnedData
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.visualise.plotting import FigureMaker
 from ephysiopy.common.utils import shift_vector, clean_kwargs
+
+import matplotlib.pylab as plt
 
 
 def fileContainsString(pname: str, searchStr: str) -> bool:
@@ -271,6 +274,33 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self._path2PosData = val
 
     @property
+    def mask_array(self):
+        if self._mask_array is None:
+            if self.PosCalcs:
+                self._mask_array = np.ma.MaskedArray(
+                    np.zeros(shape=(1, self.PosCalcs.npos), dtype=bool)
+                )
+            else:
+                self._mask_array = np.ma.MaskedArray(np.zeros(shape=(1, 1), dtype=bool))
+            return self._mask_array
+        else:
+            return self._mask_array
+
+    @mask_array.setter
+    def mask_array(self, val):
+        if self._mask_array is None:
+            self._mask_array = np.ma.MaskedArray(np.zeros(shape=(1, 1), dtype=bool))
+        if not isinstance(val, np.ma.MaskedArray):
+            if isinstance(val, (np.ndarray, list)):
+                self._mask_array = np.ma.MaskedArray(val)
+            elif isinstance(val, bool):
+                self._mask_array.fill(val)
+            else:
+                error("Need an array-like input")
+        else:
+            self._mask_array = val
+
+    @property
     def filter(self):
         return self._filter
 
@@ -322,7 +352,9 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_spike_times(self, cluster: int, channel: int, *args, **kwargs):
+    def get_spike_times(
+        self, cluster: int | list, channel: int | list, *args, **kwargs
+    ):
         """Returns the times of an individual cluster"""
         raise NotImplementedError
 
@@ -352,10 +384,9 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         if len(trial_filter) == 0:
             bool_arr = False
-            orig_bool_arr = False
+            self.mask_array = False
             self._update_filter(None)
         else:
-            orig_bool_arr = np.zeros(shape=(1, self.PosCalcs.npos), dtype=bool)
             for i_filter in trial_filter:
                 self._update_filter(i_filter)
                 if i_filter is None:
@@ -381,6 +412,9 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
                                 raise ValueError("Invalid direction")
                         else:
                             raise ValueError("filter must contain a key / value pair")
+                        bool_arr = np.logical_and(
+                            self.PosCalcs.dir > start, self.PosCalcs.dir < end
+                        )
                     if "speed" in i_filter.name:
                         if i_filter.start > i_filter.end:
                             raise ValueError(
@@ -417,14 +451,14 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
                         # such that only pos's between these ranges are KEPT
                         from_time = int(i_filter.start * self.PosCalcs.sample_rate)
                         to_time = int(i_filter.end * self.PosCalcs.sample_rate)
-                        bool_arr = np.zeros_like(orig_bool_arr)
+                        bool_arr = np.zeros(shape=(1, self.PosCalcs.npos), dtype=bool)
                         bool_arr[:, from_time:to_time] = True
                     else:
                         raise KeyError("Unrecognised key")
-        mask_array = np.logical_or(orig_bool_arr, bool_arr)
-        mask = np.expand_dims(np.any(mask_array, axis=0), 0)
+                self.mask_array = np.logical_or(self.mask_array, bool_arr)
 
-        self._mask_array = mask
+        mask = np.expand_dims(np.any(self.mask_array, axis=0), 0)
+        self.mask_array = mask
         if self.EEGCalcs:
             self.EEGCalcs.apply_mask(mask)
         if self.PosCalcs:
@@ -443,7 +477,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self.RateMap = RateMap(self.PosCalcs)
         self.npos = self.PosCalcs.xy.shape[1]
 
-    def _get_spike_pos_idx(self, cluster: int, channel: int, **kwargs):
+    def _get_spike_pos_idx(self, cluster: int | list, channel: int | list, **kwargs):
         """
         Returns the indices into the position data at which some cluster
         on a given channel emitted putative spikes.
@@ -460,12 +494,31 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             np.ndarray: The indices into the position data at which the spikes
                 occurred.
         """
+        pos_times = getattr(self.PosCalcs, "xyTS")
         if cluster is None:
             spk_times = getattr(self.PosCalcs, "xyTS")
-        else:
+        elif isinstance(cluster, int):
             spk_times = self.get_spike_times(cluster, channel)
-        pos_times = getattr(self.PosCalcs, "xyTS")
-        idx = np.searchsorted(pos_times, spk_times)
+        elif isinstance(cluster, list) and len(cluster) == 1:
+            spk_times = self.get_spike_times(cluster[0], channel[0])
+        elif isinstance(cluster, list) and len(cluster) > 1:
+            assert len(cluster) == len(
+                channel
+            ), "Cluster and channel lists must be same length"
+            idx = []
+            for clust, chan in zip(cluster, channel):
+                spk_times = self.get_spike_times(clust, chan)
+                _idx = np.searchsorted(pos_times, spk_times, side="right") - 1
+                if np.any(_idx >= self.PosCalcs.npos):
+                    _idx = np.delete(
+                        _idx, np.s_[np.argmax(_idx >= self.PosCalcs.npos) :]
+                    )
+                idx.append(_idx)
+            return idx
+
+        idx = np.searchsorted(pos_times, spk_times, side="right") - 1
+        if np.any(idx >= self.PosCalcs.npos):
+            idx = np.delete(idx, np.s_[np.argmax(idx >= self.PosCalcs.npos) :])
 
         if kwargs.get("shuffle", False):
             n_shuffles = kwargs.get("n_shuffles", 100)
@@ -479,11 +532,17 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             shifted_idx = []
             for shift in time_shifts:
                 shifted_idx.append(shift_vector(idx, shift, maxlen=self.PosCalcs.npos))
-            return np.array(shifted_idx)
+            return shifted_idx
 
         return idx
 
-    def _get_map(self, cluster: int, channel: int, var2bin: VariableToBin.XY, **kwargs):
+    def _get_map(
+        self,
+        cluster: int | list,
+        channel: int | list,
+        var2bin: VariableToBin.XY,
+        **kwargs,
+    ) -> BinnedData:
         """
         This function generates a rate map for a given cluster and channel.
 
@@ -514,12 +573,20 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             self.initialise()
         spk_times_in_pos_samples = self._get_spike_pos_idx(cluster, channel, **kwargs)
         npos = self._PosCalcs.npos
-        if spk_times_in_pos_samples.ndim == 1:
+        if (
+            isinstance(spk_times_in_pos_samples, list)
+            and len(spk_times_in_pos_samples) == 1
+        ):
+            spk_times_in_pos_samples = np.array(spk_times_in_pos_samples[0])
+        if isinstance(spk_times_in_pos_samples, np.ndarray):
             spk_weights = np.bincount(spk_times_in_pos_samples, minlength=npos)
             if len(spk_weights) > npos:
                 spk_weights = np.delete(spk_weights, np.s_[npos:], 0)
 
-        else:
+        elif (
+            isinstance(spk_times_in_pos_samples, list)
+            and len(spk_times_in_pos_samples) > 1
+        ):
             weights = []
             for spk_idx in spk_times_in_pos_samples:
                 w = np.bincount(spk_idx, minlength=npos)
@@ -528,10 +595,13 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
                 weights.append(w)
             spk_weights = np.array(weights)
 
-        rmap = self.RateMap.get_map(spk_weights, var_type=var2bin, **kwargs)
+        kwargs["var_type"] = var2bin
+        rmap = self.RateMap.get_map(spk_weights, **kwargs)
         return rmap
 
-    def get_rate_map(self, cluster: int, channel: int, **kwargs):
+    def get_rate_map(
+        self, cluster: int | list, channel: int | list, **kwargs
+    ) -> BinnedData:
         """
         Gets the rate map for the specified cluster(s) and channel.
 
@@ -542,7 +612,9 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         return self._get_map(cluster, channel, VariableToBin.XY, **kwargs)
 
-    def get_hd_map(self, cluster: int, channel: int, **kwargs):
+    def get_hd_map(
+        self, cluster: int | list, channel: int | list, **kwargs
+    ) -> BinnedData:
         """
         Gets the head direction map for the specified cluster(s) and channel.
 
@@ -553,7 +625,9 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         return self._get_map(cluster, channel, VariableToBin.DIR, **kwargs)
 
-    def get_eb_map(self, cluster: int, channel: int, **kwargs):
+    def get_eb_map(
+        self, cluster: int | list, channel: int | list, **kwargs
+    ) -> BinnedData:
         """
         Gets the edge bin map for the specified cluster(s) and channel.
 
@@ -564,7 +638,9 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         return self._get_map(cluster, channel, VariableToBin.EGO_BOUNDARY, **kwargs)
 
-    def get_speed_v_rate_map(self, cluster: int, channel: int, **kwargs):
+    def get_speed_v_rate_map(
+        self, cluster: int | list, channel: int | list, **kwargs
+    ) -> BinnedData:
         """
         Gets the speed vs rate for the specified cluster(s) and channel.
 
@@ -575,7 +651,9 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         return self._get_map(cluster, channel, VariableToBin.SPEED, **kwargs)
 
-    def get_speed_v_hd_map(self, cluster: int, channel: int, **kwargs):
+    def get_speed_v_hd_map(
+        self, cluster: int | list, channel: int | list, **kwargs
+    ) -> BinnedData:
         """
         Gets the speed vs head direction map for the specified cluster(s) and channel.
 
@@ -590,22 +668,17 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             cluster, channel, VariableToBin.SPEED_DIR, **dict(kwargs, binsize=binsize)
         )
 
-    def get_grid_map(self, cluster: int, channel: int, **kwargs):
+    def get_grid_map(
+        self, cluster: int | list, channel: int | list, **kwargs
+    ) -> BinnedData:
         rmap = self.get_rate_map(cluster, channel, **kwargs)
-        if "shuffle" in kwargs.keys():
-            kwargs = clean_kwargs(self.RateMap.autoCorr2D, kwargs)
-            n_maps = np.shape(rmap[0])[0]
-            sac = []
-            for i in range(n_maps):
-                r = np.squeeze(rmap[0][i, ...])
-                s = self.RateMap.autoCorr2D(r, **kwargs)
-                sac.append(s)
-            sac = np.array(sac)
-        else:
-            sac = self.RateMap.autoCorr2D(rmap[0], **kwargs)
+        kwargs = clean_kwargs(self.RateMap.autoCorr2D, kwargs)
+        sac = self.RateMap.autoCorr2D(rmap, **kwargs)
         return sac
 
-    def get_adaptive_map(self, cluster: int, channel: int, **kwargs):
+    def get_adaptive_map(
+        self, cluster: int | list, channel: int | list, **kwargs
+    ) -> BinnedData:
         return self._get_map(
             cluster, channel, VariableToBin.XY, map_type=MapType.ADAPTIVE, **kwargs
         )
@@ -677,17 +750,30 @@ class AxonaTrial(TrialInterface):
             return False
         return True
 
-    def get_spike_times(self, cluster: int = None, tetrode=None, *args, **kwargs):
+    def get_spike_times(
+        self, cluster: int | list = None, tetrode: int | list = None, *args, **kwargs
+    ):
         """
         Args:
-            tetrode (int):
-            cluster (int):
+            tetrode (int | list):
+            cluster (int | list):
 
         Returns:
             spike_times (np.ndarray):
         """
         if tetrode is not None:
-            return self.TETRODE.get_spike_samples(int(tetrode), int(cluster))
+            if isinstance(cluster, int):
+                return self.TETRODE.get_spike_samples(int(tetrode), int(cluster))
+            elif isinstance(cluster, list):
+                if len(cluster) == 1:
+                    tetrode = tetrode[0]
+                    cluster = cluster[0]
+                    return self.TETRODE.get_spike_samples(int(tetrode), int(cluster))
+                else:
+                    spikes = []
+                    for tc in zip(tetrode, cluster):
+                        spikes.append(self.TETRODE.get_spike_samples(tc[0], tc[1]))
+                    return spikes
 
     def apply_filter(self, *trial_filter: TrialFilter):
         """Apply a mask to the data
@@ -705,6 +791,7 @@ class AxonaTrial(TrialInterface):
 
         """
         mask = super().apply_filter(*trial_filter)
+        # if np.any(mask):
         for tetrode in self.TETRODE.keys():
             if self.TETRODE[tetrode] is not None:
                 self.TETRODE[tetrode].apply_mask(
@@ -777,7 +864,7 @@ class OpenEphysBase(TrialInterface):
         return recording_start_time
 
     def get_spike_times(
-        self, cluster: int = None, tetrode: int = None, *args, **kwargs
+        self, cluster: int | list = None, tetrode: int | list = None, *args, **kwargs
     ):
         """
         Args:
@@ -789,12 +876,23 @@ class OpenEphysBase(TrialInterface):
         """
         if not self.clusterData:
             self.load_cluster_data()
-        if cluster in self.clusterData.spk_clusters:
+        if isinstance(cluster, int) and isinstance(tetrode, int):
+            if cluster in self.clusterData.spk_clusters:
+                all_ts = self.clusterData.spike_times
+                times = all_ts[self.clusterData.spk_clusters == cluster]
+                return times.astype(np.int64) / self.sample_rate
+            else:
+                warnings.warn("Cluster not present")
+        elif isinstance(cluster, list) and isinstance(tetrode, list):
+            times = []
             all_ts = self.clusterData.spike_times
-            times = all_ts[self.clusterData.spk_clusters == cluster]
-            return times.astype(np.int64) / self.sample_rate
-        else:
-            warnings.warn("Cluster not present")
+            for c in cluster:
+                if c in self.clusterData.spk_clusters:
+                    t = all_ts[self.clusterData.spk_clusters == c]
+                    times.append(t.astype(np.int64) / self.sample_rate)
+                else:
+                    warnings.warn("Cluster not present")
+            return times
 
     def load_lfp(self, *args, **kwargs):
         """
@@ -1185,3 +1283,55 @@ class OpenEphysNWB(OpenEphysBase):
             recording_name,
             RecordingKind.NWB,
         )
+
+
+def getClusterBinCounts(
+    trial: AxonaTrial | OpenEphysBase, clusters: list[int], channels: list[int]
+) -> np.array:
+    """
+    Returns the number of spikes emitted by each cluster on each channel as a
+    numpy array. The array is of shape (n_clusters * n_channels, n_pos_samples)
+    """
+    if trial.PosCalcs is None:
+        trial.load_pos_data()
+    npos = trial.PosCalcs.npos
+    a = []
+    for clust_chan in zip(clusters, channels):
+        spk_weights = np.bincount(
+            trial._get_spike_pos_idx(clust_chan[0], clust_chan[1]),
+            minlength=npos,
+        )
+        if len(spk_weights) > npos:
+            spk_weights = np.delete(spk_weights, np.s_[npos:], 0)
+        a.append(spk_weights)
+    return np.array(a)
+
+
+def __debug_plot_mask__(trial: OpenEphysBase | AxonaTrial) -> None:
+    """
+    Debug function to plot the mask applied to the data
+    """
+
+    def _plot_mask(y: np.array, title: str):
+        fig, ax = plt.subplots()
+        _y = np.ravel(y)
+        x = np.ravel(np.arange(0, len(_y)))
+        ax.plot(x, _y)
+        ax.set_title(title)
+        plt.show()
+
+    f = TrialFilter("time", 0, 0)
+    f.start = 0
+    f.end = 600
+    trial.apply_filter(f)
+    trial_mask = trial._mask_array
+    _plot_mask(trial_mask, "Trial mask")
+    dir_mask = trial.PosCalcs.dir.mask
+    _plot_mask(dir_mask, "dir mask")
+    f.start = 600
+    f.end = 1800
+    trial.apply_filter()
+    _plot_mask(trial._mask_array, "Trial mask")
+    trial.apply_filter(f)
+    _plot_mask(trial._mask_array, "Trial mask")
+    _plot_mask(trial.PosCalcs.dir.mask, "dir mask")

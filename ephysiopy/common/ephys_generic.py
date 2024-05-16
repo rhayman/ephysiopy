@@ -148,7 +148,7 @@ class EEGCalcsGeneric(object):
             # mask now might be shorter than self.sig so we need to pad it
             if len(mask) < len(self.sig):
                 mask = np.pad(mask, (0, len(self.sig) - len(mask)))
-            self.sig.mask = mask
+            self.sig.mask = mask.data
         else:
             self.sig.mask = False
 
@@ -490,7 +490,7 @@ class PosCalcsGeneric(object):
         return xy
 
     def interpnans(self, xy: np.ma.MaskedArray) -> np.ma.MaskedArray:
-        n_masked: int = np.count_nonzero(xy.mask)
+        n_masked: int = np.count_nonzero(~xy.mask)
         if n_masked > 2:
             xm: np.ma.MaskedArray = xy[0]
             ym: np.ma.MaskedArray = xy[1]

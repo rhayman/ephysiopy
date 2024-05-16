@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
+from ephysiopy.common.utils import BinnedData
 
 
 @pytest.fixture
@@ -176,8 +177,8 @@ def test_mean_isi_range(basic_SpikeCalcs):
 
 
 def test_acorr(basic_SpikeCalcs):
-    xc, _ = basic_SpikeCalcs.acorr()
-    assert isinstance(xc, np.ndarray)
+    xc = basic_SpikeCalcs.acorr()
+    assert isinstance(xc, BinnedData)
 
 
 def test_calculate_psth(basic_SpikeCalcs):
