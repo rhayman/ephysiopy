@@ -74,4 +74,7 @@ Plotting data
 =============
 
 A mixin class called FigureMaker allows consistent plots, regardless of recording technique. All plotting functions
-there begin with "make" e.g "_getRateMapPlot" and return an instance of a matplotlib axis
+there begin with "plot" e.g "_rate_map" and return an instance of a matplotlib axis. The plotting functions in turn
+call a corresponding "get" function e.g. "get_rate_map" that will return an instance of the BinnedData class 
+containing the binned data, the histogram edges, the variable being binned (XY, SPEED etc) and the map type 
+(RATE, SPK, POS).
