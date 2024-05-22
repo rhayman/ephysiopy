@@ -8,6 +8,7 @@ import numpy as np
 import numpy.typing as npt
 from scipy import signal
 from scipy.interpolate import griddata
+import astropy.convolution as cnv
 
 
 class EventsGeneric(object):
@@ -435,6 +436,7 @@ class PosCalcsGeneric(object):
         xy = self.interpnans(xy)
         xy = self.smoothPos(xy)
         self.calcSpeed(xy)
+        self.smooth_speed(self.speed)
         self._xy = xy
         self._dir = self.calcHeadDirection(xy)
 
@@ -488,6 +490,17 @@ class PosCalcsGeneric(object):
             y: np.ma.MaskedArray = np.ma.masked_equal(y, np.min(y))
         xy = np.ma.array([x, y])
         return xy
+
+    def smooth_speed(self, speed: np.ma.MaskedArray, window_len: int = 21):
+        """
+        Smooth speed data with a window a little bit bigger than the usual
+        400ms window used for smoothing position data
+
+        NB Uses a box car filter as with Axona
+        """
+        g = cnv.Box1DKernel(window_len)
+        speed = cnv.convolve(speed, g, boundary="extend")
+        self.speed = speed
 
     def interpnans(self, xy: np.ma.MaskedArray) -> np.ma.MaskedArray:
         n_masked: int = np.count_nonzero(~xy.mask)

@@ -11,6 +11,7 @@ import boost_histogram as bh
 from astropy import convolution  # deals with nans unlike other convs
 from scipy import signal
 from scipy.spatial import distance
+from skimage.morphology import disk
 from shapely import MultiLineString, prepare
 from shapely.affinity import rotate, translate
 from shapely.geometry import LineString, Point
@@ -567,27 +568,6 @@ class RateMap(object):
         improc = improc[tn - t2 : tn - t2 + tn]
         return improc
 
-    def _circularStructure(self, radius):
-        """
-        Generates a circular binary structure for use with morphological
-        operations such as ndimage.binary_dilation etc
-
-        This is only used in this implementation for adaptively binning
-        ratemaps for use with information theoretic measures (Skaggs etc)
-
-        Args:
-            radius (int): the size of the circular structure
-
-        Returns:
-            res (array_like): Binary structure with shape [(radius*2) + 1,(radius*2) + 1]
-
-        See Also:
-            RateMap.__adpativeMap
-        """
-        from skimage.morphology import disk
-
-        return disk(radius)
-
     def getAdaptiveMap(self, pos_binned, spk_binned, alpha=4):
         """
         Produces a ratemap that has been adaptively binned according to the
@@ -645,7 +625,7 @@ class RateMap(object):
         r = 1
         while np.any(~bincheck):
             # create the filter kernel
-            h = self._circularStructure(r)
+            h = disk(r)
             h[h >= np.max(h) / 3.0] = 1
             h[h != 1] = 0
             if h.shape >= pos_binned.shape:

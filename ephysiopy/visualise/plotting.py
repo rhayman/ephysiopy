@@ -8,6 +8,7 @@ from matplotlib.patches import Rectangle
 from matplotlib.collections import PatchCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.projections import get_projection_class
+
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import seaborn as sns
 
