@@ -523,7 +523,7 @@ class RateMap(object):
         else:
             var = np.flipud(var)
         weights = np.atleast_2d(weights)  # needed for list comp below
-        var = np.array(var.data.T)
+        var = np.array(var.T)
         if bin_edges is None:
             ndhist = [
                 bh.numpy.histogramdd(var, range=range, weights=w.filled(0))
