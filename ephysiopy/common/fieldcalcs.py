@@ -62,15 +62,16 @@ def field_lims(A):
     Data is heavily smoothed.
 
     Args:
-        A (np.array): The ratemap
+        A (BinnedData): A BinnedData instance containing the ratemap
 
     Returns:
         label (np.array): The labelled ratemap
     """
-    nan_idx = np.isnan(A)
-    A[nan_idx] = 0
-    h = int(np.max(A.shape) / 2)
-    sm_rmap = blur_image(A, h, ftype="gaussian")
+    Ac = A.binned_data[0]
+    nan_idx = np.isnan(Ac)
+    Ac[nan_idx] = 0
+    h = int(np.max(Ac.shape) / 2)
+    sm_rmap = blur_image(A, h, ftype="gaussian").binned_data[0]
     thresh = np.max(sm_rmap.ravel()) * 0.2  # select area > 20% of peak
     distance = ndimage.distance_transform_edt(sm_rmap > thresh)
     peak_idx = skimage.feature.peak_local_max(

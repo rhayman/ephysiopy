@@ -301,7 +301,7 @@ class PosCalcsGeneric(object):
         self._xy = None
         self._xyTS = None
         self._dir = np.ma.MaskedArray(np.zeros_like(x))
-        self._speed = None
+        self._speed = np.ma.MaskedArray(np.zeros_like(x))
         self._ppm = ppm
         self._convert2cm = convert2cm
         self._jumpmax = jumpmax
@@ -500,7 +500,7 @@ class PosCalcsGeneric(object):
         """
         g = cnv.Box1DKernel(window_len)
         speed = cnv.convolve(speed, g, boundary="extend")
-        self.speed = speed
+        self.speed = np.ma.MaskedArray(speed)
 
     def interpnans(self, xy: np.ma.MaskedArray) -> np.ma.MaskedArray:
         n_masked: int = np.count_nonzero(~xy.mask)
@@ -546,10 +546,9 @@ class PosCalcsGeneric(object):
         Returns:
             Nothing. Sets self.speed
         """
-        speed = np.abs(np.ma.ediff1d(np.hypot(xy[0], xy[1])))
+        speed = np.ma.MaskedArray(np.abs(np.ma.ediff1d(np.hypot(xy[0], xy[1]))))
         self.speed = np.append(speed, speed[-1])
-        if self.convert2cm:
-            self.speed = self.speed * self.sample_rate
+        self.speed = self.speed * self.sample_rate
 
     def upsamplePos(self, xy: np.ma.MaskedArray, upsample_rate: int = 50):
         """

@@ -341,8 +341,8 @@ class FigureMaker(object):
         x, y = np.meshgrid(sac.bin_edges[1].data, sac.bin_edges[0].data)
         vmax = np.nanmax(np.ravel(sac.binned_data[0]))
         ax.pcolormesh(
-            x,
-            y,
+            sac.bin_edges[1].data,
+            sac.bin_edges[0].data,
             sac.binned_data[0],
             cmap=grey_cmap,
             edgecolors="face",
@@ -353,7 +353,15 @@ class FigureMaker(object):
 
         cmap = copy.copy(jet_cmap)
         cmap.set_bad("w", 0)
-        ax.pcolormesh(x, y, Am, cmap=cmap, edgecolors="face", vmax=vmax, shading="auto")
+        ax.pcolormesh(
+            sac.bin_edges[1].data,
+            sac.bin_edges[0].data,
+            Am,
+            cmap=cmap,
+            edgecolors="face",
+            vmax=vmax,
+            shading="auto",
+        )
         # horizontal green line at 3 o'clock
         _y = 0, 0
         _x = 0, sac.bin_edges[0][-1]

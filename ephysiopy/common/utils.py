@@ -200,8 +200,19 @@ def min_max_norm(x: np.ndarray, min=None, max=None, axis=0) -> np.ndarray:
     if max is None:
         max = np.nanmax(x, axis)
     if axis == -1:
-        return (x - min[..., None]) / (max - min)[..., None]
+        return (x - np.array(min)[..., None]) / np.array(max - min)[..., None]
     return (x - min) / (max - min)
+
+
+def remap_to_range(x: np.ndarray, new_min=0, new_max=1, axis=0) -> np.ndarray:
+    """
+    Remap the values of x to the range [new_min, new_max].
+    """
+    min = np.nanmin(x, axis)
+    max = np.nanmax(x, axis)
+    if axis == -1:
+        return np.array((x.T - min) / (max - min) * (new_max - new_min) + new_min).T
+    return (x - min) / (max - min) * (new_max - new_min) + new_min
 
 
 def flatten_list(list_to_flatten: list) -> list:
@@ -290,10 +301,14 @@ def blur_image(
     stddev = kwargs.pop("stddev", 5)
     boundary = kwargs.pop("boundary", "extend")
     n = int(n)
+    if n % 2 == 0:
+        n += 1
     if not ny:
         ny = n
     else:
         ny = int(ny)
+        if ny % 2 == 0:
+            ny += 1
     ndims = len(im.bin_edges)
     g = cnv.Box2DKernel(n)
     if "box" in ftype:
@@ -460,7 +475,7 @@ def bwperim(bw, n=4):
     return ~idx * bw
 
 
-def count_runs_and_unique_numbers(arr):
+def count_runs_and_unique_numbers(arr: np.ndarray) -> tuple:
     """
     Counts the number of continuous runs of numbers in a 1D numpy array
     and returns the count of runs for each unique number and the unique

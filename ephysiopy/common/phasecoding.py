@@ -1,15 +1,30 @@
 import matplotlib
 import matplotlib.cm
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 import numpy as np
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.common.rhythmicity import LFPOscillations
 from ephysiopy.common.utils import bwperim
-from ephysiopy.common.utils import count_runs_and_unique_numbers
+from ephysiopy.common.utils import count_runs_and_unique_numbers, flatten_list
+from ephysiopy.visualise.plotting import stripAxes
 from scipy import ndimage, optimize, signal
-from scipy.stats import norm
+from scipy.stats import norm, circmean
+import skimage
 from collections import defaultdict
+
+
+@stripAxes
+def _stripAx(ax):
+    return ax
+
+
+jet_cmap = matplotlib.colormaps["jet"]
+
+subaxis_title_fontsize = 10
+cbar_fontsize = 8
+cbar_tick_fontsize = 6
 
 
 def labelledCumSum(X, L):
@@ -134,7 +149,8 @@ def ccc(t, p):
     F = np.sum(np.sin(2 * t))
     G = np.sum(np.cos(2 * p))
     H = np.sum(np.sin(2 * p))
-    rho = 4 * (A * B - C * D) / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
+    rho = 4 * (A * B - C * D) / \
+        np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
     return rho
 
 
@@ -159,8 +175,74 @@ def ccc_jack(t, p):
     G = np.sum(G) - G
     H = np.sin(2 * p)
     H = np.sum(H) - H
-    rho = 4 * (A * B - C * D) / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
+    rho = 4 * (A * B - C * D) / \
+        np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
     return rho
+
+
+def plot_spikes_in_runs_per_field(field_label: np.ndarray, run_start_stop_idx: tuple, spikes_in_time: np.ndarray, **kwargs) -> tuple:
+    '''
+    Debug plotting to show spikes per run per field found in the ratemap
+    as a raster plot
+
+    Args:
+    field_label (np.ndarray): The field labels for each position bin
+    run_start_stop_idx (tuple): The start and stop indices of each run
+    spikes_in_time (np.ndarray): The number of spikes in each position bin
+
+    kwargs:
+    separate_fields (bool): If True then each field will be plotted in a
+    separate figure
+
+    Returns:
+    fig, axes (tuple): The figure and axes objects
+    '''
+
+    run_field_id = field_label[run_start_stop_idx[0]]
+    runs_per_field = np.histogram(
+        run_field_id, bins=range(1, max(run_field_id)+2))[0]
+    max_run_len = np.max(run_start_stop_idx[1] - run_start_stop_idx[0])
+    all_slices = np.array([slice(r[0], r[1])
+                          for r in run_start_stop_idx]).flatten()
+    # create the figure window first then do the iteration through fields etc
+    if "separate_fields" not in kwargs.keys():
+        fig, axes = plt.subplots(len(np.unique(run_field_id)), 1)
+        axes = axes.flatten()
+    else:
+        axes = []
+        fig = []
+    # a grey colour for the background i.e. how long the run was
+    grey = np.array([0.8627, 0.8627, 0.8627, 1])
+    # iterate through each field then pull out the
+    max_spikes = np.nanmax(spikes_in_time).astype(int) + 1
+    orig_cmap = matplotlib.colormaps['spring'].resampled(max_spikes)
+    cmap = orig_cmap(np.linspace(0, 1, max_spikes))
+    cmap[0, :] = grey
+    newcmap = ListedColormap(cmap)
+    # spike count for each run through the field
+    for i, field_id in enumerate(np.unique(run_field_id)):
+        # create a temporary array to hold the raster for this fields runs
+        raster_arr = np.zeros(shape=(runs_per_field[i], max_run_len)) * np.nan
+        # get the indices into the time binned spikes of the runs
+        i_field_slices = all_slices[run_field_id == field_id]
+        for j, s in enumerate(i_field_slices):
+            i_run_len = s.stop-s.start
+            raster_arr[j, 0:i_run_len] = spikes_in_time[s]
+        # spikes_per_run = np.nansum(raster_arr, axis=1)
+        if "separate_fields" in kwargs.keys():
+            f, ax = plt.subplots(1, 1)
+            ax.imshow(raster_arr, cmap=newcmap, aspect='auto')
+            ax.axes.get_xaxis().set_ticks([])
+            ax.axes.get_yaxis().set_ticks([])
+            ax.set_ylabel(f"Field {field_id}")
+            fig.append(f)
+            axes.append(ax)
+        else:
+            axes[i].imshow(raster_arr, cmap=newcmap, aspect='auto')
+            axes[i].axes.get_xaxis().set_ticks([])
+            axes[i].axes.get_yaxis().set_ticks([])
+            axes[i].set_ylabel(f"Field {field_id}")
+    return fig, axes
 
 
 def circCircCorrTLinear(theta, phi, k=1000, alpha=0.05, hyp=0, conf=True):
@@ -215,8 +297,10 @@ def circCircCorrTLinear(theta, phi, k=1000, alpha=0.05, hyp=0, conf=True):
         rho_boot = np.mean(rho_jack)
         rho_jack_std = np.std(rho_jack)
         ci = (
-            rho_boot - (1 / np.sqrt(n)) * rho_jack_std * norm.ppf(alpha / 2, (0, 1))[0],
-            rho_boot + (1 / np.sqrt(n)) * rho_jack_std * norm.ppf(alpha / 2, (0, 1))[0],
+            rho_boot - (1 / np.sqrt(n)) * rho_jack_std *
+            norm.ppf(alpha / 2, (0, 1))[0],
+            rho_boot + (1 / np.sqrt(n)) * rho_jack_std *
+            norm.ppf(alpha / 2, (0, 1))[0],
         )
     elif conf and k and n < 25 and n > 4:
         from sklearn.utils import resample
@@ -262,7 +346,8 @@ def shuffledPVal(theta, phi, rho, k, hyp):
     G = np.sum(np.cos(2 * phi))
     H = np.sum(np.sin(2 * phi))
 
-    rho_sim = 4 * (A * B - C * D) / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
+    rho_sim = 4 * (A * B - C * D) / \
+        np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
 
     if hyp == 1:
         p_shuff = np.sum(rho_sim >= rho) / float(k)
@@ -327,8 +412,8 @@ phase_precession_config = {
     "field_threshold": 0.35,
     # field threshold percent - fed into fieldcalcs.local_threshold as prc
     "field_threshold_percent": 65,
-    # fractional limit for restricting fields at environment edges
-    "area_threshold": np.nan,
+    # fractional limit for restricting fields size
+    "area_threshold": 0.01,
     "bins_per_cm": 2,
     "convert_xy_2_cm": False,
     # defines start/ end of theta cycle
@@ -423,7 +508,8 @@ class phasePrecession2D(object):
         self.update_rate_map()
 
         spk_times_in_pos_samples = self.getSpikePosIndices(spike_ts)
-        spk_weights = np.bincount(spk_times_in_pos_samples, minlength=len(self.pos_ts))
+        spk_weights = np.bincount(
+            spk_times_in_pos_samples, minlength=len(self.pos_ts))
         self.spike_times_in_pos_samples = spk_times_in_pos_samples
         self.spk_weights = spk_weights
 
@@ -479,7 +565,8 @@ class phasePrecession2D(object):
             "reg": None,
         }
         self.regressors = {}
-        self.regressors = defaultdict(lambda: stats_dict.copy(), self.regressors)
+        self.regressors = defaultdict(
+            lambda: stats_dict.copy(), self.regressors)
         [self.regressors[k] for k in reg_keys]
         # each of the regressors in regressor_keys is a key with a value
         # of stats_dict
@@ -544,7 +631,7 @@ class phasePrecession2D(object):
         """
 
         # Partition fields
-        peaksXY, _, labels, _ = self.partitionFields(plot=True)
+        peaksXY, _, labels, _ = self.partitionFields()
 
         # split into runs
         posD, runD = self.getPosProps(
@@ -565,13 +652,20 @@ class phasePrecession2D(object):
 
         # Plot the results
         n_regressors = len(self.get_regressors())
-        fig, ax = plt.subplots(1, n_regressors, figsize=(10, 10))
+        n_rows = np.ceil(n_regressors / 2).astype(int)
+        if n_regressors == 1:
+            fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+        else:
+            fig, ax = plt.subplots(2, n_rows, figsize=(10, 10))
+        fig.canvas.manager.set_window_title('Regression results')
+        if isinstance(ax, list | np.ndarray):
+            ax = flatten_list(ax)
         if n_regressors == 1:
             ax = [ax]
         for ra in zip(self.get_regressors(), ax):
             self.plotRegressor(ra[0], ra[1])
 
-    def partitionFields(self, ftype="g", plot=False, **kwargs):
+    def partitionFields(self, ftype: str = "g", plot: bool = False, **kwargs) -> tuple:
         """
         Partitions fields.
 
@@ -592,15 +686,17 @@ class phasePrecession2D(object):
             each field (starting at 1)
             rmap (numpy.ndarray): The ratemap of the tetrode / cluster
         """
-        rmap, (ye, xe) = self.RateMap.get_map(self.spk_weights)
-        rmap = rmap.T
+        rmap = self.RateMap.get_map(self.spk_weights)
+        xe, ye = rmap.bin_edges
+        rmap = rmap.binned_data[0]
         nan_idx = np.isnan(rmap)
         rmap[nan_idx] = 0
         # start image processing:
         # get some markers
         from ephysiopy.common import fieldcalcs
 
-        markers = fieldcalcs.local_threshold(rmap, prc=self.field_threshold_percent)
+        markers = fieldcalcs.local_threshold(
+            rmap, prc=self.field_threshold_percent)
         # clear the edges / any invalid positions again
         markers[nan_idx] = 0
         # label these markers so each blob has a unique id
@@ -616,66 +712,86 @@ class phasePrecession2D(object):
         peakCoords = np.array(
             ndimage.maximum_position(rmap, labels=labels, index=fieldId)
         ).astype(int)
-        # COMCoords = np.array(
-        #     ndimage.center_of_mass(
-        #         rmap, labels=labels, index=fieldId)
-        # ).astype(int)
-        peaksXY = np.vstack((xe[peakCoords[:, 0]], ye[peakCoords[:, 1]])).T
+
+        peaksXY = np.vstack((xe[peakCoords[:, 0]], ye[peakCoords[:, 1]]))
+
         # find the peak rate at each of the centre of the detected fields to
         # subsequently threshold the field at some fraction of the peak value
-        peakRates = rmap[peakCoords[:, 0], peakCoords[:, 1]]
-        fieldThresh = peakRates * self.field_threshold
-        rmFieldMask = np.zeros_like(rmap)
-        for fid in fieldId:
-            f = labels[peakCoords[fid - 1, 0], peakCoords[fid - 1, 1]]
-            rmFieldMask[labels == f] = rmap[labels == f] > fieldThresh[f - 1]
-        labels[~rmFieldMask.astype(bool)] = 0
-        # peakBinInds = np.ceil(peakCoords)
-        # re-order some vars to get into same format as fieldLabels
-        peakLabels = labels[peakCoords[:, 0], peakCoords[:, 1]]
-        peaksXY = peaksXY[peakLabels - 1, :]
-        peaksRate = peakRates[peakLabels - 1]
-        # peakBinInds = peakBinInds[peakLabels-1, :]
-        # peaksXY = peakCoords - np.min(xy, 1)
+        # use a labeled_comprehension to do this
+        def fn(val, pos):
+            return pos[val < (np.max(val) * self.field_threshold)]
 
-        # if ~np.isnan(self.area_threshold):
-        #     # TODO: this needs fixing so sensible values are used and the
-        #     # modified bool array is propagated correctly ie makes
-        #     # sense to have a function that applies a bool array to whatever
-        #     # arrays are used as output and call it in a couple of places
-        #     # areaInBins = self.area_threshold * self.binsPerCm
-        #     lb = ndimage.label(markers)[0]
-        #     rp = skimage.measure.regionprops(lb)
-        #     for reg in rp:
-        #         print(reg.filled_area)
-        #     markers = skimage.morphology.remove_small_objects(
-        #         lb, min_size=4000, connectivity=4, in_place=True)
+        indices = ndimage.labeled_comprehension(
+            rmap, labels, None, fn, np.ndarray, 0, True
+        )
+        labels[np.unravel_index(indices, labels.shape)] = 0
+        # as a result of this some of the labeled areas will have been removed
+        # and /or made smaller so we should fill in the holes,
+        # remove any that are too small and re-label
+        labels, n_labels = ndimage.label(ndimage.binary_fill_holes(labels))
+        min_field_size = np.ceil(np.prod(labels.shape) * self.area_threshold).astype(
+            int
+        )
+        labels = skimage.morphology.remove_small_objects(
+            labels, min_size=min_field_size, connectivity=2
+        )
+        # relable the fields
+        labels = skimage.segmentation.relabel_sequential(labels)[0]
+
+        # re-calculate the peakCoords array as we may have removed some
+        # objects
+        fieldId, _ = np.unique(labels, return_index=True)
+        fieldId = fieldId[1::]
+        peakCoords = np.array(
+            ndimage.maximum_position(rmap, labels=labels, index=fieldId)
+        ).astype(int)
+        peaksXY = np.vstack((xe[peakCoords[:, 0]], ye[peakCoords[:, 1]]))
+        peakRates = rmap[peakCoords[:, 0], peakCoords[:, 1]]
+        peakLabels = labels[peakCoords[:, 0], peakCoords[:, 1]]
+        peaksXY = peaksXY[:, peakLabels - 1]
+        peaksRate = peakRates[peakLabels - 1]
+
         if plot:
             fig = plt.figure()
             ax = fig.add_subplot(211)
+            rmapM = np.ma.masked_where(rmap == 0, rmap)
             ax.pcolormesh(
-                ye, xe, rmap, cmap=matplotlib.cm.get_cmap("jet"), edgecolors="face"
+                ye, xe, rmapM, cmap=matplotlib.colormaps["jet"], edgecolors="face"
             )
-            ax.set_title("Smoothed ratemap + peaks")
+            ax.set_title("Smoothed ratemap + peaks",
+                         fontsize=subaxis_title_fontsize)
             ax.xaxis.set_visible(False)
             ax.yaxis.set_visible(False)
             ax.set_aspect("equal")
             xlim = ax.get_xlim()
             ylim = ax.get_ylim()
-            ax.plot(peaksXY[:, 1], peaksXY[:, 0], "ko")
+            ax.plot(peaksXY[1], peaksXY[0], "ko")
             ax.set_ylim(ylim)
             ax.set_xlim(xlim)
 
             ax = fig.add_subplot(212)
-            ax.imshow(labels, interpolation="nearest", origin="lower")
-            ax.set_title("Labelled restricted fields")
+            labelsM = np.ma.masked_where(labels == 0, labels)
+            ax.pcolormesh(ye, xe, labelsM, edgecolors="face")
+            ax.plot(peaksXY[1], peaksXY[0], "ko")
+            ax.set_ylim(ylim)
+            ax.set_xlim(xlim)
+
+            ax.set_title("Labelled restricted fields",
+                         fontsize=subaxis_title_fontsize)
             ax.xaxis.set_visible(False)
             ax.yaxis.set_visible(False)
             ax.set_aspect("equal")
 
         return peaksXY, peaksRate, labels, rmap
 
-    def getPosProps(self, labels, peaksXY, laserEvents=None, plot=False, **kwargs):
+    def getPosProps(
+        self,
+        labels: np.ndarray,
+        peaksXY: np.ndarray,
+        laserEvents: np.ndarray = None,
+        plot: bool = False,
+        **kwargs,
+    ) -> dict:
         """
         Uses the output of partitionFields and returns vectors the same
         length as pos.
@@ -697,14 +813,20 @@ class phasePrecession2D(object):
         xydir = self.RateMap.dir
         spd = self.RateMap.speed
         spkPosInd = np.ceil(spikeTS * self.pos_sample_rate).astype(int)
-        spkPosInd[spkPosInd > len(xy.T)] = len(xy.T) - 1
         nPos = xy.shape[1]
+        spkPosInd[spkPosInd > nPos] = nPos - 1
         xy_old = xy.copy()
         xydir = np.squeeze(xydir)
         xydir_old = xydir.copy()
 
-        rmap, (ye, xe) = self.RateMap.get_map(self.spk_weights)
-        rmap = rmap.T
+        rmap = self.RateMap.get_map(self.spk_weights)
+        ye, xe = rmap.bin_edges
+        rmap = rmap.binned_data[0]
+        """
+        Lets remap the xy coordinates to lie between -1 and +1
+        which should make things easier later when dealing with
+        the unit circle
+        """
 
         # The large number of bins combined with the super-smoothed ratemap
         # will lead to fields labelled with lots of small holes in. Fill those
@@ -712,60 +834,92 @@ class phasePrecession2D(object):
         # labelled image
         labels, n_labels = ndimage.label(ndimage.binary_fill_holes(labels))
 
-        rmap[np.isnan(rmap)] = 0
+        rmap_zeros = rmap.copy()
+        rmap_zeros[np.isnan(rmap)] = 0
         xBins = np.digitize(xy[0], xe[:-1])
         yBins = np.digitize(xy[1], ye[:-1])
         fieldLabel = labels[xBins - 1, yBins - 1]
-        fl_counts, fl_bins = np.histogram(fieldLabel, bins=np.unique(labels))
-        for i, fl in enumerate(fl_bins[1::]):
-            print("Field {} has {} samples".format(i, fl_counts[i]))
 
         fieldPerimMask = bwperim(labels)
-        fieldPerimYBins, fieldPerimXBins = np.nonzero(fieldPerimMask)
-        fieldPerimX = ye[fieldPerimXBins]
-        fieldPerimY = xe[fieldPerimYBins]
-        fieldPerimXY = np.vstack((fieldPerimX, fieldPerimY))
-        peaksXYBins = np.array(
-            ndimage.maximum_position(rmap, labels=labels, index=np.unique(labels)[1::])
+
+        peaksYXBins = np.array(
+            ndimage.maximum_position(
+                rmap_zeros, labels=labels, index=np.unique(labels)[1::])
         ).astype(int)
-        peakY = xe[peaksXYBins[:, 0]]
-        peakX = ye[peaksXYBins[:, 1]]
-        peaksXY = np.vstack((peakX, peakY)).T
 
-        posRUnsmthd = np.zeros((nPos)) * np.nan
-        posAngleFromPeak = np.zeros_like(posRUnsmthd) * np.nan
-        perimAngleFromPeak = np.zeros_like(fieldPerimMask) * np.nan
-        for i, peak in enumerate(peaksXY):
-            i = i + 1
-            # grab each fields perim coords and the pos samples within it
-            y_ind, x_ind = np.nonzero(fieldPerimMask == i)
-            thisFieldPerim = np.array([xe[x_ind], ye[y_ind]])
-            if thisFieldPerim.any():
-                this_xy = xy[:, fieldLabel == i]
-                # calculate angle from the field peak for each point on the
-                # perim and each pos sample that lies within the field
-                thisPerimAngle = np.arctan2(
-                    thisFieldPerim[1, :] - peak[1], thisFieldPerim[0, :] - peak[0]
-                )
-                thisPosAngle = np.arctan2(
-                    this_xy[1, :] - peak[1], this_xy[0, :] - peak[0]
-                )
-                posAngleFromPeak[fieldLabel == i] = thisPosAngle
+        # define a couple of functions to add to skimage.measure.regionprops
+        # 1) return the perimeter of the region as an array of bool
+        def bw_perim(mask):
+            return bwperim(mask)
 
-                perimAngleFromPeak[fieldPerimMask == i] = thisPerimAngle
-                # for each pos sample calculate which point on the perim is
-                # most colinear with the field centre - see _circ_abs for more
-                thisAngleDf = circ_abs(
-                    thisPerimAngle[:, np.newaxis] - thisPosAngle[np.newaxis, :]
+        # 2) return the maximum index of the intensity image for the region as a tuple
+        def max_index(mask, intensity):
+            return np.array(
+                np.unravel_index(
+                    np.argmax(intensity, axis=None), intensity.shape)
+            )
+
+        field_props = skimage.measure.regionprops(
+            labels, rmap_zeros, extra_properties=(max_index, bw_perim)
+        )
+        # some arrays to hold results
+        perim_angle_from_peak = np.zeros_like(rmap) * np.nan
+        perim_dist_from_peak = np.zeros_like(rmap) * np.nan
+        pos_angle_from_peak = np.zeros((nPos)) * np.nan
+        pos_dist_from_peak = np.zeros((nPos)) * np.nan
+        pos_r_unsmoothed = np.zeros((nPos)) * np.nan
+
+        for field in field_props:
+            field_id = field.label
+            i_xy = xy[:, fieldLabel == field_id]
+            field.xy = i_xy
+            if np.any(i_xy):
+                # get the distances and angles of each point on the perimeter to the field peak
+                perim_coords = np.nonzero(field.bw_perim)
+                field.perim_coords = perim_coords
+                perim_minus_field_max = (
+                    perim_coords[0] - field.max_index[0],
+                    perim_coords[1] - field.max_index[1],
                 )
-                thisPerimInd = np.argmin(thisAngleDf, 0)
-                # calculate the distance to the peak from pos and the min perim
-                # point and calculate the ratio (r - see OUtputs for method)
-                tmp = this_xy.T - peak.T
-                distFromPos2Peak = np.hypot(tmp[:, 0], tmp[:, 1])
-                tmp = thisFieldPerim[:, thisPerimInd].T - peak.T
-                distFromPerim2Peak = np.hypot(tmp[:, 0], tmp[:, 1])
-                posRUnsmthd[fieldLabel == i] = distFromPos2Peak / distFromPerim2Peak
+
+                i_perim_angle = np.arctan2(
+                    perim_minus_field_max[0], perim_minus_field_max[1]
+                )
+                i_perim_dist = np.hypot(
+                    perim_minus_field_max[0], perim_minus_field_max[1]
+                )
+                perim_angle_from_peak[fieldPerimMask ==
+                                      field_id] = i_perim_angle
+                perim_dist_from_peak[fieldPerimMask == field_id] = i_perim_dist
+
+                # get the distances and angles of each position coordinate within the field to the field peak
+                xy_minus_field_max = (
+                    i_xy[0] - xe[peaksYXBins[field_id - 1, 0]],
+                    i_xy[1] - ye[peaksYXBins[field_id - 1, 1]],
+                )
+                i_pos_angle = np.arctan2(
+                    xy_minus_field_max[1], xy_minus_field_max[0])
+                i_pos_dist = np.hypot(
+                    xy_minus_field_max[0], xy_minus_field_max[1])
+                pos_angle_from_peak[fieldLabel == field_id] = i_pos_angle
+                pos_dist_from_peak[fieldLabel == field_id] = i_pos_dist
+
+                i_angle_df = circ_abs(
+                    i_perim_angle[:, np.newaxis] - i_pos_angle[np.newaxis, :]
+                )
+                i_perim_idx = np.argmin(i_angle_df, 0)
+                tmp = (
+                    perim_coords[1][i_perim_idx] - field.max_index[1],
+                    perim_coords[0][i_perim_idx] - field.max_index[0],
+                )
+                i_perim_dist_to_peak = np.hypot(tmp[0], tmp[1])
+                # calculate the ratio of the distance from the field peak to the position sample
+                # and the distance from the field peak to the point on the perimeter that is most
+                # colinear with the position sample
+                pos_r_unsmoothed[fieldLabel == field_id] = (
+                    i_pos_dist / i_perim_dist_to_peak
+                )
+
         # the skimage find_boundaries method combined with the labelled mask
         # strive to make some of the values in thisDistFromPos2Peak larger than
         # those in thisDistFromPerim2Peak which means that some of the vals in
@@ -775,39 +929,54 @@ class phasePrecession2D(object):
         # message letting the user know how many values have been capped
         print(
             "\n\n{:.2%} posRUnsmthd values have been capped to 1\n\n".format(
-                np.sum(posRUnsmthd >= 1) / posRUnsmthd.size
+                np.sum(pos_r_unsmoothed >= 1) / pos_r_unsmoothed.size
             )
         )
         runs_count, _ = count_runs_and_unique_numbers(fieldLabel)
         for k in runs_count.keys():
-            print(f"Field {k} has {runs_count[k]} runs through it")
-        posRUnsmthd[posRUnsmthd >= 1] = 1
+            if k != 0:
+                print(
+                    f"Field {k} has {runs_count[k]} potential runs through it")
+        pos_r_unsmoothed[pos_r_unsmoothed >= 1] = 1
         # label non-zero contiguous runs with a unique id
         runLabel = labelContigNonZeroRuns(fieldLabel)
         isRun = runLabel > 0
         runStartIdx = getLabelStarts(runLabel)
         runEndIdx = getLabelEnds(runLabel)
         # find runs that are too short, have low speed or too few spikes
-        runsSansSpikes = np.ones(len(runStartIdx), dtype=bool)
+        no_spike_runs = np.ones(len(runStartIdx), dtype=bool)
         spkRunLabels = runLabel[spkPosInd] - 1
-        runsSansSpikes[spkRunLabels[spkRunLabels > 0]] = False
-        k = signal.boxcar(self.speed_smoothing_window_len) / float(
-            self.speed_smoothing_window_len
-        )
-        spdSmthd = signal.convolve(np.squeeze(spd), k, mode="same")
+        no_spike_runs[spkRunLabels[spkRunLabels > 0]] = False
         runDurationInPosBins = runEndIdx - runStartIdx + 1
         runsMinSpeed = []
         runId = np.unique(runLabel)[1::]
         for run in runId:
-            runsMinSpeed.append(np.min(spdSmthd[runLabel == run]))
+            runsMinSpeed.append(np.min(spd[runLabel == run]))
         runsMinSpeed = np.array(runsMinSpeed)
+        slow_runs = runsMinSpeed < self.minimum_allowed_run_speed
+        short_runs = runDurationInPosBins < self.minimum_allowed_run_duration
         badRuns = np.logical_or(
             np.logical_or(
-                runsMinSpeed < self.minimum_allowed_run_speed,
-                runDurationInPosBins < self.minimum_allowed_run_duration,
+                slow_runs, short_runs
             ),
-            runsSansSpikes,
+            no_spike_runs,
         )
+        # output some info about the runs that are being removed
+        field_slow_runs = fieldLabel[runStartIdx][slow_runs]
+        field_short_runs = fieldLabel[runStartIdx][short_runs]
+        field_no_spike_runs = fieldLabel[runStartIdx][no_spike_runs]
+
+        def print_lost_runs(runs, run_type):
+            counts, field_ids = np.histogram(
+                runs, bins=np.unique(fieldLabel) + 1)
+            print("\n")
+            print(f"Runs lost due to {run_type}:")
+            for i, field in enumerate(list(field_ids[:-1])):
+                print(f"Field {field} has lost {counts[i]} runs")
+
+        print_lost_runs(field_slow_runs, "slow speed")
+        print_lost_runs(field_short_runs, "short duration")
+        print_lost_runs(field_no_spike_runs, "no spikes")
         badRuns = np.squeeze(badRuns)
         runLabel = applyFilter2Labels(~badRuns, runLabel)
         runStartIdx = runStartIdx[~badRuns]
@@ -816,29 +985,50 @@ class phasePrecession2D(object):
         runDurationInPosBins = runDurationInPosBins[~badRuns]
         isRun = runLabel > 0
 
-        # calculate mean and std direction for each run
-        runComplexMnDir = np.squeeze(np.zeros_like(runStartIdx))
-        np.add.at(
-            runComplexMnDir,
-            runLabel[isRun] - 1,
-            np.exp(1j * (xydir[isRun] * (np.pi / 180))),
+        # output how many runs are left after filtering
+        print(f"\n\n{len(runStartIdx)} total runs left after filtering\n\n")
+        counts, field_ids = np.histogram(
+            fieldLabel[runStartIdx], bins=np.unique(fieldLabel) + 1
         )
-        meanDir = np.angle(runComplexMnDir)  # circ mean
-        tortuosity = 1 - np.abs(runComplexMnDir) / runDurationInPosBins
+        for i, c in enumerate(counts):
+            print(f"Field {field_ids[i]} has {c} runs through it")
+
+        # for each of the fields extracted above using regionprops
+        # add each run through the field to the field object as a list
+        # of runs
+        field_runs_xy = {k: [] for k in np.unique(fieldLabel)}
+        for run in zip(runStartIdx, runEndIdx):
+            field_id = fieldLabel[run[0]]
+            this_run = xy[:, run[0]: run[1]]
+            field_runs_xy[field_id].append(this_run)
+        # add this list of runs to the field_props list
+        for field in field_props:
+            id = field.label
+            field.xy_runs = field_runs_xy[id]
+
+        # calculate mean direction for each run
+        meanDir = np.array(
+            [circmean(np.deg2rad(xydir)[runLabel == i])
+             for i in np.unique(runLabel)]
+        )
 
         # caculate angular distance between the runs main direction and the
         # pos's direction to the peak centre
-        posPhiUnSmthd = np.ones_like(fieldLabel) * np.nan
-        posPhiUnSmthd[isRun] = posAngleFromPeak[isRun] - meanDir[runLabel[isRun] - 1]
+        pos_phi_unsmoothed = np.ones_like(fieldLabel) * np.nan
+        pos_phi_unsmoothed[isRun] = (
+            pos_angle_from_peak[isRun] - meanDir[runLabel[isRun] - 1]
+        )
 
         # smooth r and phi in cartesian space
         # convert to cartesian coords first
-        posXUnSmthd, posYUnSmthd = pol2cart(posRUnsmthd, posPhiUnSmthd)
-        posXYUnSmthd = np.vstack((posXUnSmthd, posYUnSmthd))
+        pos_x_unsmoothed, pos_y_unsmoothed = pol2cart(
+            pos_r_unsmoothed, pos_phi_unsmoothed
+        )
+        pos_xy_unsmoothed = np.vstack((pos_x_unsmoothed, pos_y_unsmoothed))
 
-        # filter each run with filter of appropriate length
         filtLen = np.squeeze(
-            np.floor((runEndIdx - runStartIdx + 1) * self.ifr_smoothing_constant)
+            np.floor((runEndIdx - runStartIdx + 1)
+                     * self.ifr_smoothing_constant)
         )
         xy_new = np.zeros_like(xy_old) * np.nan
         for i in range(len(runStartIdx)):
@@ -848,43 +1038,70 @@ class phasePrecession2D(object):
                     cutoff=self.spatial_lowpass_cutoff / self.pos_sample_rate * 2,
                     window="blackman",
                 )
-                xy_new[:, runStartIdx[i] : runEndIdx[i]] = signal.filtfilt(
-                    filt, [1], posXYUnSmthd[:, runStartIdx[i] : runEndIdx[i]], axis=1
+                xy_new[:, runStartIdx[i]: runEndIdx[i]] = signal.filtfilt(
+                    filt,
+                    [1],
+                    pos_xy_unsmoothed[:, runStartIdx[i]: runEndIdx[i]],
+                    axis=1,
                 )
-
-        r, phi = cart2pol(xy_new[0], xy_new[1])
-        r[r > 1] = 1
+        rho, phi = cart2pol(xy_new[0], xy_new[1])
+        rho[rho > 1] = 1
 
         # calculate the direction of the smoothed data
         xydir_new = np.arctan2(np.diff(xy_new[1]), np.diff(xy_new[0]))
         xydir_new = np.append(xydir_new, xydir_new[-1])
         xydir_new[runEndIdx] = xydir_new[runEndIdx - 1]
 
+        # for each of the fields extracted above using regionprops
+        # add each run through the field to the field object as a list
+        # of runs
+        field_runs_xy = {k: [] for k in np.unique(fieldLabel)}
+        field_runs_rho_phi = {k: [] for k in np.unique(fieldLabel)}
+        for run in zip(runStartIdx, runEndIdx):
+            field_id = fieldLabel[run[0]]
+            this_run = xy_new[:, run[0]: run[1]]
+            field_runs_xy[field_id].append(this_run)
+            this_run_rho_phi = np.vstack(
+                (rho[run[0]: run[1]], phi[run[0]: run[1]]))
+            field_runs_rho_phi[field_id].append(this_run_rho_phi)
+        # add this list of runs to the field_props list
+        for field in field_props:
+            id = field.label
+            field.xy_runs = field_runs_xy[id]
+            field.rho_phi_runs = field_runs_rho_phi[id]
+
         # project the distance value onto the current direction
+        # GOOD
         if "pos_d_currentdir" in self.regressors.keys():
-            d_currentdir = r * np.cos(xydir_new - phi)
+            d_currentdir = rho * np.cos(xydir_new - phi)
             self.update_regressor_values("pos_d_currentdir", d_currentdir)
 
         # calculate the cumulative distance travelled on each run
+        # only goes from 0-1
         if "pos_d_cum" in self.regressors.keys():
-            dr = np.sqrt(np.diff(np.power(r, 2), 1))
+            dr = np.sqrt(np.diff(np.power(rho, 2), 1))
             d_cumulative = labelledCumSum(np.insert(dr, 0, 0), runLabel)
             self.update_regressor_values("pos_d_cum", d_cumulative)
 
         # calculate cumulative sum of the expected normalised firing rate
+        # only goes from 0-1
         if "pos_exptdRate_cum" in self.regressors.keys():
-            exptdRate_cumulative = labelledCumSum(1 - r, runLabel)
-            self.update_regressor_values("pos_exptdRate_cum", exptdRate_cumulative)
+            exptdRate_cumulative = labelledCumSum(1 - rho, runLabel)
+            self.update_regressor_values(
+                "pos_exptdRate_cum", exptdRate_cumulative)
 
         # direction projected onto the run mean direction is just the x coord
+        # good
         if "pos_d_meanDir" in self.regressors.keys():
             d_meandir = xy_new[0]
             self.update_regressor_values("pos_d_meanDir", d_meandir)
 
         # smooth binned spikes to get an instantaneous firing rate
         # set up the smoothing kernel
+        # all up at 1.0
         if "pos_instFR" in self.regressors.keys():
-            kernLenInBins = np.round(self.ifr_kernel_len * self.bins_per_second)
+            kernLenInBins = np.round(
+                self.ifr_kernel_len * self.bins_per_second)
             kernSig = self.ifr_kernel_sigma * self.bins_per_second
             k = signal.windows.gaussian(kernLenInBins, kernSig)
             # get a count of spikes to smooth over
@@ -895,6 +1112,7 @@ class phasePrecession2D(object):
             self.update_regressor_values("pos_instFR", instFiringRate)
 
         # find time spent within run
+        # only goes from 0-1
         if "pos_timeInRun" in self.regressors.keys():
             time = np.ones(nPos)
             time = labelledCumSum(time, runLabel)
@@ -902,98 +1120,165 @@ class phasePrecession2D(object):
             self.update_regressor_values("pos_timeInRun", timeInRun)
 
         fieldNum = fieldLabel[runStartIdx]
-        mnSpd = np.squeeze(np.zeros_like(fieldNum))
+        mnSpd = np.squeeze(np.zeros_like(fieldNum, dtype=float))
         np.add.at(mnSpd, runLabel[isRun] - 1, spd[isRun])
         nPts = np.bincount(runLabel[isRun] - 1, minlength=len(mnSpd))
-        mnSpd = mnSpd / nPts
-        centralPeripheral = np.squeeze(np.zeros_like(fieldNum))
+        np.divide.at(mnSpd, np.arange(len(mnSpd)), nPts)
+        centralPeripheral = np.squeeze(np.zeros_like(fieldNum, dtype=float))
         np.add.at(centralPeripheral, runLabel[isRun] - 1, xy_new[1, isRun])
-        centralPeripheral = centralPeripheral / nPts
+        np.divide.at(centralPeripheral, np.arange(len(nPts)), nPts)
         if plot:
+            # FIGURE LEVEL PREPARATION
             fig = plt.figure()
             ax = fig.add_subplot(221)
-            ax.plot(xy_new[0], xy_new[1])
-            ax.set_title("Unit circle x-y")
+            fig.canvas.manager.set_window_title('Field partitioning and runs')
+            # get the outline of the arena for plotting
+            # NB this is really just the outline of the area the animal
+            # covered during the session
+            # breakpoint()
+            outline = np.isfinite(rmap)
+            outline = ndimage.binary_fill_holes(outline)
+            outline = bwperim(outline)
+            outline = np.ma.masked_where(~outline, outline)
+
+            # PLOT 1) the xy data with the runs through the fields
+            cmap = matplotlib.colormaps["Set1"].resampled(np.max(fieldLabel))
+            for field in field_props:
+                for run in field.xy_runs:
+                    ax.plot(run[0], run[1], color=cmap(field.label - 1))
+            ax.set_title("Unit circle x-y", fontsize=subaxis_title_fontsize)
             ax.set_aspect("equal")
             ax.set_xlim([-1, 1])
             ax.set_ylim([-1, 1])
+            _stripAx(ax)
 
-            ax = fig.add_subplot(222)
-            ax.plot(fieldPerimX, fieldPerimY, "k.")
-            ax.set_title("Field perim and\n laser on events")
-            ax.plot(xy[1, fieldLabel > 0], xy[0, fieldLabel > 0], "y.")
+            # PLOT 2) the field perimeters and the peak locations coloured by field
+            ax1 = fig.add_subplot(222)
+            # add the outline of the arena
+            ax1.pcolormesh(xe, ye, outline)
+            fieldPerimMask_m = np.ma.MaskedArray(
+                fieldPerimMask, mask=fieldPerimMask == 0
+            )
+            fpm = ax1.pcolormesh(xe, ye, fieldPerimMask_m,
+                                 cmap=cmap, edgecolors="face")
+            for field in field_props:
+                ax1.plot(
+                    xe[peaksYXBins[field.label - 1, 1]],
+                    ye[peaksYXBins[field.label - 1, 0]],
+                    marker="o",
+                    color=cmap(field.label - 1),
+                )
+            cbar = plt.colorbar(fpm)
+            cbar.ax.tick_params(labelsize=cbar_tick_fontsize)
+            cbar.ax.set_yticks(np.linspace(
+                1.5, np.max(fieldLabel)-0.5, np.max(fieldLabel)))
+            cbar.ax.set_yticklabels(list(map(str, np.unique(fieldLabel)[1::])))
+            cbar.ax.set_ylabel("Field id", rotation=-90,
+                               va="bottom", size=cbar_fontsize)
+            ax1.set_xlim(np.min(xe), np.max(xe))
+            ax1.set_ylim(np.min(ye), np.max(ye))
+            ax1.set_title("Field perim and\n laser on events",
+                          fontsize=subaxis_title_fontsize)
             if laserEvents is not None:
-                validOns = np.setdiff1d(laserEvents, np.nonzero(~np.isnan(r))[0])
-                ax.plot(xy[0, validOns], xy[1, validOns], "rx")
-            ax.set_aspect("equal")
+                validOns = np.setdiff1d(
+                    laserEvents, np.nonzero(~np.isnan(r))[0])
+                ax1.plot(xy[0, validOns], xy[1, validOns], "rx")
+            ax1.set_aspect("equal")
+            _stripAx(ax1)
 
-            angleCMInd = np.round(perimAngleFromPeak / np.pi * 180) + 180
+            # PLOT 3) the runs through the fields coloured by angle and distance
+            angleCMInd = np.round(perim_angle_from_peak / np.pi * 180) + 180
             angleCMInd[angleCMInd == 0] = 360
             im = np.zeros_like(fieldPerimMask)
-            for fl in fl_bins[1::]:
+            fl_counts, fl_bins = np.histogram(
+                fieldLabel, bins=np.unique(labels) + 1)
+            for fl in fl_bins:
                 xi, yi = np.nonzero(fieldPerimMask == fl)
                 im[xi, yi] = angleCMInd[xi, yi]
-            imM = np.ma.MaskedArray(im, mask=~fieldPerimMask, copy=True)
-            #############################################
+            imM = np.ma.MaskedArray(im, mask=fieldPerimMask == 0, copy=True)
             # create custom colormap
-            cmap = plt.cm.get_cmap("jet_r")
-            cmaplist = [cmap(i) for i in range(cmap.N)]
-            cmaplist[0] = (1, 1, 1, 1)
-            cmap = cmap.from_list("Runvals cmap", cmaplist, cmap.N)
-            bounds = np.linspace(0, 1.0, 100)
-            norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N)
+            cmap = matplotlib.colormaps["jet_r"]
             # add the runs through the fields
-            runVals = np.zeros_like(im)
-            runVals[xBins[isRun] - 1, yBins[isRun] - 1] = r[isRun]
-            runVals = runVals
+            runVals = np.zeros_like(rmap)
+            runVals[xBins[isRun] - 1, yBins[isRun] - 1] = rho[isRun]
+            runVals = np.ma.masked_where(runVals == 0, runVals)
             ax = fig.add_subplot(223)
-            imm = ax.imshow(
-                runVals, cmap=cmap, norm=norm, origin="lower", interpolation="nearest"
+            ax.pcolormesh(xe, ye, outline)
+            imm = ax.pcolormesh(
+                xe,
+                ye,
+                runVals,
+                cmap=cmap,
+                edgecolors="face",
+                shading="auto",
             )
-            plt.colorbar(imm, orientation="horizontal")
+            cbar = plt.colorbar(imm, orientation="horizontal")
+            cbar.ax.tick_params(labelsize=cbar_tick_fontsize)
+            cbar.ax.set_xlabel("Normalised distance to field centre",
+                               rotation=0, ha="center", size=cbar_fontsize)
             ax.set_aspect("equal")
-            # add a custom colorbar for colors in runVals
 
-            # create a custom colormap for the plot
-            cmap = matplotlib.cm.get_cmap("hsv")
-            cmaplist = [cmap(i) for i in range(cmap.N)]
-            cmaplist[0] = (1, 1, 1, 1)
-            cmap = cmap.from_list("Perim cmap", cmaplist, cmap.N)
-            bounds = np.linspace(0, 360, cmap.N)
-            norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N)
+            # a cyclic colormap for the angular values
+            cmap = matplotlib.colormaps["hsv"]
 
-            imm = ax.imshow(
-                imM, cmap=cmap, norm=norm, origin="lower", interpolation="nearest"
-            )
-            plt.colorbar(imm)
-            ax.set_title("Runs by distance and angle")
-            ax.plot(peaksXYBins[:, 1], peaksXYBins[:, 0], "ko")
-            ax.set_xlim(0, im.shape[1])
-            ax.set_ylim(0, im.shape[0])
-            #############################################
+            imm = ax.pcolormesh(xe, ye,
+                                imM, cmap=cmap, edgecolors="face", shading="auto"
+                                )
+            cbar = plt.colorbar(imm)
+            cbar.ax.set_ylabel("Angle to field centre",
+                               rotation=-90, va="bottom", size=cbar_fontsize)
+            cbar.ax.tick_params(labelsize=cbar_tick_fontsize)
+            ax.set_title("Runs by distance and angle",
+                         fontsize=subaxis_title_fontsize)
+            ax.set_xlim(np.min(xe), np.max(xe))
+            ax.set_ylim(np.min(ye), np.max(ye))
+            _stripAx(ax)
+
+            # PLOT 4) the smoothed ratemap
             ax = fig.add_subplot(224)
-            ax.imshow(rmap, origin="lower", interpolation="nearest")
+            ax.pcolormesh(xe, ye, outline)
+            vmax = np.nanmax(np.ravel(rmap))
+            rmapM = np.ma.masked_where(rmap == 0, rmap)
+            ax.pcolormesh(
+                xe,
+                ye,
+                rmapM,
+                cmap=jet_cmap,
+                edgecolors="face",
+                shading="auto",
+                vmax=vmax,
+            )
+            for field in field_props:
+                ax.plot(
+                    xe[peaksYXBins[field.label - 1, 1]],
+                    ye[peaksYXBins[field.label - 1, 0]],
+                    marker="o",
+                    color='k'
+                )
+            ax.set_xlim(np.min(xe), np.max(xe))
+            ax.set_ylim(np.min(ye), np.max(ye))
             ax.set_aspect("equal")
-            ax.set_title("Smoothed ratemap")
+            ax.set_title("Smoothed ratemap", fontsize=subaxis_title_fontsize)
+            _stripAx(ax)
 
         posKeys = (
             "xy",
             "xydir",
-            "r",
+            "rho",
             "phi",
             "xy_old",
             "xydir_old",
-            "fieldLabel",
-            "runLabel",
-            # "d_currentdir",
-            # "d_cumulative",
-            # "exptdRate_cumulative",
-            # "d_meandir",
-            # "instFiringRate",
-            # "timeInRun",
+            "labels",
             "fieldPerimMask",
-            "perimAngleFromPeak",
-            "posAngleFromPeak",
+            "runLabel",
+            "fieldLabel",
+            "peaksYXBins",
+            "xe",
+            "ye",
+            "fieldPerimMask",
+            "perim_angle_from_peak",
+            "pos_angle_from_peak",
+            "pos_dist_from_peak",
         )
         runsKeys = (
             "runStartIdx",
@@ -1001,8 +1286,10 @@ class phasePrecession2D(object):
             "runDurationInPosBins",
             "runsMinSpeed",
             "meanDir",
-            "tortuosity",
             "mnSpd",
+            "xy_new",
+            "pos_x_unsmoothed",
+            "pos_y_unsmoothed",
             "centralPeripheral",
         )
         posDict = dict.fromkeys(posKeys, np.nan)
@@ -1028,7 +1315,8 @@ class phasePrecession2D(object):
         spkPhase = phase[spkEEGIdx]
         minSpikingPhase = getPhaseOfMinSpiking(spkPhase)
         phaseAdj = fixAngle(
-            phase - minSpikingPhase * (np.pi / 180) + self.allowed_min_spike_phase
+            phase - minSpikingPhase *
+            (np.pi / 180) + self.allowed_min_spike_phase
         )
         isNegFreq = np.diff(np.unwrap(phaseAdj)) < 0
         isNegFreq = np.append(isNegFreq, isNegFreq[-1])
@@ -1099,13 +1387,17 @@ class phasePrecession2D(object):
         lastInTheta = firstInTheta[1::]
         # calculate two kinds of numbering for spikes in a run
         numWithinRun = labelledCumSum(np.ones_like(spkPosIdx), spkRunLabel)
-        thetaBatchLabelInRun = labelledCumSum(firstInTheta.astype(float), spkRunLabel)
+        thetaBatchLabelInRun = labelledCumSum(
+            firstInTheta.astype(float), spkRunLabel)
 
-        spkCount = np.bincount(spkRunLabel[spkRunLabel > 0], minlength=len(meanDir))
+        spkCount = np.bincount(
+            spkRunLabel[spkRunLabel > 0], minlength=len(meanDir))
         rateInPosBins = spkCount[1::] / durationInPosBins.astype(float)
         # update the regressor dict from __init__ with relevant values
+        # all up at 1.0
         if "spk_numWithinRun" in self.regressors.keys():
             self.update_regressor_values("spk_numWithinRun", numWithinRun)
+        # all up at 1.0
         if "spk_thetaBatchLabelInRun" in self.regressors.keys():
             self.update_regressor_values(
                 "spk_thetaBatchLabelInRun", thetaBatchLabelInRun
@@ -1139,14 +1431,16 @@ class phasePrecession2D(object):
             spkUsed[~spkDict["firstInTheta"]] = False
         elif "last" in whichSpk:
             if len(spkDict["lastInTheta"]) < len(spkDict["spkRunLabel"]):
-                spkDict["lastInTheta"] = np.insert(spkDict["lastInTheta"], -1, False)
+                spkDict["lastInTheta"] = np.insert(
+                    spkDict["lastInTheta"], -1, False)
             spkUsed[~spkDict["lastInTheta"]] = False
         spkPosIdxUsed = spkDict["spkPosIdx"].astype(int)
         # copy self.regressors and update with spk/ pos of interest
         regressors = self.regressors.copy()
         for k in regressors.keys():
             if k.startswith("spk_"):
-                self.update_regressor_values(k, regressors[k]["values"][spkUsed])
+                self.update_regressor_values(
+                    k, regressors[k]["values"][spkUsed])
             elif k.startswith("pos_"):
                 self.update_regressor_values(
                     k, regressors[k]["values"][spkPosIdxUsed[spkUsed]]
@@ -1164,7 +1458,8 @@ class phasePrecession2D(object):
                 np.exp(1j * phase[goodPhase]),
             )
             phase = np.angle(cycleComplexPhase)
-            spkCountPerCycle = np.bincount(cycleLabels[goodPhase], minlength=sz)
+            spkCountPerCycle = np.bincount(
+                cycleLabels[goodPhase], minlength=sz)
             for k in regressors.keys():
                 regressors[k]["values"] = (
                     np.bincount(
@@ -1179,26 +1474,30 @@ class phasePrecession2D(object):
         for k in regressors.keys():
             print(f"Doing regression: {k}")
             goodRegressor = ~np.isnan(regressors[k]["values"])
-            reg = regressors[k]["values"][np.logical_and(goodRegressor, goodPhase)]
-            pha = phase[np.logical_and(goodRegressor, goodPhase)]
-            regressors[k]["slope"], regressors[k]["intercept"] = circRegress(reg, pha)
-            regressors[k]["pha"] = pha
-            mnx = np.mean(reg)
-            reg = reg - mnx
-            mxx = np.max(np.abs(reg)) + np.spacing(1)
-            reg = reg / mxx
-            # problem regressors = instFR, pos_d_cum
-            # breakpoint()
-            theta = np.mod(np.abs(regressors[k]["slope"]) * reg, 2 * np.pi)
-            rho, p, rho_boot, p_shuff, ci = circCircCorrTLinear(
-                theta, pha, self.k, self.alpha, self.hyp, self.conf
-            )
-            regressors[k]["reg"] = reg
-            regressors[k]["cor"] = rho
-            regressors[k]["p"] = p
-            regressors[k]["cor_boot"] = rho_boot
-            regressors[k]["p_shuffled"] = p_shuff
-            regressors[k]["ci"] = ci
+            if np.any(goodRegressor):
+                reg = regressors[k]["values"][np.logical_and(
+                    goodRegressor, goodPhase)]
+                pha = phase[np.logical_and(goodRegressor, goodPhase)]
+                regressors[k]["slope"], regressors[k]["intercept"] = circRegress(
+                    reg, pha
+                )
+                regressors[k]["pha"] = pha
+                mnx = np.mean(reg)
+                reg = reg - mnx
+                mxx = np.max(np.abs(reg)) + np.spacing(1)
+                reg = reg / mxx
+                # problem regressors = instFR, pos_d_cum
+                # breakpoint()
+                theta = np.mod(np.abs(regressors[k]["slope"]) * reg, 2 * np.pi)
+                rho, p, rho_boot, p_shuff, ci = circCircCorrTLinear(
+                    theta, pha, self.k, self.alpha, self.hyp, self.conf
+                )
+                regressors[k]["reg"] = reg
+                regressors[k]["cor"] = rho
+                regressors[k]["p"] = p
+                regressors[k]["cor_boot"] = rho_boot
+                regressors[k]["p_shuffled"] = p_shuff
+                regressors[k]["ci"] = ci
 
         self.reg_phase = phase
         return regressors
@@ -1218,12 +1517,13 @@ class phasePrecession2D(object):
         intercept = self.regressors[regressor]["intercept"]
         mm = (0, -2 * np.pi, 2 * np.pi, 4 * np.pi)
         for m in mm:
-            ax.plot((-1, 1), (-slope + intercept + m, slope + intercept + m), "r", lw=3)
+            ax.plot((-1, 1), (-slope + intercept + m,
+                    slope + intercept + m), "r", lw=3)
         ax.set_xlim(-1, 1)
         ax.set_ylim(-np.pi, 3 * np.pi)
-        ax.set_title(regressor)
-        ax.set_ylabel("Phase")
-        ax.set_xlabel("Normalised position")
+        ax.set_title(regressor, fontsize=subaxis_title_fontsize)
+        ax.set_ylabel("Phase", fontsize=cbar_tick_fontsize)
+        ax.set_xlabel("Normalised position", fontsize=cbar_tick_fontsize)
         return ax
 
     def plotPPRegression(self, regressorDict, regressor2plot="pos_d_cum", ax=None):
@@ -1232,9 +1532,10 @@ class phasePrecession2D(object):
         x = self.RateMap.xy[0, self.spike_times_in_pos_samples]
         from ephysiopy.common import fieldcalcs
 
-        rmap, (ye, xe) = self.RateMap.get_map(self.spk_weights)
-        rmap = rmap.T
+        rmap = self.RateMap.get_map(self.spk_weights)
+        xe, ye = rmap.bin_edges
         label = fieldcalcs.field_lims(rmap)
+        rmap = rmap.binned_data[0].T
         xInField = xe[label.nonzero()[1]]
         mask = np.logical_and(x > np.min(xInField), x < np.max(xInField))
         x = x[mask]
@@ -1258,7 +1559,8 @@ class phasePrecession2D(object):
         ax.plot(x, t + 2 * np.pi, ".", color="k")
         mm = (0, -2 * np.pi, 2 * np.pi, 4 * np.pi)
         for m in mm:
-            ax.plot((-1, 1), (-slope + intercept + m, slope + intercept + m), "r", lw=3)
+            ax.plot((-1, 1), (-slope + intercept + m,
+                    slope + intercept + m), "r", lw=3)
         ax.set_xlim((-1, 1))
         ax.set_ylim((-np.pi, 3 * np.pi))
         return {
