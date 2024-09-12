@@ -143,8 +143,8 @@ class EEGCalcsGeneric(object):
             the start and end times of the mask i.e. [(start1, end1), (start2, end2)]
             everything inside of these times is masked
         """
-        if mask:
-            ratio = int(len(self.sig) / len(mask))
+        if np.any(mask):
+            ratio = int(len(self.sig) / np.shape(mask)[1])
             mask = np.repeat(mask, ratio)
             # mask now might be shorter than self.sig so we need to pad it
             if len(mask) < len(self.sig):
@@ -306,7 +306,6 @@ class PosCalcsGeneric(object):
         self._convert2cm = convert2cm
         self._jumpmax = jumpmax
         self.nleds = np.ndim(x)
-        self.npos = len(x)
         if "tracker_params" in kwargs:
             self.tracker_params = kwargs["tracker_params"]
         else:
@@ -314,7 +313,11 @@ class PosCalcsGeneric(object):
         self._sample_rate = 30
 
     @property
-    def xy(self) -> np.ma.MaskedArray:
+    def npos(self):
+        return len(self.orig_xy.T)
+
+    @property
+    def xy(self) -> np.ma.MaskedArray | None:
         return self._xy
 
     @xy.setter
@@ -335,7 +338,7 @@ class PosCalcsGeneric(object):
         return self.npos / self.sample_rate
 
     @property
-    def xyTS(self) -> np.ma.MaskedArray:
+    def xyTS(self) -> np.ma.MaskedArray | None:
         return self._xyTS
 
     @xyTS.setter
@@ -384,7 +387,7 @@ class PosCalcsGeneric(object):
     def sample_rate(self, val) -> None:
         self._sample_rate = val
 
-    def postprocesspos(self, tracker_params: "dict[str, float]" = {}, **kwargs) -> None:
+    def postprocesspos(self, tracker_params: "dict[str, float]" = {}) -> None:
         """
         Post-process position data
 
@@ -473,21 +476,21 @@ class PosCalcsGeneric(object):
             self.jumpmax masked
         """
 
-        disp: np.ma.MaskedArray = np.hypot(xy[0], xy[1])
-        disp: np.ma.MaskedArray = np.diff(disp, axis=0)
-        disp: np.ma.MaskedArray = np.insert(disp, -1, 0)
+        disp = np.hypot(xy[0], xy[1])
+        disp = np.diff(disp, axis=0)
+        disp = np.insert(disp, -1, 0)
         if self.convert2cm:
             jumpmax: float = self.ppm / self.jumpmax
         else:
             jumpmax: float = self.jumpmax
-        jumps: np.ma.MaskedArray = np.abs(disp) > jumpmax
-        x: np.ma.MaskedArray = xy[0]
-        y: np.ma.MaskedArray = xy[1]
-        x: np.ma.MaskedArray = np.ma.masked_where(jumps, x)
-        y: np.ma.MaskedArray = np.ma.masked_where(jumps, y)
+        jumps = np.abs(disp) > jumpmax
+        x = xy[0]
+        y = xy[1]
+        x = np.ma.masked_where(jumps, x)
+        y = np.ma.masked_where(jumps, y)
         if getattr(self, "mask_min_values", True):
-            x: np.ma.MaskedArray = np.ma.masked_equal(x, np.min(x))
-            y: np.ma.MaskedArray = np.ma.masked_equal(y, np.min(y))
+            x = np.ma.masked_equal(x, np.min(x))
+            y = np.ma.masked_equal(y, np.min(y))
         xy = np.ma.array([x, y])
         return xy
 
@@ -503,11 +506,11 @@ class PosCalcsGeneric(object):
         self.speed = np.ma.MaskedArray(speed)
 
     def interpnans(self, xy: np.ma.MaskedArray) -> np.ma.MaskedArray:
-        n_masked: int = np.count_nonzero(~xy.mask)
+        n_masked = np.count_nonzero(xy.mask)
         if n_masked > 2:
-            xm: np.ma.MaskedArray = xy[0]
-            ym: np.ma.MaskedArray = xy[1]
-            idx: np.ndarray = np.arange(0, len(xm))
+            xm = xy[0]
+            ym = xy[1]
+            idx = np.arange(0, len(xm))
             xi = griddata(idx[~xm.mask], xm[~xm.mask], idx, method="linear")
             yi = griddata(idx[~ym.mask], ym[~ym.mask], idx, method="linear")
             print(f"Interpolated over {n_masked} bad values")
@@ -590,7 +593,9 @@ class PosCalcsGeneric(object):
             the start and end times of the mask i.e. [(start1, end1), (start2, end2)]
             everything inside of these times is masked
         """
-        self.xy.mask = mask
-        self.xyTS.mask = mask
+        if isinstance(self.xy, np.ma.MaskedArray):
+            self.xy.mask = mask
+        if isinstance(self.xyTS, np.ma.MaskedArray):
+            self.xyTS.mask = mask
         self.dir.mask = mask
         self.speed.mask = mask

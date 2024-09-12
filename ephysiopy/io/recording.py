@@ -4,9 +4,6 @@ import re
 import warnings
 from enum import Enum
 from pathlib import Path, PurePath
-from typing import NoReturn
-from collections import namedtuple
-from dataclasses import dataclass
 
 import h5py
 import numpy as np
@@ -15,12 +12,13 @@ from phylib.io.model import TemplateModel
 from ephysiopy.axona.axonaIO import IO, Pos
 from ephysiopy.axona.tetrode_dict import TetrodeDict
 from ephysiopy.common.ephys_generic import EEGCalcsGeneric, PosCalcsGeneric
+from ephysiopy.common.spikecalcs import xcorr
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.utils import VariableToBin, MapType, BinnedData
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.visualise.plotting import FigureMaker
-from ephysiopy.common.utils import shift_vector, clean_kwargs
+from ephysiopy.common.utils import shift_vector, clean_kwargs, TrialFilter
 
 import matplotlib.pylab as plt
 
@@ -66,12 +64,12 @@ def memmapBinaryFile(path2file: str, n_channels=384, **kwargs) -> np.ndarray:
 
 def loadTrackingPluginData(pname: Path) -> np.ndarray:
     dt = np.dtype(
-        {
-            "x": (np.single, 0),
-            "y": (np.single, 4),
-            "w": (np.single, 8),
-            "h": (np.single, 12),
-        }
+        [
+            ("x", np.single),
+            ("y", np.single),
+            ("w", np.single),
+            ("h", np.single),
+        ]
     )
     data_array = np.load(pname)
     new_array = data_array.view(dtype=dt).copy()
@@ -122,26 +120,6 @@ Xml2RecordingKind = {
 }
 
 
-# a basic dataclass for holding filter values
-@dataclass(eq=True)
-class TrialFilter:
-    name: str
-    start: float | str
-    end: float | str
-
-    def __init__(self, name: str, start: float | str, end: float | str):
-        assert name in [
-            "time",
-            "dir",
-            "speed",
-            "xrange",
-            "yrange",
-        ], "name must be one of 'time', 'dir', 'speed', 'xrange', 'yrange'"
-        self.name = name
-        self.start = start
-        self.end = end
-
-
 class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     """
     Defines a minimal and required set of methods for loading
@@ -149,7 +127,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     (OpenEphysNWB is there but not used)
     """
 
-    def __init__(self, pname: Path, **kwargs) -> None:
+    def __init__(self, pname: Path) -> None:
         assert Path(pname).exists(), f"Path provided doesnt exist: {pname}"
         self._pname = pname
         self._settings = None
@@ -296,7 +274,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             elif isinstance(val, bool):
                 self._mask_array.fill(val)
             else:
-                raise Typerror("Need an array-like input")
+                raise TypeError("Need an array-like input")
         else:
             self._mask_array = val
 
@@ -304,7 +282,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     def filter(self):
         return self._filter
 
-    def _update_filter(self, val: TrialFilter):
+    def _update_filter(self, val: TrialFilter | None):
         if val is None:
             self._filter = []
         else:
@@ -313,19 +291,17 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         return self._filter
 
     @abc.abstractmethod
-    def load_lfp(self, *args, **kwargs) -> NoReturn:
+    def load_lfp(self, *args, **kwargs):
         """Load the LFP data"""
         raise NotImplementedError
 
     @abc.abstractmethod
-    def load_neural_data(self, *args, **kwargs) -> NoReturn:
+    def load_neural_data(self, *args, **kwargs):
         """Load the neural data"""
         raise NotImplementedError
 
     @abc.abstractmethod
-    def load_pos_data(
-        self, ppm: int = 300, jumpmax: int = 100, *args, **kwargs
-    ) -> NoReturn:
+    def load_pos_data(self, ppm: int = 300, jumpmax: int = 100, *args, **kwargs):
         """
         Load the position data
 
@@ -343,7 +319,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def load_settings(self, *args, **kwargs) -> NoReturn:
+    def load_settings(self, *args, **kwargs):
         """Loads the format specific settings file"""
         raise NotImplementedError
 
@@ -354,11 +330,11 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def get_spike_times(
         self, cluster: int | list, channel: int | list, *args, **kwargs
-    ):
+    ) -> list | np.ndarray:
         """Returns the times of an individual cluster"""
         raise NotImplementedError
 
-    def apply_filter(self, *trial_filter: TrialFilter) -> np.ma.MaskedArray:
+    def apply_filter(self, *trial_filter: TrialFilter) -> np.ndarray:
         """Apply a mask to the data
 
         Args:
@@ -477,6 +453,30 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self.RateMap = RateMap(self.PosCalcs)
         self.npos = self.PosCalcs.xy.shape[1]
 
+    def get_spike_times_binned_into_position(
+        self, cluster: int | list, channel: int | list
+    ) -> np.ndarray:
+        """
+        Returns the spike times binned into the position data
+        That is the length of the output array will be the same as the number of position samples
+        """
+        ts = self.get_spike_times(cluster, channel)
+        if not isinstance(ts, list):
+            ts = [ts]
+        n_clusters = 1
+        if isinstance(n_clusters, list):
+            n_clusters = len(cluster)
+        n_pos = self.PosCalcs.npos
+        binned = np.zeros((n_clusters, n_pos))
+        for i, t in enumerate(ts):
+            spk_binned = np.bincount(
+                (t * self.PosCalcs.sample_rate).astype(int), minlength=n_pos
+            )
+            if len(spk_binned) > n_pos:
+                spk_binned = spk_binned[:n_pos]
+            binned[i, :] = spk_binned
+        return binned
+
     def _get_spike_pos_idx(self, cluster: int | list, channel: int | list, **kwargs):
         """
         Returns the indices into the position data at which some cluster
@@ -586,7 +586,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         elif (
             isinstance(spk_times_in_pos_samples, list)
             and len(spk_times_in_pos_samples) > 1
-        ):
+        ):  # likely the result of a shuffle arg passed to get_spike_pos_idx
             weights = []
             for spk_idx in spk_times_in_pos_samples:
                 w = np.bincount(spk_idx, minlength=npos)
@@ -683,6 +683,12 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             cluster, channel, VariableToBin.XY, map_type=MapType.ADAPTIVE, **kwargs
         )
 
+    def get_xcorr(
+        self, cluster: int | list, channel: int | list, **kwargs
+    ) -> BinnedData:
+        ts = self.get_spike_times(cluster, channel)
+        return xcorr(ts, **kwargs)
+
 
 class AxonaTrial(TrialInterface):
     def __init__(self, pname: Path, **kwargs) -> None:
@@ -748,11 +754,12 @@ class AxonaTrial(TrialInterface):
             # ttl times in Stim are in ms
         except IOError:
             return False
+        print("Loaded ttl data")
         return True
 
     def get_spike_times(
         self, cluster: int | list = None, tetrode: int | list = None, *args, **kwargs
-    ):
+    ) -> list | np.ndarray:
         """
         Args:
             tetrode (int | list):
@@ -764,7 +771,7 @@ class AxonaTrial(TrialInterface):
         if tetrode is not None:
             if isinstance(cluster, int):
                 return self.TETRODE.get_spike_samples(int(tetrode), int(cluster))
-            elif isinstance(cluster, list):
+            elif isinstance(cluster, list) and isinstance(tetrode, list):
                 if len(cluster) == 1:
                     tetrode = tetrode[0]
                     cluster = cluster[0]
@@ -775,28 +782,37 @@ class AxonaTrial(TrialInterface):
                         spikes.append(self.TETRODE.get_spike_samples(tc[0], tc[1]))
                     return spikes
 
-    def apply_filter(self, *trial_filter: TrialFilter):
+    def apply_filter(self, *trial_filter: TrialFilter) -> np.ndarray:
         """Apply a mask to the data
 
         Args:
-            mask (tuple): (start, end) in seconds
+            trial_filter (TrialFilter): A namedtuple containing the filter
+                name, start and end values
+            name (str): The name of the filter
+            start (float): The start value of the filter
+            end (float): The end value of the filter
+
+            Valid names are:
+                'dir' - the directional range to filter for
+                'speed' - min and max speed to filter for
+                'xrange' - min and max values to filter x pos values
+                'yrange' - same as xrange but for y pos
+                'time' - the times to keep / remove specified in ms
+
+            Values are pairs specifying the range of values to filter for
+            from the namedtuple TrialFilter that has fields 'start' and 'end'
+            where 'start' and 'end' are the ranges to filter for
 
         Returns:
-            None
-
-        Note:
-        mask can be a list of tuples, in which case the mask is applied
-        for each tuple in the list.
-        mask can be an empty tuple, in which case the mask is removed
-
+            np.array: An array of bools that is True where the mask is applied
         """
         mask = super().apply_filter(*trial_filter)
-        # if np.any(mask):
         for tetrode in self.TETRODE.keys():
             if self.TETRODE[tetrode] is not None:
                 self.TETRODE[tetrode].apply_mask(
                     mask, sample_rate=self.PosCalcs.sample_rate
                 )
+        return mask
 
 
 class OpenEphysBase(TrialInterface):
@@ -865,7 +881,7 @@ class OpenEphysBase(TrialInterface):
 
     def get_spike_times(
         self, cluster: int | list = None, tetrode: int | list = None, *args, **kwargs
-    ):
+    ) -> list | np.ndarray:
         """
         Args:
             tetrode (int):
@@ -911,13 +927,14 @@ class OpenEphysBase(TrialInterface):
             # set the target sample rate to 250Hz by default to match
             # Axona EEG data
             target_sample_rate = kwargs.get("target_sample_rate", 250)
-            n_samples = np.shape(lfp[channel, :])[0]
-            sig = signal.resample(
-                lfp[channel, :], int(n_samples / self.sample_rate) * target_sample_rate
+            denom = np.gcd(int(target_sample_rate), int(self.sample_rate))
+            data = lfp[channel, :]
+            sig = signal.resample_poly(
+                data, target_sample_rate / denom, self.sample_rate / denom, 0
             )
             self.EEGCalcs = EEGCalcsGeneric(sig, target_sample_rate)
 
-    def load_neural_data(self, *args, **kwargs) -> None:
+    def load_neural_data(self, *args, **kwargs):
         if "path2APdata" in kwargs.keys():
             self.path2APdata: Path = Path(kwargs["path2APdata"])
         n_channels: int = self.channel_count or kwargs["nChannels"]
@@ -1106,26 +1123,32 @@ class OpenEphysBase(TrialInterface):
         print("Loaded ttl data")
         return True
 
-    def apply_filter(self, *trial_filter: TrialFilter):
+    def apply_filter(self, *trial_filter: TrialFilter) -> np.ndarray:
         """Apply a mask to the data
 
         Args:
-            mask (tuple): (start, end) in seconds
+            trial_filter (TrialFilter): A namedtuple containing the filter
+                name, start and end values
+            name (str): The name of the filter
+            start (float): The start value of the filter
+            end (float): The end value of the filter
+
+            Valid names are:
+                'dir' - the directional range to filter for
+                'speed' - min and max speed to filter for
+                'xrange' - min and max values to filter x pos values
+                'yrange' - same as xrange but for y pos
+                'time' - the times to keep / remove specified in ms
+
+            Values are pairs specifying the range of values to filter for
+            from the namedtuple TrialFilter that has fields 'start' and 'end'
+            where 'start' and 'end' are the ranges to filter for
 
         Returns:
-            None
-
-        Note:
-        mask can be a list of tuples, in which case the mask is applied
-        for each tuple in the list.
-        mask can be an empty tuple, in which case the mask is removed
-
+            np.array: An array of bools that is True where the mask is applied
         """
-        # the mask is not applied to the kilosort data here
-        # as it will be applied when the methods are called within
-        # this class for grabbing waveforms from the template_model
-        # class
-        super().apply_filter(*trial_filter)
+        mask = super().apply_filter(*trial_filter)
+        return mask
 
     def find_files(
         self,
@@ -1283,55 +1306,3 @@ class OpenEphysNWB(OpenEphysBase):
             recording_name,
             RecordingKind.NWB,
         )
-
-
-def getClusterBinCounts(
-    trial: AxonaTrial | OpenEphysBase, clusters: list[int], channels: list[int]
-) -> np.array:
-    """
-    Returns the number of spikes emitted by each cluster on each channel as a
-    numpy array. The array is of shape (n_clusters * n_channels, n_pos_samples)
-    """
-    if trial.PosCalcs is None:
-        trial.load_pos_data()
-    npos = trial.PosCalcs.npos
-    a = []
-    for clust_chan in zip(clusters, channels):
-        spk_weights = np.bincount(
-            trial._get_spike_pos_idx(clust_chan[0], clust_chan[1]),
-            minlength=npos,
-        )
-        if len(spk_weights) > npos:
-            spk_weights = np.delete(spk_weights, np.s_[npos:], 0)
-        a.append(spk_weights)
-    return np.array(a)
-
-
-def __debug_plot_mask__(trial: OpenEphysBase | AxonaTrial) -> None:
-    """
-    Debug function to plot the mask applied to the data
-    """
-
-    def _plot_mask(y: np.array, title: str):
-        fig, ax = plt.subplots()
-        _y = np.ravel(y)
-        x = np.ravel(np.arange(0, len(_y)))
-        ax.plot(x, _y)
-        ax.set_title(title)
-        plt.show()
-
-    f = TrialFilter("time", 0, 0)
-    f.start = 0
-    f.end = 600
-    trial.apply_filter(f)
-    trial_mask = trial._mask_array
-    _plot_mask(trial_mask, "Trial mask")
-    dir_mask = trial.PosCalcs.dir.mask
-    _plot_mask(dir_mask, "dir mask")
-    f.start = 600
-    f.end = 1800
-    trial.apply_filter()
-    _plot_mask(trial._mask_array, "Trial mask")
-    trial.apply_filter(f)
-    _plot_mask(trial._mask_array, "Trial mask")
-    _plot_mask(trial.PosCalcs.dir.mask, "dir mask")

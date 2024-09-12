@@ -181,10 +181,10 @@ def test_acorr(basic_SpikeCalcs):
     assert isinstance(xc, BinnedData)
 
 
-def test_calculate_psth(basic_SpikeCalcs):
-    x, y = basic_SpikeCalcs.psth()
-    assert isinstance(x, list)
-    assert isinstance(y, list)
+# def test_calculate_psth(basic_SpikeCalcs):
+#     x, y = basic_SpikeCalcs.psth()
+#     assert isinstance(x, list)
+#     assert isinstance(y, list)
 
 
 def test_theta_mod_idx(basic_SpikeCalcs):

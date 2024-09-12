@@ -16,6 +16,7 @@ from ephysiopy.common.utils import (
     BinnedData,
     VariableToBin,
     MapType,
+    TrialFilter,
 )
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 
@@ -192,9 +193,9 @@ def cluster_quality(
 def xcorr(
     x1: np.ndarray,
     x2: np.ndarray = None,
-    Trange: np.ndarray | list = None,
+    Trange: np.ndarray | list = np.array([-0.5, 0.5]),
     binsize: float = 0.001,
-    **kwargs,
+    normed=False,
 ) -> BinnedData:
     """
     Calculates the ISIs in x1 or x1 vs x2 within a given range
@@ -205,6 +206,8 @@ def xcorr(
         Trange (array_like): Range of times to bin up in seconds
                                 Defaults to [-0.5, +0.5]
         binsize (float): The size of the bins in seconds
+        normed (bool): Whether to divide the counts by the total
+                        number of spikes to give a probabilty
 
     Returns:
         BinnedData: A BinnedData object containing the binned data and the
@@ -212,25 +215,35 @@ def xcorr(
     """
     if x2 is None:
         x2 = x1.copy()
-    if Trange is None:
-        Trange = np.array([-0.5, 0.5])
     if isinstance(Trange, list):
         Trange = np.array(Trange)
     y = []
-    irange = x1[:, np.newaxis] + Trange[np.newaxis, :]
-    dts = np.searchsorted(x2, irange)
+    irange = x2[:, np.newaxis] + Trange[np.newaxis, :]
+    dts = np.searchsorted(x1, irange)
     for i, t in enumerate(dts):
-        y.extend((x2[t[0] : t[1]] - x1[i]))
+        y.extend((x1[t[0] : t[1]] - x2[i]))
     y = np.array(y, dtype=float)
     counts, bins = np.histogram(
-        y[y != 0], bins=int(np.ptp(Trange) / binsize) + 1, range=Trange
+        y[y != 0], bins=int(np.ptp(Trange) / binsize) + 1, range=(Trange[0], Trange[1])
     )
+    if normed:
+        counts = counts / len(x1)
     return BinnedData(
         variable=VariableToBin.TIME,
         map_type=MapType.SPK,
         binned_data=[counts],
         bin_edges=[bins],
     )
+
+
+def fit_smoothed_curve_to_xcorr(xc: BinnedData, **kwargs) -> BinnedData:
+    """
+    Idea is to smooth out the result of an auto- or cross-correlogram with
+    a view to correlating the result with another auto- or cross-correlogram
+    to see how similar two of these things are.
+
+    """
+    pass
 
 
 def contamination_percent(x1: np.ndarray, x2: np.ndarray = None, **kwargs) -> tuple:
@@ -480,28 +493,36 @@ class SpikeCalcsGeneric(object):
     def secs_per_bin(self, value: float | int):
         self._secs_per_bin = value
 
-    def apply_filter(self, mask) -> None:
+    def apply_filter(self, *trial_filter: TrialFilter) -> None:
         """
         Applies a mask to the spike times
 
-        Args:
+        Args
             mask (list or tuple): The mask to apply to the spike times
         """
+        if trial_filter:
+            for i_filter in trial_filter:
+                assert isinstance(i_filter, TrialFilter), "Filter must be a TrialFilter"
+                assert i_filter.name == "time", "Only time filters are supported"
         self.spike_times.mask = False
         if self._waves and self._waves is not None:
             self._waves.mask = False
-        if not mask or len(mask[0]) == 0:
-            return
+        if not trial_filter or len(trial_filter) == 0:
+            if self._waves and self._waves is not None:
+                self._waves.mask = False
+            self.spike_times.mask = False
         else:
-            mask = [
-                np.ma.masked_inside(self.spike_times, m[0], m[1]).mask for m in mask
-            ]
-            mask = np.any(mask, axis=0)
+            mask = np.zeros_like(self.spike_times, dtype=bool)
+            for i_filter in trial_filter:
+                i_mask = np.logical_and(
+                    self.spike_times > i_filter.start, self.spike_times < i_filter.end
+                )
+                mask = np.logical_or(mask, i_mask)
             self.spike_times.mask = mask
             if self._waves is not None:
                 self._waves.mask = mask
 
-    def acorr(self, Trange: np.ndarray = None, **kwargs) -> BinnedData:
+    def acorr(self, Trange: np.ndarray = np.array([-0.5, 0.5]), **kwargs) -> BinnedData:
         """
         Calculates the autocorrelogram of a spike train
 
@@ -560,7 +581,7 @@ class SpikeCalcsGeneric(object):
         else:
             return None
 
-    def psth(self, **kwargs):
+    def psth(self) -> tuple[list, ...]:
         """
         Calculate the PSTH of event_ts against the spiking of a cell
 
@@ -959,7 +980,7 @@ class SpikeCalcsGeneric(object):
                 return False, normd, 0
             return False, normd
 
-    def theta_mod_idx(self):
+    def theta_mod_idx(self) -> float:
         """
         Calculates a theta modulation index of a spike train based on the cells
         autocorrelogram.
@@ -970,6 +991,9 @@ class SpikeCalcsGeneric(object):
         Returns:
             thetaMod (float): The difference of the values at the first peak
             and trough of the autocorrelogram.
+
+        NB This is a fairly skewed metric with a distribution strongly biased
+        to 1 (although more evenly distributed than theta_mod_idxV2 below)
         """
         ac = self.acorr()
         # Take the fft of the spike train autocorr (from -500 to +500ms)
@@ -993,9 +1017,9 @@ class SpikeCalcsGeneric(object):
         # Get the mean in the other band - mobp
         mobp = np.mean(sqd_amp[other_band_idx])
         # Find the ratio of these two - this is the theta modulation index
-        return (mtbp - mobp) / (mtbp + mobp)
+        return float((mtbp - mobp) / (mtbp + mobp))
 
-    def theta_mod_idxV2(self):
+    def theta_mod_idxV2(self) -> float:
         """
         This is a simpler alternative to the theta_mod_idx method in that it
         calculates the difference between the normalized temporal
@@ -1017,7 +1041,7 @@ class SpikeCalcsGeneric(object):
         thetaPhase = np.max(
             corr[np.logical_and(bins > 100 / 1000.0, bins < 140 / 1000.0)]
         )
-        return (thetaPhase - thetaAntiPhase) / (thetaPhase + thetaAntiPhase)
+        return float((thetaPhase - thetaAntiPhase) / (thetaPhase + thetaAntiPhase))
 
     def theta_band_max_freq(self):
         """
@@ -1074,7 +1098,7 @@ class SpikeCalcsGeneric(object):
 
     def contamination_percent(self, **kwargs) -> tuple:
 
-        c, Qi, Q00, Q01, Ri = contamination_percent(self.spike_times, **kwargs)
+        _, Qi, Q00, Q01, Ri = contamination_percent(self.spike_times, **kwargs)
         Q = min(Qi / (max(Q00, Q01)))  # this is a measure of refractoriness
         # this is a second measure of refractoriness (kicks in for very low
         # firing rates)

@@ -37,7 +37,14 @@ empty lists. The set_nan_indices method is used to set the values of the binned
 data at the specified indices to NaN.
 
 The __truediv__ method is used to divide the binned data by the binned data of 
-another BinnedData instance i.e. spike data / pos data to get a rate map.
+another BinnedData instance i.e. spike data / pos data to get a rate map. I've
+added a check to this for instances where the length of the binned data in the 
+numerator (i.e. binned spike arrays) is greater than the length of the denominator
+(i.e.the binned position array). This is because when either binning up >1 cluster
+in a trial, or creating shuffled data, the position data is invariant and so it's
+pointless to generate replicates. I don't think this will trip me up in the future
+but I guess it's theoretically possible that the denominator might be different in
+some cicrcumstances (maybe binning up runs along a linear track or something...)
 
 The __add__ method is used to add the binned data of another BinnedData instance 
 to the binned data of this instance.
@@ -54,7 +61,7 @@ are used when calling pcolormesh in the plotting functions.
 
 
 @dataclass
-class BinnedData(object):
+class BinnedData:
     variable: VariableToBin = VariableToBin.XY
     map_type: MapType = MapType.RATE
     binned_data: list[np.ndarray] = field(default_factory=list)
@@ -63,17 +70,44 @@ class BinnedData(object):
     def __iter__(self):
         yield from self.binned_data
 
+    def __assert_equal_bin_edges__(self, other):
+        assert np.all(
+            [np.all(sbe == obe) for sbe, obe in zip(self.bin_edges, other.bin_edges)]
+        ), "Bin edges do not match"
+
+    def __len__(self):
+        return len(self.binned_data)
+
+    def __getitem__(self, i):
+        return BinnedData(
+            variable=self.variable,
+            map_type=self.map_type,
+            binned_data=self.binned_data[i],
+            bin_edges=self.bin_edges,
+        )
+
     def __truediv__(self, other):
         if isinstance(other, BinnedData):
-            assert np.all(
-                [
-                    np.all(sbe == obe)
-                    for sbe, obe in zip(self.bin_edges, other.bin_edges)
-                ]
-            ), "Bin edges do not match"
+            self.__assert_equal_bin_edges__(other)
+            if len(self.binned_data) > len(other.binned_data):
+                if (other.map_type.value == MapType.POS.value) and (
+                    self.map_type.value == MapType.SPK.value
+                ):
+                    if len(other.binned_data) == 1:
+                        return BinnedData(
+                            variable=self.variable,
+                            map_type=MapType.RATE,
+                            binned_data=[
+                                a / b
+                                for a in self.binned_data
+                                for b in other.binned_data
+                            ],
+                            bin_edges=self.bin_edges,
+                        )
+
             return BinnedData(
                 variable=self.variable,
-                map_type=self.map_type,
+                map_type=MapType.RATE,
                 binned_data=[
                     a / b for a, b in zip(self.binned_data, other.binned_data)
                 ],
@@ -82,12 +116,7 @@ class BinnedData(object):
 
     def __add__(self, other):
         if isinstance(other, BinnedData):
-            assert np.all(
-                [
-                    np.all(sbe == obe)
-                    for sbe, obe in zip(self.bin_edges, other.bin_edges)
-                ]
-            ), "Bin edges do not match"
+            self.__assert_equal_bin_edges__(other)
             return BinnedData(
                 variable=self.variable,
                 map_type=self.map_type,
@@ -95,26 +124,25 @@ class BinnedData(object):
                 bin_edges=self.bin_edges,
             )
 
-    def __eq__(self, other):
-        if isinstance(other, BinnedData):
-            assert np.all(
-                [
-                    np.all(sbe == obe)
-                    for sbe, obe in zip(self.bin_edges, other.bin_edges)
-                ]
-            ), "Bin edges do not match"
+    def __eq__(self, other) -> bool:
+        assert isinstance(other, BinnedData)
+        self.__assert_equal_bin_edges__(other)
+        if np.all(
+            [
+                np.all(np.isfinite(sbd) == np.isfinite(obd))
+                for sbd, obd in zip(self.binned_data, other.binned_data)
+            ]
+        ):
             if np.all(
                 [
-                    np.all(np.isfinite(sbd) == np.isfinite(obd))
+                    np.all(sbd[np.isfinite(sbd)] == obd[np.isfinite(obd)])
                     for sbd, obd in zip(self.binned_data, other.binned_data)
                 ]
             ):
-                return np.all(
-                    [
-                        np.all(sbd[np.isfinite(sbd)] == obd[np.isfinite(obd)])
-                        for sbd, obd in zip(self.binned_data, other.binned_data)
-                    ]
-                )
+                return True
+            else:
+                return False
+        else:
             return False
 
     def set_nan_indices(self, indices):
@@ -129,29 +157,73 @@ class BinnedData(object):
             bin_edges=self.bin_edges[::-1],
         )
 
-    def correlate(self, other):
+    def correlate(self, other=None, as_matrix=False) -> list[float] | np.ndarray:
         """
         This method is used to correlate the binned data of this BinnedData
         instance with the binned data of another BinnedData instance.
 
         Args:
             other (BinnedData): The other BinnedData instance to correlate with.
+                If None, then correlations are performed between all the data held
+                in the list self.binned_data
+            as_matrix (bool): If True will return the full correlation matrix for
+                all of the correlations in the list of data in self.binned_data. If
+                False, a list of the unique correlations for the comparisons in
+                self.binned_data are returned.
 
         Returns:
             BinnedData: A new BinnedData instance with the correlation of the
-            binned data of this instance and the other instance.
+                binned data of this instance and the other instance.
         """
-        if isinstance(other, BinnedData):
-            assert np.all(
-                [
-                    np.all(
-                        sbe == obe for sbe, obe in zip(self.bin_edges, other.bin_edges)
-                    )
-                ]
-            ), "Bin edges do not match"
-            return [
-                corr_maps(a, b) for a, b in zip(self.binned_data, other.binned_data)
-            ]
+        if other is not None:
+            assert isinstance(other, BinnedData)
+            self.__assert_equal_bin_edges__(other)
+        if other is not None:
+            result = np.reshape(
+                [corr_maps(a, b) for a in self.binned_data for b in other.binned_data],
+                newshape=(len(self.binned_data), len(other.binned_data)),
+            )
+        else:
+            result = np.reshape(
+                [corr_maps(a, b) for a in self.binned_data for b in self.binned_data],
+                newshape=(len(self.binned_data), len(self.binned_data)),
+            )
+        if as_matrix:
+            return result
+        else:
+            # pick out the relevant diagonal
+            k = -1
+            if len(self.binned_data) == 1:
+                k = 0
+            if other is not None:
+                if len(other.binned_data) == 1:
+                    k = 0
+                idx = np.tril_indices(
+                    n=len(self.binned_data), m=len(other.binned_data), k=k
+                )
+            else:
+                idx = np.tril_indices(n=len(self.binned_data), k=k)
+            return result[idx]
+
+
+# a basic dataclass for holding filter values
+@dataclass(eq=True)
+class TrialFilter:
+    name: str
+    start: float | str
+    end: float | str
+
+    def __init__(self, name: str, start: float | str, end: float | str):
+        assert name in [
+            "time",
+            "dir",
+            "speed",
+            "xrange",
+            "yrange",
+        ], "name must be one of 'time', 'dir', 'speed', 'xrange', 'yrange'"
+        self.name = name
+        self.start = start
+        self.end = end
 
 
 def clean_kwargs(func, kwargs):
@@ -216,7 +288,10 @@ def remap_to_range(x: np.ndarray, new_min=0, new_max=1, axis=0) -> np.ndarray:
 
 
 def flatten_list(list_to_flatten: list) -> list:
-    return [item for sublist in list_to_flatten for item in sublist]
+    try:
+        return [item for sublist in list_to_flatten for item in sublist]
+    except TypeError:
+        return list_to_flatten
 
 
 def smooth(x, window_len=9, window="hanning"):
@@ -284,7 +359,7 @@ def smooth(x, window_len=9, window="hanning"):
 
 
 def blur_image(
-    im: BinnedData, n: int, ny: int = None, ftype: str = "boxcar", **kwargs
+    im: BinnedData, n: int, ny: int = 0, ftype: str = "boxcar", **kwargs
 ) -> BinnedData:
     """
     Smooths a 2D image by convolving with a filter.
@@ -297,13 +372,16 @@ def blur_image(
 
     Returns:
         res (BinnedData): BinnedData instance with the smoothed data.
+
+    Notes:
+        This essentially does the smoothing in-place
     """
     stddev = kwargs.pop("stddev", 5)
     boundary = kwargs.pop("boundary", "extend")
     n = int(n)
     if n % 2 == 0:
         n += 1
-    if not ny:
+    if ny == 0:
         ny = n
     else:
         ny = int(ny)
@@ -349,7 +427,7 @@ def shift_vector(v, shift, maxlen=None):
     if shift > 0:
         shifted = v + shift
         shifted[shifted >= maxlen] -= maxlen
-    return np.sort(shifted)
+        return np.sort(shifted)
 
 
 def count_to(n):
@@ -373,7 +451,7 @@ def count_to(n):
     return np.cumsum(ret)[:-1]
 
 
-def repeat_ind(n: np.array):
+def repeat_ind(n: np.ndarray) -> np.ndarray:
     """
     Examples:
         >>> n = [0, 0, 3, 0, 0, 2, 0, 2, 1]
@@ -501,7 +579,7 @@ def count_runs_and_unique_numbers(arr: np.ndarray) -> tuple:
     return runs_count, unique_numbers
 
 
-def corr_maps(map1, map2, maptype="normal"):
+def corr_maps(map1, map2, maptype="normal") -> float:
     """
     correlates two ratemaps together ignoring areas that have zero sampling
     """
@@ -511,12 +589,14 @@ def corr_maps(map1, map2, maptype="normal"):
         map1 = skimage.transform.resize(map1, map2.shape, mode="reflect")
     map1 = map1.flatten()
     map2 = map2.flatten()
+    valid_map1 = np.zeros_like(map1)
+    valid_map2 = np.zeros_like(map2)
     if "normal" in maptype:
-        valid_map1 = np.logical_or((map1 > 0), ~np.isnan(map1))
-        valid_map2 = np.logical_or((map2 > 0), ~np.isnan(map2))
+        np.logical_or((map1 > 0), ~np.isnan(map1), out=valid_map1)
+        np.logical_or((map2 > 0), ~np.isnan(map2), out=valid_map2)
     elif "grid" in maptype:
-        valid_map1 = ~np.isnan(map1)
-        valid_map2 = ~np.isnan(map2)
+        np.isfinite(map1, out=valid_map1)
+        np.isfinite(map2, out=valid_map2)
     valid = np.logical_and(valid_map1, valid_map2)
     r = np.corrcoef(map1[valid], map2[valid])
     return r[1][0]

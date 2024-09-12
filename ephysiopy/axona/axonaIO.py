@@ -410,7 +410,8 @@ class Tetrode(IO):
                 cut = np.array(self.getCut(self.tetrode), dtype=int)
                 self.cut = cut
             if self.cut is not None:
-                clustTS = np.ma.compressed(self.spike_times[self.cut == cluster])
+                clustTS = self.spike_times[self.cut == cluster]
+                # clustTS = np.ma.compressed(self.spike_times[self.cut == cluster])
         return clustTS
 
     def getPosSamples(self):
@@ -498,9 +499,12 @@ class Tetrode(IO):
             )
             pos_times_in_samples = np.nonzero(mask)[1]
             mask = np.ma.isin(spike_pos_samples, pos_times_in_samples)
-        self.spike_times.mask = mask.data
-        self.waveforms.mask = mask.data
-        self.cut.mask = mask.data
+        if mask is not None:
+            self.spike_times.mask = mask.data
+        if mask is not None:
+            self.waveforms.mask = mask.data
+        if mask is not None:
+            self.cut.mask = mask.data
 
 
 class EEG(IO):

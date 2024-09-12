@@ -1,29 +1,23 @@
-# Suppress warnings generated from doing the ffts for the spatial
-# autocorrelogram
-# see autoCorr2D and crossCorr2D
 import warnings
-from functools import cache
 from collections import namedtuple
-from dataclasses import dataclass, field
 
 import numpy as np
 import boost_histogram as bh
+from shapely import Point
 from astropy import convolution  # deals with nans unlike other convs
-from scipy import signal
 from scipy.spatial import distance
 from skimage.morphology import disk
-from shapely import MultiLineString, prepare
-from shapely.affinity import rotate, translate
-from shapely.geometry import LineString, Point
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.common.utils import (
     blur_image,
-    flatten_list,
     BinnedData,
     VariableToBin,
     MapType,
 )
 
+# Suppress warnings generated from doing the ffts for the spatial
+# autocorrelogram
+# see autoCorr2D and crossCorr2D
 warnings.filterwarnings("ignore", message="invalid value encountered in sqrt")
 warnings.filterwarnings("ignore", message="invalid value encountered in subtract")
 warnings.filterwarnings("ignore", message="invalid value encountered in greater")
@@ -65,7 +59,7 @@ class RateMap(object):
     def __init__(
         self,
         PosCalcs: PosCalcsGeneric,
-        pos_weights: np.ma.MaskedArray = None,
+        pos_weights: np.ndarray = None,
         xyInCms: bool = False,
         binsize: int = 3,
         smooth_sz: int = 5,
@@ -308,7 +302,7 @@ class RateMap(object):
         map_type=MapType.RATE,
         smoothing=True,
         **kwargs
-    ) -> BinnedData:
+    ) -> BinnedData | None:
         """
         Bins up the variable type var_type and returns a tuple of
         (rmap, binnedPositionDir) or
@@ -366,7 +360,6 @@ class RateMap(object):
             pos_weights = np.tile(self.pos_weights, arena_xy.shape[0])
             hist_range = (0, 50), (0, 2 * np.pi)
 
-            # breakpoint()
             if "range" not in kwargs.keys():
                 kwargs["range"] = hist_range
         else:
@@ -382,7 +375,6 @@ class RateMap(object):
             bin_edges = self._calc_bin_edges(binsize)
         else:
             bin_edges = None
-
         binned_pos, binned_pos_edges = self._bin_data(
             sample, bin_edges, pos_weights, hist_range
         )
@@ -406,8 +398,7 @@ class RateMap(object):
                 return pos
 
         binned_spk, _ = self._bin_data(sample, bin_edges, spk_weights, hist_range)
-
-        if isinstance(binned_spk, np.ndarray):
+        if not isinstance(binned_spk, list):
             binned_spk = [binned_spk]
 
         spk = BinnedData(var_type, MapType.SPK, binned_spk, binned_pos_edges)
@@ -416,6 +407,7 @@ class RateMap(object):
             return spk
         if map_type.value == MapType.ADAPTIVE.value:
             alpha = kwargs.pop("alpha", 4)
+            # deal with a stack of binned maps
             if binned_spk.ndim == 3:
                 smthd_rate = []
                 for i in range(binned_spk.shape[0]):
@@ -423,9 +415,7 @@ class RateMap(object):
                         self.getAdaptiveMap(binned_pos, binned_spk[i, ...], alpha)[0]
                     )
             else:
-                smthd_rate, smthd_spk, smthd_pos = self.getAdaptiveMap(
-                    binned_pos, binned_spk, alpha
-                )
+                smthd_rate, _, _ = self.getAdaptiveMap(binned_pos, binned_spk, alpha)
             return BinnedData(var_type, map_type, smthd_rate, binned_pos_edges)
 
         if not smoothing:
@@ -443,7 +433,6 @@ class RateMap(object):
                 boundary=boundary,
                 **kwargs
             )
-            rmap.map_type = MapType.RATE
         else:  # default case
             sm_pos = blur_image(
                 pos,
@@ -460,11 +449,12 @@ class RateMap(object):
                 **kwargs
             )
             rmap = sm_spk / sm_pos
-            rmap.map_type = MapType.RATE
         rmap.set_nan_indices(nanIdx)
         return rmap
 
-    def _bin_data(self, var, bin_edges, weights, range=None) -> tuple[np.ndarray]:
+    def _bin_data(
+        self, var, bin_edges, weights, range=None, density=False
+    ) -> tuple[np.ndarray, ...]:
         """
         Bins data taking account of possible multi-dimensionality
 
@@ -473,6 +463,7 @@ class RateMap(object):
             bin_edges (array_like): The edges of the data - see numpys histogramdd for more
             weights (array_like): The weights attributed to the samples in var
             good_indices (array_like): Valid indices (i.e. not nan and not infinite)
+            density (bool): same as numpys density arg for histogram
 
         Returns:
             ndhist (2-tuple): Think this always returns a two-tuple of the binned variable and
@@ -526,12 +517,16 @@ class RateMap(object):
         var = np.array(var.T)
         if bin_edges is None:
             ndhist = [
-                bh.numpy.histogramdd(var, range=range, weights=w.filled(0))
+                bh.numpy.histogramdd(
+                    var, range=range, weights=w.filled(0), density=density
+                )
                 for w in weights
             ]
         else:
             ndhist = [
-                bh.numpy.histogramdd(var, bins=bin_edges, weights=w.filled(0))
+                bh.numpy.histogramdd(
+                    var, bins=bin_edges, weights=w.filled(0), density=density
+                )
                 for w in weights
             ]
         if np.shape(weights)[0] == 1:
@@ -1004,7 +999,9 @@ class RateMap(object):
         H.set_nan_indices(Hp.binned_data[0] < Pthresh)
         return H
 
-    def _calc_ego_angles(self, arena_shape="circle", xy_binsize=2.5) -> None:
+    def _calc_ego_angles(
+        self, arena_shape="circle", xy_binsize=2.5
+    ) -> tuple[np.ndarray, ...]:
         """
         Calculate the angles between the segments of the arena wall
         and the positions of the animal throughout the trial.
@@ -1040,12 +1037,10 @@ class RateMap(object):
         spk_weights,
         degs_per_bin: float = 3,
         xy_binsize: float = 2.5,
-        arena_type: str = "circle",
         return_dists: bool = False,
         return_angles: bool = False,
         return_raw_spk: bool = False,
         return_raw_occ: bool = False,
-        **kwargs
     ) -> namedtuple:
         assert self.dir is not None, "No direction data available"
         ego_angles, arena_xy = self._calc_ego_angles()
@@ -1078,96 +1073,24 @@ class RateMap(object):
             em = em._replace(angles=ego_angles)
         return em
 
-    def getAllSpikeWeights(
-        self,
-        spike_times: np.ndarray,
-        spike_clusters: np.ndarray,
-        pos_times: np.ndarray,
-        **kwargs
-    ):
+    def get_disperion_map(
+        self, spk_times: np.ndarray, pos_times: np.ndarray
+    ) -> BinnedData:
         """
-        Args:
-            spike_times (np.ndarray): Spike times in seconds
-            spike_clusters (np.ndarray): Cluster identity vector
-            pos_times (np.ndarray): The times at which position was captured in seconds
-
-        Returns:
-            np.ndarray: The bincounts with respect to position for each cluster. Shape of returned array will be nClusters x npos
+        Attempt to write a faster version of creating an overdispersion
+        map. A cell will sometimes fire too much or too little on a given
+        run through its receptive field. Need to find all the bins that contain
+        firing in the
         """
-        assert len(spike_clusters) == len(spike_times)
-        clusters = np.unique(spike_clusters)
-        npos = len(self.dir)
-        idx = np.searchsorted(pos_times, spike_times) - 1
-        weights = [
-            np.bincount(idx[spike_clusters == c], minlength=npos) for c in clusters
-        ]
-        return np.array(weights)
-
-    def _splitStackedCorrelations(self, binned_data: list) -> tuple:
-        """
-        Takes in the result of doStackedCorrelations() and splits into
-        two arrays and returns these as a 2-tuple
-        """
-        result = [(s[0][:, :, 0], s[0][:, :, 1]) for s in binned_data]
-        result = np.array(result)
-        return np.squeeze(result[:, 0, :, :]), np.squeeze(result[:, 1, :, :])
-
-    def doStackedCorrelations(
-        self,
-        spkW: np.ndarray,
-        times: np.ndarray,
-        splits: np.ndarray,
-        var2bin: VariableToBin = VariableToBin.XY,
-        maptype: MapType = MapType.RATE,
-        **kwargs
-    ):
-        """
-        Returns a list of binned data where each item in the list
-        is the result of running np.histogramdd on a spatial
-        variable (xy, dir etc) and a temporal one at the same
-        time. The idea is to split the spatial variable into two
-        temporal halves based on the bin edges in 'splits' and
-        then to run correlations between the two halves and
-        furthermore to do this for all of the clusters that have
-        spike weights in 'spkW'. 'spkW' should be the result of
-        using getAllSpikeWeights().
-
-        Args:
-            spkW (np.ndarray): The result of calling getAllSpikeWeights()
-            times (np.ndarray): Position times in seconds
-            splits (np.ndarray): Where to split the data in seconds. Will
-                typically take the form (0, 100, 200) for
-                example which will give a split between 0-100
-                and 100-200 seconds
-            var2bin (Enum): The spatial variable to bin up
-            maptype (Enum): The type of map to produce
-        """
-        if var2bin.value == VariableToBin.DIR.value:
-            sample = self.dir
-        elif var2bin.value == VariableToBin.SPEED.value:
-            sample = self.speed
-        elif var2bin.value == VariableToBin.XY.value:
-            sample = self.xy
-        else:
-            raise ValueError("Unrecognized variable to bin.")
-        assert sample is not None
-        self.pos_time_splits = splits
-
-        sample = np.concatenate((np.atleast_2d(sample), np.atleast_2d(times)))
-        edges = [b for b in self._binedges][::-1]
-        edges.append(splits)
-        # bin pos
-        bp, bpe = np.histogramdd(sample.T, bins=edges)
-        map1_pos, map2_pos = np.squeeze(bp[:, :, 0]), np.squeeze(bp[:, :, 1])
-        # smooth position
-        map1_pos = blur_image(map1_pos, 7, ftype="gaussian")
-        map2_pos = blur_image(map2_pos, 7, ftype="gaussian")
-        # bin spk - ie the histogram is weighted by spike count
-        # in bin i
-        spk = [np.histogramdd(sample.T, bins=edges, weights=w) for w in spkW]
-        map1_spk, map2_spk = self._splitStackedCorrelations(spk)
-        map1_sm_spk = np.array([blur_image(m, 7, ftype="gaussian") for m in map1_spk])
-        map2_sm_spk = np.array([blur_image(m, 7, ftype="gaussian") for m in map2_spk])
-        map1_rmaps = map1_sm_spk / map1_pos
-        map2_rmaps = map2_sm_spk / map2_pos
-        return map1_rmaps, map2_rmaps
+        idx = np.searchsorted(pos_times, spk_times, side="right")
+        spike_weights = np.bincount(idx, minlength=len(pos_times))
+        expected_spikes = self.get_map(spike_weights)
+        # bin_edges[1] is x
+        x_bins = np.digitize(self.xy[0], expected_spikes.bin_edges[1][:-1]) - 1
+        # bin_edges[0] is y
+        y_bins = np.digitize(self.xy[1], expected_spikes.bin_edges[0][:-1]) - 1
+        expected_spikes_xy = expected_spikes.binned_data[0][y_bins, x_bins]
+        y_bins_with_firing, x_bins_with_firing = np.nonzero(
+            expected_spikes.binned_data[0] > 0
+        )
+        return observed_spikes

@@ -6,7 +6,7 @@ from scipy import stats
 import skimage
 import warnings
 from skimage.segmentation import watershed
-from ephysiopy.common.utils import blur_image, BinnedData
+from ephysiopy.common.utils import blur_image, BinnedData, MapType
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 
@@ -51,8 +51,8 @@ def get_mean_resultant_angle(ego_boundary_map: np.ndarray, **kwargs) -> float:
     return np.rad2deg(np.arctan2(np.imag(MR), np.real(MR)))
 
 
-def getCentreBearingCurve(rmap: RateMap, pos: PosCalcsGeneric) -> np.ndarray:
-    pass
+# def getCentreBearingCurve(rmap: RateMap, pos: PosCalcsGeneric) -> np.ndarray:
+#     pass
 
 
 def field_lims(A):
@@ -108,7 +108,7 @@ def limit_to_one(A, prc=50, min_dist=5):
     peak_mask = np.zeros_like(Ac, dtype=bool)
     peak_mask[tuple(peak_idx.T)] = True
     peak_labels = skimage.measure.label(peak_mask, connectivity=2)
-    field_labels = watershed(image=-Ac, markers=peak_labels)
+    field_labels = watershed(image=Ac * -1, markers=peak_labels)
     nFields = np.max(field_labels)
     sub_field_mask = np.zeros((nFields, Ac.shape[0], Ac.shape[1]))
     labelled_sub_field_mask = np.zeros_like(sub_field_mask)
@@ -164,7 +164,7 @@ def global_threshold(A, prc=50, min_dist=5):
     peak_mask = np.zeros_like(Ac, dtype=bool)
     peak_mask[tuple(peak_idx.T)] = True
     peak_labels = skimage.measure.label(peak_mask, connectivity=2)
-    field_labels = watershed(image=-Ac, markers=peak_labels)
+    field_labels = watershed(image=Ac * -1, markers=peak_labels)
     nFields = np.max(field_labels)
     return nFields
 
@@ -189,7 +189,7 @@ def local_threshold(A, prc=50, min_dist=5):
     peak_mask = np.zeros_like(Ac, dtype=bool)
     peak_mask[tuple(peak_idx.T)] = True
     peak_labels = skimage.measure.label(peak_mask, connectivity=2)
-    field_labels = watershed(image=-Ac, markers=peak_labels)
+    field_labels = watershed(image=Ac * -1, markers=peak_labels)
     nFields = np.max(field_labels)
     sub_field_mask = np.zeros((nFields, Ac.shape[0], Ac.shape[1]))
     sub_field_props = skimage.measure.regionprops(field_labels, intensity_image=Ac)
@@ -399,7 +399,7 @@ def _get_field_labels(A: np.ndarray, **kwargs) -> tuple:
     peaksMask = np.zeros_like(A, dtype=bool)
     peaksMask[tuple(peak_coords.T)] = True
     peaksLabel, nLbls = ndimage.label(peaksMask)
-    ws = watershed(image=-A, markers=peaksLabel)
+    ws = watershed(image=-1 * A, markers=peaksLabel)
     return peak_coords, ws
 
 
@@ -567,6 +567,18 @@ def calc_angs(points):
     return np.array(angs).T
 
 
+def kl_spatial_sparsity(pos_map: BinnedData) -> float:
+    """
+    Calculates a measure of spatial sampling of an arena by comparing the
+    given spatial sampling to a uniform one using kl divergence
+
+    Data in pos_map should be unsmoothed (not checked) and the MapType should
+    be POS (checked)
+    """
+    assert pos_map.map_type == MapType.POS
+    return kldiv_dir(np.ravel(pos_map.binned_data[0]))
+
+
 def spatial_sparsity(rate_map: np.ndarray, pos_map: np.ndarray) -> float:
     """
     Calculates the spatial sparsity of a rate map as defined by
@@ -607,7 +619,7 @@ def coherence(smthd_rate, unsmthd_rate):
     return coherence[1, 0]
 
 
-def kldiv_dir(polarPlot):
+def kldiv_dir(polarPlot: np.ndarray) -> float:
     """
     Returns a kl divergence for directional firing: measure of directionality.
     Calculates kl diveregence between a smoothed ratemap (probably should be
@@ -637,7 +649,9 @@ def kldiv_dir(polarPlot):
     return kldivergence
 
 
-def kldiv(X, pvect1, pvect2, variant=None):
+def kldiv(
+    X: np.ndarray, pvect1: np.ndarray, pvect2: np.ndarray, variant: str = ""
+) -> float:
     """
     Calculates the Kullback-Leibler or Jensen-Shannon divergence between
     two distributions.
@@ -699,16 +713,16 @@ def kldiv(X, pvect1, pvect2, variant=None):
                 np.nansum(pvect1 * (np.log2(pvect1) - logqvect))
                 + np.sum(pvect2 * (np.log2(pvect2) - logqvect))
             )
-            return KL
+            return float(KL)
         elif variant == "sym":
             KL1 = np.nansum(pvect1 * (np.log2(pvect1) - np.log2(pvect2)))
             KL2 = np.nansum(pvect2 * (np.log2(pvect2) - np.log2(pvect1)))
             KL = (KL1 + KL2) / 2
-            return KL
+            return float(KL)
         else:
             warnings.warn("Last argument not recognised", UserWarning)
     KL = np.nansum(pvect1 * (np.log2(pvect1) - np.log2(pvect2)))
-    return KL
+    return float(KL)
 
 
 def skaggs_info(ratemap, dwelltimes, **kwargs):
@@ -1150,7 +1164,7 @@ def get_expanding_circle_gridscore(A: np.ndarray, **kwargs):
     return max(gridscores)
 
 
-def get_deformed_sac_gridscore(self, A: np.ndarray, **kwargs):
+def get_deformed_sac_gridscore(A: np.ndarray):
     """
     Deforms a non-circular SAC into a circular SAC (circular meaning
     the ellipse drawn around the edges of the 6 nearest peaks to the
@@ -1159,3 +1173,42 @@ def get_deformed_sac_gridscore(self, A: np.ndarray, **kwargs):
     """
     deformed_SAC = deform_SAC(A)
     return gridness(deformed_SAC)
+
+
+def get_thigmotaxis_score(xy: np.ndarray, shape: str = "circle") -> float:
+    """
+    Returns a score which is the ratio of the time spent in the inner
+    portion of an environment to the time spent in the outer portion.
+    The portions are allocated so that they have equal area.
+
+    Args:
+        xy (np.ndarray): The xy coordinates of the animal's position. 2 x nsamples
+        shape (str): The shape of the environment. Legal values are 'circle'
+        and 'square'. Default 'circle'
+
+    Returns:
+    thigmoxtaxis_score (float): Values closer to 1 indicate the
+    animal spent more time in the inner portion of the environment. Values closer to -1
+    indicates the animal spent more time in the outer portion of the environment.
+    A value of 0 indicates the animal spent equal time in both portions of the
+    environment.
+    """
+    # centre the coords to get the max distance from the centre
+    xc, yc = np.min(xy, -1) + np.ptp(xy, -1) / 2
+    xy = xy - np.array([[xc], [yc]])
+    n_pos = np.shape(xy)[1]
+    inner_mask = np.zeros((n_pos), dtype=bool)
+    if shape == "circle":
+        outer_radius = np.max(np.hypot(xy[0], xy[1]))
+        inner_radius = outer_radius / np.sqrt(2)
+        inner_mask = np.less(np.hypot(xy[0], xy[1]), inner_radius, out=inner_mask)
+    elif shape == "square":
+        width, height = np.ptp(xy, -1)
+        inner_width = width / np.sqrt(2)
+        inner_height = height / np.sqrt(2)
+        x_gap = (width - inner_width) / 2
+        y_gap = (height - inner_height) / 2
+        x_mask = (xy[0] > np.min(xy[0]) + x_gap) & (xy[0] < np.max(xy[0]) - x_gap)
+        y_mask = (xy[1] > np.min(xy[1]) + y_gap) & (xy[1] < np.max(xy[1]) - y_gap)
+        inner_mask = np.logical_and(x_mask, y_mask, out=inner_mask)
+    return (np.count_nonzero(inner_mask) - np.count_nonzero(~inner_mask)) / n_pos
