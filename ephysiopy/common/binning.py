@@ -1073,24 +1073,25 @@ class RateMap(object):
             em = em._replace(angles=ego_angles)
         return em
 
-    def get_disperion_map(
-        self, spk_times: np.ndarray, pos_times: np.ndarray
-    ) -> BinnedData:
-        """
-        Attempt to write a faster version of creating an overdispersion
-        map. A cell will sometimes fire too much or too little on a given
-        run through its receptive field. Need to find all the bins that contain
-        firing in the
-        """
-        idx = np.searchsorted(pos_times, spk_times, side="right")
-        spike_weights = np.bincount(idx, minlength=len(pos_times))
-        expected_spikes = self.get_map(spike_weights)
-        # bin_edges[1] is x
-        x_bins = np.digitize(self.xy[0], expected_spikes.bin_edges[1][:-1]) - 1
-        # bin_edges[0] is y
-        y_bins = np.digitize(self.xy[1], expected_spikes.bin_edges[0][:-1]) - 1
-        expected_spikes_xy = expected_spikes.binned_data[0][y_bins, x_bins]
-        y_bins_with_firing, x_bins_with_firing = np.nonzero(
-            expected_spikes.binned_data[0] > 0
-        )
-        return observed_spikes
+    # def get_disperion_map(
+    #     self, spk_times: np.ndarray, pos_times: np.ndarray
+    # ) -> BinnedData:
+    #     """
+    #     Attempt to write a faster version of creating an overdispersion
+    #     map. A cell will sometimes fire too much or too little on a given
+    #     run through its receptive field. Need to find all the bins that contain
+    #     firing in the
+    #     """
+    #     idx = np.searchsorted(pos_times, spk_times, side="right")
+    #     spike_weights = np.bincount(idx, minlength=len(pos_times))
+    #     expected_spikes = self.get_map(spike_weights)
+    #     # bin_edges[1] is x
+    #     x_bins = np.digitize(self.xy[0], expected_spikes.bin_edges[1][:-1]) - 1
+    #     # bin_edges[0] is y
+    #     y_bins = np.digitize(self.xy[1], expected_spikes.bin_edges[0][:-1]) - 1
+    #     expected_spikes_xy = expected_spikes.binned_data[0][y_bins, x_bins]
+    #     min_rate_threshold = np.nanmax(expected_spikes.binned_data[0]) * 0.25
+    #     y_bins_with_firing, x_bins_with_firing = np.nonzero(
+    #         expected_spikes.binned_data[0] > min_rate_threshold
+    #     )
+    #     return observed_spikes
