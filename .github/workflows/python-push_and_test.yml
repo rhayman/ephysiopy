@@ -1,7 +1,7 @@
 # This workflow will install Python dependencies, run tests and lint with a variety of Python versions
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
-name: Python package
+name: Python test
 
 on:
   push:
@@ -38,49 +38,3 @@ jobs:
     - name: Test with pytest
       run: |
         pytest --cov ephysiopy --cov-report term-missing
-  release-build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-
-      - name: build release distributions
-        run: |
-          # NOTE: put your own distribution build steps here.
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          python -m pip install build
-          python -m build
-
-      - name: upload windows dists
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-dists
-          path: dist/
-  pypi-publish:
-    runs-on: ubuntu-latest
-    needs:
-      - release-build
-
-    permissions:
-      # IMPORTANT: this permission is mandatory for trusted publishing
-      id-token: write
-
-    # Dedicated environments with protections for publishing are strongly recommended.
-    environment:
-      name: pypi
-      # OPTIONAL: uncomment and update to include your PyPI project URL in the deployment status:
-      url: https://pypi.org/project/ephysiopy
-
-    steps:
-      - name: Retrieve release distributions
-        uses: actions/download-artifact@v4
-        with:
-          name: release-dists
-          path: dist/
-
-      - name: Publish release distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
