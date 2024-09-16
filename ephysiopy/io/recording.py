@@ -89,7 +89,7 @@ def loadTrackMePluginData(pname: Path, n_channels: int = 4) -> np.ndarray:
 def loadTrackMeTTLTimestamps(pname: Path) -> np.ndarray:
     ts = np.load(os.path.join(pname, "timestamps.npy"))
     states = np.load(os.path.join(pname, "states.npy"))
-    return ts[states == 2]
+    return ts[states > 0]
 
 
 def loadTrackMeTimestamps(pname: Path) -> np.ndarray:
@@ -1052,7 +1052,7 @@ class OpenEphysBase(TrialInterface):
                 pos_ts = np.arange(
                     0, pos_data.shape[0] / sample_rate, 1.0 / sample_rate
                 )
-            if pos_plugin_name != "TrackMe":
+            if "TrackMe" not in pos_plugin_name:
                 xyTS = pos_ts - recording_start_time
             else:
                 xyTS = pos_ts
