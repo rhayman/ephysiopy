@@ -1075,7 +1075,7 @@ class RateMap(object):
 
     def get_disperion_map(
         self, spk_times: np.ndarray, pos_times: np.ndarray
-    ) -> BinnedData:
+    ) -> BinnedData | None:
         """
         Attempt to write a faster version of creating an overdispersion
         map. A cell will sometimes fire too much or too little on a given
@@ -1094,4 +1094,5 @@ class RateMap(object):
         y_bins_with_firing, x_bins_with_firing = np.nonzero(
             expected_spikes.binned_data[0] > min_rate_threshold
         )
+        observed_spikes = expected_spikes
         return observed_spikes
