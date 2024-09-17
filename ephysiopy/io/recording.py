@@ -930,7 +930,10 @@ class OpenEphysBase(TrialInterface):
             denom = np.gcd(int(target_sample_rate), int(self.sample_rate))
             data = lfp[channel, :]
             sig = signal.resample_poly(
-                data, target_sample_rate / denom, self.sample_rate / denom, 0
+                data.astype(float),
+                target_sample_rate / denom,
+                self.sample_rate / denom,
+                0,
             )
             self.EEGCalcs = EEGCalcsGeneric(sig, target_sample_rate)
 
@@ -1090,7 +1093,9 @@ class OpenEphysBase(TrialInterface):
                 openephys recording system. i.e. if there is input to BNC
                 port 3 on the digital I/O board then values of 3 in the
                 states.npy file are high TTL values on this input and -3
-                are low TTL values (I think)
+                are low TTL values. NB This is important as there could well
+                be other TTL lines that are active and so the states vector
+                will then contain a mix of integer values
 
         Returns:
             Nothing but sets some keys/values in a dict on 'self'

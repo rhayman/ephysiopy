@@ -404,7 +404,16 @@ class RateMap(object):
         spk = BinnedData(var_type, MapType.SPK, binned_spk, binned_pos_edges)
 
         if map_type.value == MapType.SPK.value:
-            return spk
+            if smoothing:
+                return blur_image(
+                    spk,
+                    self.smooth_sz,
+                    ftype=self.smoothingType,
+                    boundary=boundary,
+                    **kwargs
+                )
+            else:
+                return spk
         if map_type.value == MapType.ADAPTIVE.value:
             alpha = kwargs.pop("alpha", 4)
             # deal with a stack of binned maps
@@ -1084,15 +1093,20 @@ class RateMap(object):
         """
         idx = np.searchsorted(pos_times, spk_times, side="right")
         spike_weights = np.bincount(idx, minlength=len(pos_times))
-        expected_spikes = self.get_map(spike_weights)
+        expected_spikes = self.get_map(spike_weights, map_type=MapType.SPK)
         # bin_edges[1] is x
         x_bins = np.digitize(self.xy[0], expected_spikes.bin_edges[1][:-1]) - 1
         # bin_edges[0] is y
         y_bins = np.digitize(self.xy[1], expected_spikes.bin_edges[0][:-1]) - 1
+        map_shape = np.shape(expected_spikes.binned_data[0])
+        pos_bins_linear_idx = np.ravel_multi_index([y_bins, x_bins], map_shape)
         expected_spikes_xy = expected_spikes.binned_data[0][y_bins, x_bins]
         min_rate_threshold = np.nanmax(expected_spikes.binned_data[0]) * 0.25
-        y_bins_with_firing, x_bins_with_firing = np.nonzero(
-            expected_spikes.binned_data[0] > min_rate_threshold
+        x_bins_with_firing = x_bins[spike_weights > 0]
+        y_bins_with_firing = y_bins[spike_weights > 0]
+        bins_with_firing_linear_idx = np.ravel_multi_index(
+            [y_bins_with_firing, x_bins_with_firing], map_shape
         )
+
         observed_spikes = expected_spikes
         return observed_spikes
