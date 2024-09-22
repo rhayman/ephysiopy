@@ -572,8 +572,8 @@ class LFPOscillations(object):
         sig = sig - np.ma.mean(sig)
         if np.ma.is_masked(sig):
             sig = np.ma.compressed(sig)
-        _, lowphase, _, _ = self.getFreqPhase(sig, thetaband, forder)
-        _, _, highamp, _ = self.getFreqPhase(sig, gammaband, forder)
+        _, lowphase, _, _, _ = self.getFreqPhase(sig, thetaband, forder)
+        _, _, highamp, _, _ = self.getFreqPhase(sig, gammaband, forder)
         inc = 2 * np.pi / nbins
         a = np.arange(-np.pi + inc / 2, np.pi, inc)
         dt = np.array([-inc / 2, inc / 2])
@@ -634,8 +634,8 @@ class LFPOscillations(object):
         if np.ma.is_masked(sig):
             sig = np.ma.compressed(sig)
 
-        _, lowphase, _, _ = self.getFreqPhase(sig, thetaband, forder)
-        _, _, _, highamp_f = self.getFreqPhase(sig, gammaband, forder)
+        _, lowphase, _, _, _ = self.getFreqPhase(sig, thetaband, forder)
+        _, _, _, highamp_f, _ = self.getFreqPhase(sig, gammaband, forder)
 
         highampphase = np.angle(signal.hilbert(highamp_f))
         phasedf = highampphase - lowphase
@@ -734,7 +734,7 @@ class LFPOscillations(object):
         """
         low_theta = kwargs.pop("low_theta", 6)
         high_theta = kwargs.pop("high_theta", 12)
-        _, phase, _, _ = self.getFreqPhase(self.sig, [low_theta, high_theta])
+        _, phase, _, _, _ = self.getFreqPhase(self.sig, [low_theta, high_theta])
         # get indices into the phase vector
         phase_idx = np.array(cluster_times * self.fs, dtype=int)
         # It's possible that there are indices higher than the length of
@@ -760,7 +760,7 @@ class LFPOscillations(object):
         animal was in when it was fired and the colour of the marker
         corresponds to the phase of theta at which it fired.
         """
-        _, phase, _, _ = self.getFreqPhase(lfp_data.sig, [6, 12])
+        _, phase, _, _, _ = self.getFreqPhase(lfp_data.sig, [6, 12])
         cluster_times = phy_data.spike_times[
             phy_data.spike_clusters == cluster
         ]  # in seconds

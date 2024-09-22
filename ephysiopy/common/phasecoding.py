@@ -557,7 +557,7 @@ class phasePrecession2D(object):
         # Process the EEG data a bit...
         self.eeg = lfp_sig
         L = LFPOscillations(lfp_sig, lfp_fs)
-        filt_sig, phase, _, _ = L.getFreqPhase(lfp_sig, [6, 12], 2)
+        filt_sig, phase, _, _, _ = L.getFreqPhase(lfp_sig, [6, 12], 2)
         self.filteredEEG = filt_sig
         self.phase = phase
         self.phaseAdj = np.ma.MaskedArray
