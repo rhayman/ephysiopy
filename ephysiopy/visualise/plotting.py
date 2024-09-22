@@ -5,8 +5,9 @@ import matplotlib
 import matplotlib.pylab as plt
 import matplotlib.transforms as transforms
 import numpy as np
+from scipy.signal import hilbert
 from matplotlib.patches import Rectangle
-from matplotlib.collections import PatchCollection, LineCollection
+from matplotlib.collections import PatchCollection, LineCollection, QuadMesh
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.projections import get_projection_class
 
@@ -18,6 +19,7 @@ from ephysiopy.common.spikecalcs import xcorr, SpikeCalcsGeneric
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.utils import clean_kwargs
 from ephysiopy.common import fieldcalcs as fc
+from ephysiopy.common.rhythmicity import LFPOscillations
 
 
 def stripAxes(func):
@@ -550,6 +552,56 @@ class FigureMaker(object):
         ax = self._getPowerSpectrumPlot(p[0], p[1], p[2], p[3], p[4], **kwargs)
         return ax
 
+    def plot_theta_vs_running_speed(self, **kwargs) -> QuadMesh:
+        low_theta = kwargs.pop("low_theta", 6)
+        high_theta = kwargs.pop("high_theta", 12)
+        low_speed = kwargs.pop("low_speed", 2)
+        high_speed = kwargs.pop("high_speed", 50)
+        theta_filtered_eeg = self.EEGCalcs.butterFilter(low_theta, high_theta)
+        hilbert_eeg = hilbert(theta_filtered_eeg)
+        inst_freq = (
+            self.EEGCalcs.fs / (2 * np.pi) * np.diff(np.unwrap(np.angle(hilbert_eeg)))
+        )
+        inst_freq = np.insert(inst_freq, -1, inst_freq[-1])
+        eeg_times = np.arange(0, len(self.EEGCalcs.sig)) / self.EEGCalcs.fs
+        pos_times = self.PosCalcs.xyTS
+        idx = np.searchsorted(pos_times, eeg_times)
+        idx[idx >= len(pos_times)] = len(pos_times) - 1
+        eeg_speed = self.PosCalcs.speed[idx]
+        h, edges = np.histogramdd(
+            [inst_freq, eeg_speed],
+            bins=(
+                np.arange(low_theta, high_theta, 0.5),
+                np.arange(low_speed, high_speed, 2),
+            ),
+        )
+        ax = plt.pcolormesh(edges[1], edges[0], h, cmap=jet_cmap, edgecolors="face")
+        return ax
+
+    def plot_clusters_theta_phase(
+        self, cluster: int, channel: int, **kwargs
+    ) -> plt.Axes:
+        ax = kwargs.pop("ax", None)
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection="polar")
+        if "polar" not in ax.name:
+            raise ValueError("Need a polar axis")
+        L = LFPOscillations(self.EEGCalcs.sig, self.EEGCalcs.fs)
+        ts = self.get_spike_times(cluster, channel)
+        phase, x, y = L.get_theta_phase(ts, **kwargs)
+        ax.hist(phase, density=True, bins=36)
+        ax.plot(x, y, linewidth=1, color="red", zorder=3)
+        # add lines around the edge of the polar plot to show spiking locations
+        y_lims = ax.get_ylim()
+        line_start = y_lims[1] / 1.01
+        ax.vlines(phase, ymin=line_start, ymax=y_lims[1] * 1.15, colors="k")
+        ax.set_ylim(y_lims[0], y_lims[1] * 1.15)
+        ax.set_thetagrids([])
+        ax.set_rgrids([])
+        ax.set_xticks(np.arange(0, 2 * np.pi, np.pi / 2), ["0", "90", "180", "270"])
+        return ax
+
     @stripAxes
     def _plotWaves(self, waves: np.ndarray, ax: matplotlib.axes, **kwargs) -> plt.Axes:
         ax.plot(waves, c="k", **kwargs)
@@ -716,6 +768,7 @@ class FigureMaker(object):
             strip_axes = False
         S = SpikeCalcsGeneric(spk_times, cluster=cluster)
         S.event_ts = self.ttl_data["ttl_timestamps"]
+        S.event_window = np.array(dt)
         x, y = S.psth()
         if ax is None:
             fig = plt.figure(figsize=(4.0, 7.0))

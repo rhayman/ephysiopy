@@ -13,14 +13,14 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: build release distributions
+      - name: release
         run: |
           # NOTE: put your own distribution build steps here.
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           python -m pip install build
           python -m build
 
-      - name: upload windows dists
+      - name: upload dists
         uses: actions/upload-artifact@v4
         with:
           name: release-dists
@@ -37,11 +37,10 @@ jobs:
     # Dedicated environments with protections for publishing are strongly recommended.
     environment:
       name: pypi
-      # OPTIONAL: uncomment and update to include your PyPI project URL in the deployment status:
       url: https://pypi.org/project/ephysiopy
 
     steps:
-      - name: Retrieve release distributions
+      - name: release 
         uses: actions/download-artifact@v4
         with:
           name: release-dists

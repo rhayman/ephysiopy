@@ -1,10 +1,14 @@
+import matplotlib
 import matplotlib.pylab as plt
+import matplotlib.transforms as transforms
 import numpy as np
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
-from ephysiopy.openephys2py.KiloSort import KiloSortSession
+from phylib.io.model import TemplateModel
 from scipy import signal
+from scipy import stats
+from scipy.special import i0
 
 # WARNING - THIS WILL NOT WORK AT THE MOMENT (2024-01-11) AS THE
 # CLUSTER ID IS SET TO 1 IN __INIT__
@@ -147,9 +151,7 @@ class CosineDirectionalTuning(object):
         if self.pos_samples_for_spike is None:
             self.getPosIndices()
         clust_pos_idx = self.pos_samples_for_spike[self.spk_clusters == clust]
-        clust_pos_idx[clust_pos_idx >= len(self.pos_times)] = (
-            len(self.pos_times) - 1
-        )
+        clust_pos_idx[clust_pos_idx >= len(self.pos_times)] = len(self.pos_times) - 1
         return clust_pos_idx
 
     def getClusterSpikeTimes(self, cluster: int):
@@ -202,8 +204,7 @@ class CosineDirectionalTuning(object):
         min_len_in_samples = int(self.pos_sample_rate * self.min_runlength)
         min_len_runs_mask = grouped_runs[:, 1] >= min_len_in_samples
         ret = np.array(
-            [run_start_indices[min_len_runs_mask],
-                grouped_runs[min_len_runs_mask, 1]]
+            [run_start_indices[min_len_runs_mask], grouped_runs[min_len_runs_mask, 1]]
         ).T
         # ret contains run length as last column
         ret = np.insert(ret, 1, np.sum(ret, 1), 1)
@@ -237,8 +238,7 @@ class CosineDirectionalTuning(object):
         all_speed = np.array(self.speed)
         for start_idx, end_idx, dir_bin in run_list:
             this_runs_speed = all_speed[start_idx:end_idx]
-            this_runs_runs = self._rolling_window(
-                this_runs_speed, minlength_in_samples)
+            this_runs_runs = self._rolling_window(this_runs_speed, minlength_in_samples)
             run_mask = np.all(this_runs_runs > minspeed, 1)
             if np.any(run_mask):
                 print("got one")
@@ -341,8 +341,7 @@ class CosineDirectionalTuning(object):
         # split the single histogram into individual chunks
         splitIdx = np.nonzero(np.diff(posMask.astype(int)))[0] + 1
         splitMask = np.split(posMask, splitIdx)
-        splitSpkHist = np.split(
-            spkTrHist, (splitIdx * acBinsPerPos).astype(int))
+        splitSpkHist = np.split(spkTrHist, (splitIdx * acBinsPerPos).astype(int))
         histChunks = []
         for i in range(len(splitSpkHist)):
             if np.all(splitMask[i]):
@@ -358,14 +357,12 @@ class CosineDirectionalTuning(object):
             lenThisChunk = len(histChunks[i])
             chunkLens.append(lenThisChunk)
             tmp = np.zeros(lenThisChunk * 2)
-            tmp[lenThisChunk // 2: lenThisChunk //
-                2 + lenThisChunk] = histChunks[i]
+            tmp[lenThisChunk // 2 : lenThisChunk // 2 + lenThisChunk] = histChunks[i]
             tmp2 = signal.fftconvolve(
                 tmp, histChunks[i][::-1], mode="valid"
             )  # the autocorrelation
             autoCorrGrid[:, i] = (
-                tmp2[lenThisChunk // 2: lenThisChunk //
-                     2 + int(acWindowSizeBins) + 1]
+                tmp2[lenThisChunk // 2 : lenThisChunk // 2 + int(acWindowSizeBins) + 1]
                 / acBinsPerPos
             )
 
@@ -432,7 +429,7 @@ class CosineDirectionalTuning(object):
         # calculate freqs and crop spectrum to requested range
         freqs = nqLim * np.linspace(0, 1, fftHalfLen)
         freqs = freqs[freqs <= maxFreq].T
-        power = power[0: len(freqs)]
+        power = power[0 : len(freqs)]
 
         # smooth spectrum using gaussian kernel
         binsPerHz = (fftHalfLen - 1) / nqLim
@@ -480,8 +477,7 @@ class CosineDirectionalTuning(object):
             ax.plot(freqs, power_sm, "k", lw=2)
             ax.axvline(self.thetaRange[0], c="b", ls="--")
             ax.axvline(self.thetaRange[1], c="b", ls="--")
-            _, stemlines, _ = ax.stem([freqAtBandMaxPower], [
-                                      bandMaxPower], linefmt="r")
+            _, stemlines, _ = ax.stem([freqAtBandMaxPower], [bandMaxPower], linefmt="r")
             # plt.setp(stemlines, 'linewidth', 2)
             ax.fill_between(
                 freqs,
@@ -538,14 +534,16 @@ class LFPOscillations(object):
             sig = self.sig
         band2filter = np.array(band2filter, dtype=float)
 
-        b, a = signal.butter(ford, band2filter /
-                             (self.fs / 2), btype="bandpass")
+        b, a = signal.butter(ford, band2filter / (self.fs / 2), btype="bandpass")
 
         filt_sig = signal.filtfilt(b, a, sig, padtype="odd")
-        phase = np.angle(signal.hilbert(filt_sig))
-        amplitude = np.abs(signal.hilbert(filt_sig))
+        hilbert_sig = signal.hilbert(filt_sig)
+        phase = np.angle(hilbert_sig)
+        amplitude = np.abs(hilbert_sig)
+        inst_freq = self.fs / (2 * np.pi) * np.diff(np.unwrap(phase))
+        inst_freq = np.insert(inst_freq, -1, inst_freq[-1])
         amplitude_filtered = signal.filtfilt(b, a, amplitude, padtype="odd")
-        return filt_sig, phase, amplitude, amplitude_filtered
+        return filt_sig, phase, amplitude, amplitude_filtered, inst_freq
 
     def modulationindex(
         self,
@@ -688,29 +686,101 @@ class LFPOscillations(object):
         fx = filtfilt(taps, [1.0], sig)
         return fx
 
-    def spike_phase_plot(self, cluster: int,
-                         pos_data: PosCalcsGeneric,
-                         KSdata: KiloSortSession,
-                         lfp_data: EEGCalcsGeneric) -> None:
-        '''
+    def theta_running(
+        self, pos_data: PosCalcsGeneric, lfp_data: EEGCalcsGeneric, **kwargs
+    ):
+        """
+        Returns metrics to do with the theta frequency/ power and running speed/ acceleration
+
+
+        """
+        low_theta = kwargs.pop("low_theta", 6)
+        high_theta = kwargs.pop("high_theta", 12)
+        low_speed = kwargs.pop("low_speed", 2)
+        high_speed = kwargs.pop("high_speed", 35)
+        nbins = kwargs.pop("nbins", 13)
+        filt_sig, phase, amplitude, amplitude_filtered, inst_freq = self.getFreqPhase(
+            band2filter=[low_theta, high_theta]
+        )
+        # interpolate speed to match the frequency of the LFP data
+        eeg_time = np.linspace(
+            0, lfp_data.sig.shape[0] / lfp_data.fs, len(lfp_data.sig)
+        )
+        pos_time = np.linspace(0, pos_data.duration, pos_data.npos)
+        interpolated_speed = np.interp(eeg_time, pos_time, pos_data.speed)
+        h, e = np.histogramdd(
+            [inst_freq, interpolated_speed],
+            bins=(
+                np.linspace(low_theta, high_theta, nbins),
+                np.linspace(low_speed, high_speed, nbins),
+            ),
+        )
+        plt.pcolormesh(e[1], e[0], h, cmap=matplotlib.colormaps["bone_r"])
+
+    def get_theta_phase(self, cluster_times: np.ndarray, **kwargs):
+        """
+        Calculates the phase of theta at which a cluster emitted spikes
+        and returns a fit to a vonmises distribution
+
+        Parameters
+        ----------
+        cluster_times (np.ndarray) - the times the cluster emitted spikes in
+                                     seconds
+
+        Valid kwargs:
+        low_theta (int) - low end for bandpass filter
+        high_theta (int) - high end for bandpass filter
+
+        """
+        low_theta = kwargs.pop("low_theta", 6)
+        high_theta = kwargs.pop("high_theta", 12)
+        _, phase, _, _ = self.getFreqPhase(self.sig, [low_theta, high_theta])
+        # get indices into the phase vector
+        phase_idx = np.array(cluster_times * self.fs, dtype=int)
+        # It's possible that there are indices higher than the length of
+        # the phase vector so lets set them to the last index
+        bad_idx = np.nonzero(phase_idx > len(phase))[0]
+        phase_idx[bad_idx] = len(phase) - 1
+        # get some stats for fitting to a vonmises
+        kappa, loc, _ = stats.vonmises.fit(phase[phase_idx])
+        x = np.linspace(-np.pi, np.pi, num=501)
+        y = np.exp(kappa * np.cos(x - loc)) / (2 * np.pi * i0(kappa))
+        return phase[phase_idx], x, y
+
+    def spike_xy_phase_plot(
+        self,
+        cluster: int,
+        pos_data: PosCalcsGeneric,
+        phy_data: TemplateModel,
+        lfp_data: EEGCalcsGeneric,
+    ) -> plt.Axes:
+        """
         Produces a plot of the phase of theta at which each spike was
         emitted. Each spike is plotted according to the x-y location the
-        animal was in when it was fired and the colour of the marker 
+        animal was in when it was fired and the colour of the marker
         corresponds to the phase of theta at which it fired.
-        '''
-        _, phase, _, _ = self.getFreqPhase(
-            lfp_data.sig, [6, 12])
-        cluster_times = KSdata.spike_times[KSdata.spk_clusters == cluster]
-        # cluster_times in samples (@30000Hz)
+        """
+        _, phase, _, _ = self.getFreqPhase(lfp_data.sig, [6, 12])
+        cluster_times = phy_data.spike_times[
+            phy_data.spike_clusters == cluster
+        ]  # in seconds
         # get indices into the phase vector
-        phase_idx = np.array(cluster_times/(3e4/self.fs), dtype=int)
+        phase_idx = np.array(cluster_times * self.fs, dtype=int)
         # It's possible that there are indices higher than the length of
         # the phase vector so lets set them to the last index
         bad_idx = np.nonzero(phase_idx > len(phase))[0]
         phase_idx[bad_idx] = len(phase) - 1
         # get indices into the position data
-        pos_idx = np.array(cluster_times/(3e4/pos_data.sample_rate), dtype=int)
+        pos_idx = np.array(cluster_times * pos_data.sample_rate, dtype=int)
         bad_idx = np.nonzero(pos_idx >= len(pos_data.xyTS))[0]
         pos_idx[bad_idx] = len(pos_data.xyTS) - 1
         # add PI to phases to remove negativity
         # cluster_phases = phase[phase_idx]
+        # TODO: create the colour map for phase and plot
+        spike_xy = pos_data.xy[:, pos_idx]
+        spike_phase = phase[phase_idx]
+        cmap = matplotlib.colormaps["hsv"]
+        fig, ax = plt.subplots()
+        ax.plot(pos_data.xy[0], pos_data.xy[1], color="lightgrey", zorder=0)
+        ax.scatter(spike_xy[0], spike_xy[1], c=spike_phase, cmap=cmap, zorder=1)
+        return ax
