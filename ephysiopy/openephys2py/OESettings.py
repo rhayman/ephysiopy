@@ -2,16 +2,21 @@
 Classes for parsing information contained in the settings.xml
 file that is saved when recording with the openephys system.
 """
+
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import xml.etree.ElementTree as ET
 
 import xml
+import os
+import json
+from pathlib import Path
 from abc import ABC
 from collections import OrderedDict
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Callable, List
+from typing import Callable
 
 
 @dataclass
@@ -26,8 +31,8 @@ class Channel(object):
     _param: bool = field(default_factory=bool)
     _record: bool = field(default=False)
     _audio: bool = field(default=False)
-    _lowcut: int = field(default=None)
-    _highcut: int = field(default=None)
+    _lowcut: int = field(default_factory=int)
+    _highcut: int = field(default_factory=int)
 
     @property
     def number(self) -> int:
@@ -38,7 +43,7 @@ class Channel(object):
         self._number = int(value)
 
     @property
-    def gain(self) -> int:
+    def gain(self) -> float:
         return self._gain
 
     @gain.setter
@@ -96,15 +101,15 @@ class Channel(object):
 
 
 @dataclass
-class Stream():
+class Stream:
     """
     Documents an OE DatasSream
     """
 
-    name: str = field(default=None)
-    description: str = field(default=None)
-    sample_rate: int = field(default=None)
-    channel_count: int = field(default=None)
+    name: str = field(default_factory=str)
+    description: str = field(default_factory=str)
+    sample_rate: int = field(default_factory=int)
+    channel_count: int = field(default_factory=int)
 
 
 @dataclass
@@ -113,18 +118,18 @@ class OEPlugin(ABC):
     Documents an OE plugin
     """
 
-    name: str = field(default=None)
-    insertionPoint: int = field(default=None)
-    pluginName: str = field(default=None)
-    type: int = field(default=None)
-    index: int = field(default=None)
-    libraryName: str = field(default=None)
-    libraryVersion: int = field(default=None)
-    processorType: int = field(default=None)
-    nodeId: int = field(default=None)
-    channel_count: int = field(default=None)
-    stream: Stream = field(default=None)
-    sample_rate: int = field(default=None)
+    name: str = field(default_factory=str)
+    insertionPoint: int = field(default_factory=int)
+    pluginName: str = field(default_factory=str)
+    type: int = field(default_factory=int)
+    index: int = field(default_factory=int)
+    libraryName: str = field(default_factory=str)
+    libraryVersion: int = field(default_factory=int)
+    processorType: int = field(default_factory=int)
+    nodeId: int = field(default_factory=int)
+    channel_count: int = field(default_factory=int)
+    stream: Stream = field(default_factory=Stream)
+    sample_rate: int = field(default_factory=int)
 
 
 @dataclass
@@ -133,14 +138,14 @@ class RecordNode(OEPlugin):
     Documents the RecordNode plugin
     """
 
-    path: str = field(default=None)
-    engine: str = field(default=None)
-    recordEvents: int = field(default=None)
-    recordSpikes: int = field(default=None)
-    isMainStream: int = field(default=None)
-    sync_line: int = field(default=None)
-    source_node_id: int = field(default=None)
-    recording_state: str = field(default=None)
+    path: str = field(default_factory=str)
+    engine: str = field(default_factory=str)
+    recordEvents: int = field(default_factory=int)
+    recordSpikes: int = field(default_factory=int)
+    isMainStream: int = field(default_factory=int)
+    sync_line: int = field(default_factory=int)
+    source_node_id: int = field(default_factory=int)
+    recording_state: str = field(default_factory=str)
 
 
 @dataclass
@@ -149,7 +154,7 @@ class RhythmFPGA(OEPlugin):
     Documents the Rhythm FPGA plugin
     """
 
-    channel_info: List[Channel] = field(default=None)
+    channel_info: list[Channel] = field(default_factory=list)
 
 
 # Identical to the RhythmFPGA class above for now
@@ -159,7 +164,7 @@ class NeuropixPXI(OEPlugin):
     Documents the Neuropixels-PXI plugin
     """
 
-    channel_info: List[Channel] = field(default=None)
+    channel_info: list[Channel] = field(default_factory=list)
 
 
 @dataclass
@@ -168,8 +173,8 @@ class AcquisitionBoard(OEPlugin):
     Documents the Acquisition Board plugin
     """
 
-    LowCut: int = field(default=None)
-    HighCut: int = field(default=None)
+    LowCut: int = field(default_factory=int)
+    HighCut: int = field(default_factory=int)
 
 
 @dataclass
@@ -183,9 +188,9 @@ class BandpassFilter(OEPlugin):
     pluginType = 1
     libraryName = "Bandpass Filter"
 
-    channels: List[int] = field(default_factory=List)
-    lowcut: List[int] = field(default_factory=List)
-    highcut: List[int] = field(default_factory=List)
+    channels: list[int] = field(default_factory=list)
+    low_cut: float = field(default_factory=float)
+    high_cut: float = field(default_factory=float)
 
 
 @dataclass
@@ -211,6 +216,7 @@ class TrackMe(OEPlugin):
     """
     Documents the TrackMe plugin
     """
+
     pass
 
 
@@ -219,18 +225,24 @@ class StimControl(OEPlugin):
     """
     Documents the StimControl plugin
     """
-    Device: int = field(default=None)
-    Duration: int = field(default=None)
-    Interval: int = field(default=None)
-    Gate: int = field(default=None)
-    Output: int = field(default=None)
-    Start: int = field(default=None)
-    Stop: int = field(default=None)
-    Trigger: int = field(default=None)
+
+    Device: int = field(default_factory=int)
+    Duration: int = field(default_factory=int)
+    Interval: int = field(default_factory=int)
+    Gate: int = field(default_factory=int)
+    Output: int = field(default_factory=int)
+    Start: int = field(default_factory=int)
+    Stop: int = field(default_factory=int)
+    Trigger: int = field(default_factory=int)
 
 
 @dataclass
 class SpikeSorter(OEPlugin):
+    pass
+
+
+@dataclass
+class SpikeViewer(OEPlugin):
     pass
 
 
@@ -242,14 +254,34 @@ class Electrode(object):
 
     nChannels: int = field(default_factory=int)
     id: int = field(default_factory=int)
-    subChannels: List[int] = field(default_factory=List)
-    subChannelsThresh: List[int] = field(default_factory=List)
-    subChannelsActive: List[int] = field(default_factory=List)
+    subChannels: list[int] = field(default_factory=list)
+    subChannelsThresh: list[int] = field(default_factory=list)
+    subChannelsActive: list[int] = field(default_factory=list)
     prePeakSamples: int = field(default=8)
     postPeakSamples: int = field(default=32)
 
 
-class AbstractProcessorFactory():
+@dataclass
+class RippleDetector(OEPlugin):
+    """
+    Documents the Ripple Detector plugin
+    """
+
+    Ripple_Input: int = field(default_factory=int)
+    Ripple_Out: int = field(default_factory=int)
+    ripple_std: float = field(default_factory=float)
+    time_thresh: float = field(default_factory=float)
+    refr_time: float = field(default_factory=float)
+    rms_samples: float = field(default_factory=float)
+    mov_detect: int = field(default_factory=int)
+    mov_input: int = field(default_factory=int)
+    mov_out: int = field(default_factory=int)
+    mov_std: float = field(default_factory=float)
+    min_time_st: float = field(default_factory=float)
+    min_time_mov: float = field(default_factory=float)
+
+
+class AbstractProcessorFactory:
     def create_pos_tracker(self):
         return PosTracker()
 
@@ -277,8 +309,14 @@ class AbstractProcessorFactory():
     def create_oe_plugin(self):
         return OEPlugin()
 
+    def create_ripple_detector(self):
+        return RippleDetector()
 
-class ProcessorFactory():
+    def create_bandpass_filter(self):
+        return BandpassFilter()
+
+
+class ProcessorFactory:
     factory = AbstractProcessorFactory()
 
     def create_processor(self, proc_name: str):
@@ -298,14 +336,15 @@ class ProcessorFactory():
             return self.factory.create_record_node()
         elif "StimControl" in proc_name:
             return self.factory.create_stim_control()
+        elif "Ripple Detector" in proc_name:
+            return self.factory.create_ripple_detector()
+        elif "Bandpass Filter" in proc_name:
+            return self.factory.create_bandpass_filter()
         else:
             return self.factory.create_oe_plugin()
 
 
-def recurseNode(
-                node: xml.etree.ElementTree.Element,
-                func: Callable,
-                cls: dataclass):
+def recurseNode(node: ET.Element, func: Callable, cls: dataclass):
     """
     Recursive function that applies func to each node
     """
@@ -317,7 +356,7 @@ def recurseNode(
         return
 
 
-def addValues2Class(node: xml.etree.ElementTree.Element, cls: dataclass):
+def addValues2Class(node: ET.Element, cls: dataclass):
     for i in node.items():
         if hasattr(cls, i[0]):
             setattr(cls, i[0], i[1])
@@ -331,7 +370,7 @@ def addValues2Class(node: xml.etree.ElementTree.Element, cls: dataclass):
         if cls.stream is None:
             cls.stream = Stream()
         recurseNode(node, addValues2Class, cls.stream)
-    
+
 
 class OEStructure(object):
     """
@@ -339,14 +378,32 @@ class OEStructure(object):
     format recordings
     """
 
-    def __init__(self, fname: str):
+    def __init__(self, fname: Path):
         self.filename = []
-        self.data = []
-        import json
+        if isinstance(fname, str):
+            fname = Path(fname)
+        files = dict.fromkeys(self.find_oebin(fname))
 
+        for f in files.keys():
+            files[f] = self.read_oebin(f)
+
+        self.data = files
+
+    def find_oebin(self, pname: Path) -> list:
+        path2oebins = []
+        for d, c, f in os.walk(pname):
+            for ff in f:
+                if "." not in c:  # ignore hidden directories
+                    if ff == "structure.oebin":
+                        path2oebins.append(Path(d))
+        return path2oebins
+
+    def read_oebin(self, fname: Path) -> dict:
         self.filename.append(fname)
+        fname = fname / Path("structure.oebin")
         with open(fname, "r") as f:
-            self.data.append(json.load(f))
+            data = json.load(f)
+        return data
 
 
 class Settings(object):
@@ -394,17 +451,36 @@ class Settings(object):
         if self.tree is not None:
             for elem in self.tree.iter("PROCESSOR"):
                 i_proc = elem.get("name")
-                if "/" in i_proc:
-                    i_proc = i_proc.split("/")[-1]
-                new_processor = processor_factory.create_processor(i_proc)
-                recurseNode(elem, addValues2Class, new_processor)
-                if i_proc == "Record Node":
-                    if new_processor.nodeId is not None:
-                        self.record_nodes[i_proc + " " + new_processor.nodeId] = new_processor
+                if i_proc is not None:
+                    if "/" in i_proc:
+                        i_proc = i_proc.split("/")[-1]
+                    print(f"i_proc: {i_proc}")
+                    new_processor = processor_factory.create_processor(i_proc)
+                    print(f"node_id: {new_processor.nodeId}")
+                    if i_proc == "Record Node":
+                        if new_processor.nodeId is not None:
+                            self.record_nodes[
+                                i_proc + " " + str(new_processor.nodeId)
+                            ] = new_processor
+                        else:
+                            self.record_nodes[i_proc] = new_processor
                     else:
-                        self.record_nodes[i_proc] = new_processor
-                else:
-                    if new_processor.nodeId is not None:
-                        self.processors[i_proc + " " + new_processor.nodeId] = new_processor
-                    else:
-                        self.processors[i_proc] = new_processor
+                        if new_processor.nodeId is not None:
+                            self.processors[
+                                i_proc + " " + str(new_processor.nodeId)
+                            ] = new_processor
+                        else:
+                            self.processors[i_proc] = new_processor
+
+    def get_processor(self, key: str):
+        """
+        Returns the information about the requested processor or an
+        empty OEPlugin instance if it's not available
+        """
+        processor = [self.processors[k] for k in self.processors.keys() if key in k]
+        if processor:
+            if len(processor) == 1:
+                return processor[0]
+            else:
+                return processor
+        return OEPlugin()

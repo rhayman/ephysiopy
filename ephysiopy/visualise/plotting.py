@@ -640,6 +640,7 @@ class FigureMaker(object):
         Returns:
             matplotlib.axes: The axes with the plot.
         """
+        min_freq = kwargs.pop("min_freq", 0)
         if "strip_axes" in kwargs.keys():
             strip_axes = kwargs.pop("strip_axes")
         else:
@@ -653,7 +654,7 @@ class FigureMaker(object):
             ax = fig.add_subplot(111)
         ax.plot(freqs, power, alpha=0.5, color=[0.8627, 0.8627, 0.8627])
         ax.plot(freqs, sm_power)
-        ax.set_xlim(0, max_freq)
+        ax.set_xlim(min_freq, max_freq)
         ylim = [0, np.max(sm_power[freqs < max_freq])]
         if "ylim" in kwargs:
             ylim = kwargs["ylim"]

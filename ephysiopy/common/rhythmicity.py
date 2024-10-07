@@ -1,14 +1,22 @@
+import os
 import matplotlib
 import matplotlib.pylab as plt
 import matplotlib.transforms as transforms
+from matplotlib.patches import Rectangle
 import numpy as np
+from pathlib import Path, PurePath
+from scipy.signal import ShortTimeFFT
+from scipy.signal.windows import gaussian
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
+from ephysiopy.common.utils import window_rms
+from ephysiopy.openephys2py.OESettings import Settings
 from phylib.io.model import TemplateModel
 from scipy import signal
 from scipy import stats
 from scipy.special import i0
+
 
 # WARNING - THIS WILL NOT WORK AT THE MOMENT (2024-01-11) AS THE
 # CLUSTER ID IS SET TO 1 IN __INIT__
@@ -784,3 +792,296 @@ class LFPOscillations(object):
         ax.plot(pos_data.xy[0], pos_data.xy[1], color="lightgrey", zorder=0)
         ax.scatter(spike_xy[0], spike_xy[1], c=spike_phase, cmap=cmap, zorder=1)
         return ax
+
+
+class Rippler(object):
+    """
+    Does some spectrographic analysis and plots of LFP data
+    looking specifically at the ripple band
+
+    Until I modified the Ripple Detector plugin the duration of the TTL
+    pulses was variable with a more or less bimodal distribution which
+    is why there is a separate treatment of short and long duration TTL pulses below
+
+    """
+
+    # time units are seconds, frequencies and sample rates in Hz
+    pre_ttl = 0.05
+    post_ttl = 0.2
+    min_ttl_duration = 0.01
+    ripple_band_low = 120
+    ripple_band_high = 250
+    bit_volts = 0.1949999928474426  # available in the structure.oebin file
+    # some parameters for the FFT stuff
+    gaussian_window = 12
+    gaussian_std = 5
+    lfp_plotting_scale = (
+        500  # this is the scale/range I was looking at the ripple filtered lfp signal
+    )
+
+    def __init__(self, trial_root: Path, signal: np.ndarray, fs: int):
+        """
+        trial_root (Path) - location of the root recording directory, used to load ttls etc
+        signal (np.ndarray) - the LFP signal (usually downsampled to about 500-1000Hz)
+        fs (int) - the sampling rate of the signal
+        """
+
+        self.pname_for_trial = trial_root
+        self.orig_sig = signal
+        self.fs = fs
+        self.trial = OpenEphysBase(trial_root)
+        LFP = EEGCalcsGeneric(signal, fs)
+
+        pname_for_ttl_data = self.__find_path_to_ripple_ttl(self.pname_for_trial)
+        sync_file = pname_for_ttl_data.parents[2] / Path("sync_messages.txt")
+        recording_start_time = self.__load_start_time(sync_file)
+        ttl_ts = np.load(pname_for_ttl_data / "timestamps.npy") - recording_start_time
+        ttl_states = np.load(pname_for_ttl_data / "states.npy")
+        self.ttl_on = ttl_ts[ttl_states > 0]
+        self.ttl_off = ttl_ts[ttl_states < 0]
+        # put all the ttls into an array to calculate the differences and
+        # find the pulses with the longest durations
+        self.all_ttls = np.array([self.ttl_on.ravel(), self.ttl_off.ravel()])
+        ttl_durations = np.diff(self.all_ttls, axis=0)
+        self.long_duration_ttls = np.nonzero(ttl_durations >= self.min_ttl_duration)[1]
+        self.short_duration_ttls = np.nonzero(ttl_durations < self.min_ttl_duration)[1]
+        self.ttl_durations = ttl_durations.ravel()
+
+        ripple_filtered_eeg = LFP.butterFilter(
+            self.ripple_band_low, self.ripple_band_high
+        )
+        ripple_filtered_eeg *= self.bit_volts
+        self.ripple_filtered_eeg = ripple_filtered_eeg
+        self.eeg_time = np.linspace(
+            0,
+            LFP.sig.shape[0] / self.fs,
+            LFP.sig.shape[0],
+        )
+
+    def __load_start_time(self, path_to_sync_message_file: Path):
+        """
+        Returns the start time contained in a sync file from OE
+        """
+        recording_start_time = 0
+        with open(path_to_sync_message_file, "r") as f:
+            sync_strs = f.read()
+            sync_lines = sync_strs.split("\n")
+            for line in sync_lines:
+                if "Start Time" in line:
+                    tokens = line.split(":")
+                    start_time = int(tokens[-1])
+                    sample_rate = int(tokens[0].split("@")[-1].strip().split()[0])
+                    recording_start_time = start_time / float(sample_rate)
+        return recording_start_time
+
+    def __find_path_to_ripple_ttl(self, trial_root: Path, **kwargs) -> Path:
+        """
+        Iterates through a directory tree and finds the path to the
+        Ripple Detector plugin data and returns its location
+        """
+        exp_name = kwargs.pop("experiment", "experiment1")
+        rec_name = kwargs.pop("recording", "recording1")
+        ripple_match = (
+            trial_root
+            / Path("Record Node [0-9][0-9][0-9]")
+            / Path(exp_name)
+            / Path(rec_name)
+            / Path("events")
+            / Path("Ripple_Detector-[0-9][0-9][0-9].Rhythm Data-[A-Z]")
+            / Path("TTL")
+        )
+        for d, c, f in os.walk(trial_root):
+            for ff in f:
+                if "." not in c:  # ignore hidden directories
+                    if "timestamps.npy" in ff:
+                        if PurePath(d).match(str(ripple_match)):
+                            return Path(d)
+        return Path()
+
+    def plot_and_save_ripple_band_lfp_with_ttl(
+        self, pname_for_saving: Path, save: bool = True
+    ):
+        for idx in self.long_duration_ttls:
+            eeg_chunk = self.ripple_filtered_eeg[
+                np.logical_and(
+                    self.eeg_time > self.ttl_on[idx] - self.pre_ttl,
+                    self.eeg_time < self.ttl_on[idx] + self.post_ttl,
+                )
+            ]
+            eeg_chunk_time = self.eeg_time[
+                np.logical_and(
+                    self.eeg_time > self.ttl_on[idx] - self.pre_ttl,
+                    self.eeg_time < self.ttl_on[idx] + self.post_ttl,
+                )
+            ]
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            axTrans = transforms.blended_transform_factory(ax.transData, ax.transData)
+            ax.plot(eeg_chunk_time, eeg_chunk)
+            ax.add_patch(
+                Rectangle(
+                    (self.ttl_on[idx], -self.lfp_plotting_scale),
+                    width=self.ttl_off[idx] - self.ttl_on[idx],
+                    height=1000,
+                    transform=axTrans,
+                    color=[0, 0, 1],
+                    alpha=0.3,
+                )
+            )
+
+            ax.set_ylim(-self.lfp_plotting_scale, self.lfp_plotting_scale)
+            if save:
+                plt.savefig(pname_for_saving / Path(str(idx) + ".png"))
+                plt.close()
+            else:
+                plt.show()
+
+    def plot_mean_spectrogram(self, ttl_duration_type: str = "long"):
+        """
+        Plots the mean spectrogram for either 'long' or 'short' ttl events
+        """
+        spectrograms = []
+        rows = []
+        cols = []
+        ttls = self.long_duration_ttls
+        if ttl_duration_type == "short":
+            ttls = self.short_duration_ttls
+        for i in ttls:
+            (
+                SFT,
+                N,
+                spec,
+            ) = self.get_spectrogram(i)
+            r, c = np.shape(spec)
+            rows.append(r)
+            cols.append(c)
+            spectrograms.append(spec)
+
+        # some spectrograms might be slightly different shapes so
+        # truncate to the shortest length in each dimension
+        min_rows = np.min(rows)
+        min_cols = np.min(cols)
+        spec_array = np.empty(shape=[len(ttls), min_rows, min_cols])
+        for i, s in enumerate(spectrograms):
+            spec_array[i, :, :] = s[0:min_rows, 0:min_cols]
+
+        mean_spectrogram = np.mean(spec_array, 0)
+        fig1, ax1 = plt.subplots(figsize=(6.0, 4.0))  # enlarge plot a bit
+        t_lo, t_hi = SFT.extent(N)[:2]  # time range of plot
+        ax1.set_title(
+            rf"Spectrogram ({SFT.m_num*SFT.T:g}$\,s$ Gaussian "
+            + rf"window, $\sigma_t={self.gaussian_std*SFT.T:g}\,$s)"
+        )
+        ax1.set(
+            xlabel=f"Time $t$ in seconds ({SFT.p_num(N)} slices, "
+            + rf"$\Delta t = {SFT.delta_t:g}\,$s)",
+            ylabel=f"Freq. $f$ in Hz ({SFT.f_pts} bins, "
+            + rf"$\Delta f = {SFT.delta_f:g}\,$Hz)",
+            xlim=(t_lo, t_hi),
+        )
+        trans = transforms.blended_transform_factory(ax1.transData, ax1.transAxes)
+        max_duration = np.max(self.ttl_durations[ttls])
+        ax1.vlines(
+            [
+                self.pre_ttl,
+                self.pre_ttl + max_duration,
+            ],
+            ymin=0,
+            ymax=1,
+            colors="r",
+            linestyles="--",
+            transform=trans,
+        )
+        max_duration_ms = max_duration * 1000
+        ax1.annotate(
+            f"{max_duration_ms:.2f}\n ms",
+            xy=(self.pre_ttl + max_duration / 2, 0.8),
+            xytext=(self.pre_ttl + max_duration / 2, 0.8),
+            xycoords=trans,
+            textcoords=trans,
+            ha="center",
+            va="bottom",
+            color="r",
+            fontsize="small",
+        )
+
+        im1 = ax1.imshow(
+            mean_spectrogram,
+            origin="lower",
+            aspect="auto",
+            extent=SFT.extent(N),
+            cmap="magma",
+        )
+        fig1.colorbar(
+            im1,
+            label="Power Spectral Density " + r"$20\,\log_{10}|S_x(t, f)|$ in dB",
+        )
+        plt.show()
+        return spectrograms
+
+    def get_spectrogram(self, idx: int, plot=False):
+        eeg_chunk = self.orig_sig[
+            np.logical_and(
+                self.eeg_time > self.ttl_on[idx] - self.pre_ttl,
+                self.eeg_time < self.ttl_on[idx] + self.post_ttl,
+            )
+        ]
+
+        win = gaussian(self.gaussian_window, std=self.gaussian_std, sym=True)
+        SFT = ShortTimeFFT(win, hop=1, fs=self.fs, mfft=256, scale_to="psd")
+        Sx2 = SFT.spectrogram(eeg_chunk)
+        N = len(eeg_chunk)
+
+        if plot:
+            fig1, ax1 = plt.subplots(figsize=(6.0, 4.0))  # enlarge plot a bit
+            t_lo, t_hi = SFT.extent(N)[:2]  # time range of plot
+            ax1.set_title(
+                rf"Spectrogram ({SFT.m_num*SFT.T:g}$\,s$ Gaussian "
+                + rf"window, $\sigma_t={self.gaussian_std*SFT.T:g}\,$s)"
+            )
+            ax1.set(
+                xlabel=f"Time $t$ in seconds ({SFT.p_num(N)} slices, "
+                + rf"$\Delta t = {SFT.delta_t:g}\,$s)",
+                ylabel=f"Freq. $f$ in Hz ({SFT.f_pts} bins, "
+                + rf"$\Delta f = {SFT.delta_f:g}\,$Hz)",
+                xlim=(t_lo, t_hi),
+            )
+            trans = transforms.blended_transform_factory(ax1.transData, ax1.transAxes)
+            ax1.vlines(
+                [self.pre_ttl, self.pre_ttl + self.ttl_durations[0, idx]],
+                ymin=0,
+                ymax=1,
+                colors="r",
+                linestyles="--",
+                transform=trans,
+            )
+
+            im1 = ax1.imshow(
+                np.abs(Sx2),
+                origin="lower",
+                aspect="auto",
+                extent=SFT.extent(N),
+                cmap="magma",
+            )
+            fig1.colorbar(
+                im1,
+                label="Power Spectral Density " + r"$20\,\log_{10}|S_x(t, f)|$ in dB",
+            )
+            plt.show()
+        return SFT, N, np.abs(Sx2)
+
+    def __find_high_power_periods(self, n: int = 3, t: int = 10) -> np.ndarray:
+        """
+        Find periods where the power in the ripple band is above n standard deviations
+        for t samples. Meant to recapitulate the algorithm from the Ripple Detector
+        plugin
+
+        """
+        # get some detection parameters from the Ripple Detector plugin
+        settings = Settings(self.pname_for_trial)
+        proc = settings.get_processor("Ripple")
+        rms_window = float(getattr(proc, "rms_samples"))
+        ripple_detect_channel = int(getattr(proc, "Ripple_Input"))
+        ripple_std = int(getattr(proc, "ripple_std"))
+        time_thresh = int(getattr(proc, "time_thresh"))
+        rms_sig = window_rms(self.ripple_filtered_eeg, rms_window)
