@@ -454,9 +454,8 @@ class Settings(object):
                 if i_proc is not None:
                     if "/" in i_proc:
                         i_proc = i_proc.split("/")[-1]
-                    print(f"i_proc: {i_proc}")
                     new_processor = processor_factory.create_processor(i_proc)
-                    print(f"node_id: {new_processor.nodeId}")
+                    recurseNode(elem, addValues2Class, new_processor)
                     if i_proc == "Record Node":
                         if new_processor.nodeId is not None:
                             self.record_nodes[
