@@ -20,8 +20,6 @@ from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.visualise.plotting import FigureMaker
 from ephysiopy.common.utils import shift_vector, clean_kwargs, TrialFilter
 
-import matplotlib.pylab as plt
-
 
 def fileContainsString(pname: str, searchStr: str) -> bool:
     if os.path.exists(pname):
@@ -1157,7 +1155,7 @@ class OpenEphysBase(TrialInterface):
 
     def find_files(
         self,
-        pname_root: str,
+        pname_root: str | Path,
         experiment_name: str = "experiment1",
         rec_name: str = "recording1",
         **kwargs,

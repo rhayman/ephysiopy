@@ -8,13 +8,11 @@ try:
 except ImportError:
     import xml.etree.ElementTree as ET
 
-import xml
 import os
 import json
 from pathlib import Path
 from abc import ABC
 from collections import OrderedDict
-from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -269,10 +267,13 @@ class RippleDetector(OEPlugin):
 
     Ripple_Input: int = field(default_factory=int)
     Ripple_Out: int = field(default_factory=int)
+    Ripple_save: int = field(default_factory=int)
     ripple_std: float = field(default_factory=float)
     time_thresh: float = field(default_factory=float)
     refr_time: float = field(default_factory=float)
     rms_samples: float = field(default_factory=float)
+    ttl_duration: int = field(default_factory=int)
+    ttl_percent: int = field(default_factory=int)
     mov_detect: int = field(default_factory=int)
     mov_input: int = field(default_factory=int)
     mov_out: int = field(default_factory=int)
@@ -352,8 +353,6 @@ def recurseNode(node: ET.Element, func: Callable, cls: dataclass):
         func(node, cls)
         for item in node:
             recurseNode(item, func, cls)
-    else:
-        return
 
 
 def addValues2Class(node: ET.Element, cls: dataclass):
@@ -418,9 +417,8 @@ class Settings(object):
         YYYY-MM-DD_HH-MM-SS
     """
 
-    def __init__(self, pname: str):
+    def __init__(self, pname: str | Path):
         self.filename = None
-        import os
 
         for d, _, f in os.walk(pname):
             for ff in f:

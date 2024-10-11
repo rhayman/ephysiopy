@@ -12,14 +12,11 @@ from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 from ephysiopy.common.utils import window_rms
 from ephysiopy.openephys2py.OESettings import Settings
+
 from phylib.io.model import TemplateModel
 from scipy import signal
 from scipy import stats
 from scipy.special import i0
-
-
-# WARNING - THIS WILL NOT WORK AT THE MOMENT (2024-01-11) AS THE
-# CLUSTER ID IS SET TO 1 IN __INIT__
 
 
 class CosineDirectionalTuning(object):
@@ -809,11 +806,23 @@ class Rippler(object):
     pre_ttl = 0.05
     post_ttl = 0.2
     min_ttl_duration = 0.01
-    ripple_band_low = 120
-    ripple_band_high = 250
+    # Not all TTL "events" in OE parlance result in a laser pulse as I modified
+    # the plugin so that only x percent are sent to the ttl "out" line that goes
+    # to the laser. All TTL events *are* recorded however on a separate TTL line
+    # that here I am calling ttl_all_line as opposed to ttl_out_line which is the
+    # line that goes to the laser - these values are overwritten when the Ripple
+    # Detector plugin settings are loaded in __init__
+    ttl_all_line = 4
+    ttl_out_line = 1
+    ttl_percent = (
+        100  # percentage of the ripple detections that get propagated to laser
+    )
+    ttl_duration = 50  # minimum duration of TTL pulse in ms
+    ripple_band_low = 120  # Hz
+    ripple_band_high = 250  # Hz
     bit_volts = 0.1949999928474426  # available in the structure.oebin file
     # some parameters for the FFT stuff
-    gaussian_window = 12
+    gaussian_window = 12  # in samples
     gaussian_std = 5
     lfp_plotting_scale = (
         500  # this is the scale/range I was looking at the ripple filtered lfp signal
@@ -829,23 +838,25 @@ class Rippler(object):
         self.pname_for_trial = trial_root
         self.orig_sig = signal
         self.fs = fs
-        self.trial = OpenEphysBase(trial_root)
+        self.settings = Settings(str(trial_root))
         LFP = EEGCalcsGeneric(signal, fs)
+        detector_settings = self.settings.get_processor("Ripple")
+        self.ttl_duration = float(detector_settings.ttl_duration)
 
         pname_for_ttl_data = self.__find_path_to_ripple_ttl(self.pname_for_trial)
         sync_file = pname_for_ttl_data.parents[2] / Path("sync_messages.txt")
         recording_start_time = self.__load_start_time(sync_file)
         ttl_ts = np.load(pname_for_ttl_data / "timestamps.npy") - recording_start_time
         ttl_states = np.load(pname_for_ttl_data / "states.npy")
-        self.ttl_on = ttl_ts[ttl_states > 0]
-        self.ttl_off = ttl_ts[ttl_states < 0]
-        # put all the ttls into an array to calculate the differences and
-        # find the pulses with the longest durations
-        self.all_ttls = np.array([self.ttl_on.ravel(), self.ttl_off.ravel()])
-        ttl_durations = np.diff(self.all_ttls, axis=0)
-        self.long_duration_ttls = np.nonzero(ttl_durations >= self.min_ttl_duration)[1]
-        self.short_duration_ttls = np.nonzero(ttl_durations < self.min_ttl_duration)[1]
-        self.ttl_durations = ttl_durations.ravel()
+        laser_on_ts = ttl_ts[ttl_states == int(detector_settings.Ripple_Out)]
+        laser_off_ts = ttl_ts[ttl_states == -int(detector_settings.Ripple_Out)]
+        all_on_ts = ttl_ts[ttl_states == int(detector_settings.Ripple_save)]
+        self.all_on_ts = all_on_ts
+        no_laser_on_ts = np.lib.arraysetops.setdiff1d(all_on_ts, laser_on_ts)
+        self.all_ts = ttl_ts
+        self.laser_on_ts = laser_on_ts
+        self.laser_off_ts = laser_off_ts
+        self.no_laser_on_ts = no_laser_on_ts
 
         ripple_filtered_eeg = LFP.butterFilter(
             self.ripple_band_low, self.ripple_band_high
@@ -936,22 +947,51 @@ class Rippler(object):
             else:
                 plt.show()
 
-    def plot_mean_spectrogram(self, ttl_duration_type: str = "long"):
+    def plot_mean_spectrograms(self):
+        fig = plt.figure(figsize=(12.0, 4.0))
+        ax, ax1 = fig.subplots(1, 2)
+        fig, im, spec = self.plot_mean_spectrogram(laser_on=False, ax=ax)
+        fig, im1, spec1 = self.plot_mean_spectrogram(laser_on=True, ax=ax1)
+        min_im = np.min([np.min(spec), np.min(spec1)])
+        max_im = np.max([np.max(spec), np.max(spec1)])
+        im.set_clim((min_im, max_im))
+        im1.set_clim((min_im, max_im))
+        ax1.set_ylabel("")
+        ax.set_title("Laser off")
+        ax1.set_title("Laser on")
+        fig.colorbar(
+            im1,
+            label="Power Spectral Density " + r"$20\,\log_{10}|S_x(t, f)|$ in dB",
+        )
+
+        plt.show()
+
+    def plot_mean_spectrogram(self, laser_on: bool = False, ax=None):
         """
         Plots the mean spectrogram for either 'long' or 'short' ttl events
         """
         spectrograms = []
         rows = []
         cols = []
-        ttls = self.long_duration_ttls
-        if ttl_duration_type == "short":
-            ttls = self.short_duration_ttls
+        ttls = self.laser_on_ts
+        if laser_on:
+            ttls = np.array([self.laser_on_ts, self.laser_off_ts]).T
+            # max_duration used in plotting output below
+            max_duration = np.max(np.diff(ttls))
+
+        else:
+            ttls = np.array(
+                [self.no_laser_on_ts, self.no_laser_on_ts + (self.ttl_duration / 1000)]
+            ).T
+            # max_duration used in plotting output below
+            max_duration = self.ttl_duration / 1000  # in ms
+
         for i in ttls:
             (
                 SFT,
                 N,
                 spec,
-            ) = self.get_spectrogram(i)
+            ) = self.get_spectrogram(i[0], i[1])
             r, c = np.shape(spec)
             rows.append(r)
             cols.append(c)
@@ -966,12 +1006,16 @@ class Rippler(object):
             spec_array[i, :, :] = s[0:min_rows, 0:min_cols]
 
         mean_spectrogram = np.mean(spec_array, 0)
-        fig1, ax1 = plt.subplots(figsize=(6.0, 4.0))  # enlarge plot a bit
+        if ax is None:
+            fig1, ax1 = plt.subplots(figsize=(6.0, 4.0))  # enlarge plot a bit
+        else:
+            ax1 = ax
+            fig1 = plt.gcf()
         t_lo, t_hi = SFT.extent(N)[:2]  # time range of plot
-        ax1.set_title(
-            rf"Spectrogram ({SFT.m_num*SFT.T:g}$\,s$ Gaussian "
-            + rf"window, $\sigma_t={self.gaussian_std*SFT.T:g}\,$s)"
-        )
+        # ax1.set_title(
+        #     rf"Spectrogram ({SFT.m_num*SFT.T:g}$\,s$ Gaussian "
+        #     + rf"window, $\sigma_t={self.gaussian_std*SFT.T:g}\,$s)"
+        # )
         ax1.set(
             xlabel=f"Time $t$ in seconds ({SFT.p_num(N)} slices, "
             + rf"$\Delta t = {SFT.delta_t:g}\,$s)",
@@ -980,7 +1024,6 @@ class Rippler(object):
             xlim=(t_lo, t_hi),
         )
         trans = transforms.blended_transform_factory(ax1.transData, ax1.transAxes)
-        max_duration = np.max(self.ttl_durations[ttls])
         ax1.vlines(
             [
                 self.pre_ttl,
@@ -1012,18 +1055,17 @@ class Rippler(object):
             extent=SFT.extent(N),
             cmap="magma",
         )
-        fig1.colorbar(
-            im1,
-            label="Power Spectral Density " + r"$20\,\log_{10}|S_x(t, f)|$ in dB",
-        )
-        plt.show()
-        return spectrograms
+        # fig1.colorbar(
+        #     im1,
+        #     label="Power Spectral Density " + r"$20\,\log_{10}|S_x(t, f)|$ in dB",
+        # )
+        return fig1, im1, mean_spectrogram
 
-    def get_spectrogram(self, idx: int, plot=False):
+    def get_spectrogram(self, start_time: float, end_time: float, plot=False):
         eeg_chunk = self.orig_sig[
             np.logical_and(
-                self.eeg_time > self.ttl_on[idx] - self.pre_ttl,
-                self.eeg_time < self.ttl_on[idx] + self.post_ttl,
+                self.eeg_time > start_time - self.pre_ttl,
+                self.eeg_time < end_time + self.post_ttl,
             )
         ]
 
@@ -1048,7 +1090,7 @@ class Rippler(object):
             )
             trans = transforms.blended_transform_factory(ax1.transData, ax1.transAxes)
             ax1.vlines(
-                [self.pre_ttl, self.pre_ttl + self.ttl_durations[0, idx]],
+                [self.pre_ttl, self.pre_ttl + (end_time - start_time)],
                 ymin=0,
                 ymax=1,
                 colors="r",
