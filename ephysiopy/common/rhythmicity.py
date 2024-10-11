@@ -848,15 +848,17 @@ class Rippler(object):
         recording_start_time = self.__load_start_time(sync_file)
         ttl_ts = np.load(pname_for_ttl_data / "timestamps.npy") - recording_start_time
         ttl_states = np.load(pname_for_ttl_data / "states.npy")
-        laser_on_ts = ttl_ts[ttl_states == int(detector_settings.Ripple_Out)]
-        laser_off_ts = ttl_ts[ttl_states == -int(detector_settings.Ripple_Out)]
-        all_on_ts = ttl_ts[ttl_states == int(detector_settings.Ripple_save)]
-        self.all_on_ts = all_on_ts
-        no_laser_on_ts = np.lib.arraysetops.setdiff1d(all_on_ts, laser_on_ts)
+        all_ons = ttl_ts[ttl_states == int(detector_settings.Ripple_save)]
+        laser_ons = ttl_ts[ttl_states == int(detector_settings.Ripple_Out)]
+        laser_offs = ttl_ts[ttl_states == -int(detector_settings.Ripple_Out)]
+        no_laser_ons = np.lib.setdiff1d(all_ons, laser_ons)
+
+        self.all_on_ts = all_ons
+        self.ttl_states = ttl_states
         self.all_ts = ttl_ts
-        self.laser_on_ts = laser_on_ts
-        self.laser_off_ts = laser_off_ts
-        self.no_laser_on_ts = no_laser_on_ts
+        self.laser_on_ts = laser_ons
+        self.laser_off_ts = laser_offs
+        self.no_laser_on_ts = no_laser_ons
 
         ripple_filtered_eeg = LFP.butterFilter(
             self.ripple_band_low, self.ripple_band_high
