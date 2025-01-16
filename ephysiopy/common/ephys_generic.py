@@ -289,8 +289,8 @@ class PosCalcsGeneric(object):
 
     def __init__(
         self,
-        x: npt.ArrayLike,
-        y: npt.ArrayLike,
+        x: np.ndarray | list,
+        y: np.ndarray | list,
         ppm: float,
         convert2cm: bool = True,
         jumpmax: float = 100,
@@ -298,7 +298,7 @@ class PosCalcsGeneric(object):
     ):
         assert np.shape(x) == np.shape(y)
         self.orig_xy: np.ma.MaskedArray = np.ma.MaskedArray([x, y])
-        self._xy = None
+        self._xy = np.ma.MaskedArray(np.zeros(shape=[2, len(x)]))
         self._xyTS = None
         self._dir = np.ma.MaskedArray(np.zeros_like(x))
         self._speed = np.ma.MaskedArray(np.zeros_like(x))
@@ -317,7 +317,7 @@ class PosCalcsGeneric(object):
         return len(self.orig_xy.T)
 
     @property
-    def xy(self) -> np.ma.MaskedArray | None:
+    def xy(self) -> np.ma.MaskedArray:
         return self._xy
 
     @xy.setter
@@ -434,7 +434,6 @@ class PosCalcsGeneric(object):
 
         if self.convert2cm:
             xy = xy / (self._ppm / 100.0)
-
         xy = self.speedfilter(xy)
         xy = self.interpnans(xy)
         xy = self.smoothPos(xy)

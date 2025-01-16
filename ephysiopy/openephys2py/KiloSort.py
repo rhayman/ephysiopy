@@ -44,6 +44,7 @@ class KiloSortSession(object):
         self.amplitudes = None
         self.contamPct = None
         self.good_clusters = []
+        self.mua_clusters = []
 
     def load(self):
         """
@@ -61,6 +62,8 @@ class KiloSortSession(object):
             "group labels" from phy ('good', 'MUA', 'noise' etc).
             One of these (cluster_groups.csv or cluster_group.tsv)
             is from kilosort and the other from kilosort2
+            I think these are only amended to once a phy session has been
+            run / saved...
         """
         import os
 
@@ -166,12 +169,14 @@ class KiloSortSession(object):
         for cluster_id, kslabel in zip(self.ks_cluster_id, self.ks_group):
             if "good" in kslabel:
                 self.good_clusters.append(cluster_id)
+            if "mua" in kslabel:
+                self.mua_clusters.append(cluster_id)
 
-    def get_cluster_spike_times(self, cluster: int):
+    def get_cluster_spike_times(self, cluster: int) -> np.ndarray:
         """
         Returns the spike times for cluster in samples
         """
-        if cluster in self.good_clusters:
+        if cluster in self.ks_cluster_id:
             return self.spike_times[self.spk_clusters == cluster]
 
     def apply_mask(self, mask, **kwargs):

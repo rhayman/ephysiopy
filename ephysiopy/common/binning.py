@@ -1,5 +1,4 @@
 import warnings
-from collections import namedtuple
 
 import numpy as np
 import boost_histogram as bh
@@ -59,7 +58,7 @@ class RateMap(object):
     def __init__(
         self,
         PosCalcs: PosCalcsGeneric,
-        pos_weights: np.ndarray = None,
+        pos_weights: np.ma.MaskedArray | None = None,
         xyInCms: bool = False,
         binsize: int = 3,
         smooth_sz: int = 5,
@@ -168,7 +167,7 @@ class RateMap(object):
         by
         """
         if self._pos_weights is None:
-            self._pos_weights = np.ma.MaskedArray(np.ones(self.xy.shape[1]))
+            self._pos_weights = np.ma.MaskedArray(np.ones(self.PosCalcs.npos))
         return self._pos_weights
 
     @pos_weights.setter
@@ -235,7 +234,7 @@ class RateMap(object):
         except TypeError:
             self._binDims = len(self._binedges)
 
-    def _calc_bin_edges(self, binsize: int | tuple = 3) -> tuple:
+    def _calc_bin_edges(self, binsize: int | tuple = 3) -> tuple[np.ndarray, ...]:
         """
         Aims to get the right number of bins for the variable to be binned
 
@@ -246,11 +245,11 @@ class RateMap(object):
             tuple: each member an array of bin edges
         """
         if self.var2Bin.value == VariableToBin.DIR.value:
-            self.binedges = np.linspace(0, 360, int(360 / binsize))
+            self.binedges = np.linspace(0, 360, int(360 / binsize)).tolist()
         elif self.var2Bin.value == VariableToBin.SPEED.value:
             maxspeed = np.nanmax(self.speed)
             # assume min speed = 0
-            self.binedges = np.linspace(0, maxspeed, int(maxspeed / binsize))
+            self.binedges = np.linspace(0, maxspeed, int(maxspeed / binsize)).tolist()
         elif self.var2Bin.value == VariableToBin.XY.value:
             x_lims, y_lims = self._getXYLimits()
             nxbins = int(np.ceil((x_lims[1] - x_lims[0]) / binsize))
@@ -266,9 +265,7 @@ class RateMap(object):
             nybins = int(np.ceil((y_lims[1] - y_lims[0]) / binsize))
             _x = np.linspace(x_lims[0], x_lims[1], nxbins)
             _y = np.linspace(y_lims[0], y_lims[1], nybins)
-            be = [_y, _x]
-            be.append(self.pos_time_splits)
-            self.binedges = be
+            self.binedges = _y, _x, self.pos_time_splits
         elif self.var2Bin.value == VariableToBin.SPEED_DIR.value:
             maxspeed = np.nanmax(self.speed)
             if isinstance(binsize, int):
@@ -283,14 +280,10 @@ class RateMap(object):
                 )
         elif self.var2Bin.value == VariableToBin.EGO_BOUNDARY.value:
             if isinstance(binsize, (float, int)):
-                self.binedges = (
-                    np.linspace(0, 50, 20),
-                    np.linspace(0, 2 * np.pi, 120),
-                )
+                self.binedges = np.linspace(0, 50, 20), np.linspace(0, 2 * np.pi, 120)
             elif isinstance(binsize, tuple):
-                self.binedges = (
-                    np.linspace(0, 50, int(50 / binsize[0])),
-                    np.linspace(0, 2 * np.pi, int((2 * np.pi) / binsize[1])),
+                self.binedges = np.linspace(0, 50, int(50 / binsize[0])), np.linspace(
+                    0, 2 * np.pi, int((2 * np.pi) / binsize[1])
                 )
         self._calc_bin_dims()
         return self.binedges
@@ -308,26 +301,41 @@ class RateMap(object):
         (rmap, binnedPositionDir) or
         (rmap, binnedPostionX, binnedPositionY)
 
-        Args:
-            spkWeights (array_like): Shape equal to number of positions samples captured and consists of
-                position weights. For example, if there were 5 positions
-                recorded and a cell spiked once in position 2 and 5 times in
-                position 3 and nothing anywhere else then pos_weights looks
-                like: [0 0 1 5 0]
-                spkWeights can also be list-like where each entry in the list is a different set of
-                weights - these are enumerated through in a list comp in the ._bin_data function. In
-                this case the returned tuple will consist of a 2-tuple where the first entry is an
-                array of the ratemaps (binned_spk / binned_pos) and the second part is the binned pos data (as it's common to all
-                the spike weights)
-            var_type (Enum value - see Variable2Bin defined at top of this file): The variable to bin up. Legal values are: XY, DIR and SPEED
-            mapType (enum value - see MapType defined at top of this file): If RATE then the binned up spikes are divided by var_type.
-                Otherwise return binned up position. Options are RATE or POS
-            smoothing (bool, optional): Whether to smooth the data or not. Defaults to True.
+        Parameters
+        ----------
+        spkWeights (np.ndarray) - Shape equal to number of positions samples captured and consists of
+            position weights. For example, if there were 5 positions
+            recorded and a cell spiked once in position 2 and 5 times in
+            position 3 and nothing anywhere else then pos_weights looks
+            like: [0 0 1 5 0].
+            spkWeights can also be list-like where each entry in the list is a different set of
+            weights - these are enumerated through in a list comp in the ._bin_data function. In
+            this case the returned tuple will consist of a 2-tuple where the first entry is an
+            array of the ratemaps (binned_spk / binned_pos) and the second part is the binned pos data (as it's common to all
+            the spike weights)
 
-        Returns:
-            binned_data, binned_pos (tuple): This is either a 2-tuple or a 3-tuple depening on whether binned
-                pos (mapType 'pos') or binned spikes (mapType 'rate') is asked
-                for respectively
+        var_type (Variable2Bin) - The variable to bin.
+                                  Legal values are:
+                                  VariableToBin.XY
+                                  VariableToBin.DIR
+                                  VariableToBin.SPEED
+                                  VariableToBin.SPEED_DIR
+                                  VariableToBin.XY_TIME
+                                  VariableToBin.EGO_BOUNDARY
+
+
+        mapType (MapType) - The kind of map returned.
+                            Legal values are:
+                            MapType.RATE
+                            MapType.POS
+                            MapType.SPK
+
+        smoothing (bool, optional): Smooth the data or not. Default True.
+
+        Returns
+        -------
+        binned_data, binned_pos (tuple): This is either a 2-tuple or a 3-tuple depening on whether binned
+            pos (mapType 'pos') or binned spikes (mapType 'rate') is asked for
         """
         boundary = "extend"
         pos_weights = self.pos_weights
@@ -352,6 +360,7 @@ class RateMap(object):
             binsize = kwargs.get("binsize", 5)
             if isinstance(binsize, tuple):
                 binsize = binsize[0]
+            # breakpoint()
             ego_angles, arena_xy = self._calc_ego_angles(arena_shape, binsize)
             ego_dists = distance.cdist(arena_xy, self.xy.T, "euclidean")
             sample = np.stack((np.ravel(ego_angles.T), np.ravel(ego_dists.T)))
@@ -375,9 +384,7 @@ class RateMap(object):
             bin_edges = self._calc_bin_edges(binsize)
         else:
             bin_edges = None
-        binned_pos, binned_pos_edges = self._bin_data(
-            sample, bin_edges, pos_weights, hist_range
-        )
+        binned_pos, binned_pos_edges = self._bin_data(sample, bin_edges, pos_weights)
         binned_pos = binned_pos / self.PosCalcs.sample_rate
         nanIdx = binned_pos == 0
         pos = BinnedData(var_type, MapType.POS, [binned_pos], binned_pos_edges)
@@ -397,10 +404,9 @@ class RateMap(object):
                 pos.set_nan_indices(nanIdx)
                 return pos
 
-        binned_spk, _ = self._bin_data(sample, bin_edges, spk_weights, hist_range)
+        binned_spk, _ = self._bin_data(sample, bin_edges, spk_weights)
         if not isinstance(binned_spk, list):
             binned_spk = [binned_spk]
-
         spk = BinnedData(var_type, MapType.SPK, binned_spk, binned_pos_edges)
 
         if map_type.value == MapType.SPK.value:
@@ -461,9 +467,7 @@ class RateMap(object):
         rmap.set_nan_indices(nanIdx)
         return rmap
 
-    def _bin_data(
-        self, var, bin_edges, weights, range=None, density=False
-    ) -> tuple[np.ndarray, ...]:
+    def _bin_data(self, var, bin_edges, weights) -> tuple[np.ndarray, ...]:
         """
         Bins data taking account of possible multi-dimensionality
 
@@ -471,8 +475,6 @@ class RateMap(object):
             var (array_like): The variable to bin
             bin_edges (array_like): The edges of the data - see numpys histogramdd for more
             weights (array_like): The weights attributed to the samples in var
-            good_indices (array_like): Valid indices (i.e. not nan and not infinite)
-            density (bool): same as numpys density arg for histogram
 
         Returns:
             ndhist (2-tuple): Think this always returns a two-tuple of the binned variable and
@@ -507,37 +509,41 @@ class RateMap(object):
             the bin edges for x and y (obv this will be the same for all
             entries of h)
         """
-        if not isinstance(weights, np.ma.MaskedArray):
-            weights = np.ma.MaskedArray(weights)
         if weights is None:
             weights = np.ma.MaskedArray(np.ones_like(var))
+        weights = np.ma.MaskedArray(weights)
         dims = weights.ndim
         if dims == 1 and var.ndim == 1:
             var = var[np.newaxis, :]
             if bin_edges is not None:
-                bin_edges = bin_edges[np.newaxis, :]
+                bin_edges = np.atleast_2d(bin_edges)
         elif dims > 1 and var.ndim == 1:
             var = var[np.newaxis, :]
             if bin_edges is not None:
-                bin_edges = bin_edges[np.newaxis, :]
+                bin_edges = np.atleast_2d(bin_edges)
         else:
             var = np.flipud(var)
         weights = np.atleast_2d(weights)  # needed for list comp below
+        weights = np.ma.filled(weights, 0)
         var = np.array(var.T)
         if bin_edges is None:
-            ndhist = [
-                bh.numpy.histogramdd(
-                    var, range=range, weights=w.filled(0), density=density
-                )
-                for w in weights
-            ]
+            bin_edges = self.binedges
+        if len(bin_edges) == 1:
+            hist = bh.Histogram(
+                bh.axis.Regular(len(bin_edges[0]), bin_edges[0][0], bin_edges[0][-1])
+            )
         else:
-            ndhist = [
-                bh.numpy.histogramdd(
-                    var, bins=bin_edges, weights=w.filled(0), density=density
-                )
-                for w in weights
-            ]
+            hist = bh.Histogram(
+                bh.axis.Regular(len(bin_edges[0]), bin_edges[0][0], bin_edges[0][-1]),
+                bh.axis.Regular(len(bin_edges[1]), bin_edges[1][0], bin_edges[1][-1]),
+            )
+        ndhist = []
+        for w in weights:
+            hist.fill(*var.T, weight=w)
+            ndhist.append(
+                [hist.values().copy(), [np.ravel(e) for e in hist.axes.edges]]
+            )
+            hist.reset()
         if np.shape(weights)[0] == 1:
             return ndhist[0]
         else:
@@ -1041,62 +1047,22 @@ class RateMap(object):
         # and with size arena_xy_ncoords x npos
         return ego_angles, arena_xy
 
-    def get_egocentric_boundary_map(
-        self,
-        spk_weights,
-        degs_per_bin: float = 3,
-        xy_binsize: float = 2.5,
-        return_dists: bool = False,
-        return_angles: bool = False,
-        return_raw_spk: bool = False,
-        return_raw_occ: bool = False,
-    ) -> namedtuple:
-        assert self.dir is not None, "No direction data available"
-        ego_angles, arena_xy = self._calc_ego_angles()
-        ego_dists = distance.cdist(arena_xy, self.xy.T, "euclidean")
-        occ = np.histogramdd(
-            np.stack((np.ravel(ego_dists.T), np.ravel(ego_angles.T))).T,
-            range=((0, 50), (0, 2 * np.pi)),
-            bins=(int(50 / xy_binsize), int(360 / degs_per_bin)),
-        )
-        spk_weights = np.repeat(spk_weights, arena_xy.shape[0])
-        spk = np.histogramdd(
-            np.stack((np.ravel(ego_dists.T), np.ravel(ego_angles.T))).T,
-            range=((0, 50), (0, 2 * np.pi)),
-            bins=(int(50 / xy_binsize), int(360 / degs_per_bin)),
-            weights=spk_weights,
-        )
-        rmap = spk[0] / occ[0]
-        EgoMap = namedtuple(
-            "EgoMap", ["rmap", "occ", "spk", "dists", "angles"], defaults=None
-        )
-        em = EgoMap(None, None, None, None, None)
-        em = em._replace(rmap=rmap)
-        if return_dists:
-            em = em._replace(dists=ego_dists)
-        if return_raw_occ:
-            em = em._replace(occ=occ[0])
-        if return_raw_spk:
-            em = em._replace(spk=spk[0])
-        if return_angles:
-            em = em._replace(angles=ego_angles)
-        return em
-
     def get_disperion_map(
         self, spk_times: np.ndarray, pos_times: np.ndarray
     ) -> BinnedData | None:
         """
         Attempt to write a faster version of creating an overdispersion
         map. A cell will sometimes fire too much or too little on a given
-        run through its receptive field. Need to find all the bins that contain
-        firing in the
+        run through its receptive field.
+
+        This shows the amount of 'observed' variance in spiking around
+        the mean spiking in a bin
         """
         idx = np.searchsorted(pos_times, spk_times, side="right")
         spike_weights = np.bincount(idx, minlength=len(pos_times))
         expected_spikes = self.get_map(spike_weights, map_type=MapType.SPK)
-        # bin_edges[1] is x
+        # bin_edges[1] is x, bin_edges[0] is y
         x_bins = np.digitize(self.xy[0], expected_spikes.bin_edges[1][:-1]) - 1
-        # bin_edges[0] is y
         y_bins = np.digitize(self.xy[1], expected_spikes.bin_edges[0][:-1]) - 1
         map_shape = np.shape(expected_spikes.binned_data[0])
         pos_bins_linear_idx = np.ravel_multi_index([y_bins, x_bins], map_shape)

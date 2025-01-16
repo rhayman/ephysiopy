@@ -19,7 +19,6 @@ from ephysiopy.common.spikecalcs import xcorr, SpikeCalcsGeneric
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.utils import clean_kwargs
 from ephysiopy.common import fieldcalcs as fc
-from ephysiopy.common.rhythmicity import LFPOscillations
 
 
 def stripAxes(func):
@@ -95,8 +94,9 @@ class FigureMaker(object):
         """
         Initializes the FigureMaker object with data from PosCalcs.
         """
-        self.RateMap = RateMap(self.PosCalcs)
-        self.npos = self.PosCalcs.xy.shape[1]
+        if self.PosCalcs is not None:
+            self.RateMap = RateMap(self.PosCalcs)
+            self.npos = self.PosCalcs.xy.shape[1]
 
     def _plot_multiple_clusters(
         self, func, clusters: list, channel: int, **kwargs
@@ -131,6 +131,7 @@ class FigureMaker(object):
             cluster (int): The cluster(s) to get the rate map for.
             channel (int): The channel number.
             **kwargs: Additional keyword arguments for the function.
+
         """
         rmap = self.get_rate_map(cluster, channel, **kwargs)
         vmax = np.nanmax(np.ravel(rmap.binned_data[0]))
@@ -139,6 +140,7 @@ class FigureMaker(object):
             fig = plt.figure()
             ax = fig.add_subplot(111)
         kwargs = clean_kwargs(plt.pcolormesh, kwargs)
+        # TODO: doesn't deal with multiple clusters being binned
         ax.pcolormesh(
             rmap.bin_edges[1],
             rmap.bin_edges[0],
@@ -147,7 +149,7 @@ class FigureMaker(object):
             edgecolors="face",
             vmax=vmax,
             shading="auto",
-            **kwargs
+            **kwargs,
         )
         ax.set_aspect("equal")
         return ax
@@ -242,7 +244,7 @@ class FigureMaker(object):
                 self.PosCalcs.xy[1, idx],
                 marker=marker,
                 color=col,
-                **kwargs
+                **kwargs,
             )
         return ax
 
@@ -272,7 +274,7 @@ class FigureMaker(object):
             rmap.binned_data[0],
             edgecolors="face",
             shading="auto",
-            **kwargs
+            **kwargs,
         )
         ax.set_xticks(np.arange(0, 2 * np.pi, np.pi / 4))
         # ax.set_xticklabels(np.arange(0, 2*np.pi, np.pi/4))
@@ -462,7 +464,6 @@ class FigureMaker(object):
             ax2.bar(
                 rmap.bin_edges[0],
                 speed_bincounts,
-                # align="edge",
                 alpha=0.5,
                 width=np.mean(np.diff(rmap.bin_edges[0])),
                 ec="grey",
@@ -513,7 +514,7 @@ class FigureMaker(object):
         ax.set_xlabel("Heading", fontweight="normal", size=6)
         return ax
 
-    def plot_xcorr(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
+    def plot_acorr(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
         Gets the autocorrelogram for the specified cluster(s) and channel.
 
@@ -526,6 +527,60 @@ class FigureMaker(object):
 
         ts = self.get_spike_times(cluster, channel)
         ax = self._getXCorrPlot(ts, **kwargs)
+        return ax
+
+    def plot_xcorr(
+        self, cluster_a: int, channel_a: int, cluster_b: int, channel_b: int, **kwargs
+    ) -> plt.Axes:
+        """
+        Plots the temporal cross-correlogram between cluster_a and cluster_b
+
+        Parameters
+        ----------
+        cluster_a (int) : first cluster
+        channel_a (int) : first channel
+        cluster_b (int) : second cluster
+        channel_b (int) : second channel
+
+        Returns
+        -------
+        plt.Axes : matplotlib.Axes instance
+        """
+        if "strip_axes" in kwargs.keys():
+            strip_axes = kwargs.pop("strip_axes")
+        else:
+            strip_axes = False
+        ax = kwargs.get("ax", None)
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+        if "binsize" in kwargs.keys():
+            binsize = kwargs["binsize"]
+        else:
+            binsize = 0.001
+        if "Trange" in kwargs.keys():
+            xrange = kwargs.pop("Trange")
+        else:
+            xrange = [-0.5, 0.5]
+
+        a_times = self.get_spike_times(cluster_a, channel_a)
+        b_times = self.get_spike_times(cluster_b, channel_b)
+        xcorr_binned = xcorr(a_times, b_times, Trange=xrange, binsize=binsize)
+        c = xcorr_binned.binned_data[0]
+        b = xcorr_binned.bin_edges[0]
+        ax.bar(b[:-1], c, width=binsize, color="k", align="edge", zorder=3)
+        ax.set_xlim(xrange)
+        ax.set_xticks((xrange[0], 0, xrange[1]))
+        ax.set_xticklabels("")
+        ax.tick_params(
+            axis="both", which="both", left=False, right=False, bottom=False, top=False
+        )
+        ax.set_yticklabels("")
+        ax.xaxis.set_ticks_position("bottom")
+        if strip_axes:
+            return stripAxes(ax)
+        axtrans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
+        ax.vlines(0, ymin=0, ymax=1, colors="lightgrey", transform=axtrans, zorder=1)
         return ax
 
     def plot_raster(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
@@ -581,6 +636,8 @@ class FigureMaker(object):
     def plot_clusters_theta_phase(
         self, cluster: int, channel: int, **kwargs
     ) -> plt.Axes:
+        from ephysiopy.common.rhythmicity import LFPOscillations
+
         ax = kwargs.pop("ax", None)
         if ax is None:
             fig = plt.figure()
@@ -609,15 +666,15 @@ class FigureMaker(object):
 
     def _getPowerSpectrumPlot(
         self,
-        freqs: np.array,
-        power: np.array,
-        sm_power: np.array,
+        freqs: np.ndarray,
+        power: np.ndarray,
+        sm_power: np.ndarray,
         band_max_power: float,
         freq_at_band_max_power: float,
         max_freq: int = 50,
         theta_range: tuple = [6, 12],
-        ax: matplotlib.axes = None,
-        **kwargs
+        ax: plt.Axes = None,
+        **kwargs,
     ) -> plt.Axes:
         """
         Plots the power spectrum. The parameters can be obtained from
@@ -718,7 +775,7 @@ class FigureMaker(object):
         ac = xcorr(spk_times, Trange=xrange, **kwargs)
         c = ac.binned_data[0]
         b = ac.bin_edges[0]
-        ax.bar(b[:-1], c, width=binsize, color="k", align="edge")
+        ax.bar(b[:-1], c, width=binsize, color="k", align="edge", zorder=3)
         ax.set_xlim(xrange)
         ax.set_xticks((xrange[0], 0, xrange[1]))
         ax.set_xticklabels("")
@@ -729,6 +786,8 @@ class FigureMaker(object):
         ax.xaxis.set_ticks_position("bottom")
         if strip_axes:
             return stripAxes(ax)
+        axtrans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
+        ax.vlines(0, ymin=0, ymax=1, colors="lightgrey", transform=axtrans, zorder=1)
         return ax
 
     def _getRasterPlot(
@@ -738,13 +797,13 @@ class FigureMaker(object):
         ax: matplotlib.axes = None,
         cluster=0,
         secs_per_bin: int = 0.001,
-        **kwargs
+        **kwargs,
     ) -> plt.Axes:
         """
         Plots a raster plot for a specified tetrode/ cluster.
 
         Args:
-            spk_times (np.array): The spike times in samples.
+            spk_times (np.array): The spike times in seconds
             dt (tuple, optional): The window of time in ms to examine zeroed
                 on the event of interest i.e. the first value will probably
                 be negative as in the example. Defaults to (-50, 100).
@@ -845,6 +904,8 @@ class FigureMaker(object):
             yticks[i].set_visible(False)
         axHistx.set_xlim(dt)
         axScatter.set_xlim(dt)
+        fig = plt.gcf()
+        fig.canvas.manager.set_window_title(f"Cluster {cluster}")
         if strip_axes:
             return stripAxes(axScatter)
         return axScatter
@@ -857,7 +918,7 @@ class FigureMaker(object):
         channels: list = [],
         frequencies: list = [],
         frequencyIncrement: int = 1,
-        **kwargs
+        **kwargs,
     ):
         """
         Plots a heat map spectrogram of the LFP for each channel.

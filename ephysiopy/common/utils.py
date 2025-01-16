@@ -5,6 +5,7 @@ import skimage
 from collections import defaultdict
 import inspect
 from enum import Enum
+import copy
 
 
 class VariableToBin(Enum):
@@ -34,7 +35,10 @@ arrays. The bin edges are stored in a list of numpy arrays. The variable to bin
 is stored as an instance of the VariableToBin enum. The map type is stored as an
 instance of the MapType enum. The binned data and bin edges are initialized as
 empty lists. The set_nan_indices method is used to set the values of the binned
-data at the specified indices to NaN.
+data at the specified indices to NaN. bin_units is how to conver the binned data
+to "real" units e.g. for XY it might be how to convert to cms, for time to seconds
+etc. You multiply the binned data by that number to get the real values. Note that
+this might not make sense/ be obvious for some binning (i.e. SPEED_DIR)
 
 The __truediv__ method is used to divide the binned data by the binned data of 
 another BinnedData instance i.e. spike data / pos data to get a rate map. I've
@@ -66,6 +70,7 @@ class BinnedData:
     map_type: MapType = MapType.RATE
     binned_data: list[np.ndarray] = field(default_factory=list)
     bin_edges: list[np.ndarray] = field(default_factory=list)
+    # bin_units: int = 1
 
     def __iter__(self):
         yield from self.binned_data
@@ -82,7 +87,7 @@ class BinnedData:
         return BinnedData(
             variable=self.variable,
             map_type=self.map_type,
-            binned_data=self.binned_data[i],
+            binned_data=copy.deepcopy(self.binned_data[i]),
             bin_edges=self.bin_edges,
         )
 
@@ -207,6 +212,13 @@ class BinnedData:
 
 
 # a basic dataclass for holding filter values
+# Units:
+# time: seconds
+# dir: degrees
+# speed: cm/s
+# xrange/ yrange: cm
+
+
 @dataclass(eq=True)
 class TrialFilter:
     name: str
@@ -267,6 +279,20 @@ def mean_norm(x: np.ndarray, mn=None, axis=0) -> np.ndarray:
 
 
 def min_max_norm(x: np.ndarray, min=None, max=None, axis=0) -> np.ndarray:
+    """
+    Normalise the input array x to lie between min and max
+
+    Parameters
+    ----------
+    x (np.ndarray) - the array to normalise
+    min (float) - the minimun value in the returned array
+    max (float) - the maximum value in the returned array
+    axis - the axis along which to operate. Default 0
+
+    Returns
+    -------
+    out (np.ndarray) - the normalised array
+    """
     if min is None:
         min = np.nanmin(x, axis)
     if max is None:
@@ -544,6 +570,114 @@ def polar(x, y, deg=False):
         return np.hypot(x, y), 180.0 * np.arctan2(y, x) / np.pi
     else:
         return np.hypot(x, y), np.arctan2(y, x)
+
+
+def labelledCumSum(X, L):
+    # check if inputs are masked and save for masking
+    # output and unmask the input
+    x_mask = None
+    if np.ma.is_masked(X):
+        x_mask = X.mask
+        X = X.data
+    l_mask = None
+    if np.ma.is_masked(L):
+        l_mask = L.mask
+        L = L.data
+    orig_mask = np.logical_or(x_mask, l_mask)
+    X = np.ravel(X)
+    L = np.ravel(L)
+    if len(X) != len(L):
+        print("The two inputs need to be of the same length")
+        return
+    X[np.isnan(X)] = 0
+    S = np.cumsum(X)
+
+    mask = L.astype(bool)
+    LL = L[:-1] != L[1::]
+    LL = np.insert(LL, 0, True)
+    isStart = np.logical_and(mask, LL)
+    startInds = np.nonzero(isStart)[0]
+    if len(startInds) == 0:
+        return S
+    if startInds[0] == 0:
+        S_starts = S[startInds[1::] - 1]
+        S_starts = np.insert(S_starts, 0, 0)
+    else:
+        S_starts = S[startInds - 1]
+
+    L_safe = np.cumsum(isStart)
+    S[mask] = S[mask] - S_starts[L_safe[mask] - 1]
+    zero_label_idx = L == 0
+    out_mask = np.logical_or(zero_label_idx, orig_mask)
+    S = np.ma.MaskedArray(S, mask=out_mask)
+    return S
+
+
+def cart2pol(x, y):
+    r = np.hypot(x, y)
+    th = np.arctan2(y, x)
+    return r, th
+
+
+def pol2cart(r, theta):
+    x = r * np.cos(theta)
+    y = r * np.sin(theta)
+    return x, y
+
+
+def applyFilter2Labels(M, x):
+    """
+    M is a logical mask specifying which label numbers to keep
+    x is an array of positive integer labels
+
+    This method sets the undesired labels to 0 and renumbers the remaining
+    labels 1 to n when n is the number of trues in M
+    """
+    newVals = M * np.cumsum(M)
+    x[x > 0] = newVals[x[x > 0] - 1]
+    return x
+
+
+def getLabelStarts(x):
+    x = np.ravel(x)
+    xx = np.ones(len(x) + 1)
+    xx[1::] = x
+    xx = xx[:-1] != xx[1::]
+    xx[0] = True
+    return np.nonzero(np.logical_and(x, xx))[0]
+
+
+def getLabelEnds(x):
+    x = np.ravel(x)
+    xx = np.ones(len(x) + 1)
+    xx[:-1] = x
+    xx = xx[:-1] != xx[1::]
+    xx[-1] = True
+    return np.nonzero(np.logical_and(x, xx))[0]
+
+
+def circ_abs(x):
+    return np.abs(np.mod(x + np.pi, 2 * np.pi) - np.pi)
+
+
+def labelContigNonZeroRuns(x):
+    x = np.ravel(x)
+    xx = np.ones(len(x) + 1)
+    xx[1::] = x
+    xx = xx[:-1] != xx[1::]
+    xx[0] = True
+    L = np.cumsum(np.logical_and(x, xx))
+    L[np.logical_not(x)] = 0
+    return L
+
+
+def fixAngle(a):
+    """
+    Ensure angles lie between -pi and pi
+    a must be in radians
+    """
+    b = np.mod(a + np.pi, 2 * np.pi) - np.pi
+    return b
 
 
 def bwperim(bw, n=4):

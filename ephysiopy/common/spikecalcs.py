@@ -21,7 +21,7 @@ from ephysiopy.common.utils import (
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 
 
-def get_param(waveforms, param="Amp", t=200, fet=1):
+def get_param(waveforms, param="Amp", t=200, fet=1) -> np.ndarray:
     """
     Returns the requested parameter from a spike train as a numpy array
 
@@ -45,7 +45,7 @@ def get_param(waveforms, param="Amp", t=200, fet=1):
     from sklearn.decomposition import PCA
 
     if param == "Amp":
-        return np.ptp(waveforms, axis=-1)
+        return np.ptp(waveforms + 128, axis=-1)
     elif param == "P":
         return np.max(waveforms, axis=-1)
     elif param == "T":
@@ -192,10 +192,11 @@ def cluster_quality(
 
 def xcorr(
     x1: np.ndarray,
-    x2: np.ndarray = None,
+    x2: np.ndarray | None = None,
     Trange: np.ndarray | list = np.array([-0.5, 0.5]),
     binsize: float = 0.001,
     normed=False,
+    **kwargs,
 ) -> BinnedData:
     """
     Calculates the ISIs in x1 or x1 vs x2 within a given range
@@ -208,6 +209,7 @@ def xcorr(
         binsize (float): The size of the bins in seconds
         normed (bool): Whether to divide the counts by the total
                         number of spikes to give a probabilty
+        **kwargs - just there to suck up spare parameters
 
     Returns:
         BinnedData: A BinnedData object containing the binned data and the
@@ -246,7 +248,9 @@ def fit_smoothed_curve_to_xcorr(xc: BinnedData, **kwargs) -> BinnedData:
     pass
 
 
-def contamination_percent(x1: np.ndarray, x2: np.ndarray = None, **kwargs) -> tuple:
+def contamination_percent(
+    x1: np.ndarray, x2: np.ndarray | None = None, **kwargs
+) -> tuple:
     """
     Computes the cross-correlogram between two sets of spikes and
     estimates how refractory the cross-correlogram is.
@@ -727,121 +731,6 @@ class SpikeCalcsGeneric(object):
             sm_spk_rate.compressed(), speed_filt.compressed(), method=method
         )
         return res
-        # if plot:
-        #     # A1) get the bin edges and digitize the speed data
-        #     _, sp_bin_edges = np.histogram(speed_filt.compressed(), bins=int(maxSpeed))
-        #     sp_dig = np.digitize(speed_filt, sp_bin_edges, right=True)
-        #     # A2) get the spikes per speed bin
-        #     spks_per_sp_bin = [
-        #         spk_hist_filt[sp_dig == i] for i in range(len(sp_bin_edges))
-        #     ]
-        #     # A3) put into a list a get the rates and variances
-        #     rate_per_sp_bin = []
-        #     variance_per_sp_bin = []
-        #     for x in spks_per_sp_bin:
-        #         rate_per_sp_bin.append(np.mean(x) * posSampRate)
-        #         variance_per_sp_bin.append((np.var(x) * posSampRate))
-        #     # A4) smooth the result
-        #     rate_filter = signal.windows.gaussian(5, 1.0)
-        #     rate_filter = rate_filter / np.sum(rate_filter)
-        #     binned_spk_rate = signal.filtfilt(rate_filter, 1, rate_per_sp_bin)
-        #     # instead of plotting a scatter plot of the firing rate at each
-        #     # speed bin, plot a log normalised heatmap and overlay results
-        #
-        #     # do some fancy plotting stuff, adding head direction vs firing rate
-        #     # as a heat map in the background
-        #     hd = np.ma.MaskedArray(head_direction, speed_mask)
-        #     # number of bins for hd a bit weird but its so it'll fit on the
-        #     # speed vs rate plot
-        #     _, hd_bin_edges = np.histogram(hd.compressed(), bins=int(maxSpeed))
-        #     _, spk_bin_edges = np.histogram(sm_spk_rate.compressed(), bins=int(maxSpeed))
-        #     hd_mesh, spk_mesh = np.meshgrid(hd_bin_edges, spk_bin_edges)
-        #     # B1) create a 2D histogram of the speed vs head direction
-        #     # B1a) get the "dwell" time map
-        #     binned_hd_dwell, _, _ = np.histogram2d(
-        #         hd.compressed(), sm_spk_rate.compressed(),
-        #         bins=[hd_bin_edges, spk_bin_edges]
-        #     )
-        #     # B1b) get the spike map
-        #     weights = np.bincount(x1, minlength=nSamples)
-        #     weights = np.ma.MaskedArray(weights, speed_mask)
-        #     binned_hd_spike, _, _ = np.histogram2d(
-        #         hd.compressed(), sm_spk_rate.compressed(),
-        #         bins=[hd_bin_edges, spk_bin_edges], weights=weights.compressed()
-        #     )
-        #     binned_hd_rate = binned_hd_spike / binned_hd_dwell
-        #     # blur the binned rate a bit to make it look nicer
-        #     from ephysiopy.common.utils import blur_image
-        #
-        # sm_binned_rate = blur_image(binned_hd_rate, 1)
-        #     sm_binned_rate = np.ma.MaskedArray(binned_hd_rate)
-        #     # sm_binned_rate = np.ma.masked_where(sm_binned_rate <= 1, sm_binned_rate)
-        #     if "ax" not in kwargs.keys():
-        #         fig = plt.figure()
-        #         ax = fig.add_subplot(111)
-        #     else:
-        #         ax = kwargs["ax"]
-        #
-        #     spk_mesh = spk_mesh[:-1, :-1]
-        #     hd_mesh = hd_mesh[:-1, :-1]
-        #     ax2 = ax.twinx()
-        #     ax2.set_ylabel("Heading direction ($^\circ$)")
-        #     pc = ax2.pcolormesh(
-        #         spk_mesh,
-        #         hd_mesh,
-        #         binned_hd_spike.T,
-        #         alpha=0.5,
-        #         shading="nearest",
-        #         edgecolors="None",
-        #     )
-        #     plt.colorbar(pc)
-        #     # overlay the smoothed binned rate against speed
-        #     ax.plot(sp_bin_edges, binned_spk_rate, "k")
-        #     ax.plot(sp_bin_edges, binned_spk_rate +
-        #             np.sqrt(variance_per_sp_bin), "k--")
-        #     ax.plot(sp_bin_edges, binned_spk_rate -
-        #             np.sqrt(variance_per_sp_bin), "k--")
-        #     # do the linear regression and plot the fit too
-        #     # make sure it's done on the same data as the plots above
-        #     # be sure to only use the data that isn't masked
-        #     lr = stats.linregress(speed_filt.compressed(), sm_spk_rate.compressed())
-        #     end_point = lr.intercept + \
-        #         ((sp_bin_edges[-1]-sp_bin_edges[0]) * lr.slope)
-        #     ax.plot(
-        #         [np.min(sp_bin_edges), np.max(sp_bin_edges)],
-        #         [lr.intercept, end_point],
-        #         "r--",
-        #     )
-        #     ax.set_xlim(np.min(sp_bin_edges), np.max(sp_bin_edges[-2]))
-        #     xmax = np.nanmax(binned_spk_rate) + np.nanmax(np.sqrt(variance_per_sp_bin))
-        #     ax.set_ylim(0, xmax * 1.1)
-        #     ax.set_ylabel("Firing rate(Hz)")
-        #     ax.set_xlabel("Running speed(cm/s)")
-        #     ax.set_title(
-        #         "Intercept: {0:.3f}   Slope: {1:.5f}\nPearson: {2:.5f}".format(
-        #             lr.intercept, lr.slope, lr.rvalue
-        #         )
-        #     )
-        # # do some shuffling of the data to see if the result is signficant
-        # if shuffle:
-        #     # shift spikes by at least 30 seconds after trial start and
-        #     # 30 seconds before trial end
-        #     timeSteps = np.random.randint(
-        #         30 * posSampRate, nSamples - (30 * posSampRate), nShuffles
-        #     )
-        #     shuffled_results = []
-        #     for t in timeSteps:
-        #         spk_count = np.roll(spk_hist, t)
-        #         spk_count_filt = np.ma.MaskedArray(spk_count, speed_mask)
-        #         spk_count_sm = signal.filtfilt(h.ravel(), 1, spk_count_filt)
-        #         shuffled_results.append(stats.pearsonr(
-        #             spk_count_sm, speed_filt)[0])
-        #     if plot:
-        #         fig = plt.figure()
-        #         ax = fig.add_subplot(1, 1, 1)
-        #         ax.hist(np.abs(shuffled_results), 20)
-        #         ylims = ax.get_ylim()
-        #         ax.vlines(res, ylims[0], ylims[1], "r")
 
     def get_ifr(self, spike_times: np.array, n_samples: int, **kwargs):
         """
@@ -980,10 +869,14 @@ class SpikeCalcsGeneric(object):
                 return False, normd, 0
             return False, normd
 
-    def theta_mod_idx(self) -> float:
+    def theta_mod_idx(self, **kwargs) -> float:
         """
         Calculates a theta modulation index of a spike train based on the cells
         autocorrelogram.
+
+        The difference of the mean power in the theta frequency band (6-11 Hz) and
+        the mean power in the 1-50 Hz frequency band is divided by their sum to give
+        a metric that lives between 0 and 1
 
         Args:
             x1 (np.array): The spike time-series.
@@ -993,29 +886,25 @@ class SpikeCalcsGeneric(object):
             and trough of the autocorrelogram.
 
         NB This is a fairly skewed metric with a distribution strongly biased
-        to 1 (although more evenly distributed than theta_mod_idxV2 below)
+        to -1 (although more evenly distributed than theta_mod_idxV2 below)
         """
-        ac = self.acorr()
+        ac = self.acorr(**kwargs)
         # Take the fft of the spike train autocorr (from -500 to +500ms)
         from scipy.signal import periodogram
 
-        freqs, power = periodogram(ac.binned_data[0], fs=200, return_onesided=True)
-        # Smooth the power over +/- 1Hz
-        b = signal.windows.boxcar(3)
+        fs = 1.0 / kwargs.get("binsize", 0.0001)
+        freqs, power = periodogram(ac.binned_data[0], fs=fs, return_onesided=True)
+        # Smooth the power over +/- 1Hz when fs=200
+        b = signal.windows.boxcar(3)  # another filter type - blackman?
         h = signal.filtfilt(b, 3, power)
 
-        # Square the amplitude first
+        # Square the amplitude first to get power
         sqd_amp = h**2
-        # Then find the mean power in the +/-1Hz band either side of that
-        theta_band_max_idx = np.nonzero(
-            sqd_amp == np.max(sqd_amp[np.logical_and(freqs > 6, freqs < 11)])
-        )[0][0]
         # Get the mean theta band power - mtbp
-        mtbp = np.mean(sqd_amp[theta_band_max_idx - 1 : theta_band_max_idx + 1])
-        # Find the mean amplitude in the 2-50Hz range
-        other_band_idx = np.logical_and(freqs > 2, freqs < 50)
+        mtbp = np.mean(sqd_amp[np.logical_and(freqs >= 6, freqs <= 11)])
+        # Find the mean amplitude in the 1-50Hz range
         # Get the mean in the other band - mobp
-        mobp = np.mean(sqd_amp[other_band_idx])
+        mobp = np.mean(sqd_amp[np.logical_and(freqs > 2, freqs < 50)])
         # Find the ratio of these two - this is the theta modulation index
         return float((mtbp - mobp) / (mtbp + mobp))
 
@@ -1042,6 +931,56 @@ class SpikeCalcsGeneric(object):
             corr[np.logical_and(bins > 100 / 1000.0, bins < 140 / 1000.0)]
         )
         return float((thetaPhase - thetaAntiPhase) / (thetaPhase + thetaAntiPhase))
+
+    def theta_mod_idxV3(self, **kwargs) -> float:
+        """
+        Another theta modulation index score this time based on the method used
+        by Kornienko et al., (2024) (Kevin Allens lab)
+        see https://doi.org/10.7554/eLife.35949.001
+
+        Basically uses the binned spike train instead of the autocorrelogram as
+        the input to the periodogram function (they use pwelch in R; periodogram is a
+        simplified call to welch in scipy.signal)
+
+        The resulting metric is similar to the one in theta_mod_idx above except
+        that the frequency bands compared to the theta band are narrower and
+        exclusive of the theta band
+
+        Produces a fairly normally distributed looking score with a mean and median
+        pretty close to 0
+        """
+        freqs, power = self.get_ifr_power_spectrum(**kwargs)
+        # smooth with a boxcar filter with a 0.5Hz window
+        win_len = np.count_nonzero(np.logical_and(freqs >= 0, freqs <= 0.5))
+        w = signal.windows.boxcar(win_len)
+        b = signal.filtfilt(w, 1, power)
+        sqd_amp = b**2
+        mtbp = np.mean(sqd_amp[np.logical_and(freqs >= 6, freqs <= 10)])
+        mobp = np.mean(
+            sqd_amp[
+                np.logical_or(
+                    np.logical_and(freqs > 3, freqs < 5),
+                    np.logical_and(freqs > 11, freqs < 13),
+                )
+            ]
+        )
+        return float((mtbp - mobp) / (mtbp + mobp))
+
+    def get_ifr_power_spectrum(self, **kwargs) -> tuple[np.ndarray, ...]:
+        """
+        Returns the power spectrum of the instantaneous firing rate of a cell
+
+        This is what is used to calculate the theta_mod_idxV3 score above
+        """
+        binned_spikes = np.bincount(
+            np.array(self.spike_times * self.pos_sample_rate, dtype=int).ravel(),
+            minlength=int(self.pos_sample_rate * self.duration),
+        )
+        # possibly smooth the spike train...
+        freqs, power = signal.periodogram(binned_spikes, fs=self.pos_sample_rate)
+        freqs = freqs.ravel()
+        power = power.ravel()
+        return freqs, power
 
     def theta_band_max_freq(self):
         """
@@ -1175,65 +1114,70 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         p2t = np.abs(mn_tP[best_chan] - mn_tT[best_chan])
         return p2t * 1000
 
-    def plotClusterSpace(self, waveforms, param="Amp", clusts=None, bins=256, **kwargs):
+    def plotClusterSpace(
+        self,
+        waveforms,
+        param="Amp",
+        clusts: None | int | list = None,
+        cluster_vec: None | np.ndarray | list = None,
+        **kwargs,
+    ):
         """
         Assumes the waveform data is signed 8-bit ints
+
+        NB THe above assumption is mostly broken as waveforms by default are now
+        in volts so you need to construct the trial object (AxonaTrial, OpenEphysBase
+        etc) with volts=False (works for Axona, less sure about OE)
         TODO: aspect of plot boxes in ImageGrid not right as scaled by range of
         values now
+
+        Parameters
+        ----------
+        waveforms (np.ndarray) - the array of waveform data. For Axona recordings this
+                                 is nSpikes x nChannels x nSamplesPerWaveform
+        param (str) - the parameter to plot. See get_param at the top of this file
+                      for valid args
+        clusts (optional - int or list) - which clusters to colour in
+        cluster_vec (optional - np.ndarray or list) - the cluster identity of each spike in waveforms
+                                           Must be nSpikes long
         """
+        if cluster_vec is not None:
+            assert np.shape(waveforms)[0] == len(cluster_vec)
+
         from itertools import combinations
 
-        import matplotlib.colors as colors
         from mpl_toolkits.axes_grid1 import ImageGrid
-
+        from matplotlib.collections import RegularPolyCollection
         from ephysiopy.axona.tintcolours import colours as tcols
+        from numpy.lib.arraysetops import isin
+
+        c_vec = np.zeros(shape=(np.shape(waveforms)[0]))
+        if clusts is not None:
+            idx = isin(cluster_vec, clusts)
+            c_vec[idx] = cluster_vec[idx]
+        c_vec = [[np.floor(t * 255) for t in tcols[i]] for i in c_vec.astype(int)]
 
         self.scaling = np.full(4, 15)
 
         amps = get_param(waveforms, param=param)
-        cmap = np.tile(tcols[0], (bins, 1))
-        cmap[0] = (1, 1, 1)
-        cmap = colors.ListedColormap(cmap)
-        cmap._init()
-        alpha_vals = np.ones(cmap.N + 3)
-        alpha_vals[0] = 0
-        cmap._lut[:, -1] = alpha_vals
         cmb = combinations(range(4), 2)
         if "fig" in kwargs:
             fig = kwargs["fig"]
         else:
             fig = plt.figure(figsize=(8, 6))
         grid = ImageGrid(fig, 111, nrows_ncols=(2, 3), axes_pad=0.1, aspect=False)
-        clustCMap0 = np.tile(tcols[0], (bins, 1))
-        clustCMap0[0] = (1, 1, 1)
-        clustCMap0 = colors.ListedColormap(clustCMap0)
-        clustCMap0._init()
-        clustCMap0._lut[:, -1] = alpha_vals
         for i, c in enumerate(cmb):
-            h, ye, xe = np.histogram2d(
-                amps[:, c[0]],
-                amps[:, c[1]],
-                range=((-128, 127), (-128, 127)),
-                bins=bins,
-            )
-            x, y = np.meshgrid(xe[0:-1], ye[0:-1])
-            grid[i].pcolormesh(
-                x, y, h, cmap=clustCMap0, shading="nearest", edgecolors="face"
-            )
-            h, ye, xe = np.histogram2d(
-                amps[:, c[0]],
-                amps[:, c[1]],
-                range=((-128, 127), (-128, 127)),
-                bins=bins,
-            )
-            clustCMap = np.tile(tcols[1], (bins, 1))
-            clustCMap[0] = (1, 1, 1)
-            clustCMap = colors.ListedColormap(clustCMap)
-            clustCMap._init()
-            clustCMap._lut[:, -1] = alpha_vals
-            grid[i].pcolormesh(
-                x, y, h, cmap=clustCMap, shading="nearest", edgecolors="face"
-            )
+            if np.sum(amps[:, c[0]]) > 0 and np.sum(amps[:, c[1]]) > 0:
+                xy = np.array([amps[:, c[0]], amps[:, c[1]]]).T
+                rects = RegularPolyCollection(
+                    numsides=4,
+                    rotation=0,
+                    facecolors=c_vec,
+                    edgecolors=c_vec,
+                    offsets=xy,
+                    offset_transform=grid[i].transData,
+                )
+                grid[i].add_collection(rects)
             s = str(c[0] + 1) + " v " + str(c[1] + 1)
             grid[i].text(
                 0.05,
@@ -1245,8 +1189,8 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
                 color="k",
                 transform=grid[i].transAxes,
             )
-            grid[i].set_xlim(xe.min(), xe.max())
-            grid[i].set_ylim(ye.min(), ye.max())
+            grid[i].set_xlim(0, 256)
+            grid[i].set_ylim(0, 256)
         plt.setp([a.get_xticklabels() for a in grid], visible=False)
         plt.setp([a.get_yticklabels() for a in grid], visible=False)
         return fig

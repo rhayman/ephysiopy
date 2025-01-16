@@ -5,13 +5,17 @@ import matplotlib.transforms as transforms
 from matplotlib.patches import Rectangle
 import numpy as np
 from pathlib import Path, PurePath
+from typing import Callable
 from scipy.signal import ShortTimeFFT
 from scipy.signal.windows import gaussian
+from scipy.stats import linregress
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 from ephysiopy.common.utils import window_rms
 from ephysiopy.openephys2py.OESettings import Settings
+from ephysiopy.openephys2py.KiloSort import KiloSortSession
+from ephysiopy.visualise.plotting import FigureMaker
 
 from phylib.io.model import TemplateModel
 from scipy import signal
@@ -27,11 +31,11 @@ class CosineDirectionalTuning(object):
 
     def __init__(
         self,
-        spike_times: np.array,
-        pos_times: np.array,
-        spk_clusters: np.array,
-        x: np.array,
-        y: np.array,
+        spike_times: np.ndarray,
+        pos_times: np.ndarray,
+        spk_clusters: np.ndarray,
+        x: np.ndarray,
+        y: np.ndarray,
         tracker_params={},
     ):
         """
@@ -666,8 +670,8 @@ class LFPOscillations(object):
         the frequency of laser stimulation was at 6.66Hz.
 
         Note:
-            This method may not work as expected for each trial and might
-            require tailoring. A potential improvement could be using mean
+            This method needs tweaking for each trial as the power in the signal
+            is variable across trials / animals etc. A potential improvement could be using mean
             power or a similar metric.
         """
         from scipy.signal import filtfilt, firwin, kaiserord
@@ -693,7 +697,7 @@ class LFPOscillations(object):
 
     def theta_running(
         self, pos_data: PosCalcsGeneric, lfp_data: EEGCalcsGeneric, **kwargs
-    ):
+    ) -> tuple[np.ma.MaskedArray, ...]:
         """
         Returns metrics to do with the theta frequency/ power and running speed/ acceleration
 
@@ -704,8 +708,8 @@ class LFPOscillations(object):
         low_speed = kwargs.pop("low_speed", 2)
         high_speed = kwargs.pop("high_speed", 35)
         nbins = kwargs.pop("nbins", 13)
-        filt_sig, phase, amplitude, amplitude_filtered, inst_freq = self.getFreqPhase(
-            band2filter=[low_theta, high_theta]
+        _, _, _, _, inst_freq = self.getFreqPhase(
+            lfp_data.sig, band2filter=[low_theta, high_theta]
         )
         # interpolate speed to match the frequency of the LFP data
         eeg_time = np.linspace(
@@ -720,7 +724,58 @@ class LFPOscillations(object):
                 np.linspace(low_speed, high_speed, nbins),
             ),
         )
-        plt.pcolormesh(e[1], e[0], h, cmap=matplotlib.colormaps["bone_r"])
+        # overlay the mean points for each speed bin
+        spd_bins = np.linspace(low_speed, high_speed, nbins)
+
+        def __freq_calc__(fn: Callable) -> list:
+            return [
+                fn(
+                    inst_freq[
+                        np.logical_and(interpolated_speed > s1, interpolated_speed < s2)
+                    ]
+                )
+                for s1, s2 in zip(spd_bins[:-1], spd_bins[1:])
+            ]
+
+        mean_freqs = __freq_calc__(np.mean)
+        counts = [
+            np.count_nonzero(np.logical_and(pos_data.speed >= s1, pos_data.speed < s2))
+            for s1, s2 in zip(spd_bins[:-1], spd_bins[1:])
+        ]
+        std_freqs = __freq_calc__(np.std) / np.sqrt(counts)
+
+        plt.pcolormesh(
+            e[1],
+            e[0],
+            h,
+            cmap=matplotlib.colormaps["bone_r"],
+            norm=matplotlib.colors.LogNorm(),
+        )
+        plt.colorbar()
+        plt.errorbar(x=spd_bins[1:] - 2, y=mean_freqs, yerr=std_freqs, fmt="r.")
+        ax = plt.gca()
+        ax.set_ylim((low_theta, high_theta))
+        ax.set_ylabel("Frequency (Hz)")
+        ax.set_xlabel("Running speed (cm/s)")
+        # mask the speed and lfp vectors so we can return these based
+        # on the low/high bounds of speed & theta for doing correlations/
+        # stats later
+        speed_masked = np.ma.masked_outside(interpolated_speed, low_speed, high_speed)
+        theta_masked = np.ma.masked_outside(inst_freq, low_theta, high_theta)
+        # extract both masks, combine and re-apply
+        mask = np.logical_or(speed_masked.mask, theta_masked.mask)
+        speed_masked.mask = mask
+        theta_masked.mask = mask
+        # do the linear regression to add to the plot
+        # alternative argument here says we expect the correlation to be positive
+        res = linregress(
+            speed_masked.compressed(), theta_masked.compressed(), alternative="greater"
+        )
+        ax.plot(spd_bins[1:] - 2, res.intercept + res.slope * (spd_bins[1:] - 2), "r--")
+        ax.set_title(
+            f"r = {res.rvalue:.2f}, p = {res.pvalue:.2f}, intercept = {res.intercept:.2f}"
+        )
+        return speed_masked, theta_masked
 
     def get_theta_phase(self, cluster_times: np.ndarray, **kwargs):
         """
@@ -802,6 +857,7 @@ class Rippler(object):
 
     """
 
+    n_channels = 64
     # time units are seconds, frequencies and sample rates in Hz
     pre_ttl = 0.05
     post_ttl = 0.2
@@ -843,9 +899,9 @@ class Rippler(object):
         detector_settings = self.settings.get_processor("Ripple")
         self.ttl_duration = float(detector_settings.ttl_duration)
 
-        pname_for_ttl_data = self.__find_path_to_ripple_ttl(self.pname_for_trial)
+        pname_for_ttl_data = self._find_path_to_ripple_ttl(self.pname_for_trial)
         sync_file = pname_for_ttl_data.parents[2] / Path("sync_messages.txt")
-        recording_start_time = self.__load_start_time(sync_file)
+        recording_start_time = self._load_start_time(sync_file)
         ttl_ts = np.load(pname_for_ttl_data / "timestamps.npy") - recording_start_time
         ttl_states = np.load(pname_for_ttl_data / "states.npy")
         all_ons = ttl_ts[ttl_states == int(detector_settings.Ripple_save)]
@@ -871,7 +927,7 @@ class Rippler(object):
             LFP.sig.shape[0],
         )
 
-    def __load_start_time(self, path_to_sync_message_file: Path):
+    def _load_start_time(self, path_to_sync_message_file: Path):
         """
         Returns the start time contained in a sync file from OE
         """
@@ -887,7 +943,30 @@ class Rippler(object):
                     recording_start_time = start_time / float(sample_rate)
         return recording_start_time
 
-    def __find_path_to_ripple_ttl(self, trial_root: Path, **kwargs) -> Path:
+    def _find_path_to_continuous(self, trial_root: Path, **kwargs) -> Path:
+        """
+        Iterates through a directory tree and finds the path to the
+        Ripple Detector plugin data and returns its location
+        """
+        exp_name = kwargs.pop("experiment", "experiment1")
+        rec_name = kwargs.pop("recording", "recording1")
+        folder_match = (
+            trial_root
+            / Path("Record Node [0-9][0-9][0-9]")
+            / Path(exp_name)
+            / Path(rec_name)
+            / Path("events")
+            / Path("Acquisition_Board-[0-9][0-9][0-9].*")
+        )
+        for d, c, f in os.walk(trial_root):
+            for ff in f:
+                if "." not in c:  # ignore hidden directories
+                    if "continuous.dat" in ff:
+                        if PurePath(d).match(str(folder_match)):
+                            return Path(d)
+        return Path()
+
+    def _find_path_to_ripple_ttl(self, trial_root: Path, **kwargs) -> Path:
         """
         Iterates through a directory tree and finds the path to the
         Ripple Detector plugin data and returns its location
@@ -900,7 +979,7 @@ class Rippler(object):
             / Path(exp_name)
             / Path(rec_name)
             / Path("events")
-            / Path("Ripple_Detector-[0-9][0-9][0-9].Rhythm Data-[A-Z]")
+            / Path("Ripple_Detector-[0-9][0-9][0-9].*")
             / Path("TTL")
         )
         for d, c, f in os.walk(trial_root):
@@ -910,6 +989,28 @@ class Rippler(object):
                         if PurePath(d).match(str(ripple_match)):
                             return Path(d)
         return Path()
+
+    def plot_rasters(self, laser_on: bool):
+        F = FigureMaker()
+        self.path2APdata = self._find_path_to_continuous(self.pname_for_trial)
+        K = KiloSortSession(self.path2APdata)
+        F.ttl_data = {}
+        if laser_on:
+            F.ttl_data["ttl_timestamps"] = self.laser_on_ts
+            ttls = np.array([self.laser_on_ts, self.laser_off_ts]).T
+            F.ttl_data["stim_duration"] = (
+                np.max(np.diff(ttls)) * 1000
+            )  # needs to be in ms
+        else:
+            F.ttl_data["ttl_timestamps"] = self.no_laser_on_ts
+            F.ttl_data["stim_duration"] = self.ttl_duration
+        K.load()
+        K.removeNoiseClusters()
+        K.removeKSNoiseClusters()
+        for c in K.good_clusters:
+            ts = K.get_cluster_spike_times(c) / 3e4
+            F._getRasterPlot(spk_times=ts, cluster=c)
+            plt.show()
 
     def plot_and_save_ripple_band_lfp_with_ttl(
         self, pname_for_saving: Path, save: bool = True
@@ -1114,7 +1215,7 @@ class Rippler(object):
             plt.show()
         return SFT, N, np.abs(Sx2)
 
-    def __find_high_power_periods(self, n: int = 3, t: int = 10) -> np.ndarray:
+    def _find_high_power_periods(self, n: int = 3, t: int = 10) -> np.ndarray:
         """
         Find periods where the power in the ripple band is above n standard deviations
         for t samples. Meant to recapitulate the algorithm from the Ripple Detector
