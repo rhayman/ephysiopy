@@ -623,13 +623,13 @@ class phasePrecession2D(object):
         self.getThetaProps()
         # get the indices of spikes for various metrics such as
         # theta cycle, run etc
-        spkD = self.getSpikeProps(posD["runLabel"], runD["runDurationInPosBins"])
-        self.spkdict = spkD
+        # spkD = self.getSpikeProps(posD["runLabel"], runD["runDurationInPosBins"])
+        # self.spkdict = spkD
         # at this point the 'values' and 'pha' arrays in the regressors dict are all
         # npos elements long and are masked arrays. keep as masked arrays and just modify the
         # masks instead of truncating the data
         # Do the regressions
-        self._ppRegress(spkD)
+        # self._ppRegress(spkD)
 
         # Plot the results if asked
         if do_plot:
