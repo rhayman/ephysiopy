@@ -16,6 +16,7 @@ from ephysiopy.common.utils import (
     getLabelEnds,
     pol2cart,
     cart2pol,
+    repeat_ind,
 )
 import skimage
 from skimage.measure._regionprops import (
@@ -95,6 +96,9 @@ Each run needs to have some information about the field to which it belongs
 so the constructor takes in the peak x-y coordinate of the field and its index
 as well as the coordinates of the perimeter of the field
 """
+# TODO: there are edge cases where the runs might have been filtered and data
+# thrown out leaving empty runs. These aren't dealt with here and not sure if
+# this should be the responsibility of the calling function or dealt with here...
 
 
 class RunProps(object):
@@ -108,6 +112,7 @@ class RunProps(object):
         peak_xy,
         max_index,
         perimeter_coords,
+        lfp_data=LFPSegment,
     ):
         assert xy_coords.shape[1] == len(spike_count)
         self.label = label
@@ -115,6 +120,7 @@ class RunProps(object):
         self._slice = slice
         self._spike_count = spike_count
         self._speed = speed
+        self.lfp_data = lfp_data
         self._peak_xy = peak_xy
         self._max_index = max_index
         self._perimeter_coords = perimeter_coords
@@ -180,7 +186,9 @@ class RunProps(object):
 
     @property
     def spike_position_index(self):
-        return np.arange(self._slice.start, self._slice.stop)[self._spike_count > 0]
+        indices = repeat_ind(self._spike_count)
+        times = np.arange(self._slice.start, self._slice.stop)
+        return np.take(times, indices)
 
     @property
     def observed_spikes(self):
@@ -310,6 +318,15 @@ class RunProps(object):
         xy_df = np.diff(self.xy)
         traversed_distance = np.sum(np.hypot(xy_df[0], xy_df[1]))
         return direct_line_distance / traversed_distance
+
+    # Calculate some measures to do with the LFP data
+    @property
+    def phase_of_spikes(self):
+        slice_indices = (self.lfp_data.spike_times * self.lfp_data.sample_rate).astype(
+            int
+        )
+        array_indices = slice_indices - self.lfp_data.slice.start
+        return self.lfp_data.phase[array_indices]
 
 
 class FieldProps(RegionProperties):

@@ -613,16 +613,30 @@ class phasePrecession2D(object):
             self.field_threshold,
             self.area_threshold,
         )
+        spikes_per_pos = np.bincount(
+            (self.spike_ts * self.pos_sample_rate).astype(int),
+            minlength=self.PosData.npos,
+        )
+        field_properties = fieldprops(
+            labels,
+            binned_data,
+            self.orig_xy,
+            spikes_per_pos,
+            sample_rate=self.pos_sample_rate,
+        )
+        field_properties = filter_runs(
+            field_properties,
+            self.minimum_allowed_run_duration,
+            self.minimum_allowed_run_speed,
+            min_spikes=1,
+        )
 
-        # split into runs
-        field_properties = self.getPosProps(labels)
+        # get theta cycles, amplitudes, phase etc
+        self.getThetaProps(field_properties)
+        field_properties = self.getPosProps(labels, filter=False)
         # self.posdict = posD
         # self.rundict = runD
 
-        # get theta cycles, amplitudes, phase etc
-        self.getThetaProps()
-        # get the indices of spikes for various metrics such as
-        # theta cycle, run etc
         spkD = self.getSpikeProps(posD["runLabel"], runD["runDurationInPosBins"])
         self.spkdict = spkD
         # at this point the 'values' and 'pha' arrays in the regressors dict are all
@@ -650,6 +664,7 @@ class phasePrecession2D(object):
     def getPosProps(
         self,
         labels: np.ndarray,
+        filter: bool = False,
     ) -> list:
         """
         Uses the output of partitionFields and returns vectors the same
@@ -700,15 +715,16 @@ class phasePrecession2D(object):
             xy,
             observed_spikes_in_time,
         )
-        print(
-            f"Filtering runs for min duration {self.minimum_allowed_run_duration}, speed {self.minimum_allowed_run_speed} and min spikes {self.min_spikes}"
-        )
-        field_props = filter_runs(
-            field_props,
-            self.minimum_allowed_run_duration,
-            self.minimum_allowed_run_speed,
-            min_spikes=1,
-        )
+        if filter:
+            print(
+                f"Filtering runs for min duration {self.minimum_allowed_run_duration}, speed {self.minimum_allowed_run_speed} and min spikes {self.min_spikes}"
+            )
+            field_props = filter_runs(
+                field_props,
+                self.minimum_allowed_run_duration,
+                self.minimum_allowed_run_speed,
+                min_spikes=1,
+            )
         # Smooth the runs before calculating other metrics
         [
             f.smooth_runs(
@@ -783,6 +799,12 @@ class phasePrecession2D(object):
         Processes the LFP data and inserts into each run within each field
         a segment of LFP data that has had its phase and amplitude extracted
         as well as some other metadata
+
+        Notes:
+        -----
+        The cycle label stuff below assigns an integer value to each eeg sample
+        that corresponds to the theta oscillation for that sample (starting at 1)
+        that are used
         """
         spikeTS = self.spike_ts
         phase = np.ma.MaskedArray(self.phase, mask=True)
@@ -1117,7 +1139,7 @@ def filter_runs(
     min_duration: float | int,
     min_spikes: int = 0,
 ) -> list[FieldProps]:
-    for field in field_props:
+    for idx, field in enumerate(field_props):
         runs_to_keep = [
             run
             for run in field.runs
@@ -1127,7 +1149,10 @@ def filter_runs(
                 and run.n_spikes >= min_spikes
             )
         ]
-        field.runs = runs_to_keep
+        if len(runs_to_keep) > 0:
+            field.runs = runs_to_keep
+        else:
+            field_props.pop(idx)
     return field_props
 
 
