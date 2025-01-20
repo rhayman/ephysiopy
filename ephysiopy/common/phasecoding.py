@@ -1034,7 +1034,7 @@ def getPhaseOfMinSpiking(spkPhase):
     kernelLen = 180
     kernelSig = kernelLen / 4
 
-    k = signal.gaussian(kernelLen, kernelSig)
+    k = signal.windows.gaussian(kernelLen, kernelSig)
     bins = np.arange(-179.5, 180, 1)
     phaseDist, _ = np.histogram(spkPhase / np.pi * 180, bins=bins)
     phaseDist = ndimage.convolve(phaseDist, k)

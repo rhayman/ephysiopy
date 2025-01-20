@@ -30,4 +30,11 @@ P = phasePrecession2D(
 )
 
 peaksXY, _, labels, _ = P.partitionFields(plot=True)
+
+posD, runD = P.getPosProps(labels, peaksXY, laserEvents=None, plot=True)
+
+P.getThetaProps()
+
+spkD = P.getSpikeProps(posD["runLabel"], runD["meanDir"], runD["runDurationInPosBins"])
+
 plt.show()
