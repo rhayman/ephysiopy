@@ -1149,7 +1149,12 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         from mpl_toolkits.axes_grid1 import ImageGrid
         from matplotlib.collections import RegularPolyCollection
         from ephysiopy.axona.tintcolours import colours as tcols
-        from numpy.lib.arraysetops import isin
+        from numpy.version import version as np_vers
+
+        try:
+            from numpy.lib.arraysetops import isin
+        except:
+            import np.isin as isin
 
         c_vec = np.zeros(shape=(np.shape(waveforms)[0]))
         if clusts is not None:
