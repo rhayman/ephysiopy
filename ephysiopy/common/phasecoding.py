@@ -584,7 +584,7 @@ class phasePrecession2D(object):
             imM = np.ma.MaskedArray(im, mask=~fieldPerimMask, copy=True)
             #############################################
             # create custom colormap
-            cmap = plt.cm.get_cmap("jet_r")
+            cmap = plt.colormaps["jet_r"]
             cmaplist = [cmap(i) for i in range(cmap.N)]
             cmaplist[0] = (1, 1, 1, 1)
             cmap = cmap.from_list("Runvals cmap", cmaplist, cmap.N)
