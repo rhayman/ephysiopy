@@ -1229,8 +1229,11 @@ def limit_to_one(A, prc=50, min_dist=5):
     Ac = signal.convolve(Ac, g, mode="same")
     # remove really small values
     Ac[Ac < 1e-10] = 0
+    Ac_r = skimage.exposure.rescale_intensity(
+        Ac, in_range="image", out_range=(0, 1000)
+    ).astype(np.int32)
     peak_idx = skimage.feature.peak_local_max(
-        Ac, min_distance=min_dist, exclude_border=False
+        Ac_r, min_distance=min_dist, exclude_border=False
     )
     peak_mask = np.zeros_like(Ac, dtype=bool)
     peak_mask[tuple(peak_idx.T)] = True
@@ -1285,8 +1288,11 @@ def global_threshold(A, prc=50, min_dist=5):
     Ac = signal.convolve(Ac, g, mode="same")
     maxRate = np.nanmax(np.ravel(Ac))
     Ac[Ac < maxRate * (prc / float(100))] = 0
+    Ac_r = skimage.exposure.rescale_intensity(
+        Ac, in_range="image", out_range=(0, 1000)
+    ).astype(np.int32)
     peak_idx = skimage.feature.peak_local_max(
-        Ac, min_distance=min_dist, exclude_border=False
+        Ac_r, min_distance=min_dist, exclude_border=False
     )
     peak_mask = np.zeros_like(Ac, dtype=bool)
     peak_mask[tuple(peak_idx.T)] = True
@@ -1540,10 +1546,11 @@ def _get_field_labels(A: np.ndarray, **kwargs) -> tuple:
 
     A[~np.isfinite(A)] = -1
     A[A < 0] = -1
-
-    breakpoint()
+    Ac_r = skimage.exposure.rescale_intensity(
+        A, in_range="image", out_range=(0, 1000)
+    ).astype(np.int32)
     peak_coords = skimage.feature.peak_local_max(
-        A, min_distance=min_distance, exclude_border=clear_border
+        Ac_r, min_distance=min_distance, exclude_border=clear_border
     )
     peaksMask = np.zeros_like(A, dtype=bool)
     peaksMask[tuple(peak_coords.T)] = True

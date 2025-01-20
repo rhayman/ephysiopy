@@ -540,7 +540,6 @@ class phasePrecession2D(object):
 
     def update_regressor_mask(self, key: str, indices):
         # Mask entries in the 'values' and 'pha' arrays of the relevant regressor
-        breakpoint()
         self.regressors[key]["values"].mask[indices] = False
 
     def get_regressors(self):
@@ -900,7 +899,6 @@ class phasePrecession2D(object):
         rateInPosBins = spkCount[1::] / durationInPosBins.astype(float)
         # update the regressor dict from __init__ with relevant values
         # all up at 1.0
-        breakpoint()
         if "spk_numWithinRun" in self.regressors.keys():
             self.update_regressor_values("spk_numWithinRun", numWithinRun)
         # all up at 1.0
