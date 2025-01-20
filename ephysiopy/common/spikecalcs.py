@@ -1154,7 +1154,7 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         try:
             from numpy.lib.arraysetops import isin
         except:
-            import numpy.isin as isin
+            from numpy import isin as isin
 
         c_vec = np.zeros(shape=(np.shape(waveforms)[0]))
         if clusts is not None:
