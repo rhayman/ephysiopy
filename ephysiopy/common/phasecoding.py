@@ -541,7 +541,7 @@ class phasePrecession2D(object):
         # set up the smoothing kernel
         kernLenInBins = np.round(self.ifr_kernel_len * self.bins_per_second)
         kernSig = self.ifr_kernel_sigma * self.bins_per_second
-        k = signal.gaussian(kernLenInBins, kernSig)
+        k = signal.windows.gaussian(kernLenInBins, kernSig)
         # get a count of spikes to smooth over
         spkCount = np.bincount(spkPosInd, minlength=nPos)
         # apply the smoothing kernel
@@ -603,7 +603,7 @@ class phasePrecession2D(object):
             # add a custom colorbar for colors in runVals
 
             # create a custom colormap for the plot
-            cmap = matplotlib.cm.get_cmap("hsv")
+            cmap = matplotlib.colormaps["hsv"]
             cmaplist = [cmap(i) for i in range(cmap.N)]
             cmaplist[0] = (1, 1, 1, 1)
             cmap = cmap.from_list("Perim cmap", cmaplist, cmap.N)
