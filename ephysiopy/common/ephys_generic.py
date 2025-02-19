@@ -598,3 +598,126 @@ class PosCalcsGeneric(object):
             self.xyTS.mask = mask
         self.dir.mask = mask
         self.speed.mask = mask
+
+
+"""
+Methods for quantifying data from AUX channels from the openephys 
+headstages.
+
+Idea is to find periods of quiescence for ripple/ MUA/ replay analysis
+"""
+
+
+def downsample_aux(
+    data: np.ndarray, source_freq: int = 30000, target_freq: int = 50, axis=-1
+):
+    """
+    Downsamples the default 30000Hz AUX signal to a default of 500Hz
+    """
+    denom = np.gcd(int(source_freq), int(target_freq))
+    sig = signal.resample_poly(
+        data.astype(float),
+        target_freq / denom,
+        source_freq / denom,
+        axis,
+        padtype="line",
+    )
+    return sig
+
+
+def calculate_rms_and_std(
+    sig: np.ndarray, time_window: list = [0, 10], fs: int = 50
+) -> tuple:
+    """
+    Calculate the root mean square value for time_window (in seconds)
+
+    Parameters
+    ----------
+    sig: the downsampled AUX data (single channel)
+    time_window: the range of times in seconds to calculate the RMS for
+    fs: the sampling frequency of sig
+    """
+    rms = np.nanmean(
+        np.sqrt(np.power(sig[int(time_window[0] * fs) : int(time_window[1] * fs)], 2))
+    )
+    std = np.nanstd(
+        np.sqrt(np.power(sig[int(time_window[0] * fs) : int(time_window[1] * fs)], 2))
+    )
+    return rms, std
+
+
+def find_high_amp_long_duration(
+    raw_signal: np.ndarray,
+    fs: int,
+    amp_std: int = 3,
+    duration_range: list = [0.03, 0.11],
+    duration_std: int = 1,
+) -> np.ma.MaskedArray:
+    """
+    Find periods of high amplitude and long duration in the ripple bandpass
+    filtered signal.
+
+    From Todorova & Zugaro (supp info):
+
+    "To detect ripple events, we first detrended the LFP signals and used the Hilbert transform
+    to compute the ripple band (100–250 Hz) amplitude for each channel recorded from the
+    CA1 pyramidal layer. We then averaged these amplitudes, yielding the mean instanta-
+    neous ripple amplitude. To exclude events of high spectral power not specific to the ripple
+    band, we then subtracted the mean high-frequency (300–500 Hz) amplitude (if the differ-
+    ence was negative, we set it to 0). Finally, we z-scored this signal, yielding a corrected
+    and normalized ripple amplitude R(t). Ripples were defined as events where R(t) crossed
+    a threshold of 3 s.d. and remained above 1 s.d. for 30 to 110 ms."
+
+    Parameters
+    ----------
+    raw_signal (np.ndarray) - the raw LFP signal which will be filtered here
+    fs (int) - the sampliing frequency of the raw signal
+    amp_std (int) - the signal needs to be this many standard deviations above the mean
+    duration (int) - how long in seconds the ripple should be
+    duration_std (int) - how many standard deviations above the mean the ripples should
+                            be for 'duration' ms
+    Returns
+    -------
+    masked_lfp (np.ma.MaskedArray) - the bandpass filtered LFP that has been masked
+                                        outside of epochs that don't meet the above thresholds
+
+    References
+    ----------
+    Todorova & Zugaro, 2019. Isolated cortical computations during delta waves support memory consolidation. 366: 6463
+    doi: 10.1126/science.aay0616
+    """
+    from scipy.signal import detrend, hilbert
+    from ephysiopy.common.utils import get_z_score
+
+    E = EEGCalcsGeneric(raw_signal, fs)
+    detrended_lfp = detrend(raw_signal)
+    E.sig = detrended_lfp
+
+    def get_filtered_amplitude(E: EEGCalcsGeneric, filt: list) -> np.ndarray:
+        f_lfp = E.butterFilter(filt[0], filt[1])
+        analytic_lfp = hilbert(f_lfp)
+        return np.abs(analytic_lfp)
+
+    ripple_amplitude = get_filtered_amplitude(E, [100, 250])
+    high_freq_amplitude = get_filtered_amplitude(E, [300, 499])
+
+    amplitude_df = ripple_amplitude - high_freq_amplitude
+    amplitude_df[amplitude_df < 0] = 0
+
+    Rt = get_z_score(amplitude_df)
+    Rt_mean = np.nanmean(Rt)
+    Rt_std = np.nanstd(Rt)
+    print(f"Rt mean: {Rt_mean}\nRt std: {Rt_std}")
+
+    correct_duration_events = np.ma.masked_where(
+        Rt < (Rt_mean + Rt_std * duration_std), Rt
+    )
+    candidate_slices = np.ma.clump_unmasked(correct_duration_events)
+    mask = np.ones_like(Rt, dtype=bool)
+    for i_slice in candidate_slices:
+        dt = (i_slice.stop - i_slice.start) / fs
+        if np.logical_and(dt > duration_range[0], dt < duration_range[1]):
+            if np.any(Rt[i_slice] > (Rt_mean + Rt_std * amp_std)):
+                mask[i_slice] = False
+
+    return np.ma.MaskedArray(Rt, mask=mask)

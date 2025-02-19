@@ -18,7 +18,11 @@ pp_config = phase_precession_config
 pp_config["minimum_allowed_run_speed"] = 0.1
 pp_config["minimum_allowed_run_duration"] = 1
 pp_config["convert_xy_2_cm"] = True
-pp_config["ppm"] = 450
+pp_config["ppm"] = 445
+pp_config["field_smoothing_kernel_len"] = 31
+pp_config["field_smoothing_kernel_sigma"] = 13
+pp_config["field_threshold"] = 0.5
+pp_config["field_threshold_percent"] = 20
 
 P = phasePrecession2D(
     T.EEGCalcs.sig,
@@ -31,7 +35,7 @@ P = phasePrecession2D(
 
 peaksXY, _, labels, _ = P.partitionFields(plot=True)
 
-posD, runD = P.getPosProps(labels, peaksXY, laserEvents=None, plot=True)
+posD, runD = P.getPosProps(labels, peaksXY, laserEvents=None, plot=False)
 
 P.getThetaProps()
 

@@ -846,7 +846,7 @@ class FigureMaker(object):
         scattTrans = transforms.blended_transform_factory(
             axScatter.transData, axScatter.transAxes
         )
-        stim_pwidth = self.ttl_data["stim_duration"] / 1000
+        stim_pwidth = self.ttl_data["stim_duration"]
         if stim_pwidth is None:
             raise ValueError("stim duration is None")
 

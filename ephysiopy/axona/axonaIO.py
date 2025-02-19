@@ -611,7 +611,7 @@ class Stim(dict, IO):
         setHdr = self.getHeader(filename_root.with_suffix(".set"))
         stim_duration = [setHdr[k] for k in setHdr.keys() if "stim_pwidth" in k][0]
         stim_duration = int(stim_duration)
-        stim_duration = stim_duration / 1000  # in ms now
+        stim_duration = stim_duration  # in seconds
         self.__setitem__("stim_duration", stim_duration)
 
     def update(self, *args, **kwargs):

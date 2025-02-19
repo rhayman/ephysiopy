@@ -150,7 +150,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     (OpenEphysNWB is there but not used)
     """
 
-    def __init__(self, pname: Path) -> None:
+    def __init__(self, pname: Path, **kwargs) -> None:
         assert Path(pname).exists(), f"Path provided doesnt exist: {pname}"
         self._pname = pname
         self._settings = None
@@ -885,7 +885,7 @@ class OpenEphysBase(TrialInterface):
         # Attempt to find the files contained in the parent directory
         # related to the recording with the default experiment and
         # recording name
-        self.find_files(pname)
+        self.find_files(pname, **kwargs)
         self.sample_rate = None
         self.sample_rate = self.settings.processors[rec_method].sample_rate
         if self.sample_rate is None:
@@ -915,6 +915,7 @@ class OpenEphysBase(TrialInterface):
                     start_time = int(tokens[-1])
                     sample_rate = int(tokens[0].split("@")[-1].strip().split()[0])
                     recording_start_time = start_time / float(sample_rate)
+        self.recording_start_time = recording_start_time
         return recording_start_time
 
     def get_spike_times(
@@ -993,7 +994,7 @@ class OpenEphysBase(TrialInterface):
             # pname_root gets walked through and over-written with
             # correct location of settings.xml
             self.settings = Settings(self.pname)
-            print("Loaded settings data")
+            print("Loaded settings data\n")
 
     def get_available_clusters_channels(self) -> dict:
         if self.template_model is None:
@@ -1134,7 +1135,7 @@ class OpenEphysBase(TrialInterface):
 
     def load_ttl(self, *args, **kwargs) -> bool:
         """
-        Args:
+        Valid kwargs:
             StimControl_id (str): This is the string
                 "StimControl [0-9][0-9][0-9]" where the numbers
                 are the node id in the openephys signal chain
@@ -1147,6 +1148,8 @@ class OpenEphysBase(TrialInterface):
                 are low TTL values. NB This is important as there could well
                 be other TTL lines that are active and so the states vector
                 will then contain a mix of integer values
+            RippleDetector (str): Loads up the TTL data from the Ripple Detector
+                plugin
 
         Returns:
             Nothing but sets some keys/values in a dict on 'self'
@@ -1171,13 +1174,103 @@ class OpenEphysBase(TrialInterface):
         if "TTL_channel_number" in kwargs.keys():
             chan = kwargs["TTL_channel_number"]
             high_ttl = ttl_ts[states == chan]
-            # get into ms
+            # get into seconds
             high_ttl = (high_ttl * 1000.0) - recording_start_time
             self.ttl_data["ttl_timestamps"] = high_ttl / 1000.0  # in seconds now
+        if "RippleDetector" in args:
+            if self.path2RippleDetector:
+                detector_settings = self.settings.get_processor("Ripple")
+                ttl_ts = (
+                    np.load(Path(self.path2RippleDetector) / "timestamps.npy")
+                    - self.recording_start_time
+                )
+                ttl_states = np.load(Path(self.path2RippleDetector) / "states.npy")
+                save_ttl = int(detector_settings.Ripple_save)
+                out_ttl = int(detector_settings.Ripple_Out)
+                indices_to_throw = []
+
+                for i in range(len(ttl_states) - 2):
+                    i_pair = ttl_states[i : i + 2]
+                    if np.all(i_pair == np.array([save_ttl, out_ttl])):
+                        # be extra sure this is a zero time difference
+                        if np.diff(ttl_ts[i : i + 2]) == 0:
+                            indices_to_throw.append(i)
+
+                mask = np.ones_like(ttl_states, dtype=bool)
+                mask[indices_to_throw] = False
+
+                ttl_ts = ttl_ts[mask]
+                ttl_states = ttl_states[mask]
+
+                laser_ons = ttl_ts[ttl_states == out_ttl]
+                laser_offs = ttl_ts[ttl_states == -out_ttl]
+                no_laser_ons = ttl_ts[ttl_states == save_ttl]
+                self.ttl_data["ttl_timestamps"] = laser_ons
+                self.ttl_data["ttl_timestamps_off"] = laser_offs
+                mean_duration = np.nanmean(laser_offs - laser_ons)
+                self.ttl_data["stim_duration"] = mean_duration
+                self.ttl_data["no_laser_ttls"] = no_laser_ons
+
         if not self.ttl_data:
             return False
         print("Loaded ttl data")
         return True
+
+    def load_accelerometer(self, target_freq: int = 50) -> bool:
+        if not self.path2LFPdata:
+            return False
+        """
+        Need to figure out which of the channels are AUX if we want to load
+        the accelerometer data with minimal user input...
+        Annoyingly, there could also be more than one RecordNode which means
+        the channels might get represented more than once in the structure.oebin
+        file
+
+        Parameters
+        ----------
+        target_freq (int) - the desired frequency when downsampling the aux data
+
+        """
+        from ephysiopy.openephys2py.OESettings import OEStructure
+        from ephysiopy.common.ephys_generic import downsample_aux
+
+        oebin = OEStructure(self.pname)
+        aux_chan_nums = []
+        aux_bitvolts = 0
+        for record_node_key in oebin.data.keys():
+            for channel_key in oebin.data[record_node_key].keys():
+                # this thing is a 1-item list
+                if "continuous" in channel_key:
+                    for chan_keys in oebin.data[record_node_key][channel_key][0]:
+                        for chan_idx, i_chan in enumerate(
+                            oebin.data[record_node_key][channel_key][0]["channels"]
+                        ):
+                            if "AUX" in i_chan["channel_name"]:
+                                aux_chan_nums.append(chan_idx)
+                                aux_bitvolts = i_chan["bit_volts"]
+
+        if len(aux_chan_nums) > 0:
+            aux_chan_nums = np.unique(np.array(aux_chan_nums))
+            if self.path2LFPdata is not None:
+                data = memmapBinaryFile(
+                    os.path.join(self.path2LFPdata, "continuous.dat"),
+                    n_channels=self.channel_count,
+                )
+                s = slice(min(aux_chan_nums), max(aux_chan_nums) + 1)
+                aux_data = data[s, :]
+                # now downsample the aux data a lot
+                # might take a while so print a message to console
+                print(
+                    f"Downsampling {aux_data.shape[1]} samples over {aux_data.shape[0]} channels..."
+                )
+                aux_data = downsample_aux(aux_data, target_freq=target_freq)
+                self.aux_data = aux_data
+                self.aux_data_fs = target_freq
+                self.aux_bitvolts = aux_bitvolts
+                return True
+        else:
+            warnings.warn("No AUX data found in structure.oebin file, so not loaded")
+        return False
 
     def apply_filter(self, *trial_filter: TrialFilter) -> np.ndarray:
         """Apply a mask to the data
@@ -1222,6 +1315,9 @@ class OpenEphysBase(TrialInterface):
         )
         TrackMe_match = (
             exp_name / rec_name / "continuous" / "TrackMe-[0-9][0-9][0-9].TrackingNode"
+        )
+        RippleDetector_match = (
+            exp_name / rec_name / "events" / "Ripple_Detector*" / "TTL"
         )
         sync_file_match = exp_name / rec_name
         acq_method = ""
@@ -1275,55 +1371,61 @@ class OpenEphysBase(TrialInterface):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
                                 if verbose:
-                                    print(f"Pos data at: {self.path2PosData}")
+                                    print(f"Pos data at: {self.path2PosData}\n")
                             self.path2PosOEBin = Path(d).parents[1]
                         if PurePath(d).match("*pos_data*"):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
                                 if verbose:
-                                    print(f"Pos data at: {self.path2PosData}")
+                                    print(f"Pos data at: {self.path2PosData}\n")
                         if PurePath(d).match(str(TrackingPlugin_match)):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
                                 if verbose:
-                                    print(f"Pos data at: {self.path2PosData}")
+                                    print(f"Pos data at: {self.path2PosData}\n")
                     if "continuous.dat" in ff:
                         if PurePath(d).match(str(APdata_match)):
                             self.path2APdata = os.path.join(d)
                             if verbose:
-                                print(f"Continuous AP data at: {self.path2APdata}")
+                                print(f"Continuous AP data at: {self.path2APdata}\n")
                             self.path2APOEBin = Path(d).parents[1]
                         if PurePath(d).match(str(LFPdata_match)):
                             self.path2LFPdata = os.path.join(d)
                             if verbose:
-                                print(f"Continuous LFP data at: {self.path2LFPdata}")
+                                print(f"Continuous LFP data at: {self.path2LFPdata}\n")
                         if PurePath(d).match(str(Rawdata_match)):
                             self.path2APdata = os.path.join(d)
                             self.path2LFPdata = os.path.join(d)
                         if PurePath(d).match(str(TrackMe_match)):
                             self.path2PosData = os.path.join(d)
                             if verbose:
-                                print(f"TrackMe posdata at: {self.path2PosData}")
+                                print(f"TrackMe posdata at: {self.path2PosData}\n")
                     if "sync_messages.txt" in ff:
                         if PurePath(d).match(str(sync_file_match)):
                             sync_file = os.path.join(d, "sync_messages.txt")
                             if fileContainsString(sync_file, "Start Time"):
                                 self.sync_message_file = sync_file
                                 if verbose:
-                                    print(f"sync_messages file at: {sync_file}")
+                                    print(f"sync_messages file at: {sync_file}\n")
                     if "full_words.npy" in ff:
                         if PurePath(d).match(str(Events_match)):
                             self.path2EventsData = os.path.join(d)
                             if verbose:
-                                print(f"Event data at: {self.path2EventsData}")
+                                print(f"Event data at: {self.path2EventsData}\n")
+                        if PurePath(d).match(str(RippleDetector_match)):
+                            self.path2RippleDetector = os.path.join(d)
+                            if verbose:
+                                print(
+                                    f"Ripple Detector plugin found at {self.path2RippleDetector}\n"
+                                )
                     if ".nwb" in ff:
                         self.path2NWBData = os.path.join(d, ff)
                         if verbose:
-                            print(f"nwb data at: {self.path2NWBData}")
+                            print(f"nwb data at: {self.path2NWBData}\n")
                     if "spike_templates.npy" in ff:
                         self.path2KiloSortData = os.path.join(d)
                         if verbose:
-                            print(f"Found KiloSort data at {self.path2KiloSortData}")
+                            print(f"Found KiloSort data at {self.path2KiloSortData}\n")
 
 
 class OpenEphysNWB(OpenEphysBase):

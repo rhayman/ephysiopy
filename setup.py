@@ -24,11 +24,15 @@ setuptools.setup(
         "astropy",
         "scikit-image",
         "pandas",
-        "h5py"],
+        "boost_histogram",
+        "seaborn",
+        "shapely",
+        "h5py",
+    ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.7',
+    python_requires=">=3.7",
 )

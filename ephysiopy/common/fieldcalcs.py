@@ -16,6 +16,7 @@ from ephysiopy.common.utils import (
     getLabelEnds,
     pol2cart,
     cart2pol,
+    repeat_ind,
 )
 import skimage
 from skimage.measure._regionprops import (
@@ -180,7 +181,9 @@ class RunProps(object):
 
     @property
     def spike_position_index(self):
-        return np.arange(self._slice.start, self._slice.stop)[self._spike_count > 0]
+        return np.take(
+            range(self._slice.start, self._slice.stop), repeat_ind(self._spike_count)
+        )
 
     @property
     def observed_spikes(self):
