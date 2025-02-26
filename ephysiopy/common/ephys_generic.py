@@ -28,35 +28,41 @@ class EventsGeneric(object):
 
     Once a .stm file is loaded the keys for STM are:
 
-    Attributes:
-        on (np.array): time in samples of the event
-        trial_date (str):
-        trial_time (str):
-        experimenter (str):
-        comments (str):
-        duration (str):
-        sw_version (str):
-        num_chans (str):
-        timebase (str):
-        bytes_per_timestamp (str):
-        data_format (str):
-        num_stm_samples (str):
-        posSampRate (int):
-        eegSampRate (int):
-        egfSampRate (int):
-        off (np.array):
-        stim_params (OrderedDict): This has keys:
-            Phase_1 (str):
-            Phase_2 (str):
-            Phase_3 (str):
+    Attributes
+    ----------
+    on : np.array
+        time in samples of the event
+    trial_date : str
+    trial_time : str
+    experimenter : str
+    comments : str
+    duration : str
+    sw_version : str
+    num_chans : str
+    timebase : str
+    bytes_per_timestamp : str
+    data_format : str
+    num_stm_samples : str
+    posSampRate : int
+    eegSampRate : int
+    egfSampRate : int
+    off : np.ndarray
+    stim_params : OrderedDict
+        This has keys:
+            Phase_1 : str
+            Phase_2 : str
+            Phase_3 : str
             etc
-                Each of these keys is also a dict with keys:
-                    startTime: None
-                    duration: int (in seconds)
-                    name: str
-                    pulseWidth: int (microseconds)
-                    pulseRatio: None
-                    pulsePause: int (microseconds)
+            Each of these keys is also a dict with keys:
+                startTime: None
+                duration: int
+                    in seconds
+                name: str
+                pulseWidth: int
+                    microseconds
+                pulseRatio: None
+                pulsePause: int
+                    microseconds
 
     The most important entries are the on and off numpy arrays and pulseWidth,
     the last mostly for plotting purposes.
@@ -108,9 +114,12 @@ class EEGCalcsGeneric(object):
     """
     Generic class for processing and analysis of EEG data
 
-    Args:
-        sig (array_like): The signal (of the LFP data)
-        fs (float): The sample rate
+    Parameters
+    ----------
+    sig : np.ndarray
+        The signal (of the LFP data)
+    fs : float
+        The sample rate
     """
 
     def __init__(self, sig, fs):
@@ -129,18 +138,17 @@ class EEGCalcsGeneric(object):
         """
         Applies a mask to the signal
 
-        Args:
-            mask (np.ndarray): The mask to be applied. For use with
-                               np.ma.MaskedArray's mask attribute
+        Parameters
+        ----------
+        mask : np.ndarray
+            The mask to be applied. For use with np.ma.MaskedArray's mask attribute
 
-        Returns:
-            Nothing. Sets the mask of self.sig
-
-        Notes:
-            If mask is empty, the mask is removed
-            The mask should be a list of tuples, each tuple containing
-            the start and end times of the mask i.e. [(start1, end1), (start2, end2)]
-            everything inside of these times is masked
+        Notes
+        -----
+        If mask is empty, the mask is removed
+        The mask should be a list of tuples, each tuple containing
+        the start and end times of the mask i.e. [(start1, end1), (start2, end2)]
+        everything inside of these times is masked
         """
         if np.any(mask):
             ratio = int(len(self.sig) / np.shape(mask)[1])
@@ -167,20 +175,25 @@ class EEGCalcsGeneric(object):
 
     def butterFilter(self, low: float, high: float, order: int = 5) -> np.ndarray:
         """
-        Filters self.sig with a butterworth filter with a bandpass filter
-        defined by low and high
+         Filters self.sig with a butterworth filter with a bandpass filter
+         defined by low and high
 
-        Args:
-            low, high (float): The lower and upper bounds of the bandpass
-            filter
-            order (int): The order of the filter
+        Parameters
+        ----------
+         low, high : float
+             the lower and upper bounds of the bandpass filter
+         order : int
+             the order of the filter
 
-        Returns:
-            filt (np.ndarray): The filtered signal
+         Returns
+         -------
+         filt : np.ndarray
+             the filtered signal
 
-        Notes:
-            The signal is filtered in both the forward and
-            reverse directions (scipy.signal.filtfilt)
+         Notes
+         -----
+         the signal is filtered in both the forward and
+             reverse directions (scipy.signal.filtfilt)
         """
         nyqlim = self.fs / 2
         lowcut = low / nyqlim
@@ -192,15 +205,17 @@ class EEGCalcsGeneric(object):
         """
         Calculates the power spectrum of self.sig
 
-        Returns:
-            A 5-tuple of the following and sets a bunch of member variables:
-                freqs (array_like): The frequencies at which the spectrogram
-                was calculated
-                power (array_like): The power at the frequencies defined above
-                sm_power (array_like): The smoothed power
-                bandmaxpower (float): The maximum power in the theta band
-                freqatbandmaxpower (float): The frequency at which the power
-                is maximum
+        Returns
+        -------
+        psd : tuple[np.ndarray, float,...]
+        A 5-tuple of the following and sets a bunch of member variables:
+        freqs (array_like): The frequencies at which the spectrogram
+        was calculated
+        power (array_like): The power at the frequencies defined above
+        sm_power (array_like): The smoothed power
+        bandmaxpower (float): The maximum power in the theta band
+        freqatbandmaxpower (float): The frequency at which the power
+        is maximum
         """
         nqlim = self.fs / 2
         origlen = len(self.sig)
@@ -241,15 +256,20 @@ class EEGCalcsGeneric(object):
         freqs from the result and reconstructs the original signal using
         the inverse fft without those frequencies
 
-        Args:
-            sig (np.array): The LFP signal to be filtered
-            freqs (list): The frequencies to be filtered out
-            fs (int): The sampling frequency of sig
+        Parameters
+        ----------
+        sig : np.ndarray
+            the LFP signal to be filtered
+        freqs : list
+            the frequencies to be filtered out
+        fs : int
+            the sampling frequency of sig
 
-        Returns:
-            fftRes (np.array): The filtered LFP signal
+        Returns
+        -------
+        fftRes : np.ndarray
+            the filtered LFP signal
         """
-        # from scipy import signal
         nyq = fs / 2.0
         fftRes = np.fft.fft(sig)
         f = nyq * np.linspace(0, 1, int(len(fftRes) / 2))
@@ -271,19 +291,52 @@ class PosCalcsGeneric(object):
     Generic class for post-processing of position data
     Uses numpys masked arrays for dealing with bad positions, filtering etc
 
-    Args:
-        x, y (array_like): The x and y positions.
-        ppm (int): Pixels per metre
-        convert2cm (bool): Whether everything is converted into cms or not
-        jumpmax (int): Jumps in position (pixel coords) > than this are bad
-        **kwargs: a dict[str, float] called 'tracker_params' is used to limit
-            the range of valid xy positions - 'bad' positions are masked out
-            and interpolated over
+    Parameters
+    ----------
+    x, y : np.ndarray
+        the x and y positions
+    ppm : int
+        Pixels per metre
+    convert2cm : bool
+        Whether everything is converted into cms or not
+    jumpmax : int
+        Jumps in position (pixel coords) > than this are bad
+    **kwargs:
+        a dict[str, float] called 'tracker_params' is used to limit
+        the range of valid xy positions - 'bad' positions are masked out
+        and interpolated over
 
-    Notes:
-        The positional data (x,y) is turned into a numpy masked array once this
-        class is initialised - that mask is then modified through various
-        functions (postprocesspos being the main one).
+    Attributes
+    ----------
+    orig_xy : np.ndarray
+        the original xy coordinates, never modified directly
+    npos : int
+        the number of position samples
+    xy : np.ndarray
+        2 x npos array
+    convert2cm : bool
+        whether to convert the xy position data to cms or not
+    duration : float
+        the trial duration in seconds
+    xyTS : np.ndarray
+        the timestamps the position data was recorded at. npos long vector
+    dir : np.ndarray
+        the directional data. In degrees
+    ppm : float
+        the number of pixels per metre
+    jumpmax : float
+        the minimum jump between consecutive positions before a jump is considered 'bad'
+        and smoothed over
+    speed : np.ndarray
+        the speed data, extracted from a difference of xy positions. npos long vector
+    sample_rate : int
+        the sample rate of the position data
+
+    Notes
+    -----
+    The positional data (x,y) is turned into a numpy masked array once this
+    class is initialised - that mask is then modified through various
+    functions (postprocesspos being the main one).
     """
 
     def __init__(
@@ -557,7 +610,7 @@ class PosCalcsGeneric(object):
 
         Args:
             xy (np.ma.MaskedArray): The xy positional data
-            upsample_rate (int): The rate to upsample to
+            upsample_rate : int The rate to upsample to
 
         Returns:
             new_xy (np.ma.MaskedArray): The upsampled xy positional data
@@ -612,6 +665,17 @@ def downsample_aux(
 ):
     """
     Downsamples the default 30000Hz AUX signal to a default of 500Hz
+
+    Parameters
+    ----------
+    data : np.ndarray
+        the source data
+    source_freq : int
+        the sampling frequency of data
+    target_freq : int
+        the desired output frequency of the data
+    axis : int
+        the axis along which to apply the resampling
     """
     denom = np.gcd(int(source_freq), int(target_freq))
     sig = signal.resample_poly(
@@ -632,9 +696,12 @@ def calculate_rms_and_std(
 
     Parameters
     ----------
-    sig: the downsampled AUX data (single channel)
-    time_window: the range of times in seconds to calculate the RMS for
-    fs: the sampling frequency of sig
+    sig : np.ndarray
+        the downsampled AUX data (single channel)
+    time_window : list
+        the range of times in seconds to calculate the RMS for
+    fs: int
+        the sampling frequency of sig
     """
     rms = np.nanmean(
         np.sqrt(np.power(sig[int(time_window[0] * fs) : int(time_window[1] * fs)], 2))
@@ -656,6 +723,27 @@ def find_high_amp_long_duration(
     Find periods of high amplitude and long duration in the ripple bandpass
     filtered signal.
 
+    Parameters
+    ----------
+    raw_signal : np.ndarray
+        the raw LFP signal which will be filtered here
+    fs : int
+        the sampliing frequency of the raw signal
+    amp_std : int
+        the signal needs to be this many standard deviations above the mean
+    duration :int
+        how long in seconds the ripple should be
+    duration_std :int
+        how many standard deviations above the mean the ripples should
+        be for 'duration' ms
+
+    Returns
+    -------
+    masked_lfp : np.ma.MaskedArray
+        the bandpass filtered LFP that has been masked outside of epochs that don't meet the above thresholds
+
+    Notes
+    -----
     From Todorova & Zugaro (supp info):
 
     "To detect ripple events, we first detrended the LFP signals and used the Hilbert transform
@@ -666,19 +754,6 @@ def find_high_amp_long_duration(
     ence was negative, we set it to 0). Finally, we z-scored this signal, yielding a corrected
     and normalized ripple amplitude R(t). Ripples were defined as events where R(t) crossed
     a threshold of 3 s.d. and remained above 1 s.d. for 30 to 110 ms."
-
-    Parameters
-    ----------
-    raw_signal (np.ndarray) - the raw LFP signal which will be filtered here
-    fs (int) - the sampliing frequency of the raw signal
-    amp_std (int) - the signal needs to be this many standard deviations above the mean
-    duration (int) - how long in seconds the ripple should be
-    duration_std (int) - how many standard deviations above the mean the ripples should
-                            be for 'duration' ms
-    Returns
-    -------
-    masked_lfp (np.ma.MaskedArray) - the bandpass filtered LFP that has been masked
-                                        outside of epochs that don't meet the above thresholds
 
     References
     ----------

@@ -31,27 +31,69 @@ class RateMap(object):
     of the relevant kind. This is a generic class meant to be independent of
     any particular recording format.
 
-    Args:
-        xy (ndarray): The xy data as a 2 x n_samples numpy array.
-        hdir (ndarray): The head direction data a 1 x n_samples numpy array.
-        speed (ndarray): Similar to hdir.
-        pos_weights (ndarray): A 1 x n_samples numpy array used to weight a particular
-            position samples when binning data. For example, if there were 5
-            positions recorded and a cell spiked once in position 2 and 5 times
-            in position 3 and nothing anywhere else then pos_weights looks like:
-            [0 0 1 5 0]
-            In the case of binning up position this will be an array of mostly 1's
-            unless there are some positions you want excluded.
-        ppm (int, optional): Pixels per metre. Specifies how many camera pixels per metre so this,
-            in combination with cmsPerBin, will determine how many bins there are
-            in the rate map. Defaults to None.
-        xyInCms (bool, optional): Whether the positional data is in cms. Defaults to False.
-        cmsPerBin (int, optional): How many cms on a side each bin is in a rate map OR the number of
-            degrees per bin in the case of directional binning. Defaults to 3.
-        smooth_sz (int, optional): The width of the smoothing kernel for smoothing rate maps. Defaults to 5.
+    Parameters
+    ----------
+    xy : np.ndarray
+        The xy data as a 2 x n_samples numpy array.
+    hdir : np.ndarray
+        The head direction data a 1 x n_samples numpy array.
+    speed : np.ndarray
+        Similar to hdir.
+    pos_weights : np.ndarray
+        A 1 x n_samples numpy array used to weight a particular
+        position samples when binning data. For example, if there were 5
+        positions recorded and a cell spiked once in position 2 and 5 times
+        in position 3 and nothing anywhere else then pos_weights looks like:
+        [0 0 1 5 0]
+        In the case of binning up position this will be an array of mostly 1's
+        unless there are some positions you want excluded.
+    ppm : int
+        Optional. Pixels per metre. Specifies how many camera pixels per metre so this,
+        in combination with cmsPerBin, will determine how many bins there are
+        in the rate map. Defaults to None.
+    xyInCms :bool
+        Optional. Whether the positional data is in cms. Defaults to False.
+    cmsPerBin : int
+        Optional. How many cms on a side each bin is in a rate map OR the number of
+        degrees per bin in the case of directional binning. Defaults to 3.
+    smooth_sz : int
+        Optional. The width of the smoothing kernel for smoothing rate maps. Defaults to 5.
 
-    Notes:
-        There are several instance variables you can set, see below.
+    Attributes
+    ----------
+    xy : np.ndarray
+        the x-y position as 2 x n_samples
+    dir : np.ndarray
+        directional bearing as n_samples vector. In degrees.
+    speed : np.ndarray
+        speed as n_samples vector
+    pos_times : np.ndarray
+        the times, in seconds, at which the position sample was recorded.
+    inCms : bool
+        whether the data has been converted to cms or not.
+    ppm : int
+        the number of pixels (camera coordinates) per metre
+    var2Bin : Enum
+        VariableToBin enum value. See ephysiopy.common.utils.VariableToBin
+    mapType : Enum
+        MapType enum value. See ephysiopy.common.utils.MapType
+    binedges : tuple[np.ndarray,...]
+        The edges of the binned data (can be n-dimensional)
+    x_lims : tuple[float,...]
+        The limits of the x data (min and max)
+    y_lims : tuple[float,...]
+        The limits of the y data (min and max)
+    pos_weights : np.ndarray
+        the weights assigned to position data when binning. n_samples vector
+    spike_weights : np.ndarray
+        same as pos_weights but for spikes
+    binsize : tuple
+        the size of each bin (could be x-y or degrees or some other unit)
+    smooth_sz : int
+        the size of the smoothing kernel for filtering rate maps
+    smoothingType : str
+        the kind of smoothing to apply. 'boxcar' or 'gaussian'
+
     """
 
     def __init__(
@@ -237,11 +279,15 @@ class RateMap(object):
         """
         Aims to get the right number of bins for the variable to be binned
 
-        Args:
-            binsize (int | tuple, optional): The number of cms per bin for XY OR degrees for DIR OR cm/s for SPEED. Defaults to 3.
+        Parameters
+        ----------
+        binsize : int | tuple
+            Optional. The number of cms per bin for XY OR degrees for DIR OR cm/s for SPEED. Defaults to 3.
 
-        Returns:
-            tuple: each member an array of bin edges
+        Returns
+        -------
+        bins : tuple[np.ndarray,...]
+            each member an array of bin edges
         """
         if self.var2Bin.value == VariableToBin.DIR.value:
             self.binedges = np.linspace(0, 360, int(360 / binsize)).tolist()
@@ -302,7 +348,8 @@ class RateMap(object):
 
         Parameters
         ----------
-        spk_weights (np.ndarray) - Shape equal to number of positions samples captured and consists of
+        spk_weights : np.ndarray
+            Shape equal to number of positions samples captured and consists of
             position weights. For example, if there were 5 positions
             recorded and a cell spiked once in position 2 and 5 times in
             position 3 and nothing anywhere else then pos_weights looks
@@ -313,17 +360,20 @@ class RateMap(object):
             array of the ratemaps (binned_spk / binned_pos) and the second part is the binned pos data (as it's common to all
             the spike weights)
 
-        var_type (Variable2Bin) - The variable to bin. See ephysiopy.common.utils for legal values.
+        var_type : Variable2Bin
+            The variable to bin. See ephysiopy.common.utils for legal values.
 
+        map_type : MapType
+            The kind of map returned. See ephysiopy.common.utils for legal values.
 
-        map_type (MapType) - The kind of map returned. See ephysiopy.common.utils for legal values.
-
-        smoothing (bool, optional): Smooth the data or not. Default True.
+        smoothing : bool
+            Optional. Smooth the data or not. Default True.
 
         Returns
         -------
-        binned_data (BinnedData): An instance of BinnedData containing the binned data, the bin edges, the variable binned and
-                                  the map type. See ephysiopy.common.utils for details of the class.
+        binned_data : BinnedData
+            An instance of BinnedData containing the binned data, the bin edges, the variable binned and
+            the map type. See ephysiopy.common.utils for details of the class.
         """
         boundary = "extend"
         pos_weights = self.pos_weights
@@ -459,43 +509,49 @@ class RateMap(object):
         """
         Bins data taking account of possible multi-dimensionality
 
-        Args:
-            var (array_like): The variable to bin
-            bin_edges (array_like): The edges of the data - see numpys histogramdd for more
-            weights (array_like): The weights attributed to the samples in var
+        Parameters
+        ----------
+        var : np.ndarray
+            The variable to bin
+        bin_edges : np.ndarray
+            The edges of the data - see numpys histogramdd for more
+        weights : np.ndarray
+            The weights attributed to the samples in var
 
-        Returns:
-            ndhist (2-tuple): Returns a two-tuple of the binned variable and
-                the bin edges
+        Returns
+        -------
+        binned_data : tuple[np.ndarray, ...]
+            The binned variable and the bin edges
 
-        Notes:
-            This breaks compatability with numpys histogramdd
-            In the 2d histogram case below I swap the axes around so that x and y
-            are binned in the 'normal' format i.e. so x appears horizontally and y
-            vertically.
-            Multi-binning issue is dealt with awkwardly through checking
-            the dimensionality of the weights array.
-            'normally' this would be 1 dim but when multiple clusters are being
-            binned it will be 2 dim.
-            In that case np.apply_along_axis functionality is applied.
-            The spike weights in that case might be created like so:
+        Notes
+        -----
+        This breaks compatability with numpys histogramdd
+        In the 2d histogram case below I swap the axes around so that x and y
+        are binned in the 'normal' format i.e. so x appears horizontally and y
+        vertically.
+        Multi-binning issue is dealt with awkwardly through checking
+        the dimensionality of the weights array.
+        'normally' this would be 1 dim but when multiple clusters are being
+        binned it will be 2 dim.
+        In that case np.apply_along_axis functionality is applied.
+        The spike weights in that case might be created like so:
 
-            >>> spk_W = np.zeros(shape=[len(trial.nClusters), trial.npos])
-            >>> for i, cluster in enumerate(trial.clusters):
-            >>>		x1 = trial.getClusterIdx(cluster)
-            >>>		spk_W[i, :] = np.bincount(x1, minlength=trial.npos)
+        >>> spk_W = np.zeros(shape=[len(trial.nClusters), trial.npos])
+        >>> for i, cluster in enumerate(trial.clusters):
+        >>>		x1 = trial.getClusterIdx(cluster)
+        >>>		spk_W[i, :] = np.bincount(x1, minlength=trial.npos)
 
-            This can then be fed into this fcn something like so:
+        This can then be fed into this fcn something like so:
 
-            >>> rng = np.array((np.ma.min(
-                trial.POS.xy, 1).data, np.ma.max(rial.POS.xy, 1).data))
-            >>> h = _bin_data(
-                var=trial.POS.xy, bin_edges=np.array([64, 64]),
-                weights=spk_W, rng=rng)
+        >>> rng = np.array((np.ma.min(
+            trial.POS.xy, 1).data, np.ma.max(rial.POS.xy, 1).data))
+        >>> h = _bin_data(
+            var=trial.POS.xy, bin_edges=np.array([64, 64]),
+            weights=spk_W, rng=rng)
 
-            Returned will be a tuple containing the binned up data and
-            the bin edges for x and y (obv this will be the same for all
-            entries of h)
+        Returned will be a tuple containing the binned up data and
+        the bin edges for x and y (obv this will be the same for all
+        entries of h)
         """
         if weights is None:
             weights = np.ma.MaskedArray(np.ones_like(var))
@@ -545,18 +601,22 @@ class RateMap(object):
 
         Parameters
         ----------
-        pos_binned (array_like): The binned positional data. For example that returned from get_map
+        pos_binned : np.ndarray
+            The binned positional data. For example that returned from get_map
             above with mapType as 'pos'
-        spk_binned (array_like): The binned spikes
-        alpha (int, optional): A scaling parameter determing the amount of occupancy to aim at
+        spk_binned : np.ndarray
+            The binned spikes
+        alpha : int
+            Optional. A scaling parameter determing the amount of occupancy to aim at
             in each bin. Defaults to 4. In the original paper this was set to 200.
             This is 4 here as the pos data is binned in seconds (the original data was in pos
             samples so this is a factor of 50 smaller than the original paper's value, given 50Hz sample rate)
 
         Returns
         -------
-        Returns adaptively binned spike and pos maps. Use to generate Skaggs
-        information measure
+        adaptive_map : tuple[np.ndarray,...]
+            Returns adaptively binned spike and pos maps. Use to generate Skaggs
+            information measure
 
         Notes
         -----
@@ -631,13 +691,17 @@ class RateMap(object):
 
         Parameters
         ----------
-        A (BinnedData) - instance of BinnedData
-        nodwell (np.ndarray) - array with NaNs where there was no position sampled.
-        tol (float) - values below this are set to 0.
+        A : BinnedData
+            The binned data
+        nodwell : np.ndarray
+            An array with NaNs where there was no position sampled.
+        tol : float
+            values below this are set to 0.
 
         Returns
         -------
-        BinnedData - the data in A with the maps replaced by autocorrelograms
+        data : BinnedData
+            The data in A with the maps replaced by autocorrelograms
         """
         result = BinnedData(A.variable, MapType.AUTO_CORR)
         for rmap in A.binned_data:
@@ -659,18 +723,22 @@ class RateMap(object):
 
         Parameters
         ----------
-        A (array_like): Either 2 or 3D. In the former it is simply the binned up ratemap
+        A np.ndarray
+            Either 2 or 3D. In the former it is simply the binned up ratemap
             where the two dimensions correspond to x and y.
             If 3D then the first two dimensions are x
             and y and the third (last dimension) is 'stack' of ratemaps
-        nodwell (array_like): A boolean array corresponding the bins in the ratemap that
+        nodwell : np.ndarray
+            A boolean array corresponding the bins in the ratemap that
             weren't visited. See Notes below.
-        tol (float, optional): Values below this are set to zero to deal with v small values
+        tol : float
+            Optional. Values below this are set to zero to deal with v small values
             thrown up by the fft. Default 1e-10
 
         Returns
         -------
-        sac (array_like): The spatial autocorrelation in the relevant dimensionality
+        sac : np.ndarray
+            The spatial autocorrelation in the relevant dimensionality
 
         Notes
         -----
@@ -741,13 +809,17 @@ class RateMap(object):
 
         Parameters
         ----------
-        A, B (BinnedData) - instance of BinnedData
-        A_nodwell, B_nodwell (np.ndarray) - array with NaNs where there was no position sampled.
-        tol (float) - values below this are set to 0.
+        A, B : BinnedData
+            an instance of BinnedData
+        A_nodwell, B_nodwell : np.ndarray
+            an array with NaNs where there was no position sampled.
+        tol : float
+            values below this are set to 0.
 
         Returns
         -------
-        BinnedData - the data in A with the maps replaced by autocorrelograms
+        binned_data : BinnedData
+            the data in A with the maps replaced by autocorrelograms
         """
         result = BinnedData(A.variable, MapType.CROSS_CORR)
         for rmap in A:
@@ -775,13 +847,17 @@ class RateMap(object):
 
         Parameters
         ----------
-        A, B (BinnedData) - instance of BinnedData
-        A_nodwell, B_nodwell (np.ndarray) - array with NaNs where there was no position sampled.
-        tol (float) - values below this are set to 0.
+        A, B : BinnedData
+            instance of BinnedData
+        A_nodwell, B_nodwell : np.ndarray
+            array with NaNs where there was no position sampled.
+        tol : float
+            values below this are set to 0.
 
         Returns
         -------
-        BinnedData - the data in A with the maps replaced by autocorrelograms
+        binned_data : BinnedData
+            the data in A with the maps replaced by autocorrelograms
         """
         if isinstance(A, BinnedData):
             A = A.binned_data[0]
@@ -882,19 +958,29 @@ class RateMap(object):
 
         Parameters
         ----------
-        xy (array_like): The position data
-        spkIdx (array_like): The indices in xy where the cell fired
-        ppm (int, optional): The camera pixels per metre. Default 365
-        winSize (int, optional): The window size for the temporal search
-        pos_sample_rate (int, optional): The rate at which position was sampled. Default 50
-        nbins (int, optional): The number of bins for creating the resulting ratemap. Default 71
-        boxcar (int, optional): The size of the smoothing kernel to smooth ratemaps. Default 5
-        Pthresh (int, optional): The cut-off for values in the ratemap; values < Pthresh become nans. Default 100
-        downsampfreq (int, optional): How much to downsample. Default 50
+        xy : np.ndarray
+            The position data
+        spkIdx : np.ndarray
+            The indices in xy where the cell fired
+        ppm : int
+            Optional. The camera pixels per metre. Default 365
+        winSize : int
+            Optional. The window size for the temporal search
+        pos_sample_rate : int
+            Optional. The rate at which position was sampled. Default 50
+        nbins : int
+            Optional. The number of bins for creating the resulting ratemap. Default 71
+        boxcar :int
+            Optional. The size of the smoothing kernel to smooth ratemaps. Default 5
+        Pthresh : int
+            Optional. The cut-off for values in the ratemap; values < Pthresh become nans. Default 100
+        downsampfreq : int
+            Optional. How much to downsample. Default 50
 
         Returns
         -------
-        H (array_like): The temporal windowed SAC
+        H : array_like
+            the temporal windowed SAC
         """
         # [Stage 0] Get some numbers
         xy = xy / ppm * 100
@@ -1009,12 +1095,15 @@ class RateMap(object):
 
         Parameters
         ----------
-        arena_shape (str) - the shape of the arena, 'circle' or 'square'.
-        xy_binsize (float) - the binsize
+        arena_shape : str
+            the shape of the arena, 'circle' or 'square'.
+        xy_binsize : float
+            the binsize
 
         Returns
         -------
-        tuple of np.ndarray - the angles as well as the arena x-y coordinates.
+        angles : tuple[np.ndarray,...]
+            the angles as well as the arena x-y coordinates.
 
         Notes
         -----
@@ -1056,12 +1145,15 @@ class RateMap(object):
 
         Parameters
         ----------
-        spk_times (np.ndarray) - a vector of spike times (in seconds)
-        pos_times (np.ndarray) - vector of position times (seconds)
+        spk_times : np.ndarray
+            a vector of spike times (in seconds)
+        pos_times : np.ndarray
+            vector of position times (in seconds)
 
         Returns
         -------
-        BinnedData - the overdispersion map in an instance of BinnedData
+        dispersion_map : BinnedData
+            the overdispersion map in an instance of BinnedData
 
         """
         idx = np.searchsorted(pos_times, spk_times, side="right")

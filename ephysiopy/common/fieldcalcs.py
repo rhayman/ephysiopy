@@ -56,14 +56,28 @@ PROPS["r_unsmoothed"] = "r_unsmoothed"
 PROPS["r_and_phi_to_x_and_y"] = "r_and_phi_to_x_and_y"
 PROP_VALS = set(PROPS.values())
 
-"""
-A custom class for dealing with segments of an LFP signal and how
-they relate to specific runs (see RunProps below) through a 
-receptive field (see FieldProps below)
-"""
-
 
 class LFPSegment(object):
+    """
+    A custom class for dealing with segments of an LFP signal and how
+    they relate to specific runs (see RunProps below) through a
+    receptive field (see FieldProps below)
+
+    Attributes
+    ----------
+    field_label : int
+    run_label : int
+    slice : slice
+    spike_times : np.ndarray
+    signal : np.ndarray
+    filtered_signal : np.ndarray
+    phase : np.ndarray
+    amplitude : np.ndarray
+    sample_rate : float, int
+    filter_band : tuple[int,int]
+
+    """
+
     def __init__(
         self,
         field_label: int,
@@ -89,16 +103,49 @@ class LFPSegment(object):
         self.filter_band = filter_band
 
 
-"""
-A custom class for holding information about runs through a receptive field
-
-Each run needs to have some information about the field to which it belongs
-so the constructor takes in the peak x-y coordinate of the field and its index
-as well as the coordinates of the perimeter of the field
-"""
-
-
 class RunProps(object):
+    """
+    A custom class for holding information about runs through a receptive field
+
+    Each run needs to have some information about the field to which it belongs
+    so the constructor takes in the peak x-y coordinate of the field and its index
+    as well as the coordinates of the perimeter of the field
+
+    Attributes
+    ----------
+    label : int
+    slice : slice
+    xy_coords : np.ndarray
+    spike_count : np.ndarray
+    speed : np.ndarray
+    peak_xy : tuple[float, float]
+    max_index : int
+    perimeter_coords : np.ndarray
+    hdir : np.ndarray
+        the heading direction
+    min_speed : float
+    cumulative_time : np.ndarray
+    duration: int
+    n_spikes : int
+    run_start : int
+    run_stop : int
+    mean_direction : float
+    current_direction : np.ndarray
+    cumulative_distance : np.ndarray
+    spike_position_index : np.ndarray
+    observed_spikes : np.ndarray
+    xy_angle_to_peak : np.ndarray
+    xy_dist_to_peak : np.ndarray
+    xy_dist_to_peak_normed : np.ndarray
+    pos_xy : np.ndarray
+    pos_phi : np.ndarray
+    rho : np.ndarray
+    phi : np.ndarray
+    r_and_phi_to_x_and_y : np.ndarray
+    tortuosity : np.ndarray
+    xy_is_smoothed : bool
+    """
+
     def __init__(
         self,
         label,
@@ -110,6 +157,26 @@ class RunProps(object):
         max_index,
         perimeter_coords,
     ):
+        """
+        Parameters
+        ----------
+        label : int
+            the field label the run belongs to
+        slice : slice
+            the slice into the position array that holds all the position data
+        xy_coords : np.ndarray
+            the xy data for this run
+        spike_count : np.ndarray
+            the spike count for each position sample in this run
+        speed : np.ndarray
+            the speed for this run
+        peak_xy : np.ndarray
+            the peak location of the field for the this run
+        max_index : np.ndarray
+            the index (r,c) of the maximum of the firing field containing this run
+        perimeter_coords : np.ndarray
+            the xy coordinates of the perimeter of the field containing this run
+        """
         assert xy_coords.shape[1] == len(spike_count)
         self.label = label
         self._xy_coords = xy_coords
@@ -192,11 +259,35 @@ class RunProps(object):
     def expected_spikes(
         self, expected_rate_at_pos: np.ndarray, sample_rate: int = 50
     ) -> np.ndarray:
+        """
+        Calculates the expected number of spikes along this run given the
+        whole ratemap.
+
+        Parameters
+        ----------
+        expected_rate_at_pos : np.ndarray
+            the rate seen at each xy position of the whole trial
+
+        Returns
+        -------
+        expected_rate : np.ndarray
+            the expected rate at each xy position of this run
+        """
         return expected_rate_at_pos[self._slice] / sample_rate
 
     def overdispersion(self, spike_train: np.ndarray, sample_rate: int = 50) -> float:
+        """
+        The overdispersion map for this run
+
+        Parameters
+        ----------
+        spike_train : np.mdarray
+            the spike train (spikes binned up by position) for the whole trial. Same
+            length as the trial n_samples
+        sample_rate : int
+        """
         obs_spikes = np.sum(self._spike_count)
-        expt_spikes = np.sum(spike_train[self._slice]) / sample_rate
+        expt_spikes = self.expected_spikes(spike_train, sample_rate)
         Z = np.nan
         if obs_spikes >= expt_spikes:
             Z = (obs_spikes - expt_spikes - 0.5) / np.sqrt(expt_spikes)
@@ -211,9 +302,12 @@ class RunProps(object):
 
         Parameters
         ----------
-        k (float) - smoothing constant for the instantaneous firing rate
-        spatial_lp_cut (int) - spatial lowpass cut off
-        sample_rate (int) - position sample rate in Hz
+        k : float
+            smoothing constant for the instantaneous firing rate
+        spatial_lp_cut : int
+            spatial lowpass cut off
+        sample_rate : int
+            position sample rate in Hz
         """
         f_len = np.floor((self.run_stop - self.run_start) * k) + 1
         h = signal.firwin(

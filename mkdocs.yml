@@ -3,6 +3,8 @@ site_name: ephysiopy
 theme:
   name: "material"
 
+repo_url: https://github.com/rhayman/ephysiopy
+
 plugins:
   - mkdocstrings:
       default_handler: python
