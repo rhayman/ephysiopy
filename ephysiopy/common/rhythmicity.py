@@ -1,4 +1,5 @@
 import os
+import warnings
 import matplotlib
 import matplotlib.pylab as plt
 import matplotlib.transforms as transforms
@@ -12,10 +13,10 @@ from scipy.stats import linregress
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
-from ephysiopy.common.utils import window_rms
+from ephysiopy.common.utils import window_rms, find_runs
 from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
-from ephysiopy.visualise.plotting import FigureMaker
+from ephysiopy.visualise.plotting import FigureMaker, savePlot
 
 from phylib.io.model import TemplateModel
 from scipy import signal
@@ -787,9 +788,11 @@ class LFPOscillations(object):
         cluster_times (np.ndarray) - the times the cluster emitted spikes in
                                      seconds
 
-        Valid kwargs:
-        low_theta (int) - low end for bandpass filter
-        high_theta (int) - high end for bandpass filter
+        Notes
+        -----
+        kwargs can include:
+            low_theta (int) - low end for bandpass filter
+            high_theta (int) - high end for bandpass filter
 
         """
         low_theta = kwargs.pop("low_theta", 6)
@@ -873,7 +876,7 @@ class Rippler(object):
     ttl_percent = (
         100  # percentage of the ripple detections that get propagated to laser
     )
-    ttl_duration = 50  # minimum duration of TTL pulse in ms
+    ttl_duration = 0.05  # minimum duration of TTL pulse in seconds
     low_band = 120  # Hz
     high_band = 250  # Hz
     bit_volts = 0.1949999928474426  # available in the structure.oebin file
@@ -883,6 +886,8 @@ class Rippler(object):
     lfp_plotting_scale = (
         500  # this is the scale/range I was looking at the ripple filtered lfp signal
     )
+    ripple_std_dev = 2
+    ripple_min_duration_ms = 20
 
     def __init__(self, trial_root: Path, signal: np.ndarray, fs: int):
         """
@@ -898,7 +903,9 @@ class Rippler(object):
         LFP = EEGCalcsGeneric(signal, fs)
         self.LFP = LFP
         detector_settings = self.settings.get_processor("Ripple")
-        self.ttl_duration = float(detector_settings.ttl_duration)
+        self.ttl_duration = (
+            float(detector_settings.ttl_duration) / 1000
+        )  # in seconds now
 
         pname_for_ttl_data = self._find_path_to_ripple_ttl(self.pname_for_trial)
         sync_file = pname_for_ttl_data.parents[2] / Path("sync_messages.txt")
@@ -924,7 +931,7 @@ class Rippler(object):
             0,
             LFP.sig.shape[0] / self.fs,
             LFP.sig.shape[0],
-        )
+        )  # in seconds
 
     def update_bandpass(self, low=None, high=None):
         if low is None:
@@ -1000,6 +1007,35 @@ class Rippler(object):
                             return Path(d)
         return Path()
 
+    @savePlot
+    def plot_filtered_lfp_chunk(
+        self, start_time: float, end_time: float, **kwargs
+    ) -> plt.Axes:
+        idx = np.logical_and(
+            self.eeg_time > start_time - self.pre_ttl,
+            self.eeg_time < end_time + self.post_ttl,
+        )
+
+        eeg_chunk = self.filtered_eeg[idx]
+
+        normed_time = np.linspace(
+            -int(self.pre_ttl * 1000), int(self.post_ttl * 1000), len(eeg_chunk)
+        )  # in ms
+        _, ax1 = plt.subplots(figsize=(6.0, 4.0))  # enlarge plot a bit
+        ax1.plot(normed_time, eeg_chunk)
+
+        trans = transforms.blended_transform_factory(ax1.transData, ax1.transAxes)
+        ax1.vlines(
+            [0, int(self.post_ttl * 1000)],
+            ymin=0,
+            ymax=1,
+            colors="r",
+            linestyles="--",
+            transform=trans,
+        )
+        ax1.set_xlabel("Time to TTL(ms)")
+        return ax1
+
     def plot_rasters(self, laser_on: bool):
         F = FigureMaker()
         self.path2APdata = self._find_path_to_continuous(self.pname_for_trial)
@@ -1022,9 +1058,8 @@ class Rippler(object):
             F._getRasterPlot(spk_times=ts, cluster=c)
             plt.show()
 
-    def plot_and_save_ripple_band_lfp_with_ttl(
-        self, pname_for_saving: Path, save: bool = True
-    ):
+    @savePlot
+    def plot_and_save_ripple_band_lfp_with_ttl(self):
         for i_time in self.laser_on_ts:
             eeg_chunk = self.filtered_eeg[
                 np.logical_and(
@@ -1054,19 +1089,19 @@ class Rippler(object):
             )
 
             ax.set_ylim(-self.lfp_plotting_scale, self.lfp_plotting_scale)
-            if save:
-                plt.savefig(pname_for_saving / Path(str(i_time) + ".png"))
-                plt.close()
-            else:
-                plt.show()
+            plt.show()
+            return fig
 
-    def plot_mean_spectrograms(self, **kwargs):
+    @savePlot
+    def plot_mean_spectrograms(self, **kwargs) -> plt.Figure:
         fig = plt.figure(figsize=(12.0, 4.0))
         ax, ax1 = fig.subplots(1, 2)
         fig, im, spec = self.plot_mean_spectrogram(laser_on=False, ax=ax, **kwargs)
         fig, im1, spec1 = self.plot_mean_spectrogram(laser_on=True, ax=ax1, **kwargs)
         self.laser_off_spectrogram = spec
         self.laser_on_spectrogram = spec1
+        spec = np.mean(spec, 0)
+        spec1 = np.mean(spec1, 0)
         min_im = np.min([np.min(spec), np.min(spec1)])
         max_im = np.max([np.max(spec), np.max(spec1)])
         im.set_clim((min_im, max_im))
@@ -1084,24 +1119,25 @@ class Rippler(object):
         )
 
         plt.show()
+        return fig
 
     def plot_mean_spectrogram(self, laser_on: bool = False, ax=None, **kwargs):
         """
         Plots the mean spectrogram for either 'long' or 'short' ttl events
         """
         norm = kwargs.pop("norm", None)
-        spectrograms = []
-        rows = []
-        cols = []
         ttls = np.array([self.laser_on_ts, self.laser_off_ts]).T
         # max_duration used in plotting output below
         ttl_duration = np.mean(np.diff(ttls))
 
         if not laser_on:
             ttls = np.array(
-                [self.no_laser_on_ts, self.no_laser_on_ts + (self.ttl_duration / 1000)]
+                [self.no_laser_on_ts, self.no_laser_on_ts + (self.ttl_duration)]
             ).T
-
+        # breakpoint()
+        spectrograms = []
+        rows = []
+        cols = []
         for ttl in ttls:
             (
                 SFT,
@@ -1121,17 +1157,13 @@ class Rippler(object):
         for i, s in enumerate(spectrograms):
             spec_array[i, :, :] = s[0:min_rows, 0:min_cols]
 
-        mean_spectrogram = np.mean(spec_array, 0)
         if ax is None:
             fig1, ax1 = plt.subplots(figsize=(6.0, 4.0))  # enlarge plot a bit
         else:
             ax1 = ax
             fig1 = plt.gcf()
         t_lo, t_hi = SFT.extent(N)[:2]  # time range of plot
-        # ax1.set_title(
-        #     rf"Spectrogram ({SFT.m_num*SFT.T:g}$\,s$ Gaussian "
-        #     + rf"window, $\sigma_t={self.gaussian_std*SFT.T:g}\,$s)"
-        # )
+        breakpoint()
         ax1.set(
             xlabel=f"Time $t$ in seconds ({SFT.p_num(N)} slices, "
             + rf"$\Delta t = {SFT.delta_t:g}\,$s)",
@@ -1142,7 +1174,7 @@ class Rippler(object):
         trans = transforms.blended_transform_factory(ax1.transData, ax1.transAxes)
         ax1.vlines(
             [
-                self.pre_ttl,
+                0,
                 self.pre_ttl + ttl_duration,
             ],
             ymin=0,
@@ -1153,7 +1185,7 @@ class Rippler(object):
         )
         # add an annotation for the ttl duration next in between
         # the vertical red dashed lines
-        ttl_duration_ms = ttl_duration * 1000
+        ttl_duration_ms = ttl_duration  # * 1000
         ax1.annotate(
             f"{ttl_duration_ms:.2f}\n ms",
             xy=(self.pre_ttl + ttl_duration / 2, 0.8),
@@ -1165,24 +1197,34 @@ class Rippler(object):
             color="r",
             fontsize="small",
         )
-
+        # imshow not respecting the image extents so use pcolormesh
+        # mean_spec_array = np.mean(spec_array, 0)
+        # X, Y = np.meshgrid(
+        #     np.linspace(SFT.extent(N)[0], SFT.extent(N)[1], mean_spec_array.shape[1]),
+        #     np.linspace(SFT.extent(N)[2], SFT.extent(N)[3], mean_spec_array.shape[0]),
+        # )
+        # breakpoint()
+        # im1 = ax1.pcolormesh(
+        #     X, Y, np.mean(spec_array, 0), cmap="magma", norm=norm, edgecolors="face"
+        # )
         im1 = ax1.imshow(
-            mean_spectrogram,
+            np.mean(spec_array, 0),
             origin="lower",
             aspect="auto",
             extent=SFT.extent(N),
             cmap="magma",
             norm=norm,
         )
-        return fig1, im1, mean_spectrogram
+        return fig1, im1, spec_array
 
     def get_spectrogram(self, start_time: float, end_time: float, plot=False):
         eeg_chunk = self.filtered_eeg[
             np.logical_and(
                 self.eeg_time > start_time - self.pre_ttl,
-                self.eeg_time < end_time + self.post_ttl,
+                self.eeg_time < start_time + self.post_ttl,
             )
         ]
+        # breakpoint()
 
         win = gaussian(self.gaussian_window, std=self.gaussian_std, sym=True)
         SFT = ShortTimeFFT(win, hop=1, fs=self.fs, mfft=256, scale_to="psd")
@@ -1205,7 +1247,7 @@ class Rippler(object):
             )
             trans = transforms.blended_transform_factory(ax1.transData, ax1.transAxes)
             ax1.vlines(
-                [self.pre_ttl, self.pre_ttl + (end_time - start_time)],
+                [self.pre_ttl, self.pre_ttl + (start_time)],
                 ymin=0,
                 ymax=1,
                 colors="r",
@@ -1227,7 +1269,8 @@ class Rippler(object):
             plt.show()
         return SFT, N, np.abs(Sx2)
 
-    def plot_mean_rippleband_power(self, **kwargs):
+    @savePlot
+    def plot_mean_rippleband_power(self, **kwargs) -> plt.Axes:
         """
         Plots the mean power in the ripple band for the laser on and no laser
         conditions
@@ -1235,11 +1278,11 @@ class Rippler(object):
         if np.any(self.laser_on_spectrogram) and np.any(self.laser_off_spectrogram):
             ax = kwargs.pop("ax", None)
             freqs = np.linspace(
-                0, int(self.fs / 2), int(self.laser_off_spectrogram.shape[0])
+                0, int(self.fs / 2), int(self.laser_off_spectrogram.shape[1])
             )
             idx = np.logical_and(freqs >= self.low_band, freqs <= self.high_band)
-            mean_power_on = np.mean(self.laser_on_spectrogram[idx, :], 0)
-            mean_power_no = np.mean(self.laser_off_spectrogram[idx, :], 0)
+            mean_power_on = np.mean(self.laser_on_spectrogram[:, idx, :], axis=(0, 1))
+            mean_power_no = np.mean(self.laser_off_spectrogram[:, idx, :], axis=(0, 1))
             mean_power_on_time = np.linspace(
                 0 - self.pre_ttl, self.post_ttl, len(mean_power_on)
             )
@@ -1280,6 +1323,7 @@ class Rippler(object):
             )
             plt.legend()
             plt.show()
+            return ax
 
     def _find_high_power_periods(self, n: int = 3, t: int = 10) -> np.ndarray:
         """
@@ -1296,3 +1340,80 @@ class Rippler(object):
         ripple_std = int(getattr(proc, "ripple_std"))
         time_thresh = int(getattr(proc, "time_thresh"))
         rms_sig = window_rms(self.filtered_eeg, rms_window)
+
+    def filter_timestamps_for_real_ripples(self):
+        """
+        Filter out low power and short duration events from the list of timestamps
+        """
+        laser_on_keep_indices, laser_on_run_lens = (
+            self._calc_ripple_chunks_duration_power("laser")
+        )
+        no_laser_keep_indices, no_laser_run_lens = (
+            self._calc_ripple_chunks_duration_power("no_laser")
+        )
+        self.laser_on_run_lens = laser_on_run_lens
+        self.no_laser_run_lens = no_laser_run_lens
+        self.laser_on_ts = self.laser_on_ts[laser_on_keep_indices]
+        self.laser_off_ts = self.laser_off_ts[laser_on_keep_indices]
+        self.no_laser_on_ts = self.no_laser_on_ts[no_laser_keep_indices]
+
+    def _calc_ripple_chunks_duration_power(self, ttl_type="no_laser") -> tuple:
+        """
+        Find the indices and durations of the events that have sufficient
+        duration and power to be considered ripples.
+
+        Parameters
+        ----------
+        ttl_type (str) - which bit of the trial to do the calculation for
+                         Either 'no_laser' or 'laser'
+
+        Returns
+        -------
+        tuple: the run indices to keep and the run durations in ms
+
+        """
+        n_samples = int((self.post_ttl + self.pre_ttl) * 1000)
+        times = [0]
+        if ttl_type == "no_laser":
+            times = self.no_laser_on_ts
+        elif ttl_type == "laser":
+            times = self.laser_on_ts
+        else:
+            warnings.warn(
+                "ttl_type not recognised. Must be one of 'laser' or 'no_laser'"
+            )
+            return ([],)
+        eeg_chunks = np.zeros(shape=[len(times), n_samples])
+        rms_signal = window_rms(self.filtered_eeg, 12)
+
+        # Get segments of the root mean squared and smoothed LFP signal
+        for i, t in enumerate(times):
+            idx = np.logical_and(
+                self.eeg_time > t - self.pre_ttl, self.eeg_time < t + self.post_ttl
+            )
+            eeg_chunks[i, :] = rms_signal[idx]
+
+        # Square the whole filtered LFP signal and calculate the mean power
+        mean_power = np.mean(rms_signal)
+        std_dev_power = np.std(rms_signal)
+
+        # Find ripples that are ripple_std_dev standard deviations over the
+        # mean power to demarcate the start and end of the ripples and longer
+        # than ripple_min_duration_ms
+        indices_to_keep = []
+        run_lens = []
+        for idx, chunk in enumerate(eeg_chunks):
+            high_power = chunk > mean_power + std_dev_power * self.ripple_std_dev
+            run_vals, _, run_lengths = find_runs(high_power)
+            if len(run_vals > 1):
+                try:
+                    if run_vals[0] is True:
+                        run_length = run_lengths[0]
+                    else:  # second run_val must be True
+                        run_length = run_lengths[1]
+                    if run_length > self.ripple_min_duration_ms:
+                        indices_to_keep.append(idx)
+                        run_lens.append(run_length)
+                except IndexError:
+                    pass
+        return indices_to_keep, run_lens

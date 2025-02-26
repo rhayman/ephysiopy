@@ -477,14 +477,15 @@ def count_to(n):
     return np.cumsum(ret)[:-1]
 
 
-def window_rms(a: np.ndarray, window_size: int) -> np.ndarray:
+def window_rms(a: np.ndarray, window_size: int | float) -> np.ndarray:
     """
     Returns the root mean square of the input a over a window of
     size window_size
     """
+    window_size = int(window_size)
     a2 = np.power(a, 2)
     window = np.ones(window_size) / float(window_size)
-    return np.sqrt(np.convolve(a2, window, "valid"))
+    return np.sqrt(np.convolve(a2, window, "same"))
 
 
 def find_runs(x):

@@ -148,6 +148,36 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     Defines a minimal and required set of methods for loading
     electrophysiology data recorded using Axona or OpenEphys
     (OpenEphysNWB is there but not used)
+
+    Attributes
+    ----------
+    pname : str
+        the absolute pathname of the top-level data directory
+    settings : dict
+        contains metadata about the trial
+    PosCalcs : PosCalcsGeneric
+        contains the positional data for the trial
+    RateMap : RateMap
+        methods for binning data mostly
+    EEGCalcs : EEGCalcs
+        methods for dealing with LFP data
+    clusterData : clusterData
+        contains results of a spike sorting session (i.e. KiloSort)
+    recording_start_time : float
+        the start time of the recording in seconds
+    sync_message_file : Path
+        the location of the sync_message_file (OpenEphys)
+    ttl_data : dict
+        ttl data including timestamps, ids and states
+    accelerometer_data : np.ndarray
+        data relating to headstage accelerometers
+    path2PosData : Path
+        location of the positional data
+    mask_array : np.ma.MaskedArray
+        contains the mask (if applied) for positional data
+    filter : TrialFilter
+        contains details of the filter applied to the positional data
+
     """
 
     def __init__(self, pname: Path, **kwargs) -> None:
@@ -330,11 +360,11 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         Load the position data
 
-        Args:
-            pname (Path): Path to base directory containing pos data
-            ppm (int): pixels per metre
-            jumpmax (int): max jump in pixels between positions, more
-                than this and the position is interpolated over
+        Parameters
+        ----------
+        ppm (int): pixels per metre
+        jumpmax (int): max jump in pixels between positions, more
+            than this and the position is interpolated over
         """
         raise NotImplementedError
 
@@ -362,9 +392,10 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     def apply_filter(self, *trial_filter: TrialFilter) -> np.ndarray:
         """Apply a mask to the data
 
-        Args:
-            trial_filter (TrialFilter): A namedtuple containing the filter
-                name, start and end values
+        Parameters
+        ----------
+        trial_filter (TrialFilter): A namedtuple containing the filter
+            name, start and end values
             name (str): The name of the filter
             start (float): The start value of the filter
             end (float): The end value of the filter
@@ -380,8 +411,9 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             from the namedtuple TrialFilter that has fields 'start' and 'end'
             where 'start' and 'end' are the ranges to filter for
 
-        Returns:
-            np.array: An array of bools that is True where the mask is applied
+        Returns
+        -------
+        np.ndarray: An array of bools that is True where the mask is applied
         """
         if len(trial_filter) == 0:
             bool_arr = False
@@ -485,8 +517,14 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self, cluster: int | list, channel: int | list
     ) -> np.ndarray:
         """
-        Returns the spike times binned into the position data
-        That is the length of the output array will be the same as the number of position samples
+        Parameters
+        ----------
+        cluster (int | list): The cluster(s).
+        channel (int | list): The channel(s).
+
+        Returns
+        -------
+        np.ndarray - the spike times binned into the position data
         """
         ts = self.get_spike_times(cluster, channel)
         if not isinstance(ts, list):
@@ -512,16 +550,18 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         Returns the indices into the position data at which some cluster
         on a given channel emitted putative spikes.
 
-        Args:
-            cluster (int): The cluster identity. NB this can be None in which
-                    case the "spike times" are equal to the position times, which
-                    means data binned using these indices will be equivalent to
-                    binning up just the position data alone.
+        Parameters
+        ----------
+        cluster (int | list): The cluster(s). NB this can be None in which
+                case the "spike times" are equal to the position times, which
+                means data binned using these indices will be equivalent to
+                binning up just the position data alone.
 
-            channel (int): The channel identity. Ignored if cluster is None
+        channel (int | list): The channel identity. Ignored if cluster is None
 
-        Returns:
-            np.ndarray: The indices into the position data at which the spikes
+        Returns
+        -------
+        np.ndarray: The indices into the position data at which the spikes
                 occurred.
         """
         pos_times = getattr(self.PosCalcs, "xyTS")
@@ -576,28 +616,28 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         This function generates a rate map for a given cluster and channel.
 
-        Args:
-            cluster (int): The cluster.
-            channel (int): The channel.
-            var2bin (VariableToBin.XY): The variable to bin. This is an enum that specifies the type of variable to bin.
-            **kwargs:
-                do_shuffle (bool): If True, the rate map will be shuffled by the default number of shuffles (100).
-                                If the n_shuffles keyword is provided, the rate map will be shuffled by that number of shuffles, and
-                                an array of shuffled rate maps will be returned e.g [100 x nx x ny].
-                                The shuffles themselves are generated by shifting the spike times by a random amount between 30s and the
-                                length of the position data minus 30s. The random amount is drawn from a uniform distribution. In order to preserve
-                                the shifts over multiple calls to this function, the option is provided to set the random seed to a fixed
-                                value using the random_seed keyword.
-                                Default is False
-                n_shuffles (int): The number of shuffles to perform. Default is 100.
-                random_seed (int): The random seed to use for the shuffles. Default is None.
+        Parameters
+        ----------
+        cluster (int | list): The cluster(s).
+        channel (int | list): The channel(s).
+        var2bin (VariableToBin.XY): The variable to bin. This is an enum that specifies the type of variable to bin.
+        **kwargs:
+            do_shuffle (bool): If True, the rate map will be shuffled by the default number of shuffles (100).
+                            If the n_shuffles keyword is provided, the rate map will be shuffled by that number of shuffles, and
+                            an array of shuffled rate maps will be returned e.g [100 x nx x ny].
+                            The shuffles themselves are generated by shifting the spike times by a random amount between 30s and the
+                            length of the position data minus 30s. The random amount is drawn from a uniform distribution. In order to preserve
+                            the shifts over multiple calls to this function, the option is provided to set the random seed to a fixed
+                            value using the random_seed keyword.
+                            Default is False
+            n_shuffles (int): The number of shuffles to perform. Default is 100.
+            random_seed (int): The random seed to use for the shuffles. Default is None.
 
 
-        Returns:
-            np.ndarray: The rate map as a numpy array.
+        Returns
+        -------
+        np.ndarray: The rate map as a numpy array.
 
-        Raises:
-            Exception: If the RateMap is not initialized, an exception will be raised.
         """
         if not self.RateMap:
             self.initialise()
@@ -636,10 +676,15 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         Gets the rate map for the specified cluster(s) and channel.
 
-        Args:
-            cluster (int): The cluster(s) to get the rate map for.
-            channel (int): The channel number.
-            **kwargs: Additional keyword arguments for the function.
+        Parameters
+        ----------
+        cluster (int | list): The cluster(s) to get the speed vs rate for.
+        channel (int | list): The channel(s) number.
+        **kwargs: Additional keyword arguments passed to _get_map
+
+        Returns
+        -------
+        BinnedData - the binned data
         """
         return self._get_map(cluster, channel, VariableToBin.XY, **kwargs)
 
@@ -649,11 +694,17 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         Gets the head direction map for the specified cluster(s) and channel.
 
-        Args:
-            cluster (int): The cluster(s) to get the head direction map for.
-            channel (int): The channel number.
-            **kwargs: Additional keyword arguments for the function.
+        Parameters
+        ----------
+        cluster (int | list): The cluster(s) to get the speed vs rate for.
+        channel (int | list): The channel(s) number.
+        **kwargs: Additional keyword arguments passed to _get_map
+
+        Returns
+        -------
+        BinnedData - the binned data
         """
+
         return self._get_map(cluster, channel, VariableToBin.DIR, **kwargs)
 
     def get_eb_map(
@@ -662,10 +713,15 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         Gets the edge bin map for the specified cluster(s) and channel.
 
-        Args:
-            cluster (int): The cluster(s) to get the edge bin map for.
-            channel (int): The channel number.
-            **kwargs: Additional keyword arguments for the function.
+        Parameters
+        ----------
+        cluster (int | list): The cluster(s) to get the speed vs rate for.
+        channel (int | list): The channel(s) number.
+        **kwargs: Additional keyword arguments passed to _get_map
+
+        Returns
+        -------
+        BinnedData - the binned data
         """
         return self._get_map(cluster, channel, VariableToBin.EGO_BOUNDARY, **kwargs)
 
@@ -675,10 +731,15 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         Gets the speed vs rate for the specified cluster(s) and channel.
 
-        Args:
-            cluster (int): The cluster(s) to get the speed vs rate for.
-            channel (int): The channel number.
-            **kwargs: Additional keyword arguments for the function.
+        Parameters
+        ----------
+        cluster (int | list): The cluster(s) to get the speed vs rate for.
+        channel (int | list): The channel(s) number.
+        **kwargs: Additional keyword arguments passed to _get_map
+
+        Returns
+        -------
+        BinnedData - the binned data
         """
         return self._get_map(cluster, channel, VariableToBin.SPEED, **kwargs)
 
@@ -688,10 +749,11 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         Gets the speed vs head direction map for the specified cluster(s) and channel.
 
-        Args:
-            cluster (int): The cluster(s) to get the speed vs head direction map for.
-            channel (int): The channel number.
-            **kwargs: Additional keyword arguments for the function.
+        Parameters
+        ----------
+        cluster (int | list): The cluster(s) to get the speed vs head direction map for.
+        channel (int | list): The channel number.
+        **kwargs: Additional keyword arguments passed to _get_map
         """
         # binsize is in cm/s and degrees
         binsize = kwargs.get("binsize", (2.5, 3))
@@ -799,7 +861,7 @@ class AxonaTrial(TrialInterface):
         self, cluster: int | list = None, tetrode: int | list = None, *args, **kwargs
     ) -> list | np.ndarray:
         """
-        Args:
+        Parameters:
             tetrode (int | list):
             cluster (int | list):
 
@@ -823,12 +885,13 @@ class AxonaTrial(TrialInterface):
     def apply_filter(self, *trial_filter: TrialFilter) -> np.ndarray:
         """Apply a mask to the data
 
-        Args:
-            trial_filter (TrialFilter): A namedtuple containing the filter
-                name, start and end values
-            name (str): The name of the filter
-            start (float): The start value of the filter
-            end (float): The end value of the filter
+        Parameters
+        ----------
+        trial_filter (TrialFilter): A namedtuple containing the filter
+            name, start and end values:
+                name (str): The name of the filter
+                start (float): The start value of the filter
+                end (float): The end value of the filter
 
             Valid names are:
                 'dir' - the directional range to filter for
@@ -841,8 +904,11 @@ class AxonaTrial(TrialInterface):
             from the namedtuple TrialFilter that has fields 'start' and 'end'
             where 'start' and 'end' are the ranges to filter for
 
-        Returns:
-            np.array: An array of bools that is True where the mask is applied
+            See ephysiopy.common.utils.TrialFilter for more details
+
+        Returns
+        -------
+        np.ndarray: An array of bools that is True where the mask is applied
         """
         mask = super().apply_filter(*trial_filter)
         for tetrode in self.TETRODE.keys():
@@ -903,6 +969,10 @@ class OpenEphysBase(TrialInterface):
     def _get_recording_start_time(self) -> float:
         """
         Get the recording start time from the sync_messages.txt file
+
+        Returns
+        -------
+        start_time (float) - in seconds
         """
         recording_start_time = 0.0
         if self.sync_message_file is not None:
@@ -922,12 +992,14 @@ class OpenEphysBase(TrialInterface):
         self, cluster: int | list = None, tetrode: int | list = None, *args, **kwargs
     ) -> list | np.ndarray:
         """
-        Args:
-            tetrode (int):
-            cluster (int):
+        Parameters
+        ----------
+        cluster (int| list)
+        tetrode (int | list)
 
-        Returns:
-            spike_times (np.ndarray): in seconds
+        Returns
+        -------
+        spike_times (list | np.ndarray): in seconds
         """
         if not self.clusterData:
             self.load_cluster_data()
@@ -1135,6 +1207,12 @@ class OpenEphysBase(TrialInterface):
 
     def load_ttl(self, *args, **kwargs) -> bool:
         """
+        Returns
+        -------
+        loaded (bool) - whether the data was loaded or not
+
+        Notes
+        -----
         Valid kwargs:
             StimControl_id (str): This is the string
                 "StimControl [0-9][0-9][0-9]" where the numbers
@@ -1151,12 +1229,11 @@ class OpenEphysBase(TrialInterface):
             RippleDetector (str): Loads up the TTL data from the Ripple Detector
                 plugin
 
-        Returns:
-            Nothing but sets some keys/values in a dict on 'self'
-            called ttl_data, namely:
+        Sets some keys/values in a dict on 'self'
+        called ttl_data, namely:
 
-            ttl_timestamps (list): the times of high ttl pulses in ms
-            stim_duration (int): the duration of the ttl pulse in ms
+        ttl_timestamps (list): the times of high ttl pulses in ms
+        stim_duration (int): the duration of the ttl pulse in ms
         """
         if not Path(self.path2EventsData).exists:
             return False
@@ -1275,25 +1352,13 @@ class OpenEphysBase(TrialInterface):
     def apply_filter(self, *trial_filter: TrialFilter) -> np.ndarray:
         """Apply a mask to the data
 
-        Args:
-            trial_filter (TrialFilter): A namedtuple containing the filter
-                name, start and end values
-            name (str): The name of the filter
-            start (float): The start value of the filter
-            end (float): The end value of the filter
+        Parameters
+        ----------
+        trial_filter (TrialFilter): A namedtuple containing the filter
+            name, start and end values
 
-            Valid names are:
-                'dir' - the directional range to filter for
-                'speed' - min and max speed to filter for
-                'xrange' - min and max values to filter x pos values
-                'yrange' - same as xrange but for y pos
-                'time' - the times to keep / remove specified in ms
-
-            Values are pairs specifying the range of values to filter for
-            from the namedtuple TrialFilter that has fields 'start' and 'end'
-            where 'start' and 'end' are the ranges to filter for
-
-        Returns:
+        Returns
+        -------
             np.array: An array of bools that is True where the mask is applied
         """
         mask = super().apply_filter(*trial_filter)

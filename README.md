@@ -18,6 +18,13 @@ or,
 
 Or similar.
 
+Documentation
+=============
+
+An ongoing lack of effort. There is more or less up-to-date documentation here:
+
+https://rhayman.github.io/ephysiopy/
+
 Code Example
 ============
 

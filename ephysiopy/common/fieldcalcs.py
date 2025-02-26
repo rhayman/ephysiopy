@@ -663,14 +663,6 @@ def fieldprops(
             inconsistent handling of images with singleton dimensions. To
             recover the old behaviour, use
             ``regionprops(np.squeeze(label_image), ...)``.
-    intensity_image : (M, N[, P][, C]) ndarray, optional
-        Intensity (i.e., input) image with same size as labeled image, plus
-        optionally an extra dimension for multichannel data. Currently,
-        this extra channel dimension, if present, must be the last axis.
-        Default is None.
-
-        .. versionchanged:: 0.18.0
-            The ability to provide an extra dimension for channels was added.
     xy : (2 x N) ndarray
         The x-y coordinates for all runs through the field corresponding to
         a particular label
@@ -1048,7 +1040,7 @@ def partitionFields(
     field_threshold_percent: int = 50,
     field_rate_threshold: float = 0.5,
     area_threshold=0.01,
-) -> tuple:
+) -> tuple[np.ndarray, ...]:
     """
     Partitions fields.
 
@@ -1057,10 +1049,10 @@ def partitionFields(
 
     Parameters
     ----------
-    rmap (BinnedData) - an instance of ephysiopy.common.utils.BinnedData
+    binned_data (BinnedData) - an instance of ephysiopy.common.utils.BinnedData
     field_threshold_percent (int) - removes pixels in a field that fall below this percent
                                     of the maximum firing rate in the field
-    field_rate_threshold (rate) - anything below this firing rate in Hz threshold is set to 0
+    field_rate_threshold (float) - anything below this firing rate in Hz threshold is set to 0
     area_threshold (float) - defines the minimum field size as a proportion of the
                              environment size. Default of 0.01 says a field has to be at
                              least 1% of the size of the environment i.e.
@@ -1068,12 +1060,13 @@ def partitionFields(
 
     Returns
     -------
-    peaksXY (array_like): The xy coordinates of the peak rates in
-    each field
-    peaksRate (array_like): The peak rates in peaksXY
-    labels (numpy.ndarray): An array of the labels corresponding to
-    each field (starting  1)
-    rmap (numpy.ndarray): The ratemap of the tetrode / cluster
+    tuple[np.ndarray] - including:
+        peaksXY (array_like): The xy coordinates of the peak rates in
+        each field
+        peaksRate (array_like): The peak rates in peaksXY
+        labels (numpy.ndarray): An array of the labels corresponding to
+        each field (starting  1)
+        rmap (numpy.ndarray): The ratemap of the tetrode / cluster
     """
     ye, xe = binned_data.bin_edges
     rmap = binned_data[0]

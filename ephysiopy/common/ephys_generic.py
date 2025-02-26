@@ -5,7 +5,6 @@ things like spike timing autocorrelograms, power spectrum calculation and so on
 """
 
 import numpy as np
-import numpy.typing as npt
 from scipy import signal
 from scipy.interpolate import griddata
 import astropy.convolution as cnv

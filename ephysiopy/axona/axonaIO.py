@@ -52,7 +52,7 @@ class IO(object):
 
         Parameters
         ----------
-        input :  str
+        filename_root:  str
             Fully qualified path name to the data file
 
         Returns

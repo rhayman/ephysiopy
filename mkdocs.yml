@@ -5,9 +5,10 @@ theme:
 
 plugins:
   - mkdocstrings:
+      default_handler: python
       handlers:
         python:
-          selection:
+          options:
             docstring_style: numpy
   - search
 

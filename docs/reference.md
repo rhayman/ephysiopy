@@ -14,10 +14,6 @@
 
 ::: ephysiopy.common.fieldcalcs
 
-## Grid cells
-
-::: ephysiopy.common.gridcell
-
 ## Phase coding
 
 ::: ephysiopy.common.phasecoding

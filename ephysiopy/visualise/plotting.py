@@ -20,6 +20,23 @@ from ephysiopy.common.binning import RateMap
 from ephysiopy.common.utils import clean_kwargs
 from ephysiopy.common import fieldcalcs as fc
 
+"""
+A decorator class that accepts arguments. This one allows us to save the returned
+matplotlib Axis object to a location and name specified by the user in the decorated
+function
+"""
+
+
+def savePlot(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        ax = func(*args, **kwargs)
+        if "save_as" in kwargs.keys():
+            plt.savefig(kwargs["save_as"])
+        return ax
+
+    return wrapper
+
 
 def stripAxes(func):
     @functools.wraps(func)
@@ -122,6 +139,7 @@ class FigureMaker(object):
             func(ts, ax=ax, **kwargs)
         return fig
 
+    @savePlot
     @stripAxes
     def plot_rate_map(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
@@ -154,6 +172,7 @@ class FigureMaker(object):
         ax.set_aspect("equal")
         return ax
 
+    @savePlot
     @stripAxes
     def plot_hd_map(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
@@ -211,6 +230,7 @@ class FigureMaker(object):
             return stripAxes(ax)
         return ax
 
+    @savePlot
     @stripAxes
     def plot_spike_path(self, cluster=None, channel=None, **kwargs) -> plt.Axes:
         """
@@ -248,6 +268,7 @@ class FigureMaker(object):
             )
         return ax
 
+    @savePlot
     @stripAxes
     def plot_eb_map(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
@@ -286,6 +307,7 @@ class FigureMaker(object):
             return ax, rmap
         return ax
 
+    @savePlot
     @stripAxes
     def plot_eb_spikes(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
@@ -356,6 +378,7 @@ class FigureMaker(object):
             ax_col.set_thetagrids([0, 90])
         return ax
 
+    @savePlot
     @stripAxes
     def plot_sac(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
@@ -422,6 +445,7 @@ class FigureMaker(object):
 
         return ax
 
+    @savePlot
     def plot_speed_v_rate(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
         Gets the speed versus rate plot for the specified cluster(s) and
@@ -477,6 +501,7 @@ class FigureMaker(object):
         return ax
 
     # @stripAxes
+    @savePlot
     def plot_speed_v_hd(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
         Gets the speed versus head direction plot for the specified cluster(s)
@@ -514,6 +539,7 @@ class FigureMaker(object):
         ax.set_xlabel("Heading", fontweight="normal", size=6)
         return ax
 
+    @savePlot
     def plot_acorr(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
         Gets the autocorrelogram for the specified cluster(s) and channel.
@@ -529,6 +555,7 @@ class FigureMaker(object):
         ax = self._getXCorrPlot(ts, **kwargs)
         return ax
 
+    @savePlot
     def plot_xcorr(
         self, cluster_a: int, channel_a: int, cluster_b: int, channel_b: int, **kwargs
     ) -> plt.Axes:
@@ -583,6 +610,7 @@ class FigureMaker(object):
         ax.vlines(0, ymin=0, ymax=1, colors="lightgrey", transform=axtrans, zorder=1)
         return ax
 
+    @savePlot
     def plot_raster(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
         Gets the raster plot for the specified cluster(s) and channel.
@@ -596,6 +624,7 @@ class FigureMaker(object):
         ax = self._getRasterPlot(ts, cluster=cluster, **kwargs)
         return ax
 
+    @savePlot
     def plot_power_spectrum(self, **kwargs) -> plt.Axes:
         """
         Gets the power spectrum.
@@ -607,6 +636,7 @@ class FigureMaker(object):
         ax = self._getPowerSpectrumPlot(p[0], p[1], p[2], p[3], p[4], **kwargs)
         return ax
 
+    @savePlot
     def plot_theta_vs_running_speed(self, **kwargs) -> QuadMesh:
         low_theta = kwargs.pop("low_theta", 6)
         high_theta = kwargs.pop("high_theta", 12)
@@ -633,6 +663,7 @@ class FigureMaker(object):
         ax = plt.pcolormesh(edges[1], edges[0], h, cmap=jet_cmap, edgecolors="face")
         return ax
 
+    @savePlot
     def plot_clusters_theta_phase(
         self, cluster: int, channel: int, **kwargs
     ) -> plt.Axes:
@@ -659,6 +690,7 @@ class FigureMaker(object):
         ax.set_xticks(np.arange(0, 2 * np.pi, np.pi / 2), ["0", "90", "180", "270"])
         return ax
 
+    @savePlot
     @stripAxes
     def _plotWaves(self, waves: np.ndarray, ax: matplotlib.axes, **kwargs) -> plt.Axes:
         ax.plot(waves, c="k", **kwargs)
