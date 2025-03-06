@@ -15,6 +15,53 @@ from abc import ABC
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Callable
+import numpy as np
+from ephysiopy.common.utils import memmapBinaryFile
+
+"""
+Some conversion classes used in the dataclasses below. When the attributes for the
+dataclasses are added (via recursion in the addValues2Class and recurseNode functions at
+the end of this file) they are added as strings. If we know that they should be ints or 
+floats or whatever we can do that conversion by using descriptor-typed fields. See 
+
+https://docs.python.org/3/library/dataclasses.html#descriptor-typed-fields
+
+for more details
+"""
+
+
+class IntConversion:
+    def __init__(self, *, default):
+        self._default = default
+
+    def __set_name__(self, owner, name):
+        self._name = "_" + name
+
+    def __get__(self, obj, type):
+        if obj is None:
+            return self._default
+
+        return getattr(obj, self._name, self._default)
+
+    def __set__(self, obj, value):
+        setattr(obj, self._name, int(value))
+
+
+class FloatConversion:
+    def __init__(self, *, default):
+        self._default = default
+
+    def __set_name__(self, owner, name):
+        self._name = "_" + name
+
+    def __get__(self, obj, type):
+        if obj is None:
+            return self._default
+
+        return getattr(obj, self._name, self._default)
+
+    def __set__(self, obj, value):
+        setattr(obj, self._name, float(value))
 
 
 @dataclass
@@ -24,13 +71,13 @@ class Channel(object):
     """
 
     name: str = field(default_factory=str)
-    _number: int = field(default_factory=int)
-    _gain: float = field(default_factory=float)
+    _number: IntConversion = IntConversion(default=0)
+    _gain: FloatConversion = FloatConversion(default=0)
     _param: bool = field(default_factory=bool)
     _record: bool = field(default=False)
     _audio: bool = field(default=False)
-    _lowcut: int = field(default_factory=int)
-    _highcut: int = field(default_factory=int)
+    _lowcut: IntConversion = IntConversion(default=0)
+    _highcut: IntConversion = IntConversion(default=0)
 
     @property
     def number(self) -> int:
@@ -106,8 +153,8 @@ class Stream:
 
     name: str = field(default_factory=str)
     description: str = field(default_factory=str)
-    sample_rate: int = field(default_factory=int)
-    channel_count: int = field(default_factory=int)
+    sample_rate: IntConversion = IntConversion(default=0)
+    channel_count: IntConversion = IntConversion(default=0)
 
 
 @dataclass
@@ -117,17 +164,17 @@ class OEPlugin(ABC):
     """
 
     name: str = field(default_factory=str)
-    insertionPoint: int = field(default_factory=int)
+    insertionPoint: IntConversion = IntConversion(default=0)
     pluginName: str = field(default_factory=str)
-    type: int = field(default_factory=int)
-    index: int = field(default_factory=int)
+    type: IntConversion = IntConversion(default=0)
+    index: IntConversion = IntConversion(default=0)
     libraryName: str = field(default_factory=str)
-    libraryVersion: int = field(default_factory=int)
-    processorType: int = field(default_factory=int)
-    nodeId: int = field(default_factory=int)
-    channel_count: int = field(default_factory=int)
+    libraryVersion: IntConversion = IntConversion(default=0)
+    processorType: IntConversion = IntConversion(default=0)
+    nodeId: IntConversion = IntConversion(default=0)
+    channel_count: IntConversion = IntConversion(default=0)
     stream: Stream = field(default_factory=Stream)
-    sample_rate: int = field(default_factory=int)
+    sample_rate: IntConversion = IntConversion(default=0)
 
 
 @dataclass
@@ -138,11 +185,11 @@ class RecordNode(OEPlugin):
 
     path: str = field(default_factory=str)
     engine: str = field(default_factory=str)
-    recordEvents: int = field(default_factory=int)
-    recordSpikes: int = field(default_factory=int)
-    isMainStream: int = field(default_factory=int)
-    sync_line: int = field(default_factory=int)
-    source_node_id: int = field(default_factory=int)
+    recordEvents: IntConversion = IntConversion(default=0)
+    recordSpikes: IntConversion = IntConversion(default=0)
+    isMainStream: IntConversion = IntConversion(default=0)
+    sync_line: IntConversion = IntConversion(default=0)
+    source_node_id: IntConversion = IntConversion(default=0)
     recording_state: str = field(default_factory=str)
 
 
@@ -171,8 +218,8 @@ class AcquisitionBoard(OEPlugin):
     Documents the Acquisition Board plugin
     """
 
-    LowCut: int = field(default_factory=int)
-    HighCut: int = field(default_factory=int)
+    LowCut: IntConversion = IntConversion(default=0)
+    HighCut: IntConversion = IntConversion(default=0)
 
 
 @dataclass
@@ -187,8 +234,38 @@ class BandpassFilter(OEPlugin):
     libraryName = "Bandpass Filter"
 
     channels: list[int] = field(default_factory=list)
-    low_cut: float = field(default_factory=float)
-    high_cut: float = field(default_factory=float)
+    low_cut: FloatConversion = FloatConversion(default=0)
+    high_cut: FloatConversion = FloatConversion(default=0)
+
+
+@dataclass
+class TrackingPort(OEPlugin):
+    """
+    Documents the Tracking Port plugin which uses Bonsai input
+    and Tracking Visual plugin for visualisation within OE
+    """
+
+    def load(self, path2data: Path) -> np.ndarray:
+        print("Loading Tracking Port data...")
+        dt = np.dtype(
+            [
+                ("x", np.single),
+                ("y", np.single),
+                ("w", np.single),
+                ("h", np.single),
+            ]
+        )
+        data_array = np.load(path2data / Path("data_array.npy"))
+        new_array = data_array.view(dtype=dt).copy()
+        w = new_array["w"][0]
+        h = new_array["h"][0]
+        x = new_array["x"] * w
+        y = new_array["y"] * h
+        pos_data = np.array([np.ravel(x), np.ravel(y)]).T
+        return pos_data
+
+    def load_times(self, path2data: Path) -> np.ndarray:
+        return np.load(path2data / Path("timestamps.npy"))
 
 
 @dataclass
@@ -197,16 +274,28 @@ class PosTracker(OEPlugin):
     Documents the PosTracker plugin
     """
 
-    Brightness: int = field(default=20)
-    Contrast: int = field(default=20)
-    Exposure: int = field(default=20)
-    LeftBorder: int = field(default=0)
-    RightBorder: int = field(default=800)
-    TopBorder: int = field(default=0)
-    BottomBorder: int = field(default=600)
+    Brightness: IntConversion = IntConversion(default=20)
+    Contrast: IntConversion = IntConversion(default=20)
+    Exposure: IntConversion = IntConversion(default=20)
+    LeftBorder: IntConversion = IntConversion(default=0)
+    RightBorder: IntConversion = IntConversion(default=800)
+    TopBorder: IntConversion = IntConversion(default=0)
+    BottomBorder: IntConversion = IntConversion(default=600)
     AutoExposure: bool = field(default=False)
     OverlayPath: bool = field(default=False)
-    sample_rate: int = field(default=30)
+    sample_rate: IntConversion = IntConversion(default=30)
+
+    """
+    Custom methods for loading numpy arrays containing position data
+    and associated timestamps
+    """
+
+    def load(self, path2data: Path) -> np.ndarray:
+        print("Loading Tracker data...")
+        return np.load(path2data / Path("data_array.npy"))
+
+    def load_times(self, path2data: Path) -> np.ndarray:
+        return np.load(path2data / Path("timestamps.npy"))
 
 
 @dataclass
@@ -215,7 +304,24 @@ class TrackMe(OEPlugin):
     Documents the TrackMe plugin
     """
 
-    pass
+    def load(self, path2data: Path) -> np.ndarray:
+        print("Loading TrackMe data...")
+        mmap = memmapBinaryFile(path2data / Path("data_array.npy"), self.channel_count)
+        return np.array(mmap[0:2, :]).T
+
+    def load_times(self, path2data: Path) -> np.ndarray:
+        ts = np.load(path2data / Path("timestamps.npy"))
+        return ts - ts[0]
+
+    def load_frame_count(self, path2data: Path) -> np.ndarray:
+        data = memmapBinaryFile(path2data / Path("data_array.npy"), self.channel_count)
+        # framecount data is always last column in continuous.dat file
+        return np.array(data[-1, :]).T
+
+    def load_ttl_times(self, path2data: Path) -> np.ndarray:
+        ts = np.load(path2data / Path("timestamps.npy"))
+        states = np.load(path2data / Path("states.npy"))
+        return ts[states > 0]
 
 
 @dataclass
@@ -224,14 +330,14 @@ class StimControl(OEPlugin):
     Documents the StimControl plugin
     """
 
-    Device: int = field(default_factory=int)
-    Duration: int = field(default_factory=int)
-    Interval: int = field(default_factory=int)
-    Gate: int = field(default_factory=int)
-    Output: int = field(default_factory=int)
-    Start: int = field(default_factory=int)
-    Stop: int = field(default_factory=int)
-    Trigger: int = field(default_factory=int)
+    Device: IntConversion = IntConversion(default=0)
+    Duration: IntConversion = IntConversion(default=0)
+    Interval: IntConversion = IntConversion(default=0)
+    Gate: IntConversion = IntConversion(default=0)
+    Output: IntConversion = IntConversion(default=0)
+    Start: IntConversion = IntConversion(default=0)
+    Stop: IntConversion = IntConversion(default=0)
+    Trigger: IntConversion = IntConversion(default=0)
 
 
 @dataclass
@@ -250,13 +356,19 @@ class Electrode(object):
     Documents the ELECTRODE entries in the settings.xml file
     """
 
-    nChannels: int = field(default_factory=int)
-    id: int = field(default_factory=int)
+    nChannels: IntConversion = IntConversion(default=0)
+    id: IntConversion = IntConversion(default=0)
     subChannels: list[int] = field(default_factory=list)
     subChannelsThresh: list[int] = field(default_factory=list)
     subChannelsActive: list[int] = field(default_factory=list)
-    prePeakSamples: int = field(default=8)
-    postPeakSamples: int = field(default=32)
+    prePeakSamples: IntConversion = IntConversion(default=8)
+    postPeakSamples: IntConversion = IntConversion(default=32)
+
+
+"""
+The RippleDetector plugin emits TTL events so it has a custom
+method defined for loading and processing that
+"""
 
 
 @dataclass
@@ -265,21 +377,50 @@ class RippleDetector(OEPlugin):
     Documents the Ripple Detector plugin
     """
 
-    Ripple_Input: int = field(default_factory=int)
-    Ripple_Out: int = field(default_factory=int)
-    Ripple_save: int = field(default_factory=int)
-    ripple_std: float = field(default_factory=float)
-    time_thresh: float = field(default_factory=float)
-    refr_time: float = field(default_factory=float)
-    rms_samples: float = field(default_factory=float)
-    ttl_duration: int = field(default_factory=int)
-    ttl_percent: int = field(default_factory=int)
-    mov_detect: int = field(default_factory=int)
-    mov_input: int = field(default_factory=int)
-    mov_out: int = field(default_factory=int)
-    mov_std: float = field(default_factory=float)
-    min_time_st: float = field(default_factory=float)
-    min_time_mov: float = field(default_factory=float)
+    Ripple_Input: IntConversion = IntConversion(default=-1)
+    Ripple_Out: IntConversion = IntConversion(default=-1)
+    Ripple_save: IntConversion = IntConversion(default=-1)
+    ripple_std: FloatConversion = FloatConversion(default=-1)
+    time_thresh: FloatConversion = FloatConversion(default=-1)
+    refr_time: FloatConversion = FloatConversion(default=-1)
+    rms_samples: FloatConversion = FloatConversion(default=-1)
+    ttl_duration: IntConversion = IntConversion(default=-1)
+    ttl_percent: IntConversion = IntConversion(default=-1)
+    mov_detect: IntConversion = IntConversion(default=-1)
+    mov_input: IntConversion = IntConversion(default=-1)
+    mov_out: IntConversion = IntConversion(default=-1)
+    mov_std: FloatConversion = FloatConversion(default=-1)
+    min_time_st: FloatConversion = FloatConversion(default=-1)
+    min_time_mov: FloatConversion = FloatConversion(default=-1)
+
+    def load_ttl(self, path2TTL: Path, trial_start_time: float) -> dict:
+        timestamps = np.load(path2TTL / Path("timestamps.npy")) - trial_start_time
+        states = np.load(path2TTL / Path("states.npy"))
+        out = dict()
+        out_ttl = int(self.Ripple_Out)
+        save_ttl = int(self.Ripple_save)
+        # check for identical times - should fix the plugin really...
+        bad_indices = []
+        for i in range(len(states) - 2):
+            i_pair = states[i : i + 2]
+            if np.all(i_pair == np.array([save_ttl, out_ttl])):
+                if np.diff(timestamps[i : i + 2]) == 0:
+                    bad_indices.append(i)
+        mask = np.ones_like(states, dtype=bool)
+        mask[bad_indices] = False
+        timestamps = timestamps[mask]
+        states = states[mask]
+
+        out["ttl_timestamps"] = timestamps[states == out_ttl]
+        out["ttl_timestamps_off"] = timestamps[states == out_ttl * -1]
+        out["no_laser_ttls"] = timestamps[states == save_ttl]
+        if len(out["ttl_timestamps_off"]) == len(out["ttl_timestamps"]):
+            out["stim_duration"] = np.nanmean(
+                out["ttl_timestamps_off"] - out["ttl_timestamps"]
+            )
+        else:
+            out["stim_duration"] = None
+        return out
 
 
 class AbstractProcessorFactory:

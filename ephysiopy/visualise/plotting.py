@@ -1,4 +1,5 @@
 import functools
+from inspect import getfullargspec
 import warnings
 
 import matplotlib
@@ -31,8 +32,9 @@ def savePlot(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         ax = func(*args, **kwargs)
-        if "save_as" in kwargs.keys():
-            plt.savefig(kwargs["save_as"])
+        if ax is not None:
+            if "save_as" in kwargs.keys():
+                plt.savefig(kwargs["save_as"])
         return ax
 
     return wrapper
@@ -41,18 +43,46 @@ def savePlot(func):
 def stripAxes(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
+        if ax is not None:
+            ax = func(*args, **kwargs)
+            plt.setp(ax.get_xticklabels(), visible=False)
+            plt.setp(ax.get_yticklabels(), visible=False)
+            ax.axes.get_xaxis().set_visible(False)
+            ax.axes.get_yaxis().set_visible(False)
+            if "polar" in ax.name:
+                ax.set_rticks([])
+            else:
+                ax.spines["right"].set_visible(False)
+                ax.spines["top"].set_visible(False)
+                ax.spines["bottom"].set_visible(False)
+                ax.spines["left"].set_visible(False)
+        return ax
+
+    return wrapper
+
+
+def addClusterChannelToAxes(func):
+    argspec = getfullargspec(func)
+    try:
+        argindex = argspec.args.index("cluster")
+    except ValueError as v:
+        pass
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
         ax = func(*args, **kwargs)
-        plt.setp(ax.get_xticklabels(), visible=False)
-        plt.setp(ax.get_yticklabels(), visible=False)
-        ax.axes.get_xaxis().set_visible(False)
-        ax.axes.get_yaxis().set_visible(False)
-        if "polar" in ax.name:
-            ax.set_rticks([])
-        else:
-            ax.spines["right"].set_visible(False)
-            ax.spines["top"].set_visible(False)
-            ax.spines["bottom"].set_visible(False)
-            ax.spines["left"].set_visible(False)
+        if ax is not None:
+            if "add_cluster" in kwargs.keys():
+                if kwargs["add_cluster"] is True:
+                    if "cluster" in argspec.args:
+                        ax.text(
+                            0.5,
+                            1.2,
+                            str(args[argindex]),
+                            transform=ax.transAxes,
+                            fontsize=20,
+                            ha="center",
+                        )
         return ax
 
     return wrapper
@@ -140,6 +170,7 @@ class FigureMaker(object):
         return fig
 
     @savePlot
+    @addClusterChannelToAxes
     @stripAxes
     def plot_rate_map(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
@@ -540,6 +571,7 @@ class FigureMaker(object):
         return ax
 
     @savePlot
+    @addClusterChannelToAxes
     def plot_acorr(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
         Gets the autocorrelogram for the specified cluster(s) and channel.
@@ -564,14 +596,18 @@ class FigureMaker(object):
 
         Parameters
         ----------
-        cluster_a (int) : first cluster
-        channel_a (int) : first channel
-        cluster_b (int) : second cluster
-        channel_b (int) : second channel
+        cluster_a : int
+            first cluster
+        channel_a :int
+            first channel
+        cluster_b : int
+            second cluster
+        channel_b : int
+            second channel
 
         Returns
         -------
-        plt.Axes : matplotlib.Axes instance
+        plt.Axes : matplotlib.Axes
         """
         if "strip_axes" in kwargs.keys():
             strip_axes = kwargs.pop("strip_axes")
@@ -611,14 +647,23 @@ class FigureMaker(object):
         return ax
 
     @savePlot
+    @addClusterChannelToAxes
     def plot_raster(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
         Gets the raster plot for the specified cluster(s) and channel.
 
-        Args:
-            cluster (int | list): The cluster(s) to get the raster plot for.
-            channel (int): The channel number.
-            **kwargs: Additional keyword arguments for the function.
+        Parameters
+        ----------
+        cluster (int | list): The cluster(s) to get the raster plot for.
+        channel (int): The channel number.
+        **kwargs:
+            dt (list) - the range in seconds to plot data over either side of the TTL pulse
+            seconds_per_bin (float) - the number of seconds per bin
+
+
+        Returns
+        -------
+        ax (plt.Axes)
         """
         ts = self.get_spike_times(cluster, channel)
         ax = self._getRasterPlot(ts, cluster=cluster, **kwargs)
@@ -830,7 +875,7 @@ class FigureMaker(object):
         cluster=0,
         secs_per_bin: int = 0.001,
         **kwargs,
-    ) -> plt.Axes:
+    ) -> plt.Axes | None:
         """
         Plots a raster plot for a specified tetrode/ cluster.
 
@@ -862,85 +907,91 @@ class FigureMaker(object):
         S.event_ts = self.ttl_data["ttl_timestamps"]
         S.event_window = np.array(dt)
         x, y = S.psth()
-        if ax is None:
-            fig = plt.figure(figsize=(4.0, 7.0))
-            axScatter = fig.add_subplot(111)
+        if y:
+            if ax is None:
+                fig = plt.figure(figsize=(4.0, 7.0))
+                axScatter = fig.add_subplot(111)
+            else:
+                axScatter = ax
+            histColor = [1 / 255.0, 1 / 255.0, 1 / 255.0]
+            axScatter.scatter(x, y, marker=".", s=2, rasterized=False, color=histColor)
+            divider = make_axes_locatable(axScatter)
+            axScatter.set_xticks((dt[0], 0, dt[1]))
+            axScatter.set_xticklabels((str(dt[0]), "0", str(dt[1])))
+            axHistx = divider.append_axes(
+                "top", 0.95, pad=0.2, sharex=axScatter, transform=axScatter.transAxes
+            )
+            scattTrans = transforms.blended_transform_factory(
+                axScatter.transData, axScatter.transAxes
+            )
+            stim_pwidth = self.ttl_data["stim_duration"]
+            if stim_pwidth is None:
+                raise ValueError("stim duration is None")
+
+            axScatter.add_patch(
+                Rectangle(
+                    (0, 0),
+                    width=stim_pwidth,
+                    height=1,
+                    transform=scattTrans,
+                    color=[0, 0, 1],
+                    alpha=0.3,
+                )
+            )
+            histTrans = transforms.blended_transform_factory(
+                axHistx.transData, axHistx.transAxes
+            )
+            axHistx.add_patch(
+                Rectangle(
+                    (0, 0),
+                    width=stim_pwidth,
+                    height=1,
+                    transform=histTrans,
+                    color=[0, 0, 1],
+                    alpha=0.3,
+                )
+            )
+            axScatter.set_ylabel("Laser stimulation events", labelpad=-2.5)
+            axScatter.set_xlabel("Time to stimulus onset(s)")
+            nStms = y[-1]
+            axScatter.set_ylim(0, nStms)
+            # Label only the min and max of the y-axis
+            ylabels = axScatter.get_yticklabels()
+            for i in range(1, len(ylabels) - 1):
+                ylabels[i].set_visible(False)
+            yticks = axScatter.get_yticklines()
+            for i in range(1, len(yticks) - 1):
+                yticks[i].set_visible(False)
+
+            axHistx.hist(
+                x,
+                bins=np.arange(dt[0], dt[1] + secs_per_bin, secs_per_bin),
+                color=histColor,
+                range=dt,
+                rasterized=True,
+                histtype="stepfilled",
+            )
+            axHistx.set_ylabel("Spike count", labelpad=-2.5)
+            plt.setp(axHistx.get_xticklabels(), visible=False)
+            # Label only the min and max of the y-axis
+            ylabels = axHistx.get_yticklabels()
+            for i in range(1, len(ylabels) - 1):
+                ylabels[i].set_visible(False)
+            yticks = axHistx.get_yticklines()
+            for i in range(1, len(yticks) - 1):
+                yticks[i].set_visible(False)
+            axHistx.set_xlim(dt)
+            axScatter.set_xlim(dt)
+            fig = plt.gcf()
+            fig.canvas.manager.set_window_title(f"Cluster {cluster}")
+            if strip_axes:
+                return stripAxes(axScatter)
+            return axHistx
         else:
-            axScatter = ax
-        histColor = [1 / 255.0, 1 / 255.0, 1 / 255.0]
-        axScatter.scatter(x, y, marker=".", s=2, rasterized=False, color=histColor)
-        divider = make_axes_locatable(axScatter)
-        axScatter.set_xticks((dt[0], 0, dt[1]))
-        axScatter.set_xticklabels((str(dt[0]), "0", str(dt[1])))
-        axHistx = divider.append_axes(
-            "top", 0.95, pad=0.2, sharex=axScatter, transform=axScatter.transAxes
-        )
-        scattTrans = transforms.blended_transform_factory(
-            axScatter.transData, axScatter.transAxes
-        )
-        stim_pwidth = self.ttl_data["stim_duration"]
-        if stim_pwidth is None:
-            raise ValueError("stim duration is None")
-
-        axScatter.add_patch(
-            Rectangle(
-                (0, 0),
-                width=stim_pwidth,
-                height=1,
-                transform=scattTrans,
-                color=[0, 0, 1],
-                alpha=0.3,
+            warnings.warn(
+                f"PSTH for cluster {cluster} is empty. The cell fired no spikes in the period under question"
             )
-        )
-        histTrans = transforms.blended_transform_factory(
-            axHistx.transData, axHistx.transAxes
-        )
-        axHistx.add_patch(
-            Rectangle(
-                (0, 0),
-                width=stim_pwidth,
-                height=1,
-                transform=histTrans,
-                color=[0, 0, 1],
-                alpha=0.3,
-            )
-        )
-        axScatter.set_ylabel("Laser stimulation events", labelpad=-2.5)
-        axScatter.set_xlabel("Time to stimulus onset(s)")
-        nStms = y[-1]
-        axScatter.set_ylim(0, nStms)
-        # Label only the min and max of the y-axis
-        ylabels = axScatter.get_yticklabels()
-        for i in range(1, len(ylabels) - 1):
-            ylabels[i].set_visible(False)
-        yticks = axScatter.get_yticklines()
-        for i in range(1, len(yticks) - 1):
-            yticks[i].set_visible(False)
-
-        axHistx.hist(
-            x,
-            bins=np.arange(dt[0], dt[1] + secs_per_bin, secs_per_bin),
-            color=histColor,
-            range=dt,
-            rasterized=True,
-            histtype="stepfilled",
-        )
-        axHistx.set_ylabel("Spike count", labelpad=-2.5)
-        plt.setp(axHistx.get_xticklabels(), visible=False)
-        # Label only the min and max of the y-axis
-        ylabels = axHistx.get_yticklabels()
-        for i in range(1, len(ylabels) - 1):
-            ylabels[i].set_visible(False)
-        yticks = axHistx.get_yticklines()
-        for i in range(1, len(yticks) - 1):
-            yticks[i].set_visible(False)
-        axHistx.set_xlim(dt)
-        axScatter.set_xlim(dt)
-        fig = plt.gcf()
-        fig.canvas.manager.set_window_title(f"Cluster {cluster}")
-        if strip_axes:
-            return stripAxes(axScatter)
-        return axScatter
+            return
 
     def plotSpectrogramByDepth(
         self,

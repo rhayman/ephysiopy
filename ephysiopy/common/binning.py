@@ -286,7 +286,7 @@ class RateMap(object):
 
         Returns
         -------
-        bins : tuple[np.ndarray,...]
+        bins : tuple of np.ndarray
             each member an array of bin edges
         """
         if self.var2Bin.value == VariableToBin.DIR.value:
@@ -602,21 +602,20 @@ class RateMap(object):
         Parameters
         ----------
         pos_binned : np.ndarray
-            The binned positional data. For example that returned from get_map
-            above with mapType as 'pos'
+            The binned positional data.
         spk_binned : np.ndarray
             The binned spikes
-        alpha : int
-            Optional. A scaling parameter determing the amount of occupancy to aim at
+        alpha : int, optional
+            A scaling parameter determing the amount of occupancy to aim at
             in each bin. Defaults to 4. In the original paper this was set to 200.
             This is 4 here as the pos data is binned in seconds (the original data was in pos
             samples so this is a factor of 50 smaller than the original paper's value, given 50Hz sample rate)
 
         Returns
         -------
-        adaptive_map : tuple[np.ndarray,...]
-            Returns adaptively binned spike and pos maps. Use to generate Skaggs
-            information measure
+        adaptive_map : tuple of np.ndarray
+            The adaptively binned spike and pos maps.
+            Use this to generate Skaggs information measure
 
         Notes
         -----
@@ -627,17 +626,19 @@ class RateMap(object):
         alpha is a scaling parameter that might need tweaking for different
         data sets.
 
-        From the paper:
-            The data [are] first binned
-            into a 64 X 64 grid of spatial locations, and then the firing rate
-            at each point in this grid was calculated by expanding a circle
-            around the point until the following criterion was met:
-                Nspks > alpha / (Nocc^2 * r^2)
-            where Nspks is the number of spikes emitted in a circle of radius
-            r (in bins), Nocc is the number of occupancy samples, alpha is the
-            scaling parameter
-            The firing rate in the given bin is then calculated as:
-                sample_rate * (Nspks / Nocc)
+        The data [are] first binned
+        into a 64 X 64 grid of spatial locations, and then the firing rate
+        at each point in this grid was calculated by expanding a circle
+        around the point until the following criterion was met:
+
+        Nspks > alpha / (Nocc^2 * r^2)
+
+        where Nspks is the number of spikes emitted in a circle of radius
+        r (in bins), Nocc is the number of occupancy samples, alpha is the
+        scaling parameter
+        The firing rate in the given bin is then calculated as:
+
+        sample_rate * (Nspks / Nocc)
 
         References
         ----------
@@ -684,7 +685,7 @@ class RateMap(object):
         return smthdrate, smthdspk, smthdpos
 
     def autoCorr2D(
-        self, A: BinnedData, nodwell: np.ndarray = None, tol: float = 1e-10
+        self, A: BinnedData, nodwell: np.ndarray, tol: float = 1e-10
     ) -> BinnedData:
         """
         Performs autocorrelations on all the maps in an instance of BinnedData.
@@ -696,7 +697,7 @@ class RateMap(object):
         nodwell : np.ndarray
             An array with NaNs where there was no position sampled.
         tol : float
-            values below this are set to 0.
+            Tolerance below which values are set to 0.
 
         Returns
         -------
@@ -715,30 +716,28 @@ class RateMap(object):
         ]
         return result
 
-    def _autoCorr2D(
-        self, A: np.ndarray, nodwell: np.ndarray = None, tol: float = 1e-10
-    ):
+    def _autoCorr2D(self, A: np.ndarray, nodwell: np.ndarray, tol: float = 1e-10):
         """
         Performs a spatial autocorrelation on the array A
 
         Parameters
         ----------
-        A np.ndarray
+        A : np.ndarray
             Either 2 or 3D. In the former it is simply the binned up ratemap
             where the two dimensions correspond to x and y.
             If 3D then the first two dimensions are x
             and y and the third (last dimension) is 'stack' of ratemaps
         nodwell : np.ndarray
             A boolean array corresponding the bins in the ratemap that
-            weren't visited. See Notes below.
-        tol : float
-            Optional. Values below this are set to zero to deal with v small values
+            weren't visited. See Notes.
+        tol : float, optional
+            Values below this are set to zero to deal with v small values
             thrown up by the fft. Default 1e-10
 
         Returns
         -------
         sac : np.ndarray
-            The spatial autocorrelation in the relevant dimensionality
+            The spatial autocorrelation
 
         Notes
         -----
@@ -750,8 +749,6 @@ class RateMap(object):
         m, n = np.shape(A)
         o = 1
         x = np.reshape(A, (m, n, o))
-        if nodwell is None:
-            nodwell = ~np.isfinite(A)
         nodwell = np.reshape(nodwell, (m, n, o))
         x[nodwell] = 0
         # [Step 1] Obtain FFTs of x, the sum of squares and bins visited
@@ -800,8 +797,8 @@ class RateMap(object):
         self,
         A: BinnedData,
         B: BinnedData,
-        A_nodwell: np.ndarray = None,
-        B_nodwell: np.ndarray = None,
+        A_nodwell: np.ndarray,
+        B_nodwell: np.ndarray,
         tol: float = 1e-10,
     ) -> BinnedData:
         """
@@ -836,10 +833,10 @@ class RateMap(object):
 
     def _crossCorr2D(
         self,
-        A: BinnedData,
-        B: BinnedData,
-        A_nodwell: np.ndarray = None,
-        B_nodwell: np.ndarray = None,
+        A: BinnedData | np.ndarray,
+        B: BinnedData | np.ndarray,
+        A_nodwell: np.ndarray,
+        B_nodwell: np.ndarray,
         tol: float = 1e-10,
     ):
         """

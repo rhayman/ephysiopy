@@ -18,87 +18,13 @@ from ephysiopy.common.utils import VariableToBin, MapType, BinnedData
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.visualise.plotting import FigureMaker
-from ephysiopy.common.utils import shift_vector, clean_kwargs, TrialFilter
-
-
-def fileContainsString(pname: str, searchStr: str) -> bool:
-    if os.path.exists(pname):
-        with open(pname, "r") as f:
-            strs = f.read()
-        lines = strs.split("\n")
-        found = False
-        for line in lines:
-            if searchStr in line:
-                found = True
-        return found
-    else:
-        return False
-
-
-def memmapBinaryFile(path2file: str, n_channels=384, **kwargs) -> np.ndarray:
-    """
-    Returns a numpy memmap of the int16 data in the
-    file path2file, if present
-    """
-    import os
-
-    if "data_type" in kwargs.keys():
-        data_type = kwargs["data_type"]
-    else:
-        data_type = np.int16
-
-    if os.path.exists(path2file):
-        # make sure n_channels is int as could be str
-        n_channels = int(n_channels)
-        status = os.stat(path2file)
-        n_samples = int(status.st_size / (2.0 * n_channels))
-        mmap = np.memmap(
-            path2file, data_type, "r", 0, (n_channels, n_samples), order="F"
-        )
-        return mmap
-    else:
-        return np.empty(0)
-
-
-def loadTrackingPluginData(pname: Path) -> np.ndarray:
-    dt = np.dtype(
-        [
-            ("x", np.single),
-            ("y", np.single),
-            ("w", np.single),
-            ("h", np.single),
-        ]
-    )
-    data_array = np.load(pname)
-    new_array = data_array.view(dtype=dt).copy()
-    w = new_array["w"][0]
-    h = new_array["h"][0]
-    x = new_array["x"] * w
-    y = new_array["y"] * h
-    pos_data = np.array([np.ravel(x), np.ravel(y)]).T
-    return pos_data
-
-
-def loadTrackMePluginData(pname: Path, n_channels: int = 4) -> np.ndarray:
-    mmap = memmapBinaryFile(str(pname), n_channels)
-    return np.array(mmap[0:2, :]).T
-
-
-def loadTrackMeTTLTimestamps(pname: Path) -> np.ndarray:
-    ts = np.load(os.path.join(pname, "timestamps.npy"))
-    states = np.load(os.path.join(pname, "states.npy"))
-    return ts[states > 0]
-
-
-def loadTrackMeTimestamps(pname: Path) -> np.ndarray:
-    ts = np.load(os.path.join(pname, "timestamps.npy"))
-    return ts - ts[0]
-
-
-def loadTrackMeFrameCount(pname: Path, n_channels: int = 4) -> np.ndarray:
-    data = memmapBinaryFile(str(pname), n_channels)
-    # framecount data is always last column in continuous.dat file
-    return np.array(data[-1, :]).T
+from ephysiopy.common.utils import (
+    shift_vector,
+    clean_kwargs,
+    TrialFilter,
+    memmapBinaryFile,
+    fileContainsString,
+)
 
 
 def find_path_to_ripple_ttl(trial_root: Path, **kwargs) -> Path:
@@ -149,14 +75,15 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     electrophysiology data recorded using Axona or OpenEphys
     (OpenEphysNWB is there but not used)
 
+    Parameters
+    ----------
+    pname (Path) : The path to the top-level directory containing the recording
+
     Attributes
     ----------
-    pname : str
-        the absolute pathname of the top-level data directory
-    settings : dict
-        contains metadata about the trial
-    PosCalcs : PosCalcsGeneric
-        contains the positional data for the trial
+    pname (str) : the absolute pathname of the top-level data directory
+    settings (dict) : contains metadata about the trial
+    PosCalcs (PosCalcsGeneric) : contains the positional data for the trial
     RateMap : RateMap
         methods for binning data mostly
     EEGCalcs : EEGCalcs
@@ -390,7 +317,9 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     def apply_filter(self, *trial_filter: TrialFilter) -> np.ndarray:
-        """Apply a mask to the data
+        """
+        Apply a mask to the recorded data. This will mask all the currently
+        loaded data (LFP, position etc)
 
         Parameters
         ----------
@@ -711,7 +640,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self, cluster: int | list, channel: int | list, **kwargs
     ) -> BinnedData:
         """
-        Gets the edge bin map for the specified cluster(s) and channel.
+        Gets the egocentric boundary map for the specified cluster(s) and channel.
 
         Parameters
         ----------
@@ -883,7 +812,8 @@ class AxonaTrial(TrialInterface):
                     return spikes
 
     def apply_filter(self, *trial_filter: TrialFilter) -> np.ndarray:
-        """Apply a mask to the data
+        """
+        Apply a mask to the data
 
         Parameters
         ----------
@@ -1137,44 +1067,31 @@ class OpenEphysBase(TrialInterface):
                 pos_plugin_name = pos_plugin_name.lstrip("Sources/")
 
             self.pos_plugin_name = pos_plugin_name
+            tracker = self.settings.get_processor(pos_plugin_name)
+            pos_data = tracker.load(self.path2PosData)
 
-            if "Tracker" in pos_plugin_name:
-                print("Loading Tracker data...")
-                pos_data = np.load(os.path.join(self.path2PosData, "data_array.npy"))
-            if "Tracking Port" in pos_plugin_name:
-                print("Loading Tracking Port data...")
-                pos_data = loadTrackingPluginData(
-                    os.path.join(self.path2PosData, "data_array.npy")
-                )
-            if "TrackingPlugin" in pos_plugin_name:
-                print("Loading TrackingPlugin data...")
-                pos_data = loadTrackingPluginData(
-                    os.path.join(self.path2PosData, "data_array.npy")
-                )
+            # TODO: Can't find trials where this plugin is used...maybe on some backup...
+            # if "TrackingPlugin" in pos_plugin_name:
+            #     print("Loading TrackingPlugin data...")
+            #     pos_data = loadTrackingPluginData(
+            #         os.path.join(self.path2PosData, "data_array.npy")
+            #     )
 
-            pos_ts = np.load(os.path.join(self.path2PosData, "timestamps.npy"))
+            pos_ts = tracker.load_times(self.path2PosData)
             # pos_ts in seconds
             pos_ts = np.ravel(pos_ts)
             if "TrackMe" in pos_plugin_name:
-                print("Loading TrackMe data...")
-                n_pos_chans = int(
-                    self.settings.processors[pos_plugin_name].channel_count
-                )
-                pos_data = loadTrackMePluginData(
-                    Path(os.path.join(self.path2PosData, "continuous.dat")),
-                    n_channels=n_pos_chans,
-                )
                 if "loadTTLPos" in kwargs.keys():
-                    pos_ts = loadTrackMeTTLTimestamps(Path(self.path2EventsData))
+                    pos_ts = tracker.load_ttl_times(Path(self.path2EventsData))
                 else:
-                    pos_ts = loadTrackMeTimestamps(Path(self.path2PosData))
+                    pos_ts = tracker.load_times(Path(self.path2PosData))
                 pos_ts = pos_ts[0 : len(pos_data)]
-            sample_rate = self.settings.processors[pos_plugin_name].sample_rate
-            sample_rate = float(sample_rate) if sample_rate is not None else 50
+            sample_rate = tracker.sample_rate
+            # sample_rate = float(sample_rate) if sample_rate is not None else 50
             # the timestamps for the Tracker Port plugin are fucked so
             # we have to infer from the shape of the position data
             if "Tracking Port" in pos_plugin_name:
-                sample_rate = kwargs["sample_rate"] or 50
+                sample_rate = kwargs.get("sample_rate", 50)
                 # pos_ts in seconds
                 pos_ts = np.arange(
                     0, pos_data.shape[0] / sample_rate, 1.0 / sample_rate
@@ -1185,6 +1102,10 @@ class OpenEphysBase(TrialInterface):
                 xyTS = pos_ts
             if self.sync_message_file is not None:
                 recording_start_time = xyTS[0]
+
+            # This is the gateway to all the position processing so if you want
+            # to load your own pos data you'll need to create an instance of
+            # PosCalcsGeneric yourself and apply it to self
             P = PosCalcsGeneric(
                 pos_data[:, 0],
                 pos_data[:, 1],
@@ -1257,37 +1178,9 @@ class OpenEphysBase(TrialInterface):
         if "RippleDetector" in args:
             if self.path2RippleDetector:
                 detector_settings = self.settings.get_processor("Ripple")
-                ttl_ts = (
-                    np.load(Path(self.path2RippleDetector) / "timestamps.npy")
-                    - self.recording_start_time
+                self.ttl_data = detector_settings.load_ttl(
+                    self.path2RippleDetector, self.recording_start_time
                 )
-                ttl_states = np.load(Path(self.path2RippleDetector) / "states.npy")
-                save_ttl = int(detector_settings.Ripple_save)
-                out_ttl = int(detector_settings.Ripple_Out)
-                indices_to_throw = []
-
-                for i in range(len(ttl_states) - 2):
-                    i_pair = ttl_states[i : i + 2]
-                    if np.all(i_pair == np.array([save_ttl, out_ttl])):
-                        # be extra sure this is a zero time difference
-                        if np.diff(ttl_ts[i : i + 2]) == 0:
-                            indices_to_throw.append(i)
-
-                mask = np.ones_like(ttl_states, dtype=bool)
-                mask[indices_to_throw] = False
-
-                ttl_ts = ttl_ts[mask]
-                ttl_states = ttl_states[mask]
-
-                laser_ons = ttl_ts[ttl_states == out_ttl]
-                laser_offs = ttl_ts[ttl_states == -out_ttl]
-                no_laser_ons = ttl_ts[ttl_states == save_ttl]
-                self.ttl_data["ttl_timestamps"] = laser_ons
-                self.ttl_data["ttl_timestamps_off"] = laser_offs
-                mean_duration = np.nanmean(laser_offs - laser_ons)
-                self.ttl_data["stim_duration"] = mean_duration
-                self.ttl_data["no_laser_ttls"] = no_laser_ons
-
         if not self.ttl_data:
             return False
         print("Loaded ttl data")

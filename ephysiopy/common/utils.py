@@ -6,6 +6,8 @@ from collections import defaultdict
 import inspect
 from enum import Enum
 import copy
+from pathlib import Path
+import os
 
 
 class VariableToBin(Enum):
@@ -70,7 +72,6 @@ class BinnedData:
     map_type: MapType = MapType.RATE
     binned_data: list[np.ndarray] = field(default_factory=list)
     bin_edges: list[np.ndarray] = field(default_factory=list)
-    # bin_units: int = 1
 
     def __iter__(self):
         yield from self.binned_data
@@ -236,6 +237,45 @@ class TrialFilter:
         self.name = name
         self.start = start
         self.end = end
+
+
+def memmapBinaryFile(path2file: Path, n_channels=384, **kwargs) -> np.ndarray:
+    """
+    Returns a numpy memmap of the int16 data in the
+    file path2file, if present
+    """
+    import os
+
+    if "data_type" in kwargs.keys():
+        data_type = kwargs["data_type"]
+    else:
+        data_type = np.int16
+
+    if os.path.exists(path2file):
+        # make sure n_channels is int as could be str
+        n_channels = int(n_channels)
+        status = os.stat(path2file)
+        n_samples = int(status.st_size / (2.0 * n_channels))
+        mmap = np.memmap(
+            path2file, data_type, "r", 0, (n_channels, n_samples), order="F"
+        )
+        return mmap
+    else:
+        return np.empty(0)
+
+
+def fileContainsString(pname: str, searchStr: str) -> bool:
+    if os.path.exists(pname):
+        with open(pname, "r") as f:
+            strs = f.read()
+        lines = strs.split("\n")
+        found = False
+        for line in lines:
+            if searchStr in line:
+                found = True
+        return found
+    else:
+        return False
 
 
 def clean_kwargs(func, kwargs):

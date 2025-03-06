@@ -1059,38 +1059,40 @@ class Rippler(object):
             plt.show()
 
     @savePlot
-    def plot_and_save_ripple_band_lfp_with_ttl(self):
-        for i_time in self.laser_on_ts:
-            eeg_chunk = self.filtered_eeg[
-                np.logical_and(
-                    self.eeg_time > i_time - self.pre_ttl,
-                    self.eeg_time < i_time + self.post_ttl,
-                )
-            ]
-            eeg_chunk_time = self.eeg_time[
-                np.logical_and(
-                    self.eeg_time > i_time - self.pre_ttl,
-                    self.eeg_time < i_time + self.post_ttl,
-                )
-            ]
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            axTrans = transforms.blended_transform_factory(ax.transData, ax.transData)
-            ax.plot(eeg_chunk_time, eeg_chunk)
-            ax.add_patch(
-                Rectangle(
-                    (i_time, -self.lfp_plotting_scale),
-                    width=0.1,
-                    height=1000,
-                    transform=axTrans,
-                    color=[0, 0, 1],
-                    alpha=0.3,
-                )
+    def _plot_ripple_lfp_with_ttl(self, i_time: float, **kwargs):
+        eeg_chunk = self.filtered_eeg[
+            np.logical_and(
+                self.eeg_time > i_time - self.pre_ttl,
+                self.eeg_time < i_time + self.post_ttl,
             )
+        ]
+        eeg_chunk_time = self.eeg_time[
+            np.logical_and(
+                self.eeg_time > i_time - self.pre_ttl,
+                self.eeg_time < i_time + self.post_ttl,
+            )
+        ]
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        axTrans = transforms.blended_transform_factory(ax.transData, ax.transData)
+        ax.plot(eeg_chunk_time, eeg_chunk)
+        ax.add_patch(
+            Rectangle(
+                (i_time, -self.lfp_plotting_scale),
+                width=0.1,
+                height=1000,
+                transform=axTrans,
+                color=[0, 0, 1],
+                alpha=0.3,
+            )
+        )
 
-            ax.set_ylim(-self.lfp_plotting_scale, self.lfp_plotting_scale)
-            plt.show()
-            return fig
+        ax.set_ylim(-self.lfp_plotting_scale, self.lfp_plotting_scale)
+        return ax
+
+    def plot_and_save_ripple_band_lfp_with_ttl(self, **kwargs):
+        for i_time in self.laser_on_ts:
+            self._plot_ripple_lfp_with_ttl(i_time, **kwargs)
 
     @savePlot
     def plot_mean_spectrograms(self, **kwargs) -> plt.Figure:
@@ -1163,7 +1165,6 @@ class Rippler(object):
             ax1 = ax
             fig1 = plt.gcf()
         t_lo, t_hi = SFT.extent(N)[:2]  # time range of plot
-        breakpoint()
         ax1.set(
             xlabel=f"Time $t$ in seconds ({SFT.p_num(N)} slices, "
             + rf"$\Delta t = {SFT.delta_t:g}\,$s)",
@@ -1174,7 +1175,7 @@ class Rippler(object):
         trans = transforms.blended_transform_factory(ax1.transData, ax1.transAxes)
         ax1.vlines(
             [
-                0,
+                self.pre_ttl,
                 self.pre_ttl + ttl_duration,
             ],
             ymin=0,
@@ -1270,7 +1271,7 @@ class Rippler(object):
         return SFT, N, np.abs(Sx2)
 
     @savePlot
-    def plot_mean_rippleband_power(self, **kwargs) -> plt.Axes:
+    def plot_mean_rippleband_power(self, **kwargs) -> plt.Axes | None:
         """
         Plots the mean power in the ripple band for the laser on and no laser
         conditions
