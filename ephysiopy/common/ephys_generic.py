@@ -731,8 +731,8 @@ def find_high_amp_long_duration(
         the sampliing frequency of the raw signal
     amp_std : int
         the signal needs to be this many standard deviations above the mean
-    duration :int
-        how long in seconds the ripple should be
+    duration :list of int
+        the minimum and maximum durations in seconds for the ripples
     duration_std :int
         how many standard deviations above the mean the ripples should
         be for 'duration' ms

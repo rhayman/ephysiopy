@@ -10,6 +10,7 @@ from typing import Callable
 from scipy.signal import ShortTimeFFT
 from scipy.signal.windows import gaussian
 from scipy.stats import linregress
+from ephysiopy.io.recording import OpenEphysBase
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
@@ -899,30 +900,33 @@ class Rippler(object):
         self.pname_for_trial = trial_root
         self.orig_sig = signal
         self.fs = fs
-        self.settings = Settings(str(trial_root))
+        trial = OpenEphysBase(trial_root)
+        trial._get_recording_start_time()
+        self.settings = trial.settings
         LFP = EEGCalcsGeneric(signal, fs)
         self.LFP = LFP
         detector_settings = self.settings.get_processor("Ripple")
-        self.ttl_duration = (
-            float(detector_settings.ttl_duration) / 1000
-        )  # in seconds now
+        ttl_data = detector_settings.load_ttl(
+            trial.path2RippleDetector, trial.recording_start_time
+        )
+        # breakpoint()
 
-        pname_for_ttl_data = self._find_path_to_ripple_ttl(self.pname_for_trial)
-        sync_file = pname_for_ttl_data.parents[2] / Path("sync_messages.txt")
-        recording_start_time = self._load_start_time(sync_file)
-        ttl_ts = np.load(pname_for_ttl_data / "timestamps.npy") - recording_start_time
-        ttl_states = np.load(pname_for_ttl_data / "states.npy")
-        all_ons = ttl_ts[ttl_states == int(detector_settings.Ripple_save)]
-        laser_ons = ttl_ts[ttl_states == int(detector_settings.Ripple_Out)]
-        laser_offs = ttl_ts[ttl_states == -int(detector_settings.Ripple_Out)]
-        no_laser_ons = np.lib.setdiff1d(all_ons, laser_ons)
+        # pname_for_ttl_data = self._find_path_to_ripple_ttl(self.pname_for_trial)
+        # sync_file = pname_for_ttl_data.parents[2] / Path("sync_messages.txt")
+        # recording_start_time = self._load_start_time(sync_file)
+        # ttl_ts = np.load(pname_for_ttl_data / "timestamps.npy") - trial.recording_start_time
+        # ttl_states = np.load(pname_for_ttl_data / "states.npy")
+        # all_ons = ttl_ts[ttl_states == detector_settings.Ripple_save]
+        # laser_ons = ttl_ts[ttl_states == detector_settings.Ripple_Out]
+        # laser_offs = ttl_ts[ttl_states == detector_settings.Ripple_Out * -1]
+        # no_laser_ons = np.lib.setdiff1d(all_ons, laser_ons)
 
-        self.all_on_ts = all_ons
-        self.ttl_states = ttl_states
-        self.all_ts = ttl_ts
-        self.laser_on_ts = laser_ons
-        self.laser_off_ts = laser_offs
-        self.no_laser_on_ts = no_laser_ons
+        # self.all_on_ts = all_ons
+        # self.ttl_states = ttl_states
+        # self.all_ts = ttl_ts
+        self.laser_on_ts = ttl_data["ttl_timestamps"]
+        self.laser_off_ts = ttl_data["ttl_timestamps_off"]
+        self.no_laser_on_ts = ttl_data["no_laser_ttls"]
 
         filtered_eeg = LFP.butterFilter(self.low_band, self.high_band)
         filtered_eeg *= self.bit_volts

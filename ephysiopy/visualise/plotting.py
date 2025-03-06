@@ -674,7 +674,8 @@ class FigureMaker(object):
         """
         Gets the power spectrum.
 
-        Args:
+        Parameters
+        ----------
             **kwargs: Additional keyword arguments for the function.
         """
         p = self.EEGCalcs.calcEEGPowerSpectrum()

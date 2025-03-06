@@ -44,6 +44,8 @@ class IntConversion:
         return getattr(obj, self._name, self._default)
 
     def __set__(self, obj, value):
+        if value == "50.0":
+            breakpoint()
         setattr(obj, self._name, int(value))
 
 
@@ -76,8 +78,8 @@ class Channel(object):
     _param: bool = field(default_factory=bool)
     _record: bool = field(default=False)
     _audio: bool = field(default=False)
-    _lowcut: IntConversion = IntConversion(default=0)
-    _highcut: IntConversion = IntConversion(default=0)
+    _lowcut: FloatConversion = FloatConversion(default=0)
+    _highcut: FloatConversion = FloatConversion(default=0)
 
     @property
     def number(self) -> int:
@@ -153,7 +155,7 @@ class Stream:
 
     name: str = field(default_factory=str)
     description: str = field(default_factory=str)
-    sample_rate: IntConversion = IntConversion(default=0)
+    sample_rate: FloatConversion = FloatConversion(default=0)
     channel_count: IntConversion = IntConversion(default=0)
 
 
@@ -169,12 +171,12 @@ class OEPlugin(ABC):
     type: IntConversion = IntConversion(default=0)
     index: IntConversion = IntConversion(default=0)
     libraryName: str = field(default_factory=str)
-    libraryVersion: IntConversion = IntConversion(default=0)
+    libraryVersion: str = field(default_factory=str)
     processorType: IntConversion = IntConversion(default=0)
     nodeId: IntConversion = IntConversion(default=0)
     channel_count: IntConversion = IntConversion(default=0)
     stream: Stream = field(default_factory=Stream)
-    sample_rate: IntConversion = IntConversion(default=0)
+    sample_rate: FloatConversion = FloatConversion(default=0)
 
 
 @dataclass
@@ -218,8 +220,8 @@ class AcquisitionBoard(OEPlugin):
     Documents the Acquisition Board plugin
     """
 
-    LowCut: IntConversion = IntConversion(default=0)
-    HighCut: IntConversion = IntConversion(default=0)
+    LowCut: FloatConversion = FloatConversion(default=0)
+    HighCut: FloatConversion = FloatConversion(default=0)
 
 
 @dataclass
@@ -384,8 +386,8 @@ class RippleDetector(OEPlugin):
     time_thresh: FloatConversion = FloatConversion(default=-1)
     refr_time: FloatConversion = FloatConversion(default=-1)
     rms_samples: FloatConversion = FloatConversion(default=-1)
-    ttl_duration: IntConversion = IntConversion(default=-1)
-    ttl_percent: IntConversion = IntConversion(default=-1)
+    ttl_duration: FloatConversion = FloatConversion(default=-1)
+    ttl_percent: FloatConversion = FloatConversion(default=-1)
     mov_detect: IntConversion = IntConversion(default=-1)
     mov_input: IntConversion = IntConversion(default=-1)
     mov_out: IntConversion = IntConversion(default=-1)
@@ -397,23 +399,24 @@ class RippleDetector(OEPlugin):
         timestamps = np.load(path2TTL / Path("timestamps.npy")) - trial_start_time
         states = np.load(path2TTL / Path("states.npy"))
         out = dict()
-        out_ttl = int(self.Ripple_Out)
-        save_ttl = int(self.Ripple_save)
+        out_ttl = self.Ripple_Out
+        save_ttl = self.Ripple_save
         # check for identical times - should fix the plugin really...
-        bad_indices = []
-        for i in range(len(states) - 2):
-            i_pair = states[i : i + 2]
-            if np.all(i_pair == np.array([save_ttl, out_ttl])):
-                if np.diff(timestamps[i : i + 2]) == 0:
-                    bad_indices.append(i)
-        mask = np.ones_like(states, dtype=bool)
-        mask[bad_indices] = False
-        timestamps = timestamps[mask]
-        states = states[mask]
+        # for some reason the plugin occassionally spits out negative TTL states
+        # for the ripple out line without a corresponding positive state. This
+        # picks out those bad indices and removes them from the states and
+        # timestamps vectors
+        indices = np.ravel(np.argwhere(states == (0 - out_ttl)))
+        bad_indices = np.ravel(
+            indices[np.argwhere(states[indices] + states[indices - 1])]
+        )
+        states = np.delete(states, bad_indices)
+        timestamps = np.delete(timestamps, bad_indices)
 
         out["ttl_timestamps"] = timestamps[states == out_ttl]
         out["ttl_timestamps_off"] = timestamps[states == out_ttl * -1]
-        out["no_laser_ttls"] = timestamps[states == save_ttl]
+        all_ons = timestamps[states == save_ttl]
+        out["no_laser_ttls"] = np.lib.setdiff1d(all_ons, out["ttl_timestamps"])
         if len(out["ttl_timestamps_off"]) == len(out["ttl_timestamps"]):
             out["stim_duration"] = np.nanmean(
                 out["ttl_timestamps_off"] - out["ttl_timestamps"]
@@ -594,7 +597,10 @@ class Settings(object):
                     if "/" in i_proc:
                         i_proc = i_proc.split("/")[-1]
                     new_processor = processor_factory.create_processor(i_proc)
+                    # try:
                     recurseNode(elem, addValues2Class, new_processor)
+                    # except ValueError:
+                    # breakpoint()
                     if i_proc == "Record Node":
                         if new_processor.nodeId is not None:
                             self.record_nodes[
