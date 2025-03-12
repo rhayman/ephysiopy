@@ -41,27 +41,66 @@ class CosineDirectionalTuning(object):
         tracker_params={},
     ):
         """
-        Args:
-            spike_times (1d np.array): Spike times
-            pos_times (1d np.array): Position times
-            spk_clusters (1d np.array): Spike clusters
-            x and y (1d np.array): Position coordinates
-            tracker_params (dict): From the PosTracker as created in
-                                    OESettings.Settings.parse
+        Parameters
+        ----------
+        spike_times : np.ndarray
+            Spike times (in seconds)
+        pos_times : np.ndarray
+            Position times (in seconds)
+        spk_clusters : np.ndarray
+            Spike clusters
+        x, y : np.ndarray
+            Position coordinates
+        tracker_params : dict
+            From the PosTracker as created in OESettings.Settings.parse
 
-        Note:
-            All timestamps should be given in sub-millisecond accurate seconds
-            and pos_xy in cms
+        Attributes
+        ----------
+        spike_times : np.ndarray
+            Spike times
+        pos_times : np.ndarray
+            Position times
+        spk_clusters : np.ndarray
+            Spike clusters
+        pos_sample_rate : int
+            Position sample rate
+        spk_sample_rate : float
+            Spike sample rate
+        min_runlength : float
+            Minimum run length
+        xy : np.ndarray
+            Position coordinates
+        hdir : np.ndarray
+            Head direction
+        speed : np.ndarray
+            Speed
+        pos_samples_for_spike : np.ndarray
+            Position samples for spike
+        posCalcs : PosCalcsGeneric
+            Position calculations (see ephysiopy.common.ephys_generic.PosCalcsGeneric)
+        spikeCalcs : SpikeCalcsGeneric
+            Spike calculations (see ephysiopy.common.spikecalcs.SpikeCalcsGeneric)
+        smthKernelWidth : int
+            Smoothing kernel width (for LFP data)
+        smthKernelSigma : float
+            Smoothing kernel sigma (for LFP data)
+        sn2Width : int
+            SN2 width (for LFP data)
+        thetaRange : list
+            Minimum to maximum theta range
+        xmax : int
+            Maximum x value
+
+
+        Notes
+        -----
+        All timestamps should be given in sub-millisecond accurate seconds
+        and pos_xy in cms
         """
         self.spike_times = spike_times
         self.pos_times = pos_times
         self.spk_clusters = spk_clusters
-        """
-        There can be more spikes than pos samples in terms of sampling as the
-        open-ephys buffer probably needs to finish writing and the camera has
-        already stopped, so cut of any cluster indices and spike times
-        that exceed the length of the pos indices
-        """
+        # Make sure spike times are within the range of the position times
         idx_to_keep = self.spike_times < self.pos_times[-1]
         self.spike_times = self.spike_times[idx_to_keep]
         self.spk_clusters = self.spk_clusters[idx_to_keep]
@@ -144,9 +183,25 @@ class CosineDirectionalTuning(object):
     def pos_samples_for_spike(self, value):
         self._pos_samples_for_spike = value
 
-    def _rolling_window(self, a: np.array, window: int):
+    def _rolling_window(self, a: np.array, window: int) -> np.ndarray:
         """
-        Totally nabbed from SO:
+        Returns a view of the array a using a window length of window
+
+        Parameters
+        ----------
+        a : np.array
+            The array to be windowed
+        window : int
+            The window length
+
+        Returns
+        -------
+        np.array
+            The windowed array
+
+        Notes
+        -----
+        Taken from:
         https://stackoverflow.com/questions/6811183/rolling-window-for-1d-arrays-in-numpy
         """
         shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
@@ -173,14 +228,20 @@ class CosineDirectionalTuning(object):
 
     def getDirectionalBinPerPosition(self, binwidth: int):
         """
+        Digitizes the directional bin each position sample belongs to.
+
         Direction is in degrees as that what is created by me in some of the
         other bits of this package.
 
-        Args:
-            binwidth (int): The bin width in degrees
+        Parameters
+        ----------
+        binwidth : int
+            The bin width in degrees.
 
-        Returns:
-            A digitization of which directional bin each pos sample belongs to
+        Returns
+        -------
+        np.ndarray
+            A digitization of which directional bin each position sample belongs to.
         """
 
         bins = np.arange(0, 360, binwidth)
@@ -198,11 +259,13 @@ class CosineDirectionalTuning(object):
         Identifies runs of at least self.min_runlength seconds long,
         which at 30Hz pos sampling rate equals 12 samples, and
         returns the start and end indices at which
-        the run was occurred and the directional bin that run belongs to
+        the run was occurred and the directional bin that run belongs to.
 
-        Returns:
-            np.array: The start and end indices into pos samples of the run
-                      and the directional bin to which it belongs
+        Returns
+        -------
+        np.array
+            The start and end indices into pos samples of the run
+            and the directional bin to which it belongs.
         """
 
         b = self.getDirectionalBinPerPosition(45)
@@ -231,18 +294,24 @@ class CosineDirectionalTuning(object):
         to self.min_runlength in samples and sees if any of those segments
         meet the speed criteria and splits them out into separate runs if true.
 
-        NB For now this means the same spikes might get included in the
-        autocorrelation procedure later as the
-        moving window will use overlapping periods - can be modified later.
+        Notes
+        -----
+        For now this means the same spikes might get included in the
+        autocorrelation procedure later as the moving window will use
+        overlapping periods - can be modified later.
 
-        Args:
-            runs (3 x nRuns np.array): Generated from getRunsOfMinLength
-            minspeed (float): Min running speed in cm/s for an epoch (minimum
-                              epoch length defined previously
-                              in getRunsOfMinLength as minlength, usually 0.4s)
+        Parameters
+        ----------
+        runs : np.array
+            Generated from getRunsOfMinLength, shape (3, nRuns)
+        minspeed : float
+            Min running speed in cm/s for an epoch (minimum epoch length
+            defined previously in getRunsOfMinLength as minlength, usually 0.4s)
 
-        Returns:
-            3 x nRuns np.array: A modified version of the "runs" input variable
+        Returns
+        -------
+        np.array
+            A modified version of the "runs" input variable, shape (3, nRuns)
         """
         minlength_in_samples = int(self.pos_sample_rate * self.min_runlength)
         run_list = runs.tolist()
@@ -330,19 +399,32 @@ class CosineDirectionalTuning(object):
         **kwargs,
     ):
         """
-        This is taken and adapted from ephysiopy.common.eegcalcs.EEGCalcs
+        Taken and adapted from ephysiopy.common.eegcalcs.EEGCalcs
 
-        Args:
-            spkTimes (np.array): Times in seconds of the cells firing
-            posMask (np.array): Boolean array corresponding to the length of
-                                spkTimes where True is stuff to keep
-            maxFreq (float): The maximum frequency to do the power spectrum
-                                out to
-            acBinSize (float): The bin size of the autocorrelogram in seconds
-            acWindow (float): The range of the autocorr in seconds
+        Parameters
+        ----------
+        spkTimes : np.array
+            Times in seconds of the cells firing
+        posMask : np.array
+            Boolean array corresponding to the length of spkTimes where True is stuff to keep
+        maxFreq : float
+            The maximum frequency to do the power spectrum out to
+        acBinSize : float
+            The bin size of the autocorrelogram in seconds
+        acWindow : float
+            The range of the autocorr in seconds
+        plot : bool
+            Whether to plot the resulting autocorrelogram and power spectrum
 
-        Note:
-            Make sure all times are in seconds
+
+        Returns
+        -------
+        dict
+            A dictionary containing the power spectrum and other related metrics
+    
+        Notes
+        -----
+        Make sure all times are in seconds
         """
         acBinsPerPos = 1.0 / self.pos_sample_rate / acBinSize
         acWindowSizeBins = np.round(acWindow / acBinSize)
@@ -418,8 +500,31 @@ class CosineDirectionalTuning(object):
         **kwargs,
     ):
         """
-        Method used by eeg_power_spectra and intrinsic_freq_autoCorr
-        Signal in must be mean normalised already
+        Method used by eeg_power_spectra and intrinsic_freq_autoCorr.
+        Signal in must be mean normalized already.
+
+        Parameters
+        ----------
+        eeg : np.ndarray
+            The EEG signal to analyze.
+        plot : bool, optional
+            Whether to plot the resulting power spectrum (default is True).
+        binWidthSecs : float, optional
+            The bin width in seconds for the power spectrum.
+        maxFreq : float, optional
+            The maximum frequency to compute the power spectrum up to (default is 25).
+        pad2pow : int, optional
+            The power of 2 to pad the signal to (default is None).
+        ymax : float, optional
+            The maximum y-axis value for the plot (default is None).
+        **kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the power spectrum and other related metrics.
+    
         """
 
         # Get raw power spectrum
@@ -531,15 +636,26 @@ class LFPOscillations(object):
         self.sig = sig
         self.fs = fs
 
-    def getFreqPhase(self, sig, band2filter: list, ford=3):
+    def getFreqPhase(self, sig, band2filter: list, ford=3)->tuple:
         """
         Uses the Hilbert transform to calculate the instantaneous phase and
         amplitude of the time series in sig.
 
-        Args:
-            sig (np.array): The signal to be analysed
-            ford (int): The order for the Butterworth filter
-            band2filter (list): The two frequencies to be filtered for
+        Parameters
+        ----------
+        sig : np.array
+            The signal to be analysed.
+        band2filter : list
+            The two frequencies to be filtered for.
+        ford : int, optional
+            The order for the Butterworth filter (default is 3).
+
+        Returns
+        -------
+        tuple
+            A tuple containing the filtered signal, phase, amplitude, 
+            amplitude filtered, and instantaneous frequency.
+    
         """
         if sig is None:
             sig = self.sig
@@ -567,16 +683,34 @@ class LFPOscillations(object):
     ):
         """
         Calculates the modulation index of theta and gamma oscillations.
-        Specifically this is the circular correlation between the phase of
+        Specifically, this is the circular correlation between the phase of
         theta and the power of theta.
 
-        Args:
-            sig (np.array): The LFP signal
-            nbins (int): The number of bins in the circular range 0 to 2*pi
-            forder (int): The order of the butterworth filter
-            thetaband (list): The lower/upper bands of the theta freq range
-            gammaband (list): The lower/upper bands of the gamma freq range
-            plot (bool): Show some pics or not
+        Parameters
+        ----------
+        sig : np.array, optional
+            The LFP signal. If None, uses the signal provided during initialization.
+        nbins : int, optional
+            The number of bins in the circular range 0 to 2*pi (default is 20).
+        forder : int, optional
+            The order of the Butterworth filter (default is 2).
+        thetaband : list, optional
+            The lower and upper bands of the theta frequency range (default is [4, 8]).
+        gammaband : list, optional
+            The lower and upper bands of the gamma frequency range (default is [30, 80]).
+        plot : bool, optional
+            Whether to plot the results (default is True).
+
+        Returns
+        -------
+        float
+            The modulation index.
+
+        Notes
+        -----
+        The modulation index is a measure of the strength of phase-amplitude coupling
+        between theta and gamma oscillations.
+    
         """
         if sig is None:
             sig = self.sig
@@ -622,21 +756,30 @@ class LFPOscillations(object):
         More specifically this is the phase-locking value (PLV) between two
         nested oscillations in EEG data, in this case theta (default 4-8Hz)
         and gamma (defaults to 30-80Hz). A PLV of unity indicates perfect phase
-        locking (here PAC) and a value of zero indicates no locking (no PAC)
+        locking (here PAC) and a value of zero indicates no locking (no PAC).
 
-        Args:
-            eeg (numpy array): The eeg data itself. This is a 1-d array which
-            can be masked or not
-            forder (int): The order of the filter(s) applied to the eeg data
-            thetaband, gammaband (list/array): The range of values to bandpass
-            filter for for the theta and gamma ranges
-            plot (bool, optional): Whether to plot the resulting binned up
-            polar plot which shows the amplitude of the gamma oscillation
-            found at different phases of the theta oscillation.
-            Default is True.
+        Parameters
+        ----------
+        sig : np.array, optional
+            The LFP signal. If None, uses the signal provided during initialization.
+        forder : int, optional
+            The order of the Butterworth filter (default is 2).
+        thetaband : list, optional
+            The lower and upper bands of the theta frequency range (default is [4, 8]).
+        gammaband : list, optional
+            The lower and upper bands of the gamma frequency range (default is [30, 80]).
+        plot : bool, optional
+            Whether to plot the resulting binned up polar plot which shows the amplitude
+            of the gamma oscillation found at different phases of the theta oscillation
+            (default is True).
+        **kwargs : dict
+            Additional keyword arguments.
 
-        Returns:
-            plv (float): The value of the phase-amplitude coupling
+        Returns
+        -------
+        float
+            The value of the phase-amplitude coupling (PLV).
+
         """
 
         if sig is None:
@@ -671,10 +814,21 @@ class LFPOscillations(object):
         Attempts to filter out frequencies from optogenetic experiments where
         the frequency of laser stimulation was at 6.66Hz.
 
-        Note:
-            This method needs tweaking for each trial as the power in the signal
-            is variable across trials / animals etc. A potential improvement could be using mean
-            power or a similar metric.
+        Parameters
+        ----------
+        sig : np.array, optional
+            The signal to be filtered. If None, uses the signal provided during initialization.
+        width : float, optional
+            The width of the filter (default is 0.125).
+        dip : float, optional
+            The dip of the filter (default is 15.0).
+        stimFreq : float, optional
+            The frequency of the laser stimulation (default is 6.66Hz).
+
+        Returns
+        -------
+        np.array
+            The filtered signal.
         """
         from scipy.signal import filtfilt, firwin, kaiserord
 
@@ -701,8 +855,30 @@ class LFPOscillations(object):
         self, pos_data: PosCalcsGeneric, lfp_data: EEGCalcsGeneric, **kwargs
     ) -> tuple[np.ma.MaskedArray, ...]:
         """
-        Returns metrics to do with the theta frequency/ power and running speed/ acceleration
+        Returns metrics to do with the theta frequency/power and running speed/acceleration.
 
+        Parameters
+        ----------
+        pos_data : PosCalcsGeneric
+            Position data object containing position and speed information.
+        lfp_data : EEGCalcsGeneric
+            LFP data object containing the LFP signal and sampling rate.
+        **kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        tuple[np.ma.MaskedArray, ...]
+            A tuple containing masked arrays for speed and theta frequency.
+
+        Notes
+        -----
+        The function calculates the instantaneous frequency of the theta band
+        and interpolates the running speed to match the LFP data. It then
+        creates a 2D histogram of theta frequency vs. running speed and overlays
+        the mean points for each speed bin. The function also performs a linear
+        regression to find the correlation between speed and theta frequency.
+    
 
         """
         low_theta = kwargs.pop("low_theta", 6)
@@ -782,19 +958,27 @@ class LFPOscillations(object):
     def get_theta_phase(self, cluster_times: np.ndarray, **kwargs):
         """
         Calculates the phase of theta at which a cluster emitted spikes
-        and returns a fit to a vonmises distribution
+        and returns a fit to a vonmises distribution.
 
         Parameters
         ----------
-        cluster_times (np.ndarray) - the times the cluster emitted spikes in
-                                     seconds
+        cluster_times : np.ndarray
+            The times the cluster emitted spikes in seconds.
 
         Notes
         -----
         kwargs can include:
-            low_theta (int) - low end for bandpass filter
-            high_theta (int) - high end for bandpass filter
+            low_theta : int
+                Low end for bandpass filter.
+            high_theta : int
+                High end for bandpass filter.
 
+        Returns
+        -------
+        tuple
+            A tuple containing the phase of theta at which the cluster emitted spikes,
+            the x values for the vonmises distribution, and the y values for the vonmises distribution.
+   
         """
         low_theta = kwargs.pop("low_theta", 6)
         high_theta = kwargs.pop("high_theta", 12)
@@ -823,7 +1007,23 @@ class LFPOscillations(object):
         emitted. Each spike is plotted according to the x-y location the
         animal was in when it was fired and the colour of the marker
         corresponds to the phase of theta at which it fired.
-        """
+
+        Parameters
+        ----------
+        cluster : int
+            The cluster number.
+        pos_data : PosCalcsGeneric
+            Position data object containing position and speed information.
+        phy_data : TemplateModel
+            Phy data object containing spike times and clusters.
+        lfp_data : EEGCalcsGeneric
+            LFP data object containing the LFP signal and sampling rate.
+
+        Returns
+        -------
+        plt.Axes
+            The matplotlib axes object with the plot.
+    """
         _, phase, _, _, _ = self.getFreqPhase(lfp_data.sig, [6, 12])
         cluster_times = phy_data.spike_times[
             phy_data.spike_clusters == cluster
@@ -892,9 +1092,17 @@ class Rippler(object):
 
     def __init__(self, trial_root: Path, signal: np.ndarray, fs: int):
         """
-        trial_root (Path) - location of the root recording directory, used to load ttls etc
-        signal (np.ndarray) - the LFP signal (usually downsampled to about 500-1000Hz)
-        fs (int) - the sampling rate of the signal
+        Initializes the Rippler class.
+
+        Parameters
+        ----------
+        trial_root : Path
+            Location of the root recording directory, used to load ttls etc.
+        signal : np.ndarray
+            The LFP signal (usually downsampled to about 500-1000Hz).
+        fs : int
+            The sampling rate of the signal.
+        
         """
 
         self.pname_for_trial = trial_root
@@ -938,6 +1146,16 @@ class Rippler(object):
         )  # in seconds
 
     def update_bandpass(self, low=None, high=None):
+        """
+        Updates the bandpass filter settings.
+
+        Parameters
+        ----------
+        low : int, optional
+            The low frequency for the bandpass filter.
+        high : int, optional
+            The high frequency for the bandpass filter.
+        """
         if low is None:
             low = self.low_band
         self.low_band = low
@@ -950,7 +1168,17 @@ class Rippler(object):
 
     def _load_start_time(self, path_to_sync_message_file: Path):
         """
-        Returns the start time contained in a sync file from OE
+        Returns the start time contained in a sync file from OE.
+
+        Parameters
+        ----------
+        path_to_sync_message_file : Path
+            Path to the sync message file.
+
+        Returns
+        -------
+        float
+            The start time in seconds.
         """
         recording_start_time = 0
         with open(path_to_sync_message_file, "r") as f:
@@ -967,7 +1195,19 @@ class Rippler(object):
     def _find_path_to_continuous(self, trial_root: Path, **kwargs) -> Path:
         """
         Iterates through a directory tree and finds the path to the
-        Ripple Detector plugin data and returns its location
+        Ripple Detector plugin data and returns its location.
+
+        Parameters
+        ----------
+        trial_root : Path
+            The root directory of the trial.
+        **kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        Path
+            The path to the continuous data.
         """
         exp_name = kwargs.pop("experiment", "experiment1")
         rec_name = kwargs.pop("recording", "recording1")
@@ -990,7 +1230,20 @@ class Rippler(object):
     def _find_path_to_ripple_ttl(self, trial_root: Path, **kwargs) -> Path:
         """
         Iterates through a directory tree and finds the path to the
-        Ripple Detector plugin data and returns its location
+        Ripple Detector plugin data and returns its location.
+
+        Parameters
+        ----------
+        trial_root : Path
+            The root directory of the trial.
+        **kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        Path
+            The path to the ripple TTL data.
+        
         """
         exp_name = kwargs.pop("experiment", "experiment1")
         rec_name = kwargs.pop("recording", "recording1")
@@ -1015,6 +1268,23 @@ class Rippler(object):
     def plot_filtered_lfp_chunk(
         self, start_time: float, end_time: float, **kwargs
     ) -> plt.Axes:
+        """
+        Plots a chunk of the filtered LFP signal between the specified start and end times.
+
+        Parameters
+        ----------
+        start_time : float
+            The start time of the chunk to plot, in seconds.
+        end_time : float
+            The end time of the chunk to plot, in seconds.
+        **kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        plt.Axes
+            The matplotlib axes object with the plot.
+        """
         idx = np.logical_and(
             self.eeg_time > start_time - self.pre_ttl,
             self.eeg_time < end_time + self.post_ttl,
@@ -1041,6 +1311,14 @@ class Rippler(object):
         return ax1
 
     def plot_rasters(self, laser_on: bool):
+        """
+        Plots raster plots for the given laser condition.
+
+        Parameters
+        ----------
+        laser_on : bool
+            If True, plots rasters for laser on condition. If False, plots rasters for no laser condition.
+        """
         F = FigureMaker()
         self.path2APdata = self._find_path_to_continuous(self.pname_for_trial)
         K = KiloSortSession(self.path2APdata)
@@ -1095,6 +1373,14 @@ class Rippler(object):
         return ax
 
     def plot_and_save_ripple_band_lfp_with_ttl(self, **kwargs):
+        """
+        Plots and saves the ripple band LFP signal with TTL events.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments.
+        """
         for i_time in self.laser_on_ts:
             self._plot_ripple_lfp_with_ttl(i_time, **kwargs)
 
@@ -1129,7 +1415,18 @@ class Rippler(object):
 
     def plot_mean_spectrogram(self, laser_on: bool = False, ax=None, **kwargs):
         """
-        Plots the mean spectrogram for either 'long' or 'short' ttl events
+        Plots the mean spectrograms for both laser on and laser off conditions.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        plt.Figure
+            The matplotlib figure object with the plots.
+    
         """
         norm = kwargs.pop("norm", None)
         ttls = np.array([self.laser_on_ts, self.laser_off_ts]).T
@@ -1222,7 +1519,24 @@ class Rippler(object):
         )
         return fig1, im1, spec_array
 
-    def get_spectrogram(self, start_time: float, end_time: float, plot=False):
+    def get_spectrogram(self, start_time: float, end_time: float, plot=False)->tuple:
+        """
+        Computes the spectrogram of the filtered LFP signal between the specified start and end times.
+
+        Parameters
+        ----------
+        start_time : float
+            The start time of the chunk to analyze, in seconds.
+        end_time : float
+            The end time of the chunk to analyze, in seconds.
+        plot : bool, optional
+            Whether to plot the resulting spectrogram (default is False).
+
+        Returns
+        -------
+        tuple
+            A tuple containing the ShortTimeFFT object, the number of samples, and the spectrogram array.
+        """
         eeg_chunk = self.filtered_eeg[
             np.logical_and(
                 self.eeg_time > start_time - self.pre_ttl,
@@ -1277,8 +1591,18 @@ class Rippler(object):
     @savePlot
     def plot_mean_rippleband_power(self, **kwargs) -> plt.Axes | None:
         """
-        Plots the mean power in the ripple band for the laser on and no laser
-        conditions
+        Plots the mean power in the ripple band for the laser on and no laser conditions.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        plt.Axes | None
+            The matplotlib axes object with the plot, or None if no data is available.
+    
         """
         if np.any(self.laser_on_spectrogram) and np.any(self.laser_off_spectrogram):
             ax = kwargs.pop("ax", None)
@@ -1334,7 +1658,20 @@ class Rippler(object):
         """
         Find periods where the power in the ripple band is above n standard deviations
         for t samples. Meant to recapitulate the algorithm from the Ripple Detector
-        plugin
+        plugin.
+
+        Parameters
+        ----------
+        n : int, optional
+            The number of standard deviations above the mean power to consider as high power (default is 3).
+        t : int, optional
+            The number of samples for which the power must be above the threshold (default is 10).
+
+        Returns
+        -------
+        np.ndarray
+            An array of indices where the power is above the threshold for the specified duration.
+    
 
         """
         # get some detection parameters from the Ripple Detector plugin
@@ -1369,12 +1706,14 @@ class Rippler(object):
 
         Parameters
         ----------
-        ttl_type (str) - which bit of the trial to do the calculation for
-                         Either 'no_laser' or 'laser'
+        ttl_type : str, default='no_laser'
+            which bit of the trial to do the calculation for
+            Either 'no_laser' or 'laser'
 
         Returns
         -------
-        tuple: the run indices to keep and the run durations in ms
+        tuple
+            the run indices to keep and the run durations in ms
 
         """
         n_samples = int((self.post_ttl + self.pre_ttl) * 1000)

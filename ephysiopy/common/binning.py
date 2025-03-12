@@ -371,7 +371,7 @@ class RateMap(object):
 
         Returns
         -------
-        binned_data : BinnedData
+        BinnedData
             An instance of BinnedData containing the binned data, the bin edges, the variable binned and
             the map type. See ephysiopy.common.utils for details of the class.
         """
@@ -520,7 +520,7 @@ class RateMap(object):
 
         Returns
         -------
-        binned_data : tuple[np.ndarray, ...]
+        tuple of np.ndarray
             The binned variable and the bin edges
 
         Notes
@@ -613,7 +613,7 @@ class RateMap(object):
 
         Returns
         -------
-        adaptive_map : tuple of np.ndarray
+        tuple of np.ndarray
             The adaptively binned spike and pos maps.
             Use this to generate Skaggs information measure
 
@@ -701,7 +701,7 @@ class RateMap(object):
 
         Returns
         -------
-        data : BinnedData
+        BinnedData
             The data in A with the maps replaced by autocorrelograms
         """
         result = BinnedData(A.variable, MapType.AUTO_CORR)
@@ -736,7 +736,7 @@ class RateMap(object):
 
         Returns
         -------
-        sac : np.ndarray
+        np.ndarray
             The spatial autocorrelation
 
         Notes
@@ -815,7 +815,7 @@ class RateMap(object):
 
         Returns
         -------
-        binned_data : BinnedData
+        BinnedData
             the data in A with the maps replaced by autocorrelograms
         """
         result = BinnedData(A.variable, MapType.CROSS_CORR)
@@ -853,7 +853,7 @@ class RateMap(object):
 
         Returns
         -------
-        binned_data : BinnedData
+        BinnedData
             the data in A with the maps replaced by autocorrelograms
         """
         if isinstance(A, BinnedData):
@@ -976,7 +976,7 @@ class RateMap(object):
 
         Returns
         -------
-        H : array_like
+        np.ndarray
             the temporal windowed SAC
         """
         # [Stage 0] Get some numbers
@@ -1099,7 +1099,7 @@ class RateMap(object):
 
         Returns
         -------
-        angles : tuple[np.ndarray,...]
+        tupleof np.ndarray
             the angles as well as the arena x-y coordinates.
 
         Notes
@@ -1149,7 +1149,7 @@ class RateMap(object):
 
         Returns
         -------
-        dispersion_map : BinnedData
+        BinnedData
             the overdispersion map in an instance of BinnedData
 
         """

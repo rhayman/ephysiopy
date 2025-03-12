@@ -339,7 +339,7 @@ class Tetrode(IO):
         Whether to convert the data values volts. Default True
     """
 
-    def __init__(self, filename_root: Path, tetrode, volts=True):
+    def __init__(self, filename_root: Path, tetrode: int, volts: bool = True):
         filename_root = Path(filename_root)
         if filename_root.suffix == ".set":
             filename_root = Path(os.path.splitext(filename_root)[0])
@@ -377,13 +377,13 @@ class Tetrode(IO):
         self.clusters = np.unique(self.cut)
         self.pos_samples = None
 
-    def getSpkTS(self):
+    def getSpkTS(self) -> np.ma.MaskedArray:
         """
         Return all the timestamps for all the spikes on the tetrode
         """
         return np.ma.compressed(self.spike_times)
 
-    def getClustTS(self, cluster: int = None):
+    def getClustTS(self, cluster: int = None) -> np.ndarray:
         """
         Returns the timestamps for a cluster on the tetrode
 
@@ -394,7 +394,7 @@ class Tetrode(IO):
 
         Returns
         -------
-        clustTS : ndarray
+        np.ndarray
             The timestamps
 
         Notes
@@ -453,7 +453,7 @@ class Tetrode(IO):
 
         Returns
         -------
-        pos_samples : ndarray
+        np.ndarray
             The indices of the position samples, dtype is int
         """
         if self.cut is None:
@@ -465,7 +465,7 @@ class Tetrode(IO):
             self.getPosSamples()  # sets self.pos_samples
         return self.pos_samples[self.cut == cluster].astype(int)
 
-    def getUniqueClusters(self):
+    def getUniqueClusters(self) -> np.ndarray:
         """
         Returns the unique clusters
         """
@@ -474,17 +474,16 @@ class Tetrode(IO):
             self.cut = cut
         return np.unique(self.cut)
 
-    def apply_mask(self, mask, **kwargs) -> None:
+    def apply_mask(self, mask: np.ndarray, **kwargs):
         """Apply a mask to the data
 
-        Args:
-            mask (np.ndarray): The mask to be applied. For use with
-                               np.ma.MaskedArray's mask attribute
+        Parameters
+        ----------
+        mask : np.ndarray
+        The mask to be applied. For use with np.ma.MaskedArray's mask attribute
 
-        Returns:
-            None
-
-        Note:
+        Notes
+        -----
         The times inside the bounds are masked ie the mask is set to True
         The mask can be a list of tuples, in which case the mask is applied
         for each tuple in the list.

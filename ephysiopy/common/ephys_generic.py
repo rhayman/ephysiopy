@@ -439,24 +439,23 @@ class PosCalcsGeneric(object):
     def sample_rate(self, val) -> None:
         self._sample_rate = val
 
-    def postprocesspos(self, tracker_params: "dict[str, float]" = {}) -> None:
+    def postprocesspos(self, tracker_params: "dict[str, float]" = {}):
         """
         Post-process position data
 
-        Args:
-            tracker_params (dict): Same dict as created in
-            OESettings.Settings.parse
-                (from module openephys2py)
+        Parameters
+        ----------
+        tracker_params : dict
+            Same dict as created in OESettings.Settings.parse
+            (from module openephys2py)
 
-        Returns:
-            xy, hdir (np.ma.MaskedArray): The post-processed position data
-
-        Notes:
-            Several internal functions are called here: speedfilter,
-            interpnans, smoothPos and calcSpeed.
-            Some internal state/ instance variables are set as well. The
-            mask of the positional data (an instance of numpy masked array)
-            is modified throughout this method.
+        Notes
+        -----
+        Several internal functions are called here: speedfilter,
+        interpnans, smoothPos and calcSpeed.
+        Some internal state/ instance variables are set as well. The
+        mask of the positional data (an instance of numpy masked array)
+        is modified throughout this method.
         """
         xy = self.orig_xy.copy()
         x_zero = xy[0, :] < 0
@@ -495,6 +494,20 @@ class PosCalcsGeneric(object):
         self._dir = self.calcHeadDirection(xy)
 
     def calcHeadDirection(self, xy: np.ma.MaskedArray) -> np.ma.MaskedArray:
+        """
+        Calculates the head direction from the xy data
+
+        Parameters
+        ----------
+        xy : np.ma.MaskedArray
+            The xy data
+
+        Returns
+        -------
+        np.ma.MaskedArray
+            The head direction data
+
+        """
         # keep track of valid/ non-valid indices
         good = np.isfinite(xy[0])
         pos2 = np.arange(0, self.npos - 1)
@@ -557,6 +570,18 @@ class PosCalcsGeneric(object):
         self.speed = np.ma.MaskedArray(speed)
 
     def interpnans(self, xy: np.ma.MaskedArray) -> np.ma.MaskedArray:
+        """
+        Interpolates over bad values in the xy data
+
+        Parameters
+        ----------
+        xy : np.ma.MaskedArray
+
+        Returns
+        -------
+        np.ma.MaskedArray
+            The interpolated xy data
+        """
         n_masked = np.count_nonzero(xy.mask)
         if n_masked > 2:
             xm = xy[0]
@@ -573,11 +598,15 @@ class PosCalcsGeneric(object):
         """
         Smooths position data
 
-        Args:
-            xy (np.ma.MaskedArray): The xy data
+        Parameters
+        ----------
+        xy : np.ma.MaskedArray
+            The xy data
 
-        Returns:
-            xy (array_like): The smoothed positional data
+        Returns
+        -------
+        xy : array_like
+            The smoothed positional data
         """
         x = xy[0, :].astype(np.float64)
         y = xy[1, :].astype(np.float64)
@@ -594,11 +623,11 @@ class PosCalcsGeneric(object):
         """
         Calculates speed
 
-        Args:
-            xy (np.ma.MaskedArray): The xy positional data
+        Parameters
+        ----------
+        xy : np.ma.MaskedArray
+            The xy positional data
 
-        Returns:
-            Nothing. Sets self.speed
         """
         speed = np.ma.MaskedArray(np.abs(np.ma.ediff1d(np.hypot(xy[0], xy[1]))))
         self.speed = np.append(speed, speed[-1])
@@ -608,16 +637,22 @@ class PosCalcsGeneric(object):
         """
         Upsamples position data from 30 to upsample_rate
 
-        Args:
-            xy (np.ma.MaskedArray): The xy positional data
-            upsample_rate : int The rate to upsample to
+        Parameters
+        ----------
+        xy : np.ma.MaskedArray
+            The xy positional data
+        upsample_rate : int
+            The rate to upsample to
 
-        Returns:
-            new_xy (np.ma.MaskedArray): The upsampled xy positional data
+        Returns
+        -------
+        np.ma.MaskedArray
+            The upsampled xy positional data
 
-        Notes:
-            This is mostly to get pos data recorded using PosTracker at 30Hz
-            into Axona format 50Hz data
+        Notes
+        -----
+        This is mostly to get pos data recorded using PosTracker at 30Hz
+        into Axona format 50Hz data
         """
         from scipy import signal
 
@@ -627,22 +662,21 @@ class PosCalcsGeneric(object):
         new_y = signal.resample_poly(xy[1, :], upsample_rate / denom, 30 / denom)
         return np.array([new_x, new_y])
 
-    def apply_mask(self, mask):
+    def apply_mask(self, mask: np.ndarray):
         """
         Applies a mask to the position data
 
-        Args:
-            mask (np.ndarray): The mask to be applied. For use with
-                               np.ma.MaskedArray's mask attribute
+        Parameters
+        ----------
+        mask : np.ndarray
+            The mask to be applied. For use with np.ma.MaskedArray's mask attribute
 
-        Returns:
-            Nothing. Sets the mask of pos data
-
-        Notes:
-            If mask is empty, the mask is removed
-            The mask should be a list of tuples, each tuple containing
-            the start and end times of the mask i.e. [(start1, end1), (start2, end2)]
-            everything inside of these times is masked
+        Notes
+        -----
+        If mask is empty, the mask is removed
+        The mask should be a list of tuples, each tuple containing
+        the start and end times of the mask i.e. [(start1, end1), (start2, end2)]
+        everything inside of these times is masked
         """
         if isinstance(self.xy, np.ma.MaskedArray):
             self.xy.mask = mask
@@ -662,7 +696,7 @@ Idea is to find periods of quiescence for ripple/ MUA/ replay analysis
 
 def downsample_aux(
     data: np.ndarray, source_freq: int = 30000, target_freq: int = 50, axis=-1
-):
+) -> np.ndarray:
     """
     Downsamples the default 30000Hz AUX signal to a default of 500Hz
 
@@ -676,6 +710,11 @@ def downsample_aux(
         the desired output frequency of the data
     axis : int
         the axis along which to apply the resampling
+
+    Returns
+    -------
+    np.ndarray
+        the downsampled data
     """
     denom = np.gcd(int(source_freq), int(target_freq))
     sig = signal.resample_poly(
@@ -702,6 +741,11 @@ def calculate_rms_and_std(
         the range of times in seconds to calculate the RMS for
     fs: int
         the sampling frequency of sig
+
+    Returns
+    -------
+    tuple of np.ndarray
+        the RMS and standard deviation of the signal
     """
     rms = np.nanmean(
         np.sqrt(np.power(sig[int(time_window[0] * fs) : int(time_window[1] * fs)], 2))
@@ -739,7 +783,7 @@ def find_high_amp_long_duration(
 
     Returns
     -------
-    masked_lfp : np.ma.MaskedArray
+    np.ma.MaskedArray
         the bandpass filtered LFP that has been masked outside of epochs that don't meet the above thresholds
 
     Notes

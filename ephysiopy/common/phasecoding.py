@@ -23,7 +23,6 @@ from ephysiopy.common.fieldcalcs import (
 )
 from scipy import ndimage, optimize, signal
 from scipy.stats import norm
-from scipy.spatial.distance import cdist
 from collections import defaultdict
 import copy
 
@@ -40,7 +39,22 @@ cbar_fontsize = 8
 cbar_tick_fontsize = 6
 
 
-def getPhaseOfMinSpiking(spkPhase):
+def getPhaseOfMinSpiking(spkPhase: np.ndarray) -> float:
+    """
+    Returns the phase at which the minimum number of spikes are fired
+
+    Parameters
+    ----------
+    spkPhase : np.ndarray
+        The phase of the spikes
+
+    Returns
+    -------
+    float
+        The phase at which the minimum number of spikes are fired
+
+
+    """
     kernelLen = 180
     kernelSig = kernelLen / 4
 
@@ -57,6 +71,18 @@ def getPhaseOfMinSpiking(spkPhase):
 def ccc(t, p):
     """
     Calculates correlation between two random circular variables
+
+    Parameters
+    ----------
+    t : np.ndarray
+        The first variable
+    p : np.ndarray
+        The second variable
+
+    Returns
+    -------
+    float
+        The correlation between the two variables
     """
     n = len(t)
     A = np.sum(np.cos(t) * np.cos(p))
@@ -74,6 +100,19 @@ def ccc(t, p):
 def ccc_jack(t, p):
     """
     Function used to calculate jackknife estimates of correlation
+    between two circular random variables
+
+    Parameters
+    ----------
+    t : np.ndarray
+        The first variable
+    p : np.ndarray
+        The second variable
+
+    Returns
+    -------
+    np.ndarray
+        The jackknife estimates of the correlation between the two variables
     """
     n = len(t) - 1
     A = np.cos(t) * np.cos(p)
@@ -108,23 +147,27 @@ def plot_spikes_in_runs_per_field(
     Debug plotting to show spikes per run per field found in the ratemap
     as a raster plot
 
-    Args:
-    field_label (np.ndarray): The field labels for each position bin
-        a vector
-    run_start_stop_idx (np.ndarray): The start and stop indices of each run
-        has shape (n_runs, 2)
-    spikes_in_time (np.ndarray): The number of spikes in each position bin
-        a vector
+    Parameters
+    ----------
+    field_label : np.ndarray
+    The field labels for each position bin a vector
+    run_starts, runs_ends : np.ndarray
+        The start and stop indices of each run (vectors)
+    spikes_in_time : np.ndarray
+        The number of spikes in each position bin (vector)
+    ttls_in_time : np.ndarray
+        TTL occurences in time (vector)
 
-    kwargs:
-    separate_plots (bool): If True then each field will be plotted in a
-    separate figure
+    **kwargs
+        separate_plots : bool
+            If True then each field will be plotted in a separate figure
+        single_axes : bool
+            If True will plot all the runs/ spikes in a single axis with fields delimited by horizontal lines
 
-    single_axes (bool): If True will plot all the runs/ spikes in a single
-    axis with fields delimited by horizontal lines
-
-    Returns:
-    fig, axes (tuple): The figure and axes objects
+    Returns
+    -------
+    fig, axes : tuple
+        The figure and axes objects
     """
     spikes_in_time = np.ravel(spikes_in_time)
     if ttls_in_time:
@@ -210,25 +253,26 @@ def circCircCorrTLinear(theta, phi, regressor=1000, alpha=0.05, hyp=0, conf=True
     Returns the correlation value (rho), p-value, bootstrapped correlation
     values, shuffled p values and correlation values.
 
-    Args:
-        theta, phi (array_like): mx1 array containing circular data (radians)
-            whose correlation is to be measured
-        regressor (int, optional): number of permutations to use to calculate p-value
-            from randomisation and bootstrap estimation of confidence
-            intervals.
-            Leave empty to calculate p-value analytically (NB confidence
-            intervals will not be calculated). Default is 1000.
-        alpha (float, optional): hypothesis test level e.g. 0.05, 0.01 etc.
-            Default is 0.05.
-        hyp (int, optional): hypothesis to test; -1/ 0 / 1 (-ve correlated /
-            correlated in either direction / positively correlated).
-            Default is 0.
-        conf (bool, optional): True or False to calculate confidence intervals
-            via jackknife or bootstrap. Default is True.
+    Parameters
+    ----------
+    theta, phi : np.ndarray
+        The two circular variables to correlate (in radians)
+    regressor : int, default=1000
+        number of permutations to use to calculate p-value from randomisation and
+        bootstrap estimation of confidence intervals.
+        Leave empty to calculate p-value analytically (NB confidence
+        intervals will not be calculated).
+    alpha : float, default=0.05
+        hypothesis test level e.g. 0.05, 0.01 etc.
+    hyp : int, default=0
+        hypothesis to test; -1/ 0 / 1 (-ve correlated / correlated in either direction / positively correlated).
+    conf : bool, default=True
+        True or False to calculate confidence intervals via jackknife or bootstrap.
 
-    References:
-        Fisher (1993), Statistical Analysis of Circular Data,
-            Cambridge University Press, ISBN: 0 521 56890 0
+    References
+    ----------
+    Fisher (1993), Statistical Analysis of Circular Data,
+        Cambridge University Press, ISBN: 0 521 56890 0
     """
     theta = theta.ravel()
     phi = phi.ravel()
@@ -289,6 +333,16 @@ def circCircCorrTLinear(theta, phi, regressor=1000, alpha=0.05, hyp=0, conf=True
 def shuffledPVal(theta, phi, rho, regressor, hyp):
     """
     Calculates shuffled p-values for correlation
+
+    Parameters
+    ----------
+    theta, phi : np.ndarray
+        The two circular variables to correlate (in radians)
+
+    Returns
+    -------
+    float
+        The shuffled p-value for the correlation between the two variables
     """
     n = len(theta)
     idx = np.zeros((n, regressor))
@@ -324,12 +378,14 @@ def circRegress(x, t):
     """
     Finds approximation to circular-linear regression for phase precession.
 
-    Args:
-        x (list): n-by-1 list of in-field positions (linear variable)
-        t (list): n-by-1 list of phases, in degrees (converted to radians)
+    Parameters
+    ----------
+    x, t : np.ndarray
+        The linear variable and the phase variable (in radians)
 
-    Note:
-        Neither x nor t can contain NaNs, must be paired (of equal length).
+    Notes
+    -----
+    Neither x nor t can contain NaNs, must be paired (of equal length).
     """
     # transform the linear co-variate to the range -1 to 1
     if not np.any(x) or not np.any(t):
@@ -357,8 +413,9 @@ def circRegress(x, t):
     return slope, intercept
 
 
-# There are a lot of parameters here so lets keep them outside the main
-# class and define them as a module level dictionary
+"""
+A dictionary containing parameters for the phase precession analysis
+"""
 phase_precession_config = {
     "pos_sample_rate": 50,
     "lfp_sample_rate": 250,
@@ -397,7 +454,9 @@ phase_precession_config = {
     "bins_per_second": 50,  # bins per second for ifr smoothing
 }
 
-
+"""
+A list of the regressors that can be used in the phase precession analysis
+"""
 all_regressors = [
     "spk_numWithinRun",
     "pos_exptdRate_cum",
@@ -423,14 +482,56 @@ class phasePrecession2D(object):
         Philos Trans R Soc Lond B Biol Sci. 2013 Dec 23;369(1635):20120532.
         doi: 10.1098/rstb.2012.0532.
 
-    Args:
-        lfp_sig (np.array): The LFP signal against which cells might precess...
-        lfp_fs (int): The sampling frequency of the LFP signal
-        xy (np.array): The position data as 2 x num_position_samples
-        spike_ts (np.array): The times in samples at which the cell fired
-        pos_ts (np.array): The times in samples at which position was captured
-        pp_config (dict): Contains parameters for running the analysis.
-            See phase_precession_config dict in ephysiopy.common.eegcalcs
+    Parameters
+    ----------
+    lfp_sig : np.ndarray
+        The LFP signal
+    lfp_fs : int
+        The sampling frequency of the LFP signal
+    xy : np.ndarray
+        The position data as 2 x num_position_samples
+    spike_ts : np.ndarray
+        The times in samples at which the cell fired
+    pos_ts : np.ndarray
+        The times in samples at which position was captured
+    pp_config : dict
+        Contains parameters for running the analysis.
+        See phase_precession_config dict in ephysiopy.common.eegcalcs
+    regressors : list
+        A list of the regressors to use in the analysis
+
+    Attributes
+    ----------
+    orig_xy : np.ndarray
+        The original position data
+    pos_ts : np.ndarray
+        The position timestamps
+    spike_ts : np.ndarray
+        The spike timestamps
+    regressors : dict
+        A dictionary containing the regressors and their values
+    alpha : float
+        The alpha value for hypothesis testing
+    hyp : int
+        The hypothesis to test
+    conf : bool
+        Whether to calculate confidence intervals
+    eeg : np.ndarray
+        The EEG signal
+    min_theta : int
+        The minimum theta frequency
+    max_theta : int
+        The maximum theta frequency
+    filteredEEG : np.ndarray
+        The filtered EEG signal
+    phase : np.ndarray
+        The phase of the EEG signal
+    phaseAdj : np.ma.MaskedArray
+        The adjusted phase of the EEG signal as a masked array
+    spike_times_in_pos_samples : np.ndarray
+        The spike times in position samples (vector with length = npos)
+    spk_weights : np.ndarray
+        The spike weights (vector with length = npos)
     """
 
     def __init__(
@@ -449,9 +550,9 @@ class phasePrecession2D(object):
         self.update_config(pp_config)
         self._pos_ts = pos_ts
 
+        self.regressors = 1000
         self.update_regressors(regressors)
 
-        self.regressor = 1000
         self.alpha = 0.05
         self.hyp = 0
         self.conf = True
@@ -494,7 +595,7 @@ class phasePrecession2D(object):
     def spike_pos_idx(self):
         return (self.spike_ts * self.pos_sample_rate).astype(int)
 
-    def update_regressors(self, reg_keys: list):
+    def update_regressors(self, reg_keys: list | None):
         """
         Create a dict to hold the stats values for
         each regressor
@@ -519,8 +620,7 @@ class phasePrecession2D(object):
         """
         if reg_keys is None:
             reg_keys = all_regressors
-        else:
-            assert all([regressor in all_regressors for regressor in reg_keys])
+        assert all([regressor in all_regressors for regressor in reg_keys])
 
         # Create a dict to hold the stats values for
         # each regressor
@@ -543,11 +643,11 @@ class phasePrecession2D(object):
         # of stats_dict
 
     def update_regressor_values(self, key: str, values):
-        # Check whether values is a masked array and if not make it one
+        """Check whether values is a masked array and if not make it one"""
         self.regressors[key]["values"] = values
 
     def update_regressor_mask(self, key: str, indices):
-        # Mask entries in the 'values' and 'pha' arrays of the relevant regressor
+        """Mask entries in the 'values' and 'pha' arrays of the relevant regressor"""
         breakpoint()
         self.regressors[key]["values"].mask[indices] = False
 
@@ -558,12 +658,16 @@ class phasePrecession2D(object):
         return self.regressors[key]
 
     def update_config(self, pp_config):
+        """Update the relevant pp_config values"""
         [
             setattr(self, attribute, pp_config[attribute])
             for attribute in pp_config.keys()
         ]
 
     def update_position(self, ppm: float, cm: bool):
+        """
+        Update the position data based on ppm and cm values
+        """
         P = PosCalcsGeneric(
             self.orig_xy[0, :],
             self.orig_xy[1, :],
@@ -575,6 +679,9 @@ class phasePrecession2D(object):
         self.PosData = P
 
     def update_rate_map(self):
+        """
+        Create the ratemap from the position data
+        """
         R = RateMap(self.PosData, xyInCms=self.convert_xy_2_cm)
         R.binsize = self.bins_per_cm
         R.smooth_sz = self.field_smoothing_kernel_len
@@ -582,6 +689,9 @@ class phasePrecession2D(object):
         self.RateMap = R  # this will be used a fair bit below
 
     def getSpikePosIndices(self, spk_times: np.ndarray):
+        """
+        Get the indices of the spikes in the position data
+        """
         pos_times = getattr(self, "pos_ts")
         idx = np.searchsorted(pos_times, spk_times)
         idx[idx == len(pos_times)] = idx[idx == len(pos_times)] - 1
@@ -596,20 +706,17 @@ class phasePrecession2D(object):
         information about the position, spiking and theta data and then
         do the actual regression.
 
-        Args:
-            tetrode (int): The tetrode to examine
-            cluster (int): The cluster to examine
-            laserEvents (array_like, optional): The on times for laser events
-            if present. Default is None
-        Valid keyword args:
-            plot (bool): whether to plot the results of field partitions, the regression(s)
-                etc
-        See Also:
-            ephysiopy.common.eegcalcs.phasePrecession.partitionFields()
-            ephysiopy.common.eegcalcs.phasePrecession.getPosProps()
-            ephysiopy.common.eegcalcs.phasePrecession.getThetaProps()
-            ephysiopy.common.eegcalcs.phasePrecession.getSpikeProps()
-            ephysiopy.common.eegcalcs.phasePrecession._ppRegress()
+        **kwargs
+            do_plot : bool
+            whether to plot the results of field partitions, the regression(s)
+
+        See Also
+        --------
+        ephysiopy.common.eegcalcs.phasePrecession.partitionFields()
+        ephysiopy.common.eegcalcs.phasePrecession.getPosProps()
+        ephysiopy.common.eegcalcs.phasePrecession.getThetaProps()
+        ephysiopy.common.eegcalcs.phasePrecession.getSpikeProps()
+        ephysiopy.common.eegcalcs.phasePrecession._ppRegress()
         """
         do_plot = kwargs.get("plot", False)
 
@@ -669,16 +776,15 @@ class phasePrecession2D(object):
         Uses the output of partitionFields and returns vectors the same
         length as pos.
 
-        Args:
-            tetrode, cluster (int): The tetrode / cluster to examine
-            peaksXY (array_like): The x-y coords of the peaks in the ratemap
-            laserEvents (array_like): The position indices of on events
-            (laser on)
+        Parameters
+        ----------
+        labels : np.ndarray
+            The labels of the fields
 
-        Returns:
-            pos_dict, run_dict (dict): Contains a whole bunch of information
-            for the whole trial and also on a run-by-run basis (run_dict).
-            See the end of this function for all the key / value pairs.
+        Returns
+        -------
+        list of FieldProps
+            A list of FieldProps instances (see ephysiopy.common.fieldcalcs.FieldProps)
         """
         spikeTS = self.spike_ts  # in seconds
         xy = self.RateMap.xy
@@ -808,11 +914,17 @@ class phasePrecession2D(object):
 
         return field_props
 
-    def getThetaProps(self, field_props: list[FieldProps]) -> None:
+    def getThetaProps(self, field_props: list[FieldProps]):
         """
         Processes the LFP data and inserts into each run within each field
         a segment of LFP data that has had its phase and amplitude extracted
-        as well as some other metadata
+        as well as some other data
+
+        Parameters
+        ----------
+        field_props : list[FieldProps]
+            A list of FieldProps instances
+
         """
         spikeTS = self.spike_ts
         phase = np.ma.MaskedArray(self.phase, mask=True)
@@ -866,7 +978,7 @@ class phasePrecession2D(object):
         isBadCycle = np.logical_or(cycleHasBadLen, cycleHasBadPow)
         isInBadCycle = isBadCycle[cycleLabel]
         isBad = np.logical_or(isInBadCycle, isNegFreq)
-        breakpoint()
+        # breakpoint()
         # TODO: above phaseAdj is being created as a Masked array with all mask values as True...
         phaseAdj = np.ma.MaskedArray(phaseAdj, mask=np.invert(isBad))
         self.phaseAdj = phaseAdj
@@ -904,6 +1016,19 @@ class phasePrecession2D(object):
                 run.lfp_data = lfp_segment
 
     def getSpikeProps(self, field_props: list):
+        """
+        Extracts the relevant spike properties from the field_props
+
+        Parameters
+        ----------
+        field_props : list
+            A list of FieldProps instances
+
+        Returns
+        -------
+        dict
+            A dictionary containing the spike properties
+        """
         # TODO: the regressor values here need updating so they are the same length
         # as the number of positions and masked in the correct places to maintain
         # consistency with the regressors added in the getPosProps method
@@ -968,6 +1093,21 @@ class phasePrecession2D(object):
         return spkDict
 
     def _ppRegress(self, spkDict, whichSpk="first"):
+        """
+        Perform the regression analysis on the spike data
+
+        Parameters
+        ----------
+        spkDict : dict
+            A dictionary containing the spike properties
+        whichSpk : str
+            Which spike(s) in a cycle to use in the regression analysis
+
+        Returns
+        -------
+        list
+            A list of the updated regressors
+        """
 
         phase = self.phaseAdj
         newSpkRunLabel = spkDict["spkRunLabel"].copy()
@@ -1065,6 +1205,21 @@ class phasePrecession2D(object):
         return regressors
 
     def plotRegressor(self, regressor: str, ax=None):
+        """
+        Plot the regressor against the phase
+
+        Parameters
+        ----------
+        regressor : str
+            The regressor to plot
+        ax : matplotlib.axes.Axes
+            The axes to plot on
+
+        Returns
+        -------
+        ax : matplotlib.axes.Axes
+            The axes with the plot
+        """
         assert regressor in self.regressors.keys()
         if ax is None:
             fig = plt.figure(figsize=(3, 5))
@@ -1090,67 +1245,61 @@ class phasePrecession2D(object):
         ax.set_xlabel("Normalised position", fontsize=subaxis_title_fontsize)
         return ax
 
-    def plotPPRegression(self, regressorDict, regressor2plot="pos_d_cum", ax=None):
-
-        t = self.getLFPPhaseValsForSpikeTS()
-        x = self.RateMap.xy[0, self.spike_times_in_pos_samples]
-        from ephysiopy.common import fieldcalcs
-
-        rmap = self.RateMap.get_map(self.spk_weights)
-        xe, ye = rmap.bin_edges
-        label = fieldcalcs.field_lims(rmap)
-        rmap = rmap.binned_data[0].T
-        xInField = xe[label.nonzero()[1]]
-        mask = np.logical_and(x > np.min(xInField), x < np.max(xInField))
-        x = x[mask]
-        t = t[mask]
-        # keep x between -1 and +1
-        mnx = np.mean(x)
-        xn = x - mnx
-        mxx = np.max(np.abs(xn))
-        x = xn / mxx
-        # keep tn between 0 and 2pi
-        t = np.remainder(t, 2 * np.pi)
-        slope, intercept = circRegress(x, t)
-        rho, p, rho_boot, p_shuff, ci = circCircCorrTLinear(x, t)
-        plt.figure()
-        if ax is None:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-        else:
-            ax = ax
-        ax.plot(x, t, ".", color="regressor")
-        ax.plot(x, t + 2 * np.pi, ".", color="regressor")
-        mm = (0, -2 * np.pi, 2 * np.pi, 4 * np.pi)
-        for m in mm:
-            ax.plot((-1, 1), (-slope + intercept + m, slope + intercept + m), "r", lw=3)
-        ax.set_xlim((-1, 1))
-        ax.set_ylim((-np.pi, 3 * np.pi))
-        return {
-            "slope": slope,
-            "intercept": intercept,
-            "rho": rho,
-            "p": p,
-            "rho_boot": rho_boot,
-            "p_shuff": p_shuff,
-            "ci": ci,
-        }
-
-    def getLFPPhaseValsForSpikeTS(self):
-        ts = self.spike_times_in_pos_samples * (
-            self.lfp_sample_rate / self.pos_sample_rate
-        )
-        ts_idx = np.array(np.floor(ts), dtype=int)
-        return self.phase[ts_idx]
+    # def plotPPRegression(self, regressorDict, regressor2plot="pos_d_cum", ax=None):
+    #
+    #     t = self.getLFPPhaseValsForSpikeTS()
+    #     x = self.RateMap.xy[0, self.spike_times_in_pos_samples]
+    #     from ephysiopy.common import fieldcalcs
+    #
+    #     rmap = self.RateMap.get_map(self.spk_weights)
+    #     xe, ye = rmap.bin_edges
+    #     label = fieldcalcs.field_lims(rmap)
+    #     rmap = rmap.binned_data[0].T
+    #     xInField = xe[label.nonzero()[1]]
+    #     mask = np.logical_and(x > np.min(xInField), x < np.max(xInField))
+    #     x = x[mask]
+    #     t = t[mask]
+    #     # keep x between -1 and +1
+    #     mnx = np.mean(x)
+    #     xn = x - mnx
+    #     mxx = np.max(np.abs(xn))
+    #     x = xn / mxx
+    #     # keep tn between 0 and 2pi
+    #     t = np.remainder(t, 2 * np.pi)
+    #     slope, intercept = circRegress(x, t)
+    #     rho, p, rho_boot, p_shuff, ci = circCircCorrTLinear(x, t)
+    #     plt.figure()
+    #     if ax is None:
+    #         fig = plt.figure()
+    #         ax = fig.add_subplot(111)
+    #     else:
+    #         ax = ax
+    #     ax.plot(x, t, ".", color="regressor")
+    #     ax.plot(x, t + 2 * np.pi, ".", color="regressor")
+    #     mm = (0, -2 * np.pi, 2 * np.pi, 4 * np.pi)
+    #     for m in mm:
+    #         ax.plot((-1, 1), (-slope + intercept + m, slope + intercept + m), "r", lw=3)
+    #     ax.set_xlim((-1, 1))
+    #     ax.set_ylim((-np.pi, 3 * np.pi))
+    #     return {
+    #         "slope": slope,
+    #         "intercept": intercept,
+    #         "rho": rho,
+    #         "p": p,
+    #         "rho_boot": rho_boot,
+    #         "p_shuff": p_shuff,
+    #         "ci": ci,
+    #     }
+    #
+    # def getLFPPhaseValsForSpikeTS(self):
+    #     ts = self.spike_times_in_pos_samples * (
+    #         self.lfp_sample_rate / self.pos_sample_rate
+    #     )
+    #     ts_idx = np.array(np.floor(ts), dtype=int)
+    #     return self.phase[ts_idx]
 
 
 from ephysiopy.common.fieldcalcs import FieldProps
-
-"""
-Filter out runs that are too short, too slow or have too few spikes
-
-NB this modifies the input list
-"""
 
 
 def filter_runs(
@@ -1159,6 +1308,28 @@ def filter_runs(
     min_duration: float | int,
     min_spikes: int = 0,
 ) -> list[FieldProps]:
+    """
+    Filter out runs that are too short, too slow or have too few spikes
+
+    Parameters
+    ----------
+    field_props : list of FieldProps
+    min_speed : float, int
+        the minimum speed for a run
+    min_duration : int, float
+        the minimum duration for a run
+    min_spikes : int, default=0
+        the minimum number of spikes for a run
+
+    Returns
+    -------
+    list of FieldProps
+
+    Notes
+    -----
+    this modifies the input list
+    """
+
     for idx, field in enumerate(field_props):
         runs_to_keep = [
             run
@@ -1177,6 +1348,13 @@ def filter_runs(
 
 
 def plot_field_props(field_props: list[FieldProps]):
+    """
+    Plots the fields in the list of FieldProps
+
+    Parameters
+    ----------
+    list of FieldProps
+    """
     fig = plt.figure()
     subfigs = fig.subfigures(
         2,
@@ -1309,14 +1487,11 @@ def plot_field_props(field_props: list[FieldProps]):
     _stripAx(ax3)
 
 
-"""
-Plot the lfp segments for a series of runs through a field including
-the spikes emitted by the cell. 
-"""
-
-
 def plot_lfp_segment(field: FieldProps, lfp_sample_rate: int = 250):
-
+    """
+    Plot the lfp segments for a series of runs through a field including
+    the spikes emitted by the cell.
+    """
     assert hasattr(field.runs[0], "lfp_data")
 
     n_rows = 3

@@ -30,15 +30,17 @@ from astropy.convolution import interpolate_replace_nans
 import copy
 
 """
-I've adapted code from skimage.measure.regionprops for per field
+An adaptation of code from skimage.measure.regionprops for receptive field
 analysis. THe fieldprops function inherits from regionprops but
 additionally takes the xy coordinates in its constructor so
 that we can extract measures to do with angles and distances etc
 of each coordinate to the field peak or field perimeter for example.
+
 As with regionprops, you can also add functions via the 'extra_properties'
 argument; with regionprops you specify functions that operate on either one 
 or two arguments (the intensity image and / or the mask) - here you can do
 this and also specify the xy_coordinates as a third argument.
+
 Finally, some of the regionprops functions have been over-ridden so that
 the nan versions of them (e.g. nanmax, nanmin etc) are called instead as
 ratemaps/ receptive fields often contain nans.
@@ -60,21 +62,31 @@ PROP_VALS = set(PROPS.values())
 class LFPSegment(object):
     """
     A custom class for dealing with segments of an LFP signal and how
-    they relate to specific runs (see RunProps below) through a
-    receptive field (see FieldProps below)
+    they relate to specific runs through a receptive field
+    (see RunProps and FieldProps below)
 
     Attributes
     ----------
     field_label : int
+        The field id
     run_label : int
+        The run id
     slice : slice
+        slice into the LFP data for a segment
     spike_times : np.ndarray
+        the times in seconds spikes occurred for a segment
     signal : np.ndarray
+        raw signal for a segment
     filtered_signal : np.ndarray
+        bandpass filtered signal for a segment
     phase : np.ndarray
+        phase data for a segment
     amplitude : np.ndarray
+        amplitude for a segment
     sample_rate : float, int
+        sample rate for the LFP segment
     filter_band : tuple[int,int]
+        the bandpass filter values
 
     """
 
@@ -91,6 +103,25 @@ class LFPSegment(object):
         sample_rate: float | int,
         filter_band: tuple,
     ):
+        """
+        Parameters
+        ----------
+        field_label : int
+            the field id to which this LFP segment belongs
+        run_label : int
+            the run id through the field to which this LFP segment belongs
+        slice : slice
+            the slice corresponding the pos sample I think
+        spike_times : np.ndarray
+            the times at which the spikes were emitted (seonds)
+        signal, filtered_signal, phase, amplitude : np.ndarray
+            the raw, filtered, phase and amplitude of the LFP for a given segment
+        sample_rate : int, float
+            the sample rate for the LFP signal
+        filter_band : tuple
+            the bandpass filter values applied to the raw signal to give filtered_signal
+
+        """
         self.field_label = field_label
         self.run_label = run_label  # integer identity that should match with a run
         self.slice = slice  # an index into the main LFP data
@@ -114,36 +145,64 @@ class RunProps(object):
     Attributes
     ----------
     label : int
+        the run id
     slice : slice
-    xy_coords : np.ndarray
-    spike_count : np.ndarray
+        the slice of the position data for a run
+    xy: np.ndarray
+        the x-y coordinates for a run (global coordinates)
     speed : np.ndarray
+        the speed at each xy coordinate
     peak_xy : tuple[float, float]
+        the fields max rate xy location
     max_index : int
+        the index into the arrays of the field max
     perimeter_coords : np.ndarray
+        xy coordinates of the field perimeter
     hdir : np.ndarray
         the heading direction
     min_speed : float
+        the minimum speed
     cumulative_time : np.ndarray
+        the cumulative time spent on a run
     duration: int
+        the total duration of a run
     n_spikes : int
+        the total number of spikes emitted on a run
     run_start : int
+        the position index of the run start
     run_stop : int
+        the position index of the run stop
     mean_direction : float
+        the mean direction of a run
     current_direction : np.ndarray
+        the current direction of a run
     cumulative_distance : np.ndarray
+        the cumulative distance covered in a run
     spike_position_index : np.ndarray
+        the index into the position data of the spikes on a run
     observed_spikes : np.ndarray
+        the observed spikes on a run (binned by position samples)
     xy_angle_to_peak : np.ndarray
+        the xy angle to the peak (radians)
     xy_dist_to_peak : np.ndarray
+        the distance to the field max
     xy_dist_to_peak_normed : np.ndarray
+        normalised distance to field max
     pos_xy : np.ndarray
+        cartesian xy coordinates but normalised on a unit circle
     pos_phi : np.ndarray
+        the angular distance between a runs main direction and the
+        direction to the peak for each position sample
     rho : np.ndarray
+        the polar radial distance (1 = field edge)
     phi : np.ndarray
+        the polar angle (radians)
     r_and_phi_to_x_and_y : np.ndarray
+        converts rho and phi to x and y coordinates (range = -1 -> +1)
     tortuosity : np.ndarray
+        the tortuosity for a run (closer to 1 = a straighter run)
     xy_is_smoothed : bool
+        whether the xy data has been smoothed
     """
 
     def __init__(
@@ -165,7 +224,7 @@ class RunProps(object):
         slice : slice
             the slice into the position array that holds all the position data
         xy_coords : np.ndarray
-            the xy data for this run
+            the xy data for this run (global coordinates)
         spike_count : np.ndarray
             the spike count for each position sample in this run
         speed : np.ndarray
@@ -204,6 +263,10 @@ class RunProps(object):
         d = np.arctan2(np.diff(self.xy[1]), np.diff(self.xy[0]))
         d = np.append(d, d[-1])
         return np.rad2deg(d)
+
+    @property
+    def speed(self):
+        return self._speed
 
     @property
     def min_speed(self):
@@ -390,7 +453,7 @@ class RunProps(object):
 
     @property
     def r_and_phi_to_x_and_y(self):
-        return np.vstack(pol2cart(self.r, self.phi))
+        return np.vstack(pol2cart(self.rho, self.phi))
 
     """
     Define a measure of tortuosity to see how direct the run was
@@ -410,6 +473,97 @@ class RunProps(object):
 
 
 class FieldProps(RegionProperties):
+    """
+    Describes various properties of a receptive field.
+
+    Attributes
+    ----------
+    slice : tuple of slice
+        The slice of the field in the binned data (x slice, y slice)
+    label : int
+        The label of the field
+    image_intensity : np.ndarray
+        The intensity image of the field (in Hz)
+    runs : list of RunProps
+        The runs through the field
+    run_slices : list of slice
+        The slices of the runs through the field (slices are position indices)
+    run_labels : np.ndarray
+        The labels of the runs
+    max_index : np.ndarray
+        The index of the maximum intensity in the field
+    num_runs : int
+        The number of runs through the field
+    cumulative_time : list of np.ndarray
+        The cumulative time spent on the field for each run through the field
+    cumulative_distance: list of np.ndarray
+        The cumulative time spent on the field for each run through the field
+    runs_speed : list of np.ndarray
+        The speed of each run through the field
+    runs_observed_spikes : np.ndarray
+        The observed spikes for each run through the field
+    spike_position_index : np.ndarray
+        The index of the spikes in the position data
+    xy_at_peak : np.ndarray
+        The x-y coordinate of the field max
+    xy : np.ndarray
+        The x-y coordinates of the field for all runs
+    xy_relative_to_peak : np.ndarray
+        The x-y coordinates of the field zeroed with respect to the peak
+    xy_angle_to_peak : np.ndarray
+        The angle each x-y coordinate makes to the field peak
+    xy_dist_to_peak : np.ndarray
+        The distance of each x-y coordinate to the field peak
+    bw_perim : np.ndarray
+        The perimeter of the field as an array of bool
+    perimeter_coords : tuple
+        The x-y coordinates of the field perimeter
+    global_perimeter_coords : np.ndarray
+        The global x-y coordinates of the field perimeter
+    perimeter_minus_field_max : np.ndarray
+        The x-y coordinates of the field perimeter minus the field max
+    perimeter_angle_from_peak : np.ndarray
+        The angle each point on the perimeter makes to the field peak
+    perimeter_dist_from_peak : np.ndarray
+        The distance of each point on the perimeter to the field peak
+    bin_coords : np.ndarray
+        The x-y coordinates of the field in the binned data
+    phi : np.ndarray
+        The angular distance between the mean direction of each run and
+        each position samples direction to the field centre
+    rho : np.ndarray
+        The distance of each position sample to the field max (1 is furthest)
+    pos_xy : np.ndarray
+        The cartesian x-y coordinates of each position sample
+    pos_phi : np.ndarray
+        The angular distance between the mean direction of each run and
+        each position samples direction to the field centre
+    pos_r : np.ndarray
+        The ratio of the distance from the field peak to the position sample
+        and the distance from the field peak to the point on the perimeter that is most
+        colinear with the position sample
+    r_and_phi_to_x_and_y : np.ndarray
+        Converts rho and phi to x and y coordinates
+    r_per_run : np.ndarray
+        The polar radial distance for each run
+    current_direction : np.ndarray
+        The direction projected onto the mean run direction
+    cumulative_distance : list of np.ndarray
+        The cumulative distance for each run
+    projected_direction : np.ndarray
+        The direction projected onto the mean run direction
+    intensity_max : float
+        The maximum intensity of the field (i.e. field peak rate)
+    intensity_mean : float
+        The mean intensity of the field
+    intensity_min : float
+        The minimum intensity of the field
+    intensity_std : float
+        The standard deviation of the field intensity
+
+
+    """
+
     def __init__(
         self,
         slice,
@@ -454,69 +608,6 @@ class FieldProps(RegionProperties):
     def run_labels(self):
         return np.array([r.label for r in self.runs])
 
-    def __getattr__(self, attr):
-        if self._intensity_image is None and attr in _require_intensity_image:
-            raise AttributeError(
-                f"Attribute '{attr}' unavailable when `intensity_image` "
-                f"has not been specified."
-            )
-        if attr in self._extra_properties:
-            func = self._extra_properties[attr]
-            n_args = _infer_number_of_required_args(func)
-            # determine whether func requires intensity image
-            if n_args == 2:
-                if self._intensity_image is not None:
-                    if self._multichannel:
-                        multichannel_list = [
-                            func(self.image, self.image_intensity[..., i])
-                            for i in range(self.image_intensity.shape[-1])
-                        ]
-                        return np.stack(multichannel_list, axis=-1)
-                    else:
-                        return func(self.image, self.image_intensity)
-                else:
-                    raise AttributeError(
-                        f"intensity image required to calculate {attr}"
-                    )
-            elif n_args == 3:
-                if self._intensity_image is not None:
-                    return func(
-                        self.image,
-                        self.image_intensity,
-                        self.xy_coords,
-                    )
-                else:
-                    raise AttributeError(
-                        f"intensity image required to calculate {attr}"
-                    )
-            elif n_args == 1:
-                return func(self.image)
-            else:
-                raise AttributeError(
-                    f"Custom regionprop function's number of arguments must "
-                    f"be 1, 2 or 3 but {attr} takes {n_args} arguments."
-                )
-        elif attr in PROPS and attr.lower() == attr:
-            if (
-                self._intensity_image is None
-                and PROPS[attr] in _require_intensity_image
-            ):
-                raise AttributeError(
-                    f"Attribute '{attr}' unavailable when `intensity_image` "
-                    f"has not been specified."
-                )
-            # retrieve deprecated property (excluding old CamelCase ones)
-            return getattr(self, PROPS[attr])
-        else:
-            raise AttributeError(f"'{type(self)}' object has no attribute '{attr}'")
-
-    def __str__(self):
-        """
-
-        Override the string representation printed to the console
-        """
-        return f"Field {self.label} has {len(self.runs)} runs"
-
     # The maximum index of the intensity image for the region
     @property
     def max_index(self) -> np.ndarray:
@@ -532,23 +623,16 @@ class FieldProps(RegionProperties):
         return len(self.runs)
 
     @property
-    def cumulative_time(self) -> np.ndarray:
-        return np.concatenate([r.cumulative_time for r in self.runs])
+    def cumulative_time(self) -> list:
+        return [r.cumulative_time for r in self.runs]
 
     @property
-    def runs_speed(self) -> np.ndarray:
-        return np.concatenate([r._speed for r in self.runs])
+    def runs_speed(self) -> list:
+        return [r._speed for r in self.runs]
 
     @property
     def runs_observed_spikes(self) -> np.ndarray:
         return np.concatenate([r.observed_spikes for r in self.runs])
-
-    def runs_expected_spikes(
-        self, expected_rate_at_pos: np.ndarray, sample_rate: int = 50
-    ) -> np.ndarray:
-        return np.concatenate(
-            [r.expected_spikes(expected_rate_at_pos, sample_rate) for r in self.runs]
-        )
 
     @property
     def spike_position_index(self):
@@ -563,13 +647,13 @@ class FieldProps(RegionProperties):
         return np.array([x_max, y_max])
 
     @property
-    def xy_coords(self) -> np.ndarray:
+    def xy(self) -> np.ndarray:
         return np.concatenate([r.xy.T for r in self.runs]).T
 
     # The x-y coordinates zeroed with respect to the peak
     @property
     def xy_relative_to_peak(self) -> np.ndarray:
-        return (self.xy_coords.T - self.xy_at_peak).T
+        return (self.xy.T - self.xy_at_peak).T
 
     # The angle each x-y coordinate makes to the field peak
     @property
@@ -599,6 +683,7 @@ class FieldProps(RegionProperties):
         y = self.binned_data.bin_edges[0][perim_xy[0] + self.slice[0].start]
         return np.array([x, y])
 
+    @property
     def perimeter_minus_field_max(self) -> np.ndarray:
         mi = self.max_index
         perimeter_coords = self.perimeter_coords
@@ -662,6 +747,7 @@ class FieldProps(RegionProperties):
     def r_and_phi_to_x_and_y(self) -> np.ndarray:
         return np.vstack(pol2cart(self.pos_r, self.pos_phi))
 
+    @property
     def r_per_run(self) -> np.ndarray:
         perimeter_coords = self.perimeter_coords
         return np.concatenate(
@@ -677,12 +763,12 @@ class FieldProps(RegionProperties):
         )
 
     @property
-    def current_direction(self) -> np.ndarray:
-        return np.concatenate([r.current_direction for r in self.runs])
+    def current_direction(self) -> list:
+        return [r.current_direction for r in self.runs]
 
     @property
-    def cumulative_distance(self) -> np.ndarray:
-        return np.concatenate([r.cumulative_distance for r in self.runs])
+    def cumulative_distance(self) -> list:
+        return [r.cumulative_distance for r in self.runs]
 
     @property
     def projected_direction(self) -> np.ndarray:
@@ -691,11 +777,6 @@ class FieldProps(RegionProperties):
         when cartesian x and y is converted to from polar rho and phi
         """
         return np.concatenate([r.pos_xy[0] for r in self.runs])
-
-    def overdispersion(
-        self, spike_train: np.ndarray, sample_rate: int = 50
-    ) -> np.ndarray:
-        return np.array([r.overdispersion(spike_train, sample_rate) for r in self.runs])
 
     # Over-ride the next intensity_* functions so they use the
     # nan versions
@@ -718,6 +799,68 @@ class FieldProps(RegionProperties):
         vals = self.image_intensity[self.image]
         return np.nanstd(vals, axis=0)
 
+    def __getattr__(self, attr):
+        if self._intensity_image is None and attr in _require_intensity_image:
+            raise AttributeError(
+                f"Attribute '{attr}' unavailable when `intensity_image` "
+                f"has not been specified."
+            )
+        if attr in self._extra_properties:
+            func = self._extra_properties[attr]
+            n_args = _infer_number_of_required_args(func)
+            # determine whether func requires intensity image
+            if n_args == 2:
+                if self._intensity_image is not None:
+                    if self._multichannel:
+                        multichannel_list = [
+                            func(self.image, self.image_intensity[..., i])
+                            for i in range(self.image_intensity.shape[-1])
+                        ]
+                        return np.stack(multichannel_list, axis=-1)
+                    else:
+                        return func(self.image, self.image_intensity)
+                else:
+                    raise AttributeError(
+                        f"intensity image required to calculate {attr}"
+                    )
+            elif n_args == 3:
+                if self._intensity_image is not None:
+                    return func(
+                        self.image,
+                        self.image_intensity,
+                        self.xy_coords,
+                    )
+                else:
+                    raise AttributeError(
+                        f"intensity image required to calculate {attr}"
+                    )
+            elif n_args == 1:
+                return func(self.image)
+            else:
+                raise AttributeError(
+                    f"Custom regionprop function's number of arguments must "
+                    f"be 1, 2 or 3 but {attr} takes {n_args} arguments."
+                )
+        elif attr in PROPS and attr.lower() == attr:
+            if (
+                self._intensity_image is None
+                and PROPS[attr] in _require_intensity_image
+            ):
+                raise AttributeError(
+                    f"Attribute '{attr}' unavailable when `intensity_image` "
+                    f"has not been specified."
+                )
+            # retrieve deprecated property (excluding old CamelCase ones)
+            return getattr(self, PROPS[attr])
+        else:
+            raise AttributeError(f"'{type(self)}' object has no attribute '{attr}'")
+
+    def __str__(self):
+        """
+        Override the string representation printed to the console
+        """
+        return f"Field {self.label} has {len(self.runs)} runs"
+
     def smooth_runs(self, k: float, spatial_lp_cut: int, sample_rate: int):
         """
         Smooth in x and y in preparation for converting the smoothed cartesian
@@ -725,11 +868,58 @@ class FieldProps(RegionProperties):
 
         Parameters
         ----------
-        k (float) - smoothing constant for the instantaneous firing rate
-        spatial_lp_cut (int) - spatial lowpass cut off
-        sample_rate (int) - position sample rate in Hz
+        k : float
+            smoothing constant for the instantaneous firing rate
+        spatial_lp_cut : int
+            spatial lowpass cut off
+        sample_rate : int
+            position sample rate in Hz
         """
         [r.smooth_xy(k, spatial_lp_cut, sample_rate) for r in self.runs]
+
+    def runs_expected_spikes(
+        self, expected_rate_at_pos: np.ndarray, sample_rate: int = 50
+    ) -> np.ndarray:
+        """
+        Calculate the expected number of spikes along each run given the
+        whole ratemap.
+
+        Parameters
+        ----------
+        expected_rate_at_pos : np.ndarray
+            the rate seen at each xy position of the whole trial
+        sample_rate : int
+            the sample rate of the position data
+
+        Returns
+        -------
+        np.ndarray
+            the expected rate at each xy position for each run
+        """
+        return np.concatenate(
+            [r.expected_spikes(expected_rate_at_pos, sample_rate) for r in self.runs]
+        )
+
+    def overdispersion(
+        self, spike_train: np.ndarray, sample_rate: int = 50
+    ) -> np.ndarray:
+        """
+        Calculate the overdispersion for each run through the field
+
+        Parameters
+        ----------
+        spike_train : np.ndarray
+            the spike train (spikes binned up by position) for the whole trial. Same
+            length as the trial n_samples
+        sample_rate : int
+            the sample rate of the position data
+
+        Returns
+        -------
+        np.ndarray
+            the overdispersion for each run through the field
+        """
+        return np.array([r.overdispersion(spike_train, sample_rate) for r in self.runs])
 
 
 def fieldprops(
@@ -1087,20 +1277,28 @@ def fieldprops(
     return regions
 
 
-"""
-The ratemaps used in the phasePrecession2D class are a) super smoothed and
-b) very large i.e. the bins per cm is low, more or less at unity. This
-results in firing fields that have lots of holes (nans) in them. We want to
-smooth over these holes so we can construct measures such as the expected
-rate in a given bin whilst also preserving whatever 'geometry' of the
-environment exists in the ratemap as a result of where position has been 
-sampled. That is, if non-sampled positions are designated with nans, then we 
-want to smooth over those that in theory could have been sampled and keep 
-those that never could have been.
-"""
-
-
 def infill_ratemap(rmap: np.ndarray) -> np.ndarray:
+    """
+    The ratemaps used in the phasePrecession2D class are a) super smoothed and
+    b) very large i.e. the bins per cm is low. This
+    results in firing fields that have lots of holes (nans) in them. We want to
+    smooth over these holes so we can construct measures such as the expected
+    rate in a given bin whilst also preserving whatever 'geometry' of the
+    environment exists in the ratemap as a result of where position has been
+    sampled. That is, if non-sampled positions are designated with nans, then we
+    want to smooth over those that in theory could have been sampled and keep
+    those that never could have been.
+
+    Parameters
+    ----------
+    rmap : np.ndarray
+        The ratemap to be filled
+
+    Returns
+    -------
+    np.ndarray
+        The filled ratemap
+    """
     outline = np.isfinite(rmap)
     mask = ndi.binary_fill_holes(outline)
     rmap = np.ma.MaskedArray(rmap, np.invert(mask))
@@ -1111,13 +1309,25 @@ def infill_ratemap(rmap: np.ndarray) -> np.ndarray:
     return output
 
 
-"""
-Reduce the labelled data in A by restricting the values to reduce_by % of
-the maximum in each local labeled section of A - kind of a quantitative local watershed
-"""
-
-
 def reduce_labels(A: np.ndarray, labels: np.ndarray, reduce_by: float = 50) -> list:
+    """
+    Reduce the labelled data in A by restricting the values to reduce_by % of
+    the maximum in each local labeled section of A - kind of a quantitative local watershed
+
+    Parameters
+    ----------
+    A : np.ndarray
+        The data to be reduced
+    labels : np.ndarray
+        The labels to be used to partition the data
+    reduce_by : float
+        The percentage of the maximum value in each label to reduce by
+
+    Returns
+    -------
+    list of np.ndarray
+        The reduced data
+    """
     assert A.shape == labels.shape
     out = []
     for label in np.unique(labels):
@@ -1136,31 +1346,31 @@ def partitionFields(
     area_threshold=0.01,
 ) -> tuple[np.ndarray, ...]:
     """
-    Partitions fields.
-
     Partitions spikes into fields by finding the watersheds around the
     peaks of a super-smoothed ratemap
 
     Parameters
     ----------
-    binned_data (BinnedData) - an instance of ephysiopy.common.utils.BinnedData
-    field_threshold_percent (int) - removes pixels in a field that fall below this percent
-                                    of the maximum firing rate in the field
-    field_rate_threshold (float) - anything below this firing rate in Hz threshold is set to 0
-    area_threshold (float) - defines the minimum field size as a proportion of the
-                             environment size. Default of 0.01 says a field has to be at
-                             least 1% of the size of the environment i.e.
-                             binned_area_width * binned_area_height to be counted as a field
+    binned_data : BinnedData
+        an instance of ephysiopy.common.utils.BinnedData
+    field_threshold_percent : int
+        removes pixels in a field that fall below this percent of the maximum firing rate in the field
+    field_rate_threshold : float
+        anything below this firing rate in Hz threshold is set to 0
+    area_threshold : float
+        defines the minimum field size as a proportion of the
+        environment size. Default of 0.01 says a field has to be at
+        least 1% of the size of the environment i.e.
+        binned_area_width * binned_area_height to be counted as a field
 
     Returns
     -------
-    tuple[np.ndarray] - including:
-        peaksXY (array_like): The xy coordinates of the peak rates in
+    tuple of np.ndarray
+        peaksXY - The xy coordinates of the peak rates in
         each field
-        peaksRate (array_like): The peak rates in peaksXY
-        labels (numpy.ndarray): An array of the labels corresponding to
-        each field (starting  1)
-        rmap (numpy.ndarray): The ratemap of the tetrode / cluster
+        peaksRate - The peak rates in peaksXY
+        labels - An array of the labels corresponding to each field (starting  1)
+        rmap - The ratemap of the tetrode / cluster
     """
     ye, xe = binned_data.bin_edges
     rmap = binned_data[0]
@@ -1244,13 +1454,20 @@ def get_mean_resultant(ego_boundary_map: np.ndarray) -> np.complex128 | float:
     """
     Calculates the mean resultant vector of a boundary map in egocentric coordinates
 
+    Parameters
+    ----------
+    ego_boundary_map : np.ndarray
+        The egocentric boundary map
+
+    Returns
+    -------
+    float 
+        The mean resultant vector of the egocentric boundary map
+
+    Notes
+    -----
     See Hinman et al., 2019 for more details
 
-    Args:
-        ego_boundary_map (np.ndarray): The egocentric boundary map
-
-    Returns:
-        float: The mean resultant vector of the egocentric boundary map
     """
     if np.nansum(ego_boundary_map) == 0:
         return np.nan
@@ -1263,11 +1480,49 @@ def get_mean_resultant(ego_boundary_map: np.ndarray) -> np.complex128 | float:
 
 
 def get_mean_resultant_length(ego_boundary_map: np.ndarray, **kwargs) -> float:
+    '''
+    Calculates the length of the mean resultant vector of a 
+    boundary map in egocentric coordinates
+
+    Parameters
+    ----------
+    ego_boundary_map : np.ndarray
+        The egocentric boundary map
+
+    Returns
+    -------
+    float 
+        The length of the mean resultant vector of the egocentric boundary map
+
+    Notes
+    -----
+    See Hinman et al., 2019 for more details
+
+    '''
     MR = get_mean_resultant(ego_boundary_map, **kwargs)
     return np.abs(MR)
 
 
 def get_mean_resultant_angle(ego_boundary_map: np.ndarray, **kwargs) -> float:
+    '''
+    Calculates the angle of the mean resultant vector of a 
+    boundary map in egocentric coordinates
+
+    Parameters
+    ----------
+    ego_boundary_map : np.ndarray
+        The egocentric boundary map
+
+    Returns
+    -------
+    float 
+        The angle mean resultant vector of the egocentric boundary map
+
+    Notes
+    -----
+    See Hinman et al., 2019 for more details
+
+    '''
     MR = get_mean_resultant(ego_boundary_map, **kwargs)
     return np.rad2deg(np.arctan2(np.imag(MR), np.real(MR)))
 
@@ -1278,11 +1533,15 @@ def field_lims(A):
     Uses anything greater than the half peak rate to select as a field.
     Data is heavily smoothed.
 
-    Args:
-        A (BinnedData): A BinnedData instance containing the ratemap
+    Parameters
+    ----------
+    A : BinnedData
+        A BinnedData instance containing the ratemap
 
-    Returns:
-        label (np.array): The labelled ratemap
+    Returns
+    -------
+    np.ndarray
+        The labelled ratemap
     """
     Ac = A.binned_data[0]
     nan_idx = np.isnan(Ac)
@@ -1304,10 +1563,27 @@ def field_lims(A):
 
 def limit_to_one(A, prc=50, min_dist=5):
     """
-    Processes a multi-peaked ratemap (ie grid cell) and returns a matrix
+    Processes a multi-peaked ratemap and returns a matrix
     where the multi-peaked ratemap consist of a single peaked field that is
     a) not connected to the border and b) close to the middle of the
     ratemap
+
+    Parameters
+    ----------
+    A : np.ndarray
+        The ratemap
+    prc : int
+        The percentage of the peak rate to threshold the ratemap at
+    min_dist : int
+        The minimum distance between peaks
+
+    Returns
+    -------
+    tuple
+        RegionProperties of the fields (list of RegionProperties)
+        The single peaked ratemap (np.ndarray)
+        The index of the field (int)
+
     """
     Ac = A.copy()
     Ac[np.isnan(A)] = 0
@@ -1365,9 +1641,23 @@ def limit_to_one(A, prc=50, min_dist=5):
     return central_field_props, central_field, central_field_idx
 
 
-def global_threshold(A, prc=50, min_dist=5):
+def global_threshold(A, prc=50, min_dist=5)->int:
     """
     Globally thresholds a ratemap and counts number of fields found
+
+    Parameters
+    ----------
+    A : np.ndarray
+        The ratemap
+    prc : int
+        The percentage of the peak rate to threshold the ratemap at
+    min_dist : int
+        The minimum distance between peaks
+
+    Returns
+    -------
+    int
+        The number of fields found in the ratemap
     """
     Ac = A.copy()
     Ac[np.isnan(A)] = 0
@@ -1392,11 +1682,26 @@ def global_threshold(A, prc=50, min_dist=5):
     return nFields
 
 
-def local_threshold(A, prc=50, min_dist=5):
+def local_threshold(A, prc=50, min_dist=5)->np.ndarray:
     """
     Locally thresholds a ratemap to take only the surrounding prc amount
     around any local peak
-    """
+
+    Parameters
+    ----------
+    A : np.ndarray
+        The ratemap
+    prc : int
+        The percentage of the peak rate to threshold the ratemap at
+    min_dist : int
+        The minimum distance between peaks
+
+    Returns
+    -------
+    np.ndarray
+        The thresholded ratemap
+
+    """`
     Ac = A.copy()
     nanidx = np.isnan(Ac)
     Ac[nanidx] = 0
@@ -1453,55 +1758,63 @@ def border_score(
     Calculates a border score totally dis-similar to that calculated in
     Solstad et al (2008)
 
-    Args:
-        A (array_like): Should be the ratemap
-        B (array_like): This should be a boolean mask where True (1)
-            is equivalent to the presence of a border and False (0)
-            is equivalent to 'open space'. Naievely this will be the
-            edges of the ratemap but could be used to take account of
-            boundary insertions/ creations to check tuning to multiple
-            environmental boundaries. Default None: when the mask is
-            None then a mask is created that has 1's at the edges of the
-            ratemap i.e. it is assumed that occupancy = environmental
-            shape
-        shape (str): description of environment shape. Currently
-            only 'square' or 'circle' accepted. Used to calculate the
-            proportion of the environmental boundaries to examine for
-            firing
-        fieldThresh (float): Between 0 and 1 this is the percentage
-            amount of the maximum firing rate
-            to remove from the ratemap (i.e. to remove noise)
-        smthKernSig (float): the sigma value used in smoothing the ratemap
-            (again!) with a gaussian kernel
-        circumPrc (float): The percentage amount of the circumference
-            of the environment that the field needs to be to count
-            as long enough to make it through
-        binSize (float): bin size in cm
-        minArea (float): min area for a field to be considered
-        debug (bool): If True then some plots and text will be output
+    Parameters
+    ----------
+    A : np.ndarray
+        the ratemap
+    B : np.ndarray, default None
+        This should be a boolean mask where True (1)
+        is equivalent to the presence of a border and False (0)
+        is equivalent to 'open space'. Naievely this will be the
+        edges of the ratemap but could be used to take account of
+        boundary insertions/ creations to check tuning to multiple
+        environmental boundaries. Default None: when the mask is
+        None then a mask is created that has 1's at the edges of the
+        ratemap i.e. it is assumed that occupancy = environmental
+        shape
+    shape : str, default 'square'
+        description of environment shape. Currently
+        only 'square' or 'circle' accepted. Used to calculate the
+        proportion of the environmental boundaries to examine for
+        firing
+    fieldThresh : float, default 0.3
+        Between 0 and 1 this is the percentage
+        amount of the maximum firing rate
+        to remove from the ratemap (i.e. to remove noise)
+    circumPrc : float, default 0.2
+        The percentage amount of the circumference
+        of the environment that the field needs to be to count
+        as long enough to make it through
+    binSize : float, default 3.0
+        bin size in cm
+    minArea : float, default 200
+        min area for a field to be considered
 
-    Returns:
-        float: the border score
+    Returns
+    -------
+    float
+        the border score
 
-    Notes:
-        If the cell is a border cell (BVC) then we know that it should
-        fire at a fixed distance from a given boundary (possibly more
-        than one). In essence this algorithm estimates the amount of
-        variance in this distance i.e. if the cell is a border cell this
-        number should be small. This is achieved by first doing a bunch of
-        morphological operations to isolate individual fields in the
-        ratemap (similar to the code used in phasePrecession.py - see
-        the partitionFields method therein). These partitioned fields are then
-        thinned out (using skimage's skeletonize) to a single pixel
-        wide field which will lie more or less in the middle of the
-        (highly smoothed) sub-field. It is the variance in distance from the
-        nearest boundary along this pseudo-iso-line that is the boundary
-        measure
+    Notes
+    -----
+    If the cell is a border cell (BVC) then we know that it should
+    fire at a fixed distance from a given boundary (possibly more
+    than one). In essence this algorithm estimates the amount of
+    variance in this distance i.e. if the cell is a border cell this
+    number should be small. This is achieved by first doing a bunch of
+    morphological operations to isolate individual fields in the
+    ratemap (similar to the code used in phasePrecession.py - see
+    the partitionFields method therein). These partitioned fields are then
+    thinned out (using skimage's skeletonize) to a single pixel
+    wide field which will lie more or less in the middle of the
+    (highly smoothed) sub-field. It is the variance in distance from the
+    nearest boundary along this pseudo-iso-line that is the boundary
+    measure
 
-        Other things to note are that the pixel-wide field has to have some
-        minimum length. In the case of a circular environment this is set to
-        20% of the circumference; in the case of a square environment markers
-        this is at least half the length of the longest side
+    Other things to note are that the pixel-wide field has to have some
+    minimum length. In the case of a circular environment this is set to
+    20% of the circumference; in the case of a square environment markers
+    this is at least half the length of the longest side
     """
     # need to know borders of the environment so we can see if a field
     # touches the edges, and the perimeter length of the environment
@@ -1618,13 +1931,15 @@ def _get_field_labels(A: np.ndarray, **kwargs) -> tuple:
     found from those peaks. Used in field_props() and
     grid_field_props()
 
-    Args:
-        A (np.ndarray): The array to process
+    Parameters
+    ----------
+    A : np.ndarray
+        The array to process
+    **kwargs
         min_distance (float, optional): The distance in bins between fields to
         separate the regions of the image
         clear_border (bool, optional): Input to skimage.feature.peak_local_max.
-        The number of
-            pixels to ignore at the edge of the image
+        The number of pixels to ignore at the edge of the image
     """
     clear_border = True
     if "clear_border" in kwargs:
@@ -1815,11 +2130,21 @@ def calc_angs(points):
 
 def kl_spatial_sparsity(pos_map: BinnedData) -> float:
     """
-    Calculates a measure of spatial sampling of an arena by comparing the
-    given spatial sampling to a uniform one using kl divergence
+    Calculates the spatial sampling of an arena by comparing the
+    observed spatial sampling to an expected uniform one using kl divergence
 
     Data in pos_map should be unsmoothed (not checked) and the MapType should
     be POS (checked)
+
+    Parameters
+    ----------
+    pos_map : BinnedData
+        The position map
+
+    Returns
+    -------
+    float
+        The spatial sparsity of the position map
     """
     assert pos_map.map_type == MapType.POS
     return kldiv_dir(np.ravel(pos_map.binned_data[0]))
@@ -1833,18 +2158,24 @@ def spatial_sparsity(rate_map: np.ndarray, pos_map: np.ndarray) -> float:
     For example, a sparsity score of 0.10 indicates that the cell fired on
     10% of the maze surface
 
-    Args:
-        rate_map (np.ndarray): The rate map
-        pos_map (np.ndarray): The occupancy map
+    Parameters
+    ----------
+    rate_map : np.ndarray
+        The rate map
+    pos_map : np.ndarray
+        The occupancy map
 
-    Returns:
-        float: The spatial sparsity of the rate map
+    Returns
+    -------
+    float
+        The spatial sparsity of the rate map
 
-    References:
-        Markus, E.J., Barnes, C.A., McNaughton, B.L., Gladden, V.L. &
-        Skaggs, W.E. Spatial information content and reliability of
-        hippocampal CA1 neurons: effects of visual input. Hippocampus
-        4, 410–421 (1994).
+    References
+    ----------
+    Markus, E.J., Barnes, C.A., McNaughton, B.L., Gladden, V.L. &
+    Skaggs, W.E. Spatial information content and reliability of
+    hippocampal CA1 neurons: effects of visual input. Hippocampus
+    4, 410–421 (1994).
 
     """
     p_i = pos_map / np.nansum(pos_map)
@@ -1853,8 +2184,21 @@ def spatial_sparsity(rate_map: np.ndarray, pos_map: np.ndarray) -> float:
 
 
 def coherence(smthd_rate, unsmthd_rate):
-    """calculates coherence of receptive field via correlation of smoothed
+    """
+    Calculates the coherence of receptive field via correlation of smoothed
     and unsmoothed ratemaps
+
+    Parameters
+    ----------
+    smthd_rate : np.ndarray
+        The smoothed rate map
+    unsmthd_rate : np.ndarray
+        The unsmoothed rate map
+
+    Returns
+    -------
+    float
+        The coherence of the rate maps
     """
     smthd = smthd_rate.ravel()
     unsmthd = unsmthd_rate.ravel()
@@ -1875,11 +2219,15 @@ def kldiv_dir(polarPlot: np.ndarray) -> float:
     The larger the divergence the more tendancy the cell has to fire when the
     animal faces a specific direction.
 
-    Args:
-        polarPlot (1D-array): The binned and smoothed directional ratemap
+    Parameters
+    ----------
+    polarPlot np.ndarray
+        The binned and smoothed directional ratemap
 
-    Returns:
-        klDivergence (float): The divergence from circular of the 1D-array
+    Returns
+    -------
+    float
+        The divergence from circular of the 1D-array
         from a uniform circular distribution
     """
 
@@ -1902,41 +2250,45 @@ def kldiv(
     Calculates the Kullback-Leibler or Jensen-Shannon divergence between
     two distributions.
 
-    Args:
-        X (array_like): Vector of M variable values
-        P1 (array_like): Length-M vector of probabilities representing
-        distribution 1
-        P2 (array_like): Length-M vector of probabilities representing
-        distribution 2
-        sym (str, optional): If 'sym', returns a symmetric variant of the
-            Kullback-Leibler divergence, given by [KL(P1,P2)+KL(P2,P1)]/2
-        js (str, optional): If 'js', returns the Jensen-Shannon divergence,
-        given by
-            [KL(P1,Q)+KL(P2,Q)]/2, where Q = (P1+P2)/2
+    Parameters
+    ----------
+    X : np.ndarray
+        Vector of M variable values
+    P1, P2 : np.ndarray
+        Length-M vectors of probabilities representing distribution 1 and 2
+    variant : str, default 'sym'
+        If 'sym', returns a symmetric variant of the
+        Kullback-Leibler divergence, given by [KL(P1,P2)+KL(P2,P1)]/2
+        If 'js', returns the Jensen-Shannon divergence, given by
+        [KL(P1,Q)+KL(P2,Q)]/2, where Q = (P1+P2)/2
 
-    Returns:
-        float: The Kullback-Leibler divergence or Jensen-Shannon divergence
+    Returns
+    -------
+    float
+        The Kullback-Leibler divergence or Jensen-Shannon divergence
 
-    Notes:
-        The Kullback-Leibler divergence is given by:
+    Notes
+    -----
+    The Kullback-Leibler divergence is given by:
 
-        .. math:: KL(P1(x),P2(x)) = sum_[P1(x).log(P1(x)/P2(x))]
+    .. math:: KL(P1(x),P2(x)) = sum_[P1(x).log(P1(x)/P2(x))]
 
-        If X contains duplicate values, there will be an warning message,
-        and these values will be treated as distinct values.  (I.e., the
-        actual values do not enter into the computation, but the probabilities
-        for the two duplicate values will be considered as probabilities
-        corresponding to two unique values.).
-        The elements of probability vectors P1 and P2 must
-        each sum to 1 +/- .00001.
+    If X contains duplicate values, there will be an warning message,
+    and these values will be treated as distinct values.  (I.e., the
+    actual values do not enter into the computation, but the probabilities
+    for the two duplicate values will be considered as probabilities
+    corresponding to two unique values.).
+    The elements of probability vectors P1 and P2 must
+    each sum to 1 +/- .00001.
 
-        This function is taken from one on the Mathworks file exchange
+    This function is taken from one on the Mathworks file exchange
 
-    See Also:
-        Cover, T.M. and J.A. Thomas. "Elements of Information Theory," Wiley,
-        1991.
+    See Also
+    --------
+    Cover, T.M. and J.A. Thomas. "Elements of Information Theory," Wiley,
+    1991.
 
-        https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence
+    https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence
     """
 
     if len(np.unique(X)) != len(np.sort(X)):
@@ -1975,21 +2327,24 @@ def skaggs_info(ratemap, dwelltimes, **kwargs):
     """
     Calculates Skaggs information measure
 
-    Args:
-        ratemap (array_like): The binned up ratemap
-        dwelltimes (array_like): Must be same size as ratemap
+    Parameters
+    ----------
+    ratemap, dwelltimes :np.ndarray
+        The binned up ratemap and dwelltimes. Must be the same size
 
-    Returns:
-        bits_per_spike (float): Skaggs information score
+    Returns
+    -------
+    float
+        Skaggs information score in bits spike
 
-    Notes:
-        THIS DATA SHOULD UNDERGO ADAPTIVE BINNING
-        See getAdaptiveMap() in binning class
+    Notes
+    -----
+    The ratemap data should have undergone adaptive binning as per
+    the original paper. See getAdaptiveMap() in binning class
 
-        Returns Skaggs et al's estimate of spatial information
-        in bits per spike:
+    The estimate of spatial information in bits per spike:
 
-        .. math:: I = sum_{x} p(x).r(x).log(r(x)/r)
+    .. math:: I = sum_{x} p(x).r(x).log(r(x)/r)
     """
     sample_rate = kwargs.get("sample_rate", 50)
 
@@ -2015,18 +2370,21 @@ def grid_field_props(A: BinnedData, maxima="centroid", allProps=True, **kwargs):
     """
     Extracts various measures from a spatial autocorrelogram
 
-    Args:
-        A: BinnedData object containing the spatial autocorrelogram (SAC) in
+    Parameters
+    ----------
+    A : BinnedData
+        object containing the spatial autocorrelogram (SAC) in
             A.binned_data[0]
-        maxima (str, optional): The method used to detect the peaks in the SAC.
+    maxima (str, optional): The method used to detect the peaks in the SAC.
             Legal values are 'single' and 'centroid'. Default 'centroid'
-        allProps (bool, optional): Whether to return a dictionary that
-        contains the attempt to fit an ellipse around the edges of the
-        central size peaks. See below
-            Default True
+    allProps : bool default=True
+        Whether to return a dictionary that contains the attempt to fit 
+        an ellipse around the edges of the central size peaks. See below
 
-    Returns:
-        props (dict): A dictionary containing measures of the SAC.
+    Returns
+    -------
+    dict
+        Measures of the SAC.
         Keys include:
             * gridness score
             * scale
@@ -2036,14 +2394,16 @@ def grid_field_props(A: BinnedData, maxima="centroid", allProps=True, **kwargs):
             * values of the rotation procedure used to calculate gridness
             * ellipse axes and angle (if allProps is True and the it worked)
 
-    Notes:
-        The output from this method can be used as input to the show() method
-        of this class.
-        When it is the plot produced will display a lot more informative.
-        The coordinate system internally used is centred on the image centre.
+    Notes
+    -----
+    The output from this method can be used as input to the show() method
+    of this class.
+    When it is the plot produced will display a lot more informative.
+    The coordinate system internally used is centred on the image centre.
 
-    See Also:
-        ephysiopy.common.binning.autoCorr2D()
+    See Also
+    --------
+    ephysiopy.common.binning.autoCorr2D()
     """
     """
     Assign the output dictionary now as we want to return immediately if
@@ -2221,13 +2581,18 @@ def grid_orientation(peakCoords, closestPeakIdx):
     The orientation angle is the angle of the first peak working
     counter-clockwise from 3 o'clock
 
-    Args:
-        peakCoords (array_like): The peak coordinates as pairs of xy
-        closestPeakIdx (array_like): A 1D array of the indices in peakCoords
+    Parameters
+    ----------
+    peakCoords : np.ndarray
+        The peak coordinates as pairs of xy
+    closestPeakIdx : np.ndarray
+        A 1D array of the indices in peakCoords
         of the peaks closest to the centre of the SAC
 
-    Returns:
-        peak_orientation (float): The first value in an array of the angles of
+    Returns
+    -------
+    float
+        The first value in an array of the angles of
         the peaks in the SAC working counter-clockwise from a line
         extending from the middle of the SAC to 3 o'clock.
     """
@@ -2241,33 +2606,40 @@ def grid_orientation(peakCoords, closestPeakIdx):
         return np.sort(theta.compress(theta >= 0))[0]
 
 
-def gridness(image, step=30):
+def gridness(image, step=30)->tuple:
     """
     Calculates the gridness score in a grid cell SAC.
 
-    Briefly, the data in `image` is rotated in `step` amounts and
+    The data in `image` is rotated in `step` amounts and
     each rotated array is correlated with the original.
     The maximum of the values at 30, 90 and 150 degrees
     is the subtracted from the minimum of the values at 60, 120
     and 180 degrees to give the grid score.
 
-    Args:
-        image (array_like): The spatial autocorrelogram
-        step (int, optional): The amount to rotate the SAC in each step of the
+    Parameters
+    ----------
+    image : np.ndarray
+        The spatial autocorrelogram
+    step : int, default=30
+        The amount to rotate the SAC in each step of the
         rotational correlation procedure
 
-    Returns:
-        gridmeasures (3-tuple): The gridscore, the correlation values at each
+    Returns
+    -------
+    3-tuple
+        The gridscore, the correlation values at each
         `step` and the rotational array
 
-    Notes:
-        The correlation performed is a Pearsons R. Some rescaling of the
-        values in `image` is performed following rotation.
+    Notes
+    -----
+    The correlation performed is a Pearsons R. Some rescaling of the
+    values in `image` is performed following rotation.
 
-    See Also:
-        skimage.transform.rotate : for how the rotation of `image` is done
-        skimage.exposure.rescale_intensity : for the resscaling following
-        rotation
+    See Also
+    --------
+    skimage.transform.rotate : for how the rotation of `image` is done
+    skimage.exposure.rescale_intensity : for the resscaling following
+    rotation
     """
     # TODO: add options in here for whether the full range of correlations
     # are wanted or whether a reduced set is wanted (i.e. at the 30-tuples)
@@ -2309,26 +2681,28 @@ def gridness(image, step=30):
 
 def deform_SAC(A, circleXY=None, ellipseXY=None):
     """
-    Deforms a SAC that is non-circular to be more circular
+    Deforms an elliptical SAC to be circular
 
-    Basically a blatant attempt to improve grid scores, possibly
-    introduced in a paper by Matt Nolan...
+    Parameters
+    ----------
+    A : np.ndarray
+        The SAC
+    circleXY : np.ndarray, default=None
+        The xy coordinates defining a circle.
+    ellipseXY : np.ndarray, default=None
+        The xy coordinates defining an ellipse.
 
-    Args:
-        A (array_like): The SAC
-        circleXY (array_like, optional): The xy coordinates defining a circle.
-        Default None.
-        ellipseXY (array_like, optional): The xy coordinates defining an
-        ellipse. Default None.
+    Returns
+    -------
+    np.ndarray
+        The SAC deformed to be more circular
 
-    Returns:
-        deformed_sac (array_like): The SAC deformed to be more circular
-
-    See Also:
-        ephysiopy.common.ephys_generic.FieldCalcs.grid_field_props
-        skimage.transform.AffineTransform
-        skimage.transform.warp
-        skimage.exposure.rescale_intensity
+    See Also
+    --------
+    ephysiopy.common.ephys_generic.FieldCalcs.grid_field_props
+    skimage.transform.AffineTransform
+    skimage.transform.warp
+    skimage.exposure.rescale_intensity
     """
     if circleXY is None or ellipseXY is None:
         SAC_stats = grid_field_props(A)
@@ -2363,20 +2737,26 @@ def get_circular_regions(A: np.ndarray, **kwargs) -> list:
     Returns a list of images which are expanding circular
     regions centred on the middle of the image out to the
     image edge. Used for calculating the grid score of each
-    image to find the one with the max grid score. Based on
-    some Moser paper I can't recall.
+    image to find the one with the max grid score. 
 
-    Args:
-        A (np.ndarray): The SAC
+    Parameters
+    ----------
+    A : np.ndarray
+        The SAC
 
-    Keyword Args:
+    **kwargs
         min_radius (int): The smallest radius circle to start with
+
+    Returns
+    -------
+    list
+        A list of images which are circular sub-regions of the
+        original SAC
     """
     from skimage.measure import CircleModel, grid_points_in_poly
 
-    min_radius = 5
-    if "min_radius" in kwargs.keys():
-        min_radius = kwargs["min_radius"]
+
+    min_radius = kwargs.get("min_radius", 5)
 
     centre = tuple([d // 2 for d in np.shape(A)])
     max_radius = min(tuple(np.subtract(np.shape(A), centre)))
@@ -2394,7 +2774,21 @@ def get_circular_regions(A: np.ndarray, **kwargs) -> list:
     return result
 
 
-def get_basic_gridscore(A: np.ndarray, **kwargs):
+def get_basic_gridscore(A: np.ndarray, **kwargs)->float:
+    '''
+    Calculates the grid score of a spatial autocorrelogram
+
+    Parameters
+    ----------
+    A : np.ndarray
+        The spatial autocorrelogram
+
+    Returns
+    -------
+    float
+        The grid score of the SAC
+
+    '''
     return gridness(A, **kwargs)[0]
 
 
@@ -2404,22 +2798,43 @@ def get_expanding_circle_gridscore(A: np.ndarray, **kwargs):
     where the circles are centred on the image centre and expanded to
     the edge of the image. The maximum of the get_basic_gridscore() for
     each of these circular sub-regions is returned as the gridscore
+
+    Parameters
+    ----------
+    A : np.ndarray
+        The SAC
+
+    Returns
+    -------
+    float
+        The maximum grid score of the circular sub
+        regions of the SAC
     """
 
     images = get_circular_regions(A, **kwargs)
-    gridscores = [gridness(im) for im in images]
+    gridscores = [gridness(im)[0] for im in images]
     return max(gridscores)
 
 
-def get_deformed_sac_gridscore(A: np.ndarray):
+def get_deformed_sac_gridscore(A: np.ndarray)->float:
     """
     Deforms a non-circular SAC into a circular SAC (circular meaning
     the ellipse drawn around the edges of the 6 nearest peaks to the
     SAC centre) and returns get_basic_griscore() calculated on the
     deformed (or re-formed?!) SAC
+
+    Parameters
+    ----------
+    A : np.ndarray
+        The SAC
+
+    Returns
+    -------
+    float
+        The gridscore of the deformed SAC
     """
     deformed_SAC = deform_SAC(A)
-    return gridness(deformed_SAC)
+    return gridness(deformed_SAC)[0]
 
 
 def get_thigmotaxis_score(xy: np.ndarray, shape: str = "circle") -> float:
@@ -2428,17 +2843,20 @@ def get_thigmotaxis_score(xy: np.ndarray, shape: str = "circle") -> float:
     portion of an environment to the time spent in the outer portion.
     The portions are allocated so that they have equal area.
 
-    Args:
-        xy (np.ndarray): The xy coordinates of the animal's position. 2 x nsamples
-        shape (str): The shape of the environment. Legal values are 'circle'
-        and 'square'. Default 'circle'
+    Parameters
+    ----------
+    xy : np.ndarray
+        The xy coordinates of the animal's position. 2 x nsamples
+    shape :str, default='circle'
+        The shape of the environment. Legal values are 'circle' and 'square'
 
-    Returns:
-    thigmoxtaxis_score (float): Values closer to 1 indicate the
-    animal spent more time in the inner portion of the environment. Values closer to -1
-    indicates the animal spent more time in the outer portion of the environment.
-    A value of 0 indicates the animal spent equal time in both portions of the
-    environment.
+    Returns
+    -------
+    float
+        Values closer to 1 mean more time was spent in the inner portion of the environment.
+        Values closer to -1 mean more time in the outer portion of the environment.
+        A value of 0 indicates the animal spent equal time in both portions of the
+        environment.
     """
     # centre the coords to get the max distance from the centre
     xc, yc = np.min(xy, -1) + np.ptp(xy, -1) / 2

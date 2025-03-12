@@ -982,9 +982,9 @@ class OpenEphysBase(TrialInterface):
         n_channels: int = self.channel_count or kwargs["nChannels"]
         try:
             self.template_model = TemplateModel(
-                dir_path=self.path2APdata,
+                dir_path=self.path2KiloSortData,
                 sample_rate=3e4,
-                dat_path=Path(self.path2APdata).joinpath("continuous.dat"),
+                dat_path=Path(self.path2KiloSortData).joinpath("continuous.dat"),
                 n_channels_dat=int(n_channels),
             )
             print("Loaded neural data")

@@ -4,6 +4,7 @@ from ephysiopy.common.phasecoding import (
     phase_precession_config,
     phasePrecession2D,
 )
+from ephysiopy.common.fieldcalcs import partitionFields
 from ephysiopy.io.recording import AxonaTrial
 
 T = AxonaTrial(
@@ -28,14 +29,19 @@ P = phasePrecession2D(
     T.EEGCalcs.sig,
     T.EEGCalcs.fs,
     T.PosCalcs.orig_xy,
-    T.get_spike_times(3, 5),
+    T.get_spike_times(5, 3),
     T.PosCalcs.xyTS,
     pp_config,
 )
+binned_data = P.RateMap.get_map(P.spk_weights)
+_, _, labels, _ = partitionFields(
+    binned_data,
+    P.field_threshold_percent,
+    P.field_threshold,
+    P.area_threshold,
+)
 
-peaksXY, _, labels, _ = P.partitionFields(plot=True)
-
-posD, runD = P.getPosProps(labels, peaksXY, laserEvents=None, plot=False)
+field_properties = P.getPosProps(labels)
 
 P.getThetaProps()
 
