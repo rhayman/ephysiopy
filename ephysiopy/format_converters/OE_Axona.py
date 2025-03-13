@@ -1,4 +1,3 @@
-import os
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
@@ -153,13 +152,20 @@ class OE2Axona(object):
         **kwargs,
     ):
         """
-        Args:
-            pname (Path): The base directory of the openephys recording.
-                e.g. '/home/robin/Data/M4643_2023-07-21_11-52-02'
-            path2APData (Path, optional): Path to AP data. Defaults to None.
-            pos_sample_rate (int, optional): Position sample rate. Defaults to 50.
-            channels (int, optional): Number of channels. Defaults to 0.
-            **kwargs: Variable length argument list.
+        Parameters
+        ----------
+        pname : Path
+            The base directory of the openephys recording.
+            e.g. '/home/robin/Data/M4643_2023-07-21_11-52-02'
+        path2APData : Path, optional
+            Path to AP data. Defaults to None.
+        pos_sample_rate : int, optional
+            Position sample rate. Defaults to 50.
+        channels : int, optional
+            Number of channels. Defaults to 0.
+        **kwargs
+            Variable length argument list.
+
         """
         pname = Path(pname)
         assert pname.exists()
@@ -199,7 +205,24 @@ class OE2Axona(object):
 
     def resample(self, data, src_rate=30, dst_rate=50, axis=0):
         """
-        Resamples data using FFT
+        Resamples data using FFT.
+
+        Parameters
+        ----------
+        data : array_like
+            The input data to be resampled.
+        src_rate : int, optional
+            The original sampling rate of the data. Defaults to 30.
+        dst_rate : int, optional
+            The desired sampling rate of the resampled data. Defaults to 50.
+        axis : int, optional
+            The axis along which to resample. Defaults to 0.
+
+        Returns
+        -------
+        new_data : ndarray
+            The resampled data.
+
         """
         denom = np.gcd(dst_rate, src_rate)
         new_data = signal.resample_poly(data, dst_rate / denom, src_rate / denom, axis)
@@ -223,11 +246,19 @@ class OE2Axona(object):
         Loads the nwb file names in filename_root and returns a dict
         containing some of the nwb data relevant for converting to Axona file formats.
 
-        Args:
-            filename_root (str): Fully qualified name of the nwb file.
-            recording_name (str): The name of the recording in the nwb file. Note that
-                the default has changed in different versions of OE from 'recording0'
-                to 'recording1'.
+        Parameters
+        ----------
+        filename_root : str
+            Fully qualified name of the nwb file.
+        recording_name : str
+            The name of the recording in the nwb file. Note that
+            the default has changed in different versions of OE from 'recording0'
+            to 'recording1'.
+
+        Returns
+        -------
+        OpenEphysBase
+            An instance of OpenEphysBase containing the loaded data.
         """
         OE_data = OpenEphysBase(self.pname)
         try:
@@ -274,12 +305,22 @@ class OE2Axona(object):
         print("Done exporting set file.")
 
     def exportPos(self, ppm=300, jumpmax=100, as_text=False, **kwargs):
-        #
-        # Step 1) Deal with the position data first:
-        #
-        # Grab the settings of the pos tracker and do some post-processing
-        # on the position
-        # data (discard jumpy data, do some smoothing etc)
+        """
+        Exports position data to either text or Axona format.
+
+        Parameters
+        ----------
+        ppm : int, optional
+            Pixels per meter. Defaults to 300.
+        jumpmax : int,def
+            Maximum allowed jump in position data. Defaults to 100.
+        as_text : bool, optional
+            If True, exports position data to text format. Defaults to False.
+        **kwargs
+            Additional keyword arguments.
+
+
+        """
         self.settings.parse()
         if not self.OE_data:
             self.getOEData()
@@ -346,6 +387,13 @@ class OE2Axona(object):
         print("Exported position data to Axona format")
 
     def exportSpikes(self):
+        """
+        Exports spiking data.
+
+        Notes
+        -----
+        Converts spiking data from the Open Ephys format to the Axona format.
+        """
         print("Beginning conversion of spiking data...")
         self.convertSpikeData(
             self.OE_data.nwbData["acquisition"][
@@ -361,9 +409,18 @@ class OE2Axona(object):
         """
         Exports LFP data to file.
 
-        Args:
-            channel (int): The channel number.
-            lfp_type (str): The type of LFP data. Legal values are 'egf' or 'eeg'.
+        Parameters
+        ----------
+        channel : int, optional
+            The channel number. Default is 0.
+        lfp_type : str, optional
+            The type of LFP data. Legal values are 'egf' or 'eeg'. Default is 'eeg'.
+        gain : int, optional
+            Multiplier for the LFP data. Default is 5000.
+
+        Notes
+        -----
+        Converts and exports LFP data from the Open Ephys format to the Axona format.
             gain (int): Multiplier for the LFP data.
         """
         print("Beginning conversion and exporting of LFP data...")
@@ -385,10 +442,22 @@ class OE2Axona(object):
         """
         Performs the conversion of the array parts of the data.
 
-        Note: As well as upsampling the data to the Axona pos sampling rate (50Hz),
-        we have to insert some columns into the pos array as Axona format
-        expects it like: pos_format: t,x1,y1,x2,y2,numpix1,numpix2
-        We can make up some of the info and ignore other bits.
+        Parameters
+        ----------
+        xy : np.array
+            The x and y coordinates.
+        xy_ts : np.array
+            The timestamps for the x and y coordinates.
+
+        Returns
+        -------
+        np.array
+            The converted position data.
+
+        Notes
+        -----
+        Upsamples the data to the Axona position sampling rate (50Hz) and inserts
+        columns into the position array to match the Axona format.
         """
         n_new_pts = int(
             np.floor((self.last_pos_ts - self.first_pos_ts) * self.pos_sample_rate)
@@ -419,23 +488,30 @@ class OE2Axona(object):
 
     def convertTemplateDataToAxonaTetrode(self, max_n_waves=2000, **kwargs):
         """
-        Converts the data held in a TemplateModel instance into tetrode
-        format Axona data files.
+        Converts the data held in a TemplateModel instance into tetrode format Axona data files.
 
-        For each cluster, there'll be a channel that has a peak amplitude and this contains that peak channel.
-        While the other channels with a large signal in might be on the same tetrode, KiloSort (or whatever) might find
-        channels *not* within the same tetrode. For a given cluster, we can extract from the TemplateModel the 12 channels across
-        which the signal is strongest using Model.get_cluster_channels(). If a channel from a tetrode is missing from this list then the
-        spikes for that channel(s) will be zeroed when saved to Axona format.
+        Parameters
+        ----------
+        max_n_waves : int, default=2000
+            The maximum number of waveforms to process.
 
-        Example:
-            If cluster 3 has a peak channel of 1 then get_cluster_channels() might look like:
-            [ 1,  2,  0,  6, 10, 11,  4,  12,  7,  5,  8,  9]
-            Here the cluster has the best signal on 1, then 2, 0 etc, but note that channel 3 isn't in the list.
-            In this case the data for channel 3 will be zeroed when saved to Axona format.
+        Notes
+        -----
+        For each cluster, the channel with the peak amplitude is identified, and the
+        data is converted to the Axona tetrode format. If a channel from a tetrode is
+        missing, the spikes for that channel are zeroed when saved to the Axona format.
 
-        References:
-            1) https://phy.readthedocs.io/en/latest/api/#phyappstemplatetemplatemodel
+        Examples
+        --------
+        If cluster 3 has a peak channel of 1 then get_cluster_channels() might look like:
+        [ 1,  2,  0,  6, 10, 11,  4,  12,  7,  5,  8,  9]
+        Here the cluster has the best signal on 1, then 2, 0 etc, but note that channel 3
+        isn't in the list. In this case the data for channel 3 will be zeroed
+        when saved to Axona format.
+
+        References
+        ----------
+        .. [1] https://phy.readthedocs.io/en/latest/api/#phyappstemplatetemplatemodel
         """
         # First lets get the datatype for tetrode files as this will be the
         # same for all tetrodes...
@@ -567,11 +643,17 @@ class OE2Axona(object):
 
     def convertSpikeData(self, hdf5_tetrode_data: h5py._hl.group.Group):
         """
-        Does the spike conversion from OE Spike Sorter format to Axona format tetrode files.
+        Converts spike data from the Open Ephys Spike Sorter format to Axona format tetrode files.
 
-        Args:
-            hdf5_tetrode_data (h5py._hl.group.Group): This kind of looks like a dictionary and can,
-                it seems, be treated as one more or less. See http://docs.h5py.org/en/stable/high/group.html
+        Parameters
+        ----------
+        hdf5_tetrode_data : h5py._hl.group.Group
+            The HDF5 group containing the tetrode data.
+
+        Notes
+        -----
+        Converts the spike data and timestamps, scales them appropriately, and saves
+        them in the Axona tetrode format.
         """
         # First lets get the datatype for tetrode files as this will be the
         # same for all tetrodes...
@@ -627,12 +709,21 @@ class OE2Axona(object):
 
     def makeLFPData(self, data: np.ndarray, eeg_type="eeg", gain=5000):
         """
-        Downsamples the data in data and saves the result as either an egf or eeg file
-        depending on the choice of either eeg_type which can take a value of either 'egf' or 'eeg'.
-        Gain is the scaling factor.
+        Downsamples the data and saves the result as either an EGF or EEG file.
 
-        Args:
-            data (np.array): The data to be downsampled. Must have dtype as np.int16.
+        Parameters
+        ----------
+        data : np.ndarray
+            The data to be downsampled. Must have dtype as np.int16.
+        eeg_type : str, optional
+            The type of LFP data. Legal values are 'egf' or 'eeg'. Default is 'eeg'.
+        gain : int, optional
+            The scaling factor. Default is 5000.
+
+        Notes
+        -----
+        Downsamples the data to the specified rate and applies a filter. The data is
+        then scaled and saved in the Axona format.
         """
         if eeg_type == "eeg":
             from ephysiopy.axona.file_headers import EEGHeader
@@ -682,6 +773,19 @@ class OE2Axona(object):
         self.writeLFP2AxonaFormat(header, lfp_data, eeg_type)
 
     def makeSetData(self, lfp_channel=4, **kwargs):
+        """
+        Creates and writes the SET file data.
+
+        Parameters
+        ----------
+        lfp_channel : int, optional
+            The LFP channel number. Default is 4.
+
+        Notes
+        -----
+        Creates the SET file header and entries based on the provided parameters and
+        writes the data to the Axona format.
+        """
         if self.OE_data is None:
             # to get the timestamps for duration key
             self.getOEData(self.filename_root)
@@ -737,6 +841,25 @@ class OE2Axona(object):
         self.writeSetData(header)
 
     def __filterLFP__(self, data: np.array, sample_rate: int):
+        """
+        Filters the LFP data.
+
+        Parameters
+        ----------
+        data : np.array
+            The LFP data to be filtered.
+        sample_rate : int
+            The sampling rate of the data.
+
+        Returns
+        -------
+        np.array
+            The filtered LFP data.
+
+        Notes
+        -----
+        Applies a bandpass filter to the LFP data using the specified sample rate.
+        """
         from scipy.signal import filtfilt, firwin
 
         if self.fs is None:
@@ -763,6 +886,22 @@ class OE2Axona(object):
         return y
 
     def writeLFP2AxonaFormat(self, header: dataclass, data: np.array, eeg_type="eeg"):
+        """
+        Writes LFP data to the Axona format.
+
+        Parameters
+        ----------
+        header : dataclass
+            The header information for the LFP file.
+        data : np.array
+            The LFP data to be written.
+        eeg_type : str, optional
+            The type of LFP data. Legal values are 'egf' or 'eeg'. Default is 'eeg'.
+
+        Notes
+        -----
+        Writes the LFP data and header to the Axona format.
+        """
         self.AxonaData.setHeader(str(self.axona_root_name) + "." + eeg_type, header)
         self.AxonaData.setData(str(self.axona_root_name) + "." + eeg_type, data)
 
@@ -771,13 +910,57 @@ class OE2Axona(object):
         self.AxonaData.setData(str(self.axona_root_name) + ".pos", data)
 
     def writeTetrodeData(self, itet: str, header: dataclass, data: np.array):
+        """
+        Writes tetrode data to the Axona format.
+
+        Parameters
+        ----------
+        itet : str
+            The tetrode identifier.
+        header : dataclass
+            The header information for the tetrode file.
+        data : np.array
+            The tetrode data to be written.
+
+        Notes
+        -----
+        Writes the tetrode data and header to the Axona format.
+        """
         self.AxonaData.setHeader(str(self.axona_root_name) + "." + itet, header)
         self.AxonaData.setData(str(self.axona_root_name) + "." + itet, data)
 
     def writeSetData(self, header: dataclass):
+        """
+        Writes SET data to the Axona format.
+
+        Parameters
+        ----------
+        header : dataclass
+            The header information for the SET file.
+
+        Notes
+        -----
+        Writes the SET data and header to the Axona format.
+        """
         self.AxonaData.setHeader(str(self.axona_root_name) + ".set", header)
 
     def writeCutData(self, itet: str, header: dataclass, data: np.array):
+        """
+        Writes cut data to the Axona format.
+
+        Parameters
+        ----------
+        itet : str
+            The tetrode identifier.
+        header : dataclass
+            The header information for the cut file.
+        data : np.array
+            The cut data to be written.
+
+        Notes
+        -----
+        Writes the cut data and header to the Axona format.
+        """
         self.AxonaData.setCut(
             str(self.axona_root_name) + "_" + str(itet) + ".cut", header, data
         )

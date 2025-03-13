@@ -289,8 +289,10 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 
         Parameters
         ----------
-        ppm (int): pixels per metre
-        jumpmax (int): max jump in pixels between positions, more
+        ppm : int
+            pixels per metre
+        jumpmax : int
+            max jump in pixels between positions, more
             than this and the position is interpolated over
         """
         raise NotImplementedError
@@ -313,7 +315,20 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     def get_spike_times(
         self, cluster: int | list, channel: int | list, *args, **kwargs
     ) -> list | np.ndarray:
-        """Returns the times of an individual cluster"""
+        """Returns the times of an individual cluster
+
+        Parameters
+        ----------
+        cluster : int | list
+            The cluster(s) to get the spike times for
+        channel : int | list
+            The channel(s) to get the spike times for
+
+        Returns
+        -------
+        list | np.ndarray
+            the spike times
+        """
         raise NotImplementedError
 
     def apply_filter(self, *trial_filter: TrialFilter) -> np.ndarray:
@@ -323,7 +338,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 
         Parameters
         ----------
-        trial_filter (TrialFilter): A namedtuple containing the filter
+        trial_filter : TrialFilter
+            A namedtuple containing the filter
             name, start and end values
             name (str): The name of the filter
             start (float): The start value of the filter
@@ -342,7 +358,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 
         Returns
         -------
-        np.ndarray: An array of bools that is True where the mask is applied
+        np.ndarray
+            An array of bools that is True where the mask is applied
         """
         if len(trial_filter) == 0:
             bool_arr = False
@@ -448,12 +465,15 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         Parameters
         ----------
-        cluster (int | list): The cluster(s).
-        channel (int | list): The channel(s).
+        cluster (int | list)
+            The cluster(s).
+        channel (int | list)
+            The channel(s).
 
         Returns
         -------
-        np.ndarray - the spike times binned into the position data
+        np.ndarray
+            the spike times binned into the position data
         """
         ts = self.get_spike_times(cluster, channel)
         if not isinstance(ts, list):
@@ -481,17 +501,20 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 
         Parameters
         ----------
-        cluster (int | list): The cluster(s). NB this can be None in which
-                case the "spike times" are equal to the position times, which
-                means data binned using these indices will be equivalent to
-                binning up just the position data alone.
+        cluster : int | list
+            The cluster(s). NB this can be None in which
+            case the "spike times" are equal to the position times, which
+            means data binned using these indices will be equivalent to
+            binning up just the position data alone.
 
-        channel (int | list): The channel identity. Ignored if cluster is None
+        channel : int | list
+            The channel identity. Ignored if cluster is None
 
         Returns
         -------
-        np.ndarray: The indices into the position data at which the spikes
-                occurred.
+        np.ndarray
+            The indices into the position data at which the spikes
+            occurred.
         """
         pos_times = getattr(self.PosCalcs, "xyTS")
         if cluster is None:
@@ -501,9 +524,9 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         elif isinstance(cluster, list) and len(cluster) == 1:
             spk_times = self.get_spike_times(cluster[0], channel[0])
         elif isinstance(cluster, list) and len(cluster) > 1:
-            assert len(cluster) == len(
-                channel
-            ), "Cluster and channel lists must be same length"
+            assert len(cluster) == len(channel), (
+                "Cluster and channel lists must be same length"
+            )
             idx = []
             for clust, chan in zip(cluster, channel):
                 spk_times = self.get_spike_times(clust, chan)
@@ -547,11 +570,15 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 
         Parameters
         ----------
-        cluster (int | list): The cluster(s).
-        channel (int | list): The channel(s).
-        var2bin (VariableToBin.XY): The variable to bin. This is an enum that specifies the type of variable to bin.
-        **kwargs:
-            do_shuffle (bool): If True, the rate map will be shuffled by the default number of shuffles (100).
+        cluster : int or list
+            The cluster(s).
+        channel : int or list
+            The channel(s).
+        var2bin : VariableToBin.XY
+            The variable to bin. This is an enum that specifies the type of variable to bin.
+        **kwargs : dict, optional
+            Additional keyword arguments passed to the _get_spike_pos_idx function.
+            - do_shuffle (bool): If True, the rate map will be shuffled by the default number of shuffles (100).
                             If the n_shuffles keyword is provided, the rate map will be shuffled by that number of shuffles, and
                             an array of shuffled rate maps will be returned e.g [100 x nx x ny].
                             The shuffles themselves are generated by shifting the spike times by a random amount between 30s and the
@@ -559,13 +586,14 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
                             the shifts over multiple calls to this function, the option is provided to set the random seed to a fixed
                             value using the random_seed keyword.
                             Default is False
-            n_shuffles (int): The number of shuffles to perform. Default is 100.
-            random_seed (int): The random seed to use for the shuffles. Default is None.
+            - n_shuffles (int): The number of shuffles to perform. Default is 100.
+            - random_seed (int): The random seed to use for the shuffles. Default is None.
 
 
         Returns
         -------
-        np.ndarray: The rate map as a numpy array.
+        np.ndarray
+            The rate map as a numpy array.
 
         """
         if not self.RateMap:
@@ -607,13 +635,17 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 
         Parameters
         ----------
-        cluster (int | list): The cluster(s) to get the speed vs rate for.
-        channel (int | list): The channel(s) number.
-        **kwargs: Additional keyword arguments passed to _get_map
+        cluster : int, list
+            The cluster(s) to get the speed vs rate for.
+        channel : int, list
+            The channel(s) number.
+        **kwargs
+            Additional keyword arguments passed to _get_map
 
         Returns
         -------
-        BinnedData - the binned data
+        BinnedData
+            the binned data
         """
         return self._get_map(cluster, channel, VariableToBin.XY, **kwargs)
 
@@ -625,8 +657,10 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 
         Parameters
         ----------
-        cluster (int | list): The cluster(s) to get the speed vs rate for.
-        channel (int | list): The channel(s) number.
+        cluster : int, list
+            The cluster(s) to get the speed vs rate for.
+        channel : int,  list
+            The channel(s) number.
         **kwargs: Additional keyword arguments passed to _get_map
 
         Returns
@@ -644,13 +678,16 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 
         Parameters
         ----------
-        cluster (int | list): The cluster(s) to get the speed vs rate for.
-        channel (int | list): The channel(s) number.
+        cluster : int, list
+            The cluster(s) to get the speed vs rate for.
+        channel : int, list
+            The channel(s) number.
         **kwargs: Additional keyword arguments passed to _get_map
 
         Returns
         -------
-        BinnedData - the binned data
+        BinnedData
+            the binned data
         """
         return self._get_map(cluster, channel, VariableToBin.EGO_BOUNDARY, **kwargs)
 
@@ -662,8 +699,10 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 
         Parameters
         ----------
-        cluster (int | list): The cluster(s) to get the speed vs rate for.
-        channel (int | list): The channel(s) number.
+        cluster : int, list
+                        The cluster(s) to get the speed vs rate for.
+        channel : int, list
+                        The channel(s) number.
         **kwargs: Additional keyword arguments passed to _get_map
 
         Returns
@@ -680,8 +719,10 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 
         Parameters
         ----------
-        cluster (int | list): The cluster(s) to get the speed vs head direction map for.
-        channel (int | list): The channel number.
+        cluster : int, list
+                        The cluster(s) to get the speed vs head direction map for.
+        channel : int, list
+                        The channel number.
         **kwargs: Additional keyword arguments passed to _get_map
         """
         # binsize is in cm/s and degrees
@@ -693,6 +734,23 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     def get_grid_map(
         self, cluster: int | list, channel: int | list, **kwargs
     ) -> BinnedData:
+        """
+        Generates a grid map for a given cluster and channel.
+
+        Parameters
+        ----------
+        cluster : int or list
+            The cluster(s).
+        channel : int or list
+            The channel(s).
+        **kwargs : dict, optional
+            Additional keyword arguments passed to the autoCorr2D function.
+
+        Returns
+        -------
+        BinnedData
+            The grid map as a BinnedData object.
+        """
         rmap = self.get_rate_map(cluster, channel, **kwargs)
         kwargs = clean_kwargs(self.RateMap.autoCorr2D, kwargs)
         sac = self.RateMap.autoCorr2D(rmap, **kwargs)
@@ -701,6 +759,23 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     def get_adaptive_map(
         self, cluster: int | list, channel: int | list, **kwargs
     ) -> BinnedData:
+        """
+        Generates an adaptive map for a given cluster and channel.
+
+        Parameters
+        ----------
+        cluster : int or list
+            The cluster(s).
+        channel : int or list
+            The channel(s).
+        **kwargs : dict, optional
+            Additional keyword arguments passed to the _get_map function.
+
+        Returns
+        -------
+        BinnedData
+            The adaptive map as a BinnedData object.
+        """
         return self._get_map(
             cluster, channel, VariableToBin.XY, map_type=MapType.ADAPTIVE, **kwargs
         )
@@ -708,6 +783,23 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     def get_xcorr(
         self, cluster: int | list, channel: int | list, **kwargs
     ) -> BinnedData:
+        """
+        Computes the cross-correlation for a given cluster and channel.
+
+        Parameters
+        ----------
+        cluster : int or list
+            The cluster(s).
+        channel : int or list
+            The channel(s).
+        **kwargs : dict, optional
+            Additional keyword arguments passed to the xcorr function.
+
+        Returns
+        -------
+        BinnedData
+            The cross-correlation as a BinnedData object.
+        """
         ts = self.get_spike_times(cluster, channel)
         return xcorr(ts, **kwargs)
 
@@ -789,14 +881,6 @@ class AxonaTrial(TrialInterface):
     def get_spike_times(
         self, cluster: int | list = None, tetrode: int | list = None, *args, **kwargs
     ) -> list | np.ndarray:
-        """
-        Parameters:
-            tetrode (int | list):
-            cluster (int | list):
-
-        Returns:
-            spike_times (np.ndarray):
-        """
         if tetrode is not None:
             if isinstance(cluster, int):
                 return self.TETRODE.get_spike_samples(int(tetrode), int(cluster))
@@ -812,34 +896,6 @@ class AxonaTrial(TrialInterface):
                     return spikes
 
     def apply_filter(self, *trial_filter: TrialFilter) -> np.ndarray:
-        """
-        Apply a mask to the data
-
-        Parameters
-        ----------
-        trial_filter (TrialFilter): A namedtuple containing the filter
-            name, start and end values:
-                name (str): The name of the filter
-                start (float): The start value of the filter
-                end (float): The end value of the filter
-
-            Valid names are:
-                'dir' - the directional range to filter for
-                'speed' - min and max speed to filter for
-                'xrange' - min and max values to filter x pos values
-                'yrange' - same as xrange but for y pos
-                'time' - the times to keep / remove specified in ms
-
-            Values are pairs specifying the range of values to filter for
-            from the namedtuple TrialFilter that has fields 'start' and 'end'
-            where 'start' and 'end' are the ranges to filter for
-
-            See ephysiopy.common.utils.TrialFilter for more details
-
-        Returns
-        -------
-        np.ndarray: An array of bools that is True where the mask is applied
-        """
         mask = super().apply_filter(*trial_filter)
         for tetrode in self.TETRODE.keys():
             if self.TETRODE[tetrode] is not None:
@@ -897,13 +953,6 @@ class OpenEphysBase(TrialInterface):
         self.template_model = None
 
     def _get_recording_start_time(self) -> float:
-        """
-        Get the recording start time from the sync_messages.txt file
-
-        Returns
-        -------
-        start_time (float) - in seconds
-        """
         recording_start_time = 0.0
         if self.sync_message_file is not None:
             with open(self.sync_message_file, "r") as f:
@@ -921,16 +970,6 @@ class OpenEphysBase(TrialInterface):
     def get_spike_times(
         self, cluster: int | list = None, tetrode: int | list = None, *args, **kwargs
     ) -> list | np.ndarray:
-        """
-        Parameters
-        ----------
-        cluster (int| list)
-        tetrode (int | list)
-
-        Returns
-        -------
-        spike_times (list | np.ndarray): in seconds
-        """
         if not self.clusterData:
             self.load_cluster_data()
         if isinstance(cluster, int) and isinstance(tetrode, int):
@@ -950,11 +989,6 @@ class OpenEphysBase(TrialInterface):
             return times
 
     def load_lfp(self, *args, **kwargs):
-        """
-        Valid kwargs are:
-        'target_sample_rate' - int
-            the sample rate to downsample to from the original
-        """
         from scipy import signal
 
         if self.path2LFPdata is not None:
@@ -999,6 +1033,14 @@ class OpenEphysBase(TrialInterface):
             print("Loaded settings data\n")
 
     def get_available_clusters_channels(self) -> dict:
+        """
+        Get available clusters and their corresponding channels.
+
+        Returns
+        -------
+        dict
+            A dictionary where keys are channels and values are lists of clusters available on those channels.
+        """
         if self.template_model is None:
             self.load_neural_data()
         unique_clusters = np.unique(self.template_model.spike_clusters)
@@ -1127,35 +1169,6 @@ class OpenEphysBase(TrialInterface):
         self.recording_start_time = recording_start_time
 
     def load_ttl(self, *args, **kwargs) -> bool:
-        """
-        Returns
-        -------
-        loaded (bool) - whether the data was loaded or not
-
-        Notes
-        -----
-        Valid kwargs:
-            StimControl_id (str): This is the string
-                "StimControl [0-9][0-9][0-9]" where the numbers
-                are the node id in the openephys signal chain
-            TTL_channel_number (int): The integer value in the "states.npy"
-                file that corresponds to the
-                identity of the TTL input on the Digital I/O board on the
-                openephys recording system. i.e. if there is input to BNC
-                port 3 on the digital I/O board then values of 3 in the
-                states.npy file are high TTL values on this input and -3
-                are low TTL values. NB This is important as there could well
-                be other TTL lines that are active and so the states vector
-                will then contain a mix of integer values
-            RippleDetector (str): Loads up the TTL data from the Ripple Detector
-                plugin
-
-        Sets some keys/values in a dict on 'self'
-        called ttl_data, namely:
-
-        ttl_timestamps (list): the times of high ttl pulses in ms
-        stim_duration (int): the duration of the ttl pulse in ms
-        """
         if not Path(self.path2EventsData).exists:
             return False
         ttl_ts = np.load(os.path.join(self.path2EventsData, "timestamps.npy"))
@@ -1198,8 +1211,13 @@ class OpenEphysBase(TrialInterface):
 
         Parameters
         ----------
-        target_freq (int) - the desired frequency when downsampling the aux data
+        target_freq : int
+            the desired frequency when downsampling the aux data
 
+        Returns
+        -------
+        bool
+            whether the data was loaded or not
         """
         from ephysiopy.openephys2py.OESettings import OEStructure
         from ephysiopy.common.ephys_generic import downsample_aux
@@ -1243,17 +1261,6 @@ class OpenEphysBase(TrialInterface):
         return False
 
     def apply_filter(self, *trial_filter: TrialFilter) -> np.ndarray:
-        """Apply a mask to the data
-
-        Parameters
-        ----------
-        trial_filter (TrialFilter): A namedtuple containing the filter
-            name, start and end values
-
-        Returns
-        -------
-            np.array: An array of bools that is True where the mask is applied
-        """
         mask = super().apply_filter(*trial_filter)
         return mask
 
@@ -1309,11 +1316,7 @@ class OpenEphysBase(TrialInterface):
             )
         Events_match = (
             # only dealing with a single TTL channel at the moment
-            exp_name
-            / rec_name
-            / "events"
-            / acq_method
-            / "TTL"
+            exp_name / rec_name / "events" / acq_method / "TTL"
         )
 
         if pname_root is None:

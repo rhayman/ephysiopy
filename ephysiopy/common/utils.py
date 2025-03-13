@@ -66,7 +66,8 @@ class BinnedData:
 
     def __assert_equal_bin_edges__(self, other):
         assert np.all(
-            [np.all(sbe == obe) for sbe, obe in zip(self.bin_edges, other.bin_edges)]
+            [np.all(sbe == obe)
+             for sbe, obe in zip(self.bin_edges, other.bin_edges)]
         ), "Bin edges do not match"
 
     def __len__(self):
@@ -222,12 +223,14 @@ class BinnedData:
             self.__assert_equal_bin_edges__(other)
         if other is not None:
             result = np.reshape(
-                [corr_maps(a, b) for a in self.binned_data for b in other.binned_data],
+                [corr_maps(a, b)
+                 for a in self.binned_data for b in other.binned_data],
                 newshape=(len(self.binned_data), len(other.binned_data)),
             )
         else:
             result = np.reshape(
-                [corr_maps(a, b) for a in self.binned_data for b in self.binned_data],
+                [corr_maps(a, b)
+                 for a in self.binned_data for b in self.binned_data],
                 newshape=(len(self.binned_data), len(self.binned_data)),
             )
         if as_matrix:
@@ -774,7 +777,7 @@ def find_runs(x):
 
 def repeat_ind(n: np.ndarray) -> np.ndarray:
     """
-    Repeat a given index a specified number of times
+    Repeat a given index a specified number of times.
 
     The input specifies how many times to repeat the given index.
     It is equivalent to something like this:
@@ -784,12 +787,21 @@ def repeat_ind(n: np.ndarray) -> np.ndarray:
     But this version seems to be faster, and probably scales better.
     At any rate, it encapsulates a task in a function.
 
+    Parameters
+    ----------
+    n : np.ndarray
+        A 1D array where each element specifies the number of times to repeat its index.
+
+    Returns
+    -------
+    np.ndarray
+        A 1D array with indices repeated according to the input array.
+
     Examples
     --------
     >>> n = np.array([0, 0, 3, 0, 0, 2, 0, 2, 1])
     >>> repeat_ind(n)
     array([2, 2, 2, 5, 5, 7, 7, 8])
-
     """
     if n.ndim != 1:
         raise Exception("n is supposed to be 1d array.")
@@ -800,9 +812,25 @@ def repeat_ind(n: np.ndarray) -> np.ndarray:
 
 def rect(r, w, deg=False):
     """
-    Convert from polar (r,w) to rectangular (x,y)
-    x = r cos(w)
-    y = r sin(w)
+    Convert from polar (r, w) to rectangular (x, y) coordinates.
+
+    Parameters
+    ----------
+    r : float or np.ndarray
+        Radial coordinate(s).
+    w : float or np.ndarray
+        Angular coordinate(s).
+    deg : bool, optional
+        If True, `w` is in degrees. Default is False (radians).
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - x : float or np.ndarray
+            X coordinate(s).
+        - y : float or np.ndarray
+            Y coordinate(s).
     """
     # radian if deg=0; degree if deg=1
     if deg:
@@ -814,12 +842,21 @@ def polar(x, y, deg=False):
     """
     Converts from rectangular coordinates to polar ones.
 
-    Args:
-        x, y (array_like, list_like): The x and y coordinates.
-        deg (int): Radian if deg=0; degree if deg=1.
+    Parameters
+    ----------
+    x : array_like
+        The x coordinates.
+    y : array_like
+        The y coordinates.
+    deg : bool, optional
+        If True, returns the angle in degrees. Default is False (radians).
 
-    Returns:
-        p (array_like): The polar version of x and y.
+    Returns
+    -------
+    r : array_like
+        The radial coordinates.
+    theta : array_like
+        The angular coordinates.
     """
     if deg:
         return np.hypot(x, y), 180.0 * np.arctan2(y, x) / np.pi
@@ -828,6 +865,24 @@ def polar(x, y, deg=False):
 
 
 def labelledCumSum(X, L):
+    """
+    Compute the cumulative sum of an array with labels, resetting the
+    sum at label changes.
+
+    Parameters
+    ----------
+    X : np.ndarray
+        Input array to compute the cumulative sum.
+    L : np.ndarray
+        Label array indicating where to reset the cumulative sum.
+
+    Returns
+    -------
+    np.ma.MaskedArray
+        The cumulative sum array with resets at label changes, masked
+        appropriately.
+    """
+
     # check if inputs are masked and save for masking
     # output and unmask the input
     x_mask = None
@@ -869,12 +924,46 @@ def labelledCumSum(X, L):
 
 
 def cart2pol(x, y):
+    """
+    Convert Cartesian coordinates to polar coordinates.
+
+    Parameters
+    ----------
+    x : float or np.ndarray
+        X coordinate(s).
+    y : float or np.ndarray
+        Y coordinate(s).
+
+    Returns
+    -------
+    r : float or np.ndarray
+        Radial coordinate(s).
+    th : float or np.ndarray
+        Angular coordinate(s) in radians.
+    """
     r = np.hypot(x, y)
     th = np.arctan2(y, x)
     return r, th
 
 
 def pol2cart(r, theta):
+    """
+    Convert polar coordinates to Cartesian coordinates.
+
+    Parameters
+    ----------
+    r : float or np.ndarray
+        Radial coordinate(s).
+    theta : float or np.ndarray
+        Angular coordinate(s) in radians.
+
+    Returns
+    -------
+    x : float or np.ndarray
+        X coordinate(s).
+    y : float or np.ndarray
+        Y coordinate(s).
+    """
     x = r * np.cos(theta)
     y = r * np.sin(theta)
     return x, y
@@ -894,6 +983,21 @@ def applyFilter2Labels(M, x):
 
 
 def getLabelStarts(x):
+    """
+    Get the indices of the start of contiguous runs of non-zero values in a
+    1D numpy array.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        The input 1D numpy array.
+
+    Returns
+    -------
+    np.ndarray
+        An array of indices marking the start of each contiguous run of
+        non-zero values.
+    """
     x = np.ravel(x)
     xx = np.ones(len(x) + 1)
     xx[1::] = x
@@ -903,6 +1007,21 @@ def getLabelStarts(x):
 
 
 def getLabelEnds(x):
+    """
+    Get the indices of the end of contiguous runs of non-zero values
+    in a 1D numpy array.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        The input 1D numpy array.
+
+    Returns
+    -------
+    np.ndarray
+        An array of indices marking the end of each contiguous run of
+        non-zero values.
+    """
     x = np.ravel(x)
     xx = np.ones(len(x) + 1)
     xx[:-1] = x
@@ -912,10 +1031,38 @@ def getLabelEnds(x):
 
 
 def circ_abs(x):
+    """
+    Calculate the absolute value of an angle in radians,
+    normalized to the range [-pi, pi].
+
+    Parameters
+    ----------
+    x : float or np.ndarray
+        Angle(s) in radians.
+
+    Returns
+    -------
+    float or np.ndarray
+        Absolute value of the angle(s) normalized to the range [-pi, pi].
+    """
     return np.abs(np.mod(x + np.pi, 2 * np.pi) - np.pi)
 
 
 def labelContigNonZeroRuns(x):
+    """
+    Label contiguous non-zero runs in a 1D numpy array.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        The input 1D numpy array.
+
+    Returns
+    -------
+    np.ndarray
+        An array where each element is labeled with an integer representing
+        the contiguous non-zero run it belongs to.
+    """
     x = np.ravel(x)
     xx = np.ones(len(x) + 1)
     xx[1::] = x
@@ -928,8 +1075,17 @@ def labelContigNonZeroRuns(x):
 
 def fixAngle(a):
     """
-    Ensure angles lie between -pi and pi
-    a must be in radians
+    Ensure angles lie between -pi and pi.
+
+    Parameters
+    ----------
+    a : float or np.ndarray
+        Angle(s) in radians.
+
+    Returns
+    -------
+    float or np.ndarray
+        Angle(s) normalized to the range [-pi, pi].
     """
     b = np.mod(a + np.pi, 2 * np.pi) - np.pi
     return b
@@ -942,16 +1098,21 @@ def bwperim(bw, n=4):
     A pixel is part of an object perimeter if its value is one and there
     is at least one zero-valued pixel in its neighborhood.
 
-    By default the neighborhood of a pixel is 4 nearest pixels, but
-    if `n` is set to 8 the 8 nearest pixels will be considered.
+    By default, the neighborhood of a pixel is 4 nearest pixels, but
+    if `n` is set to 8, the 8 nearest pixels will be considered.
 
-    Args:
-        bw (array_like): A black-and-white image.
-        n (int, optional): Connectivity. Must be 4 or 8. Default is 8.
+    Parameters
+    ----------
+    bw : array_like
+        A black-and-white image.
+    n : int, optional
+        Connectivity. Must be 4 or 8. Default is 4.
 
-    Returns:
-        perim (array_like): A boolean image.
-    """
+    Returns
+    -------
+    perim : array_like
+        A boolean image.
+     """
 
     if n not in (4, 8):
         raise ValueError("mahotas.bwperim: n must be 4 or 8")
@@ -988,16 +1149,20 @@ def bwperim(bw, n=4):
 
 def count_runs_and_unique_numbers(arr: np.ndarray) -> tuple:
     """
-    Counts the number of continuous runs of numbers in a 1D numpy array
-    and returns the count of runs for each unique number and the unique
-    numbers.
+    Counts the number of continuous runs of numbers in a 1D numpy array.
 
-    Args:
-        arr (np.ndarray): The input 1D numpy array of numbers.
+    Parameters
+    ----------
+    arr : np.ndarray
+        The input 1D numpy array of numbers.
 
-    Returns:
-        tuple: A tuple containing a dictionary with the count of runs for
-        each unique number and the set of unique numbers in the array.
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - dict: A dictionary with the count of runs for each unique number.
+        - set: The set of unique numbers in the array.
+
     """
     if arr.size == 0:
         return {}, set()
@@ -1014,7 +1179,30 @@ def count_runs_and_unique_numbers(arr: np.ndarray) -> tuple:
 
 def corr_maps(map1, map2, maptype="normal") -> float:
     """
-    correlates two ratemaps together ignoring areas that have zero sampling
+    Correlates two rate maps together, ignoring areas that have zero sampling.
+
+    Parameters
+    ----------
+    map1 : np.ndarray
+        The first rate map to correlate.
+    map2 : np.ndarray
+        The second rate map to correlate.
+    maptype : str, optional
+        The type of correlation to perform. Options are "normal" and "grid".
+        Default is "normal".
+
+    Returns
+    -------
+    float
+        The correlation coefficient between the two rate maps.
+
+    Notes
+    -----
+    If the shapes of the input maps are different, the smaller map will be
+    resized to match the shape of the larger map using reflection mode.
+
+    The "normal" maptype considers non-zero and non-NaN values for correlation,
+    while the "grid" maptype considers only finite values.
     """
     if map1.shape > map2.shape:
         map2 = skimage.transform.resize(map2, map1.shape, mode="reflect")

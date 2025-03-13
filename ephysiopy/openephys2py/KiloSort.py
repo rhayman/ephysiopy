@@ -19,17 +19,19 @@ class KiloSortSession(object):
     where 'cluster_id' is obvious (relates to identity in spk_clusters.npy),
     the 'group' is a string that contains things like 'noise' or 'unsorted' or
     whatever as the phy user can define their own labels.
-
-    Args:
-        fname_root (str): The top-level directory. If the Kilosort session was
-        run directly on data from an openephys recording session then
-        fname_root is typically in form of YYYY-MM-DD_HH-MM-SS
     """
 
     def __init__(self, fname_root):
         """
+        Initialize the KiloSortSession.
+
         Walk through the path to find the location of the files in case this
-        has been called in another way i.e. binary format a la Neuropixels
+        has been called in another way i.e., binary format a la Neuropixels.
+
+        Parameters
+        ----------
+        fname_root : str
+            The top-level directory containing the Kilosort session files.
         """
         self.fname_root = fname_root
 
@@ -174,25 +176,36 @@ class KiloSortSession(object):
 
     def get_cluster_spike_times(self, cluster: int) -> np.ndarray:
         """
-        Returns the spike times for cluster in samples
+        Returns the spike times for a given cluster in samples.
+
+        Parameters
+        ----------
+        cluster : int
+            The cluster ID.
+
+        Returns
+        -------
+        np.ndarray
+            The spike times for the specified cluster.
         """
         if cluster in self.ks_cluster_id:
             return self.spike_times[self.spk_clusters == cluster]
 
     def apply_mask(self, mask, **kwargs):
-        """Apply a mask to the data
+        """
+        Apply a mask to the data.
 
-        Args:
-            mask (tuple): (start, end) in seconds
+        Parameters
+        ----------
+        mask : tuple
+            A tuple (start, end) in seconds specifying the mask range.
 
-        Returns:
-            None
-
-        Note:
-        The times inside the bounds are masked ie the mask is set to True
+        Notes
+        -----
+        The times inside the bounds are masked, i.e., the mask is set to True.
         The mask can be a list of tuples, in which case the mask is applied
-        for each tuple in the list.
-        mask can be an empty tuple, in which case the mask is removed
+        for each tuple in the list. The mask can be an empty tuple, in which
+        case the mask is removed.
 
         """
         # get spike and pos times into position sample units
