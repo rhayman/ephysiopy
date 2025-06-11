@@ -47,9 +47,20 @@ Module Contents
    .. py:method:: _rolling_window(a, window)
 
       
-      Totally nabbed from SO:
-      https://stackoverflow.com/questions/6811183/rolling-window-for-1d-arrays-in-numpy
+      Returns a view of the array a using a window length of window
 
+      :param a: The array to be windowed
+      :type a: np.array
+      :param window: The window length
+      :type window: int
+
+      :returns: The windowed array
+      :rtype: np.array
+
+      .. rubric:: Notes
+
+      Taken from:
+      https://stackoverflow.com/questions/6811183/rolling-window-for-1d-arrays-in-numpy
 
 
 
@@ -81,13 +92,16 @@ Module Contents
    .. py:method:: getDirectionalBinPerPosition(binwidth)
 
       
+      Digitizes the directional bin each position sample belongs to.
+
       Direction is in degrees as that what is created by me in some of the
       other bits of this package.
 
-      :param binwidth: The bin width in degrees
+      :param binwidth: The bin width in degrees.
       :type binwidth: int
 
-      :returns: A digitization of which directional bin each pos sample belongs to
+      :returns: A digitization of which directional bin each position sample belongs to.
+      :rtype: np.ndarray
 
 
 
@@ -116,12 +130,10 @@ Module Contents
       Identifies runs of at least self.min_runlength seconds long,
       which at 30Hz pos sampling rate equals 12 samples, and
       returns the start and end indices at which
-      the run was occurred and the directional bin that run belongs to
+      the run was occurred and the directional bin that run belongs to.
 
-      :returns:
-
-                The start and end indices into pos samples of the run
-                          and the directional bin to which it belongs
+      :returns: The start and end indices into pos samples of the run
+                and the directional bin to which it belongs.
       :rtype: np.array
 
 
@@ -145,22 +157,27 @@ Module Contents
    .. py:method:: intrinsic_freq_autoCorr(spkTimes=None, posMask=None, maxFreq=25, acBinSize=0.002, acWindow=0.5, plot=True, **kwargs)
 
       
-      This is taken and adapted from ephysiopy.common.eegcalcs.EEGCalcs
+      Taken and adapted from ephysiopy.common.eegcalcs.EEGCalcs
 
       :param spkTimes: Times in seconds of the cells firing
       :type spkTimes: np.array
-      :param posMask: Boolean array corresponding to the length of
-                      spkTimes where True is stuff to keep
+      :param posMask: Boolean array corresponding to the length of spkTimes where True is stuff to keep
       :type posMask: np.array
-      :param maxFreq: The maximum frequency to do the power spectrum
-                      out to
+      :param maxFreq: The maximum frequency to do the power spectrum out to
       :type maxFreq: float
       :param acBinSize: The bin size of the autocorrelogram in seconds
       :type acBinSize: float
       :param acWindow: The range of the autocorr in seconds
       :type acWindow: float
+      :param plot: Whether to plot the resulting autocorrelogram and power spectrum
+      :type plot: bool
 
-      .. note:: Make sure all times are in seconds
+      :returns: A dictionary containing the power spectrum and other related metrics
+      :rtype: dict
+
+      .. rubric:: Notes
+
+      Make sure all times are in seconds
 
 
 
@@ -183,9 +200,26 @@ Module Contents
    .. py:method:: power_spectrum(eeg, plot=True, binWidthSecs=None, maxFreq=25, pad2pow=None, ymax=None, **kwargs)
 
       
-      Method used by eeg_power_spectra and intrinsic_freq_autoCorr
-      Signal in must be mean normalised already
+      Method used by eeg_power_spectra and intrinsic_freq_autoCorr.
+      Signal in must be mean normalized already.
 
+      :param eeg: The EEG signal to analyze.
+      :type eeg: np.ndarray
+      :param plot: Whether to plot the resulting power spectrum (default is True).
+      :type plot: bool, optional
+      :param binWidthSecs: The bin width in seconds for the power spectrum.
+      :type binWidthSecs: float, optional
+      :param maxFreq: The maximum frequency to compute the power spectrum up to (default is 25).
+      :type maxFreq: float, optional
+      :param pad2pow: The power of 2 to pad the signal to (default is None).
+      :type pad2pow: int, optional
+      :param ymax: The maximum y-axis value for the plot (default is None).
+      :type ymax: float, optional
+      :param \*\*kwargs: Additional keyword arguments.
+      :type \*\*kwargs: dict
+
+      :returns: A dictionary containing the power spectrum and other related metrics.
+      :rtype: dict
 
 
 
@@ -215,19 +249,20 @@ Module Contents
       to self.min_runlength in samples and sees if any of those segments
       meet the speed criteria and splits them out into separate runs if true.
 
-      NB For now this means the same spikes might get included in the
-      autocorrelation procedure later as the
-      moving window will use overlapping periods - can be modified later.
+      .. rubric:: Notes
 
-      :param runs: Generated from getRunsOfMinLength
-      :type runs: 3 x nRuns np.array
-      :param minspeed: Min running speed in cm/s for an epoch (minimum
-                       epoch length defined previously
-                       in getRunsOfMinLength as minlength, usually 0.4s)
+      For now this means the same spikes might get included in the
+      autocorrelation procedure later as the moving window will use
+      overlapping periods - can be modified later.
+
+      :param runs: Generated from getRunsOfMinLength, shape (3, nRuns)
+      :type runs: np.array
+      :param minspeed: Min running speed in cm/s for an epoch (minimum epoch length
+                       defined previously in getRunsOfMinLength as minlength, usually 0.4s)
       :type minspeed: float
 
-      :returns: A modified version of the "runs" input variable
-      :rtype: 3 x nRuns np.array
+      :returns: A modified version of the "runs" input variable, shape (3, nRuns)
+      :rtype: np.array
 
 
 
@@ -320,30 +355,6 @@ Module Contents
 
    .. py:attribute:: spk_clusters
 
-      
-      There can be more spikes than pos samples in terms of sampling as the
-      open-ephys buffer probably needs to finish writing and the camera has
-      already stopped, so cut of any cluster indices and spike times
-      that exceed the length of the pos indices
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      ..
-          !! processed by numpydoc !!
-
 
    .. py:property:: spk_sample_rate
 
@@ -396,11 +407,17 @@ Module Contents
       Attempts to filter out frequencies from optogenetic experiments where
       the frequency of laser stimulation was at 6.66Hz.
 
-      .. note::
+      :param sig: The signal to be filtered. If None, uses the signal provided during initialization.
+      :type sig: np.array, optional
+      :param width: The width of the filter (default is 0.125).
+      :type width: float, optional
+      :param dip: The dip of the filter (default is 15.0).
+      :type dip: float, optional
+      :param stimFreq: The frequency of the laser stimulation (default is 6.66Hz).
+      :type stimFreq: float, optional
 
-         This method needs tweaking for each trial as the power in the signal
-         is variable across trials / animals etc. A potential improvement could be using mean
-         power or a similar metric.
+      :returns: The filtered signal.
+      :rtype: np.array
 
 
 
@@ -426,12 +443,16 @@ Module Contents
       Uses the Hilbert transform to calculate the instantaneous phase and
       amplitude of the time series in sig.
 
-      :param sig: The signal to be analysed
+      :param sig: The signal to be analysed.
       :type sig: np.array
-      :param ford: The order for the Butterworth filter
-      :type ford: int
-      :param band2filter: The two frequencies to be filtered for
+      :param band2filter: The two frequencies to be filtered for.
       :type band2filter: list
+      :param ford: The order for the Butterworth filter (default is 3).
+      :type ford: int, optional
+
+      :returns: A tuple containing the filtered signal, phase, amplitude,
+                amplitude filtered, and instantaneous frequency.
+      :rtype: tuple
 
 
 
@@ -455,15 +476,22 @@ Module Contents
 
       
       Calculates the phase of theta at which a cluster emitted spikes
-      and returns a fit to a vonmises distribution
+      and returns a fit to a vonmises distribution.
 
-      :param cluster_times (np.ndarray) - the times the cluster emitted spikes in: seconds
+      :param cluster_times: The times the cluster emitted spikes in seconds.
+      :type cluster_times: np.ndarray
 
       .. rubric:: Notes
 
       kwargs can include:
-          low_theta (int) - low end for bandpass filter
-          high_theta (int) - high end for bandpass filter
+          low_theta : int
+              Low end for bandpass filter.
+          high_theta : int
+              High end for bandpass filter.
+
+      :returns: A tuple containing the phase of theta at which the cluster emitted spikes,
+                the x values for the vonmises distribution, and the y values for the vonmises distribution.
+      :rtype: tuple
 
 
 
@@ -487,21 +515,29 @@ Module Contents
 
       
       Calculates the modulation index of theta and gamma oscillations.
-      Specifically this is the circular correlation between the phase of
+      Specifically, this is the circular correlation between the phase of
       theta and the power of theta.
 
-      :param sig: The LFP signal
-      :type sig: np.array
-      :param nbins: The number of bins in the circular range 0 to 2*pi
-      :type nbins: int
-      :param forder: The order of the butterworth filter
-      :type forder: int
-      :param thetaband: The lower/upper bands of the theta freq range
-      :type thetaband: list
-      :param gammaband: The lower/upper bands of the gamma freq range
-      :type gammaband: list
-      :param plot: Show some pics or not
-      :type plot: bool
+      :param sig: The LFP signal. If None, uses the signal provided during initialization.
+      :type sig: np.array, optional
+      :param nbins: The number of bins in the circular range 0 to 2*pi (default is 20).
+      :type nbins: int, optional
+      :param forder: The order of the Butterworth filter (default is 2).
+      :type forder: int, optional
+      :param thetaband: The lower and upper bands of the theta frequency range (default is [4, 8]).
+      :type thetaband: list, optional
+      :param gammaband: The lower and upper bands of the gamma frequency range (default is [30, 80]).
+      :type gammaband: list, optional
+      :param plot: Whether to plot the results (default is True).
+      :type plot: bool, optional
+
+      :returns: The modulation index.
+      :rtype: float
+
+      .. rubric:: Notes
+
+      The modulation index is a measure of the strength of phase-amplitude coupling
+      between theta and gamma oscillations.
 
 
 
@@ -528,26 +564,25 @@ Module Contents
       More specifically this is the phase-locking value (PLV) between two
       nested oscillations in EEG data, in this case theta (default 4-8Hz)
       and gamma (defaults to 30-80Hz). A PLV of unity indicates perfect phase
-      locking (here PAC) and a value of zero indicates no locking (no PAC)
+      locking (here PAC) and a value of zero indicates no locking (no PAC).
 
-      :param eeg: The eeg data itself. This is a 1-d array which
-      :type eeg: numpy array
-      :param can be masked or not:
-      :param forder: The order of the filter(s) applied to the eeg data
-      :type forder: int
-      :param thetaband: The range of values to bandpass
-      :type thetaband: list/array
-      :param gammaband: The range of values to bandpass
-      :type gammaband: list/array
-      :param filter for for the theta and gamma ranges:
-      :param plot: Whether to plot the resulting binned up
+      :param sig: The LFP signal. If None, uses the signal provided during initialization.
+      :type sig: np.array, optional
+      :param forder: The order of the Butterworth filter (default is 2).
+      :type forder: int, optional
+      :param thetaband: The lower and upper bands of the theta frequency range (default is [4, 8]).
+      :type thetaband: list, optional
+      :param gammaband: The lower and upper bands of the gamma frequency range (default is [30, 80]).
+      :type gammaband: list, optional
+      :param plot: Whether to plot the resulting binned up polar plot which shows the amplitude
+                   of the gamma oscillation found at different phases of the theta oscillation
+                   (default is True).
       :type plot: bool, optional
-      :param polar plot which shows the amplitude of the gamma oscillation:
-      :param found at different phases of the theta oscillation.:
-      :param Default is True.:
+      :param \*\*kwargs: Additional keyword arguments.
+      :type \*\*kwargs: dict
 
-      :returns: The value of the phase-amplitude coupling
-      :rtype: plv (float)
+      :returns: The value of the phase-amplitude coupling (PLV).
+      :rtype: float
 
 
 
@@ -575,6 +610,17 @@ Module Contents
       animal was in when it was fired and the colour of the marker
       corresponds to the phase of theta at which it fired.
 
+      :param cluster: The cluster number.
+      :type cluster: int
+      :param pos_data: Position data object containing position and speed information.
+      :type pos_data: PosCalcsGeneric
+      :param phy_data: Phy data object containing spike times and clusters.
+      :type phy_data: TemplateModel
+      :param lfp_data: LFP data object containing the LFP signal and sampling rate.
+      :type lfp_data: EEGCalcsGeneric
+
+      :returns: The matplotlib axes object with the plot.
+      :rtype: plt.Axes
 
 
 
@@ -597,8 +643,25 @@ Module Contents
    .. py:method:: theta_running(pos_data, lfp_data, **kwargs)
 
       
-      Returns metrics to do with the theta frequency/ power and running speed/ acceleration
+      Returns metrics to do with the theta frequency/power and running speed/acceleration.
 
+      :param pos_data: Position data object containing position and speed information.
+      :type pos_data: PosCalcsGeneric
+      :param lfp_data: LFP data object containing the LFP signal and sampling rate.
+      :type lfp_data: EEGCalcsGeneric
+      :param \*\*kwargs: Additional keyword arguments.
+      :type \*\*kwargs: dict
+
+      :returns: A tuple containing masked arrays for speed and theta frequency.
+      :rtype: tuple[np.ma.MaskedArray, ...]
+
+      .. rubric:: Notes
+
+      The function calculates the instantaneous frequency of the theta band
+      and interpolates the running speed to match the LFP data. It then
+      creates a 2D histogram of theta frequency vs. running speed and overlays
+      the mean points for each speed bin. The function also performs a linear
+      regression to find the correlation between speed and theta frequency.
 
 
 
@@ -660,10 +723,12 @@ Module Contents
       Find the indices and durations of the events that have sufficient
       duration and power to be considered ripples.
 
-      :param ttl_type (str) - which bit of the trial to do the calculation for: Either 'no_laser' or 'laser'
+      :param ttl_type: which bit of the trial to do the calculation for
+                       Either 'no_laser' or 'laser'
+      :type ttl_type: str, default='no_laser'
 
-      :returns: **tuple**
-      :rtype: the run indices to keep and the run durations in ms
+      :returns: the run indices to keep and the run durations in ms
+      :rtype: tuple
 
 
 
@@ -688,8 +753,15 @@ Module Contents
       
       Find periods where the power in the ripple band is above n standard deviations
       for t samples. Meant to recapitulate the algorithm from the Ripple Detector
-      plugin
+      plugin.
 
+      :param n: The number of standard deviations above the mean power to consider as high power (default is 3).
+      :type n: int, optional
+      :param t: The number of samples for which the power must be above the threshold (default is 10).
+      :type t: int, optional
+
+      :returns: An array of indices where the power is above the threshold for the specified duration.
+      :rtype: np.ndarray
 
 
 
@@ -713,8 +785,15 @@ Module Contents
 
       
       Iterates through a directory tree and finds the path to the
-      Ripple Detector plugin data and returns its location
+      Ripple Detector plugin data and returns its location.
 
+      :param trial_root: The root directory of the trial.
+      :type trial_root: Path
+      :param \*\*kwargs: Additional keyword arguments.
+      :type \*\*kwargs: dict
+
+      :returns: The path to the continuous data.
+      :rtype: Path
 
 
 
@@ -738,8 +817,15 @@ Module Contents
 
       
       Iterates through a directory tree and finds the path to the
-      Ripple Detector plugin data and returns its location
+      Ripple Detector plugin data and returns its location.
 
+      :param trial_root: The root directory of the trial.
+      :type trial_root: Path
+      :param \*\*kwargs: Additional keyword arguments.
+      :type \*\*kwargs: dict
+
+      :returns: The path to the ripple TTL data.
+      :rtype: Path
 
 
 
@@ -762,8 +848,13 @@ Module Contents
    .. py:method:: _load_start_time(path_to_sync_message_file)
 
       
-      Returns the start time contained in a sync file from OE
+      Returns the start time contained in a sync file from OE.
 
+      :param path_to_sync_message_file: Path to the sync message file.
+      :type path_to_sync_message_file: Path
+
+      :returns: The start time in seconds.
+      :rtype: float
 
 
 
@@ -812,19 +903,106 @@ Module Contents
 
    .. py:method:: get_spectrogram(start_time, end_time, plot=False)
 
+      
+      Computes the spectrogram of the filtered LFP signal between the specified start and end times.
+
+      :param start_time: The start time of the chunk to analyze, in seconds.
+      :type start_time: float
+      :param end_time: The end time of the chunk to analyze, in seconds.
+      :type end_time: float
+      :param plot: Whether to plot the resulting spectrogram (default is False).
+      :type plot: bool, optional
+
+      :returns: A tuple containing the ShortTimeFFT object, the number of samples, and the spectrogram array.
+      :rtype: tuple
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: plot_and_save_ripple_band_lfp_with_ttl(**kwargs)
 
+      
+      Plots and saves the ripple band LFP signal with TTL events.
+
+      :param \*\*kwargs: Additional keyword arguments.
+      :type \*\*kwargs: dict
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: plot_filtered_lfp_chunk(start_time, end_time, **kwargs)
+
+      
+      Plots a chunk of the filtered LFP signal between the specified start and end times.
+
+      :param start_time: The start time of the chunk to plot, in seconds.
+      :type start_time: float
+      :param end_time: The end time of the chunk to plot, in seconds.
+      :type end_time: float
+      :param \*\*kwargs: Additional keyword arguments.
+      :type \*\*kwargs: dict
+
+      :returns: The matplotlib axes object with the plot.
+      :rtype: plt.Axes
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:method:: plot_mean_rippleband_power(**kwargs)
 
       
-      Plots the mean power in the ripple band for the laser on and no laser
-      conditions
+      Plots the mean power in the ripple band for the laser on and no laser conditions.
 
+      :param \*\*kwargs: Additional keyword arguments.
+      :type \*\*kwargs: dict
+
+      :returns: The matplotlib axes object with the plot, or None if no data is available.
+      :rtype: plt.Axes | None
 
 
 
@@ -847,8 +1025,13 @@ Module Contents
    .. py:method:: plot_mean_spectrogram(laser_on = False, ax=None, **kwargs)
 
       
-      Plots the mean spectrogram for either 'long' or 'short' ttl events
+      Plots the mean spectrograms for both laser on and laser off conditions.
 
+      :param \*\*kwargs: Additional keyword arguments.
+      :type \*\*kwargs: dict
+
+      :returns: The matplotlib figure object with the plots.
+      :rtype: plt.Figure
 
 
 
@@ -873,17 +1056,59 @@ Module Contents
 
    .. py:method:: plot_rasters(laser_on)
 
+      
+      Plots raster plots for the given laser condition.
+
+      :param laser_on: If True, plots rasters for laser on condition. If False, plots rasters for no laser condition.
+      :type laser_on: bool
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: update_bandpass(low=None, high=None)
 
+      
+      Updates the bandpass filter settings.
+
+      :param low: The low frequency for the bandpass filter.
+      :type low: int, optional
+      :param high: The high frequency for the bandpass filter.
+      :type high: int, optional
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:attribute:: LFP
-
-
-   .. py:attribute:: all_on_ts
-
-
-   .. py:attribute:: all_ts
 
 
    .. py:attribute:: bit_volts
@@ -991,8 +1216,5 @@ Module Contents
    .. py:attribute:: ttl_percent
       :value: 100
 
-
-
-   .. py:attribute:: ttl_states
 
 

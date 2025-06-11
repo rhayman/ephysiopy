@@ -107,7 +107,8 @@ class EventsGeneric(object):
         self._event_dict = dict.fromkeys(level_one_keys)
         self._event_dict["stim_params"] = OrderedDict.fromkeys(level_two_keys)
         for k in self._event_dict["stim_params"].keys():
-            self._event_dict["stim_params"][k] = dict.fromkeys(level_three_keys)
+            self._event_dict["stim_params"][k] = dict.fromkeys(
+                level_three_keys)
 
 
 class EEGCalcsGeneric(object):
@@ -133,6 +134,25 @@ class EEGCalcsGeneric(object):
         self.sn2Width = 2
         self.maxFreq = 125
         self.maxPow = None
+
+    def __add__(self, other):
+        """
+        Adds two EEGCalcsGeneric objects together
+
+        Parameters
+        ----------
+        other : EEGCalcsGeneric
+            The other EEGCalcsGeneric object to add
+
+        Returns
+        -------
+        EEGCalcsGeneric
+            A new EEGCalcsGeneric object with the combined sig and fs
+        """
+        if not isinstance(other, EEGCalcsGeneric):
+            raise TypeError("Can only add another EEGCalcsGeneric object")
+        new_sig = np.ma.concatenate((self.sig, other.sig))
+        return EEGCalcsGeneric(new_sig, self.fs)
 
     def apply_mask(self, mask) -> None:
         """
@@ -279,7 +299,8 @@ class EEGCalcsGeneric(object):
         idx = np.zeros([len(freqs), len(f)]).astype(bool)
 
         for i, freq in enumerate(freqs):
-            idx[i, :] = np.logical_and(np.abs(f) < freq + band, np.abs(f) > freq - band)
+            idx[i, :] = np.logical_and(
+                np.abs(f) < freq + band, np.abs(f) > freq - band)
 
         pollutedIdx = np.sum(idx, 0)
         fftRes[pollutedIdx] = np.mean(fftRes)
@@ -363,6 +384,31 @@ class PosCalcsGeneric(object):
         else:
             self.tracker_params = {}
         self._sample_rate = 30
+
+    def __add__(self, other):
+        """
+        Adds two PosCalcsGeneric objects together
+
+        Parameters
+        ----------
+        other : PosCalcsGeneric
+            The other PosCalcsGeneric object to add
+
+        Returns
+        -------
+        PosCalcsGeneric
+            A new PosCalcsGeneric object with the combined xy data
+        """
+        if not isinstance(other, PosCalcsGeneric):
+            raise TypeError("Can only add another PosCalcsGeneric object")
+        new_xy = np.ma.concatenate((self.orig_xy, other.orig_xy), axis=1)
+        P = PosCalcsGeneric(new_xy[0], new_xy[1], self.ppm, self.convert2cm)
+        P._xyTS = (
+            np.ma.concatenate((self.xyTS, other.xyTS + self.duration), axis=0)
+            if self.xyTS is not None
+            else None
+        )
+        return P
 
     @property
     def npos(self):
@@ -629,7 +675,8 @@ class PosCalcsGeneric(object):
             The xy positional data
 
         """
-        speed = np.ma.MaskedArray(np.abs(np.ma.ediff1d(np.hypot(xy[0], xy[1]))))
+        speed = np.ma.MaskedArray(
+            np.abs(np.ma.ediff1d(np.hypot(xy[0], xy[1]))))
         self.speed = np.append(speed, speed[-1])
         self.speed = self.speed * self.sample_rate
 
@@ -658,8 +705,10 @@ class PosCalcsGeneric(object):
 
         denom = np.gcd(upsample_rate, 30)
 
-        new_x = signal.resample_poly(xy[0, :], upsample_rate / denom, 30 / denom)
-        new_y = signal.resample_poly(xy[1, :], upsample_rate / denom, 30 / denom)
+        new_x = signal.resample_poly(
+            xy[0, :], upsample_rate / denom, 30 / denom)
+        new_y = signal.resample_poly(
+            xy[1, :], upsample_rate / denom, 30 / denom)
         return np.array([new_x, new_y])
 
     def apply_mask(self, mask: np.ndarray):
@@ -748,10 +797,12 @@ def calculate_rms_and_std(
         the RMS and standard deviation of the signal
     """
     rms = np.nanmean(
-        np.sqrt(np.power(sig[int(time_window[0] * fs) : int(time_window[1] * fs)], 2))
+        np.sqrt(
+            np.power(sig[int(time_window[0] * fs): int(time_window[1] * fs)], 2))
     )
     std = np.nanstd(
-        np.sqrt(np.power(sig[int(time_window[0] * fs) : int(time_window[1] * fs)], 2))
+        np.sqrt(
+            np.power(sig[int(time_window[0] * fs): int(time_window[1] * fs)], 2))
     )
     return rms, std
 

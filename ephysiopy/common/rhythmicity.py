@@ -17,7 +17,7 @@ from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 from ephysiopy.common.utils import window_rms, find_runs
 from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
-from ephysiopy.visualise.plotting import FigureMaker, savePlot
+from ephysiopy.visualise.plotting import FigureMaker, saveFigure
 
 from phylib.io.model import TemplateModel
 from scipy import signal
@@ -421,7 +421,7 @@ class CosineDirectionalTuning(object):
         -------
         dict
             A dictionary containing the power spectrum and other related metrics
-    
+
         Notes
         -----
         Make sure all times are in seconds
@@ -524,7 +524,7 @@ class CosineDirectionalTuning(object):
         -------
         dict
             A dictionary containing the power spectrum and other related metrics.
-    
+
         """
 
         # Get raw power spectrum
@@ -636,7 +636,7 @@ class LFPOscillations(object):
         self.sig = sig
         self.fs = fs
 
-    def getFreqPhase(self, sig, band2filter: list, ford=3)->tuple:
+    def getFreqPhase(self, sig, band2filter: list, ford=3) -> tuple:
         """
         Uses the Hilbert transform to calculate the instantaneous phase and
         amplitude of the time series in sig.
@@ -653,9 +653,9 @@ class LFPOscillations(object):
         Returns
         -------
         tuple
-            A tuple containing the filtered signal, phase, amplitude, 
+            A tuple containing the filtered signal, phase, amplitude,
             amplitude filtered, and instantaneous frequency.
-    
+
         """
         if sig is None:
             sig = self.sig
@@ -710,7 +710,7 @@ class LFPOscillations(object):
         -----
         The modulation index is a measure of the strength of phase-amplitude coupling
         between theta and gamma oscillations.
-    
+
         """
         if sig is None:
             sig = self.sig
@@ -878,7 +878,7 @@ class LFPOscillations(object):
         creates a 2D histogram of theta frequency vs. running speed and overlays
         the mean points for each speed bin. The function also performs a linear
         regression to find the correlation between speed and theta frequency.
-    
+
 
         """
         low_theta = kwargs.pop("low_theta", 6)
@@ -978,7 +978,7 @@ class LFPOscillations(object):
         tuple
             A tuple containing the phase of theta at which the cluster emitted spikes,
             the x values for the vonmises distribution, and the y values for the vonmises distribution.
-   
+
         """
         low_theta = kwargs.pop("low_theta", 6)
         high_theta = kwargs.pop("high_theta", 12)
@@ -1023,7 +1023,7 @@ class LFPOscillations(object):
         -------
         plt.Axes
             The matplotlib axes object with the plot.
-    """
+        """
         _, phase, _, _, _ = self.getFreqPhase(lfp_data.sig, [6, 12])
         cluster_times = phy_data.spike_times[
             phy_data.spike_clusters == cluster
@@ -1102,7 +1102,7 @@ class Rippler(object):
             The LFP signal (usually downsampled to about 500-1000Hz).
         fs : int
             The sampling rate of the signal.
-        
+
         """
 
         self.pname_for_trial = trial_root
@@ -1243,7 +1243,7 @@ class Rippler(object):
         -------
         Path
             The path to the ripple TTL data.
-        
+
         """
         exp_name = kwargs.pop("experiment", "experiment1")
         rec_name = kwargs.pop("recording", "recording1")
@@ -1264,7 +1264,7 @@ class Rippler(object):
                             return Path(d)
         return Path()
 
-    @savePlot
+    @saveFigure
     def plot_filtered_lfp_chunk(
         self, start_time: float, end_time: float, **kwargs
     ) -> plt.Axes:
@@ -1340,7 +1340,7 @@ class Rippler(object):
             F._getRasterPlot(spk_times=ts, cluster=c)
             plt.show()
 
-    @savePlot
+    @saveFigure
     def _plot_ripple_lfp_with_ttl(self, i_time: float, **kwargs):
         eeg_chunk = self.filtered_eeg[
             np.logical_and(
@@ -1384,7 +1384,7 @@ class Rippler(object):
         for i_time in self.laser_on_ts:
             self._plot_ripple_lfp_with_ttl(i_time, **kwargs)
 
-    @savePlot
+    @saveFigure
     def plot_mean_spectrograms(self, **kwargs) -> plt.Figure:
         fig = plt.figure(figsize=(12.0, 4.0))
         ax, ax1 = fig.subplots(1, 2)
@@ -1426,7 +1426,7 @@ class Rippler(object):
         -------
         plt.Figure
             The matplotlib figure object with the plots.
-    
+
         """
         norm = kwargs.pop("norm", None)
         ttls = np.array([self.laser_on_ts, self.laser_off_ts]).T
@@ -1519,7 +1519,7 @@ class Rippler(object):
         )
         return fig1, im1, spec_array
 
-    def get_spectrogram(self, start_time: float, end_time: float, plot=False)->tuple:
+    def get_spectrogram(self, start_time: float, end_time: float, plot=False) -> tuple:
         """
         Computes the spectrogram of the filtered LFP signal between the specified start and end times.
 
@@ -1554,8 +1554,8 @@ class Rippler(object):
             fig1, ax1 = plt.subplots(figsize=(6.0, 4.0))  # enlarge plot a bit
             t_lo, t_hi = SFT.extent(N)[:2]  # time range of plot
             ax1.set_title(
-                rf"Spectrogram ({SFT.m_num*SFT.T:g}$\,s$ Gaussian "
-                + rf"window, $\sigma_t={self.gaussian_std*SFT.T:g}\,$s)"
+                rf"Spectrogram ({SFT.m_num * SFT.T:g}$\,s$ Gaussian "
+                + rf"window, $\sigma_t={self.gaussian_std * SFT.T:g}\,$s)"
             )
             ax1.set(
                 xlabel=f"Time $t$ in seconds ({SFT.p_num(N)} slices, "
@@ -1588,7 +1588,7 @@ class Rippler(object):
             plt.show()
         return SFT, N, np.abs(Sx2)
 
-    @savePlot
+    @saveFigure
     def plot_mean_rippleband_power(self, **kwargs) -> plt.Axes | None:
         """
         Plots the mean power in the ripple band for the laser on and no laser conditions.
@@ -1602,7 +1602,7 @@ class Rippler(object):
         -------
         plt.Axes | None
             The matplotlib axes object with the plot, or None if no data is available.
-    
+
         """
         if np.any(self.laser_on_spectrogram) and np.any(self.laser_off_spectrogram):
             ax = kwargs.pop("ax", None)
@@ -1671,7 +1671,7 @@ class Rippler(object):
         -------
         np.ndarray
             An array of indices where the power is above the threshold for the specified duration.
-    
+
 
         """
         # get some detection parameters from the Ripple Detector plugin

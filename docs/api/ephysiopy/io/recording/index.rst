@@ -140,30 +140,29 @@ Module Contents
    .. py:method:: apply_filter(*trial_filter)
 
       
-      Apply a mask to the data
+      Apply a mask to the recorded data. This will mask all the currently
+      loaded data (LFP, position etc)
 
-      :param trial_filter (TrialFilter):
-                                         name, start and end values:
-                                             name (str): The name of the filter
-                                             start (float): The start value of the filter
-                                             end (float): The end value of the filter
+      :param trial_filter: A namedtuple containing the filter
+                           name, start and end values
+                           name (str): The name of the filter
+                           start (float): The start value of the filter
+                           end (float): The end value of the filter
 
-                                         Valid names are:
-                                             'dir' - the directional range to filter for
-                                             'speed' - min and max speed to filter for
-                                             'xrange' - min and max values to filter x pos values
-                                             'yrange' - same as xrange but for y pos
-                                             'time' - the times to keep / remove specified in ms
+                           Valid names are:
+                               'dir' - the directional range to filter for
+                               'speed' - min and max speed to filter for
+                               'xrange' - min and max values to filter x pos values
+                               'yrange' - same as xrange but for y pos
+                               'time' - the times to keep / remove specified in ms
 
-                                         Values are pairs specifying the range of values to filter for
-                                         from the namedtuple TrialFilter that has fields 'start' and 'end'
-                                         where 'start' and 'end' are the ranges to filter for
+                           Values are pairs specifying the range of values to filter for
+                           from the namedtuple TrialFilter that has fields 'start' and 'end'
+                           where 'start' and 'end' are the ranges to filter for
+      :type trial_filter: TrialFilter
 
-                                         See ephysiopy.common.utils.TrialFilter for more details
-      :type trial_filter (TrialFilter): A namedtuple containing the filter
-
-      :returns: **np.ndarray**
-      :rtype: An array of bools that is True where the mask is applied
+      :returns: An array of bools that is True where the mask is applied
+      :rtype: np.ndarray
 
 
 
@@ -189,12 +188,15 @@ Module Contents
    .. py:method:: get_spike_times(cluster = None, tetrode = None, *args, **kwargs)
 
       
-      :param tetrode:
-      :type tetrode: int | list
-      :param cluster:
-      :type cluster: int | list
+      Returns the times of an individual cluster
 
-      :rtype: spike_times (np.ndarray)
+      :param cluster: The cluster(s) to get the spike times for
+      :type cluster: int | list
+      :param channel: The channel(s) to get the spike times for
+      :type channel: int | list
+
+      :returns: the spike times
+      :rtype: list | np.ndarray
 
 
 
@@ -291,10 +293,11 @@ Module Contents
       
       Load the position data
 
-      :param ppm (int):
-      :type ppm (int): pixels per metre
-      :param jumpmax (int): than this and the position is interpolated over
-      :type jumpmax (int): max jump in pixels between positions, more
+      :param ppm: pixels per metre
+      :type ppm: int
+      :param jumpmax: max jump in pixels between positions, more
+                      than this and the position is interpolated over
+      :type jumpmax: int
 
 
 
@@ -453,38 +456,33 @@ Module Contents
 
    .. py:method:: _get_recording_start_time()
 
-      
-      Get the recording start time from the sync_messages.txt file
-
-      :rtype: start_time (float) - in seconds
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      ..
-          !! processed by numpydoc !!
-
 
    .. py:method:: apply_filter(*trial_filter)
 
       
-      Apply a mask to the data
+      Apply a mask to the recorded data. This will mask all the currently
+      loaded data (LFP, position etc)
 
-      :param trial_filter (TrialFilter): name, start and end values
-      :type trial_filter (TrialFilter): A namedtuple containing the filter
+      :param trial_filter: A namedtuple containing the filter
+                           name, start and end values
+                           name (str): The name of the filter
+                           start (float): The start value of the filter
+                           end (float): The end value of the filter
 
-      :returns: np.array: An array of bools that is True where the mask is applied
+                           Valid names are:
+                               'dir' - the directional range to filter for
+                               'speed' - min and max speed to filter for
+                               'xrange' - min and max values to filter x pos values
+                               'yrange' - same as xrange but for y pos
+                               'time' - the times to keep / remove specified in ms
+
+                           Values are pairs specifying the range of values to filter for
+                           from the namedtuple TrialFilter that has fields 'start' and 'end'
+                           where 'start' and 'end' are the ranges to filter for
+      :type trial_filter: TrialFilter
+
+      :returns: An array of bools that is True where the mask is applied
+      :rtype: np.ndarray
 
 
 
@@ -509,15 +507,42 @@ Module Contents
 
    .. py:method:: get_available_clusters_channels()
 
+      
+      Get available clusters and their corresponding channels.
+
+      :returns: A dictionary where keys are channels and values are lists of clusters available on those channels.
+      :rtype: dict
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: get_spike_times(cluster = None, tetrode = None, *args, **kwargs)
 
       
-      :param cluster (int| list):
-      :param tetrode (int | list):
+      Returns the times of an individual cluster
 
-      :returns: **spike_times (list | np.ndarray)**
-      :rtype: in seconds
+      :param cluster: The cluster(s) to get the spike times for
+      :type cluster: int | list
+      :param channel: The channel(s) to get the spike times for
+      :type channel: int | list
+
+      :returns: the spike times
+      :rtype: list | np.ndarray
 
 
 
@@ -567,9 +592,7 @@ Module Contents
    .. py:method:: load_lfp(*args, **kwargs)
 
       
-      Valid kwargs are:
-      'target_sample_rate' - int
-          the sample rate to downsample to from the original
+      Load the LFP data
 
 
 
@@ -619,10 +642,11 @@ Module Contents
       
       Load the position data
 
-      :param ppm (int):
-      :type ppm (int): pixels per metre
-      :param jumpmax (int): than this and the position is interpolated over
-      :type jumpmax (int): max jump in pixels between positions, more
+      :param ppm: pixels per metre
+      :type ppm: int
+      :param jumpmax: max jump in pixels between positions, more
+                      than this and the position is interpolated over
+      :type jumpmax: int
 
 
 
@@ -667,50 +691,6 @@ Module Contents
 
 
    .. py:method:: load_ttl(*args, **kwargs)
-
-      
-      :rtype: loaded (bool) - whether the data was loaded or not
-
-      .. rubric:: Notes
-
-      Valid kwargs:
-          StimControl_id (str): This is the string
-              "StimControl [0-9][0-9][0-9]" where the numbers
-              are the node id in the openephys signal chain
-          TTL_channel_number (int): The integer value in the "states.npy"
-              file that corresponds to the
-              identity of the TTL input on the Digital I/O board on the
-              openephys recording system. i.e. if there is input to BNC
-              port 3 on the digital I/O board then values of 3 in the
-              states.npy file are high TTL values on this input and -3
-              are low TTL values. NB This is important as there could well
-              be other TTL lines that are active and so the states vector
-              will then contain a mix of integer values
-          RippleDetector (str): Loads up the TTL data from the Ripple Detector
-              plugin
-
-      Sets some keys/values in a dict on 'self'
-      called ttl_data, namely:
-
-      ttl_timestamps (list): the times of high ttl pulses in ms
-      stim_duration (int): the duration of the ttl pulse in ms
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      ..
-          !! processed by numpydoc !!
 
 
    .. py:attribute:: channel_count
@@ -868,10 +848,11 @@ Module Contents
       
       Load the position data
 
-      :param ppm (int):
-      :type ppm (int): pixels per metre
-      :param jumpmax (int): than this and the position is interpolated over
-      :type jumpmax (int): max jump in pixels between positions, more
+      :param ppm: pixels per metre
+      :type ppm: int
+      :param jumpmax: max jump in pixels between positions, more
+                      than this and the position is interpolated over
+      :type jumpmax: int
 
 
 
@@ -1074,14 +1055,14 @@ Module Contents
       
       This function generates a rate map for a given cluster and channel.
 
-      :param cluster (int | list):
-      :type cluster (int | list): The cluster(s).
-      :param channel (int | list):
-      :type channel (int | list): The channel(s).
-      :param var2bin (VariableToBin.XY):
-      :type var2bin (VariableToBin.XY): The variable to bin. This is an enum that specifies the type of variable to bin.
-      :param \*\*kwargs:
-                         do_shuffle (bool): If True, the rate map will be shuffled by the default number of shuffles (100).
+      :param cluster: The cluster(s).
+      :type cluster: int or list
+      :param channel: The channel(s).
+      :type channel: int or list
+      :param var2bin: The variable to bin. This is an enum that specifies the type of variable to bin.
+      :type var2bin: VariableToBin.XY
+      :param \*\*kwargs: Additional keyword arguments passed to the _get_spike_pos_idx function.
+                         - do_shuffle (bool): If True, the rate map will be shuffled by the default number of shuffles (100).
                                          If the n_shuffles keyword is provided, the rate map will be shuffled by that number of shuffles, and
                                          an array of shuffled rate maps will be returned e.g [100 x nx x ny].
                                          The shuffles themselves are generated by shifting the spike times by a random amount between 30s and the
@@ -1089,11 +1070,12 @@ Module Contents
                                          the shifts over multiple calls to this function, the option is provided to set the random seed to a fixed
                                          value using the random_seed keyword.
                                          Default is False
-                         n_shuffles (int): The number of shuffles to perform. Default is 100.
-                         random_seed (int): The random seed to use for the shuffles. Default is None.
+                         - n_shuffles (int): The number of shuffles to perform. Default is 100.
+                         - random_seed (int): The random seed to use for the shuffles. Default is None.
+      :type \*\*kwargs: dict, optional
 
-      :returns: **np.ndarray**
-      :rtype: The rate map as a numpy array.
+      :returns: The rate map as a numpy array.
+      :rtype: np.ndarray
 
 
 
@@ -1119,15 +1101,17 @@ Module Contents
       Returns the indices into the position data at which some cluster
       on a given channel emitted putative spikes.
 
-      :param cluster (int | list): case the "spike times" are equal to the position times, which
-                                   means data binned using these indices will be equivalent to
-                                   binning up just the position data alone.
-      :type cluster (int | list): The cluster(s). NB this can be None in which
-      :param channel (int | list):
-      :type channel (int | list): The channel identity. Ignored if cluster is None
+      :param cluster: The cluster(s). NB this can be None in which
+                      case the "spike times" are equal to the position times, which
+                      means data binned using these indices will be equivalent to
+                      binning up just the position data alone.
+      :type cluster: int | list
+      :param channel: The channel identity. Ignored if cluster is None
+      :type channel: int | list
 
-      :returns: **np.ndarray** -- occurred.
-      :rtype: The indices into the position data at which the spikes
+      :returns: The indices into the position data at which the spikes
+                occurred.
+      :rtype: np.ndarray
 
 
 
@@ -1156,25 +1140,26 @@ Module Contents
       Apply a mask to the recorded data. This will mask all the currently
       loaded data (LFP, position etc)
 
-      :param trial_filter (TrialFilter): name, start and end values
-                                         name (str): The name of the filter
-                                         start (float): The start value of the filter
-                                         end (float): The end value of the filter
+      :param trial_filter: A namedtuple containing the filter
+                           name, start and end values
+                           name (str): The name of the filter
+                           start (float): The start value of the filter
+                           end (float): The end value of the filter
 
-                                         Valid names are:
-                                             'dir' - the directional range to filter for
-                                             'speed' - min and max speed to filter for
-                                             'xrange' - min and max values to filter x pos values
-                                             'yrange' - same as xrange but for y pos
-                                             'time' - the times to keep / remove specified in ms
+                           Valid names are:
+                               'dir' - the directional range to filter for
+                               'speed' - min and max speed to filter for
+                               'xrange' - min and max values to filter x pos values
+                               'yrange' - same as xrange but for y pos
+                               'time' - the times to keep / remove specified in ms
 
-                                         Values are pairs specifying the range of values to filter for
-                                         from the namedtuple TrialFilter that has fields 'start' and 'end'
-                                         where 'start' and 'end' are the ranges to filter for
-      :type trial_filter (TrialFilter): A namedtuple containing the filter
+                           Values are pairs specifying the range of values to filter for
+                           from the namedtuple TrialFilter that has fields 'start' and 'end'
+                           where 'start' and 'end' are the ranges to filter for
+      :type trial_filter: TrialFilter
 
-      :returns: **np.ndarray**
-      :rtype: An array of bools that is True where the mask is applied
+      :returns: An array of bools that is True where the mask is applied
+      :rtype: np.ndarray
 
 
 
@@ -1196,6 +1181,36 @@ Module Contents
 
    .. py:method:: get_adaptive_map(cluster, channel, **kwargs)
 
+      
+      Generates an adaptive map for a given cluster and channel.
+
+      :param cluster: The cluster(s).
+      :type cluster: int or list
+      :param channel: The channel(s).
+      :type channel: int or list
+      :param \*\*kwargs: Additional keyword arguments passed to the _get_map function.
+      :type \*\*kwargs: dict, optional
+
+      :returns: The adaptive map as a BinnedData object.
+      :rtype: BinnedData
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: get_available_clusters_channels()
 
@@ -1205,14 +1220,15 @@ Module Contents
       
       Gets the egocentric boundary map for the specified cluster(s) and channel.
 
-      :param cluster (int | list):
-      :type cluster (int | list): The cluster(s) to get the speed vs rate for.
-      :param channel (int | list):
-      :type channel (int | list): The channel(s) number.
+      :param cluster: The cluster(s) to get the speed vs rate for.
+      :type cluster: int, list
+      :param channel: The channel(s) number.
+      :type channel: int, list
       :param \*\*kwargs:
       :type \*\*kwargs: Additional keyword arguments passed to _get_map
 
-      :rtype: BinnedData - the binned data
+      :returns: the binned data
+      :rtype: BinnedData
 
 
 
@@ -1234,16 +1250,46 @@ Module Contents
 
    .. py:method:: get_grid_map(cluster, channel, **kwargs)
 
+      
+      Generates a grid map for a given cluster and channel.
+
+      :param cluster: The cluster(s).
+      :type cluster: int or list
+      :param channel: The channel(s).
+      :type channel: int or list
+      :param \*\*kwargs: Additional keyword arguments passed to the autoCorr2D function.
+      :type \*\*kwargs: dict, optional
+
+      :returns: The grid map as a BinnedData object.
+      :rtype: BinnedData
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: get_hd_map(cluster, channel, **kwargs)
 
       
       Gets the head direction map for the specified cluster(s) and channel.
 
-      :param cluster (int | list):
-      :type cluster (int | list): The cluster(s) to get the speed vs rate for.
-      :param channel (int | list):
-      :type channel (int | list): The channel(s) number.
+      :param cluster: The cluster(s) to get the speed vs rate for.
+      :type cluster: int, list
+      :param channel: The channel(s) number.
+      :type channel: int,  list
       :param \*\*kwargs:
       :type \*\*kwargs: Additional keyword arguments passed to _get_map
 
@@ -1272,14 +1318,14 @@ Module Contents
       
       Gets the rate map for the specified cluster(s) and channel.
 
-      :param cluster (int | list):
-      :type cluster (int | list): The cluster(s) to get the speed vs rate for.
-      :param channel (int | list):
-      :type channel (int | list): The channel(s) number.
-      :param \*\*kwargs:
-      :type \*\*kwargs: Additional keyword arguments passed to _get_map
+      :param cluster: The cluster(s) to get the speed vs rate for.
+      :type cluster: int, list
+      :param channel: The channel(s) number.
+      :type channel: int, list
+      :param \*\*kwargs: Additional keyword arguments passed to _get_map
 
-      :rtype: BinnedData - the binned data
+      :returns: the binned data
+      :rtype: BinnedData
 
 
 
@@ -1304,10 +1350,10 @@ Module Contents
       
       Gets the speed vs head direction map for the specified cluster(s) and channel.
 
-      :param cluster (int | list):
-      :type cluster (int | list): The cluster(s) to get the speed vs head direction map for.
-      :param channel (int | list):
-      :type channel (int | list): The channel number.
+      :param cluster: The cluster(s) to get the speed vs head direction map for.
+      :type cluster: int, list
+      :param channel: The channel number.
+      :type channel: int, list
       :param \*\*kwargs:
       :type \*\*kwargs: Additional keyword arguments passed to _get_map
 
@@ -1334,10 +1380,10 @@ Module Contents
       
       Gets the speed vs rate for the specified cluster(s) and channel.
 
-      :param cluster (int | list):
-      :type cluster (int | list): The cluster(s) to get the speed vs rate for.
-      :param channel (int | list):
-      :type channel (int | list): The channel(s) number.
+      :param cluster: The cluster(s) to get the speed vs rate for.
+      :type cluster: int, list
+      :param channel: The channel(s) number.
+      :type channel: int, list
       :param \*\*kwargs:
       :type \*\*kwargs: Additional keyword arguments passed to _get_map
 
@@ -1368,6 +1414,13 @@ Module Contents
       
       Returns the times of an individual cluster
 
+      :param cluster: The cluster(s) to get the spike times for
+      :type cluster: int | list
+      :param channel: The channel(s) to get the spike times for
+      :type channel: int | list
+
+      :returns: the spike times
+      :rtype: list | np.ndarray
 
 
 
@@ -1390,12 +1443,11 @@ Module Contents
    .. py:method:: get_spike_times_binned_into_position(cluster, channel)
 
       
-      :param cluster (int | list):
-      :type cluster (int | list): The cluster(s).
-      :param channel (int | list):
-      :type channel (int | list): The channel(s).
+      :param cluster (int | list): The cluster(s).
+      :param channel (int | list): The channel(s).
 
-      :rtype: np.ndarray - the spike times binned into the position data
+      :returns: the spike times binned into the position data
+      :rtype: np.ndarray
 
 
 
@@ -1416,6 +1468,36 @@ Module Contents
 
 
    .. py:method:: get_xcorr(cluster, channel, **kwargs)
+
+      
+      Computes the cross-correlation for a given cluster and channel.
+
+      :param cluster: The cluster(s).
+      :type cluster: int or list
+      :param channel: The channel(s).
+      :type channel: int or list
+      :param \*\*kwargs: Additional keyword arguments passed to the xcorr function.
+      :type \*\*kwargs: dict, optional
+
+      :returns: The cross-correlation as a BinnedData object.
+      :rtype: BinnedData
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:method:: initialise()
@@ -1506,10 +1588,11 @@ Module Contents
       
       Load the position data
 
-      :param ppm (int):
-      :type ppm (int): pixels per metre
-      :param jumpmax (int): than this and the position is interpolated over
-      :type jumpmax (int): max jump in pixels between positions, more
+      :param ppm: pixels per metre
+      :type ppm: int
+      :param jumpmax: max jump in pixels between positions, more
+                      than this and the position is interpolated over
+      :type jumpmax: int
 
 
 

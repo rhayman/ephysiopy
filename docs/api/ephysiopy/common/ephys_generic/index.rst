@@ -528,11 +528,8 @@ Module Contents
       
       Applies a mask to the position data
 
-      :param mask: The mask to be applied. For use with
-                   np.ma.MaskedArray's mask attribute
+      :param mask: The mask to be applied. For use with np.ma.MaskedArray's mask attribute
       :type mask: np.ndarray
-
-      :returns: Nothing. Sets the mask of pos data
 
       .. rubric:: Notes
 
@@ -561,6 +558,32 @@ Module Contents
 
    .. py:method:: calcHeadDirection(xy)
 
+      
+      Calculates the head direction from the xy data
+
+      :param xy: The xy data
+      :type xy: np.ma.MaskedArray
+
+      :returns: The head direction data
+      :rtype: np.ma.MaskedArray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: calcSpeed(xy)
 
@@ -569,8 +592,6 @@ Module Contents
 
       :param xy: The xy positional data
       :type xy: np.ma.MaskedArray
-
-      :returns: Nothing. Sets self.speed
 
 
 
@@ -592,18 +613,41 @@ Module Contents
 
    .. py:method:: interpnans(xy)
 
+      
+      Interpolates over bad values in the xy data
+
+      :param xy:
+      :type xy: np.ma.MaskedArray
+
+      :returns: The interpolated xy data
+      :rtype: np.ma.MaskedArray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: postprocesspos(tracker_params = {})
 
       
       Post-process position data
 
-      :param tracker_params: Same dict as created in
+      :param tracker_params: Same dict as created in OESettings.Settings.parse
+                             (from module openephys2py)
       :type tracker_params: dict
-      :param OESettings.Settings.parse: (from module openephys2py)
-
-      :returns: The post-processed position data
-      :rtype: xy, hdir (np.ma.MaskedArray)
 
       .. rubric:: Notes
 
@@ -639,8 +683,8 @@ Module Contents
       :param xy: The xy data
       :type xy: np.ma.MaskedArray
 
-      :returns: The smoothed positional data
-      :rtype: xy (array_like)
+      :returns: **xy** -- The smoothed positional data
+      :rtype: array_like
 
 
 
@@ -723,10 +767,11 @@ Module Contents
 
       :param xy: The xy positional data
       :type xy: np.ma.MaskedArray
-      :param upsample_rate: int The rate to upsample to
+      :param upsample_rate: The rate to upsample to
+      :type upsample_rate: int
 
       :returns: The upsampled xy positional data
-      :rtype: new_xy (np.ma.MaskedArray)
+      :rtype: np.ma.MaskedArray
 
       .. rubric:: Notes
 
@@ -850,6 +895,9 @@ Module Contents
    :param fs: the sampling frequency of sig
    :type fs: int
 
+   :returns: the RMS and standard deviation of the signal
+   :rtype: tuple of np.ndarray
+
 
 
 
@@ -881,6 +929,9 @@ Module Contents
    :param axis: the axis along which to apply the resampling
    :type axis: int
 
+   :returns: the downsampled data
+   :rtype: np.ndarray
+
 
 
 
@@ -910,13 +961,13 @@ Module Contents
    :type fs: int
    :param amp_std: the signal needs to be this many standard deviations above the mean
    :type amp_std: int
-   :param duration: how long in seconds the ripple should be
-   :type duration: int
+   :param duration: the minimum and maximum durations in seconds for the ripples
+   :type duration: list of int
    :param duration_std: how many standard deviations above the mean the ripples should
                         be for 'duration' ms
    :type duration_std: int
 
-   :returns: **masked_lfp** -- the bandpass filtered LFP that has been masked outside of epochs that don't meet the above thresholds
+   :returns: the bandpass filtered LFP that has been masked outside of epochs that don't meet the above thresholds
    :rtype: np.ma.MaskedArray
 
    .. rubric:: Notes

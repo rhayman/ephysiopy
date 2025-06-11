@@ -21,6 +21,11 @@ Module Contents
 
 
    
+   A dictionary-like object that returns a Tetrode object when
+   a key is requested. The Tetrode object is created on the fly
+   if it does not already exist. The Tetrode object is created
+   using the axonaIO.Tetrode class. The Tetrode object is stored
+   in the dictionary for future use.
 
 
 
@@ -70,6 +75,13 @@ Module Contents
       Returns spike times in seconds for given cluster from given
       tetrode
 
+      :param tetrode: The tetrode number
+      :type tetrode: int
+      :param cluster: The cluster number
+      :type cluster: int
+
+      :returns: The spike times in seconds
+      :rtype: np.ndarray
 
 
 

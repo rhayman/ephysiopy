@@ -69,9 +69,245 @@ Module Contents
 
 
    
-   Please refer to `skimage.measure.regionprops` for more information
-   on the available region properties.
+   Describes various properties of a receptive field.
 
+   .. attribute:: slice
+
+      The slice of the field in the binned data (x slice, y slice)
+
+      :type: tuple of slice
+
+   .. attribute:: label
+
+      The label of the field
+
+      :type: int
+
+   .. attribute:: image_intensity
+
+      The intensity image of the field (in Hz)
+
+      :type: np.ndarray
+
+   .. attribute:: runs
+
+      The runs through the field
+
+      :type: list of RunProps
+
+   .. attribute:: run_slices
+
+      The slices of the runs through the field (slices are position indices)
+
+      :type: list of slice
+
+   .. attribute:: run_labels
+
+      The labels of the runs
+
+      :type: np.ndarray
+
+   .. attribute:: max_index
+
+      The index of the maximum intensity in the field
+
+      :type: np.ndarray
+
+   .. attribute:: num_runs
+
+      The number of runs through the field
+
+      :type: int
+
+   .. attribute:: cumulative_time
+
+      The cumulative time spent on the field for each run through the field
+
+      :type: list of np.ndarray
+
+   .. attribute:: cumulative_distance
+
+      The cumulative time spent on the field for each run through the field
+
+      :type: list of np.ndarray
+
+   .. attribute:: runs_speed
+
+      The speed of each run through the field
+
+      :type: list of np.ndarray
+
+   .. attribute:: runs_observed_spikes
+
+      The observed spikes for each run through the field
+
+      :type: np.ndarray
+
+   .. attribute:: spike_position_index
+
+      The index of the spikes in the position data
+
+      :type: np.ndarray
+
+   .. attribute:: xy_at_peak
+
+      The x-y coordinate of the field max
+
+      :type: np.ndarray
+
+   .. attribute:: xy
+
+      The x-y coordinates of the field for all runs
+
+      :type: np.ndarray
+
+   .. attribute:: xy_relative_to_peak
+
+      The x-y coordinates of the field zeroed with respect to the peak
+
+      :type: np.ndarray
+
+   .. attribute:: xy_angle_to_peak
+
+      The angle each x-y coordinate makes to the field peak
+
+      :type: np.ndarray
+
+   .. attribute:: xy_dist_to_peak
+
+      The distance of each x-y coordinate to the field peak
+
+      :type: np.ndarray
+
+   .. attribute:: bw_perim
+
+      The perimeter of the field as an array of bool
+
+      :type: np.ndarray
+
+   .. attribute:: perimeter_coords
+
+      The x-y coordinates of the field perimeter
+
+      :type: tuple
+
+   .. attribute:: global_perimeter_coords
+
+      The global x-y coordinates of the field perimeter
+
+      :type: np.ndarray
+
+   .. attribute:: perimeter_minus_field_max
+
+      The x-y coordinates of the field perimeter minus the field max
+
+      :type: np.ndarray
+
+   .. attribute:: perimeter_angle_from_peak
+
+      The angle each point on the perimeter makes to the field peak
+
+      :type: np.ndarray
+
+   .. attribute:: perimeter_dist_from_peak
+
+      The distance of each point on the perimeter to the field peak
+
+      :type: np.ndarray
+
+   .. attribute:: bin_coords
+
+      The x-y coordinates of the field in the binned data
+
+      :type: np.ndarray
+
+   .. attribute:: phi
+
+      The angular distance between the mean direction of each run and
+      each position samples direction to the field centre
+
+      :type: np.ndarray
+
+   .. attribute:: rho
+
+      The distance of each position sample to the field max (1 is furthest)
+
+      :type: np.ndarray
+
+   .. attribute:: pos_xy
+
+      The cartesian x-y coordinates of each position sample
+
+      :type: np.ndarray
+
+   .. attribute:: pos_phi
+
+      The angular distance between the mean direction of each run and
+      each position samples direction to the field centre
+
+      :type: np.ndarray
+
+   .. attribute:: pos_r
+
+      The ratio of the distance from the field peak to the position sample
+      and the distance from the field peak to the point on the perimeter that is most
+      colinear with the position sample
+
+      :type: np.ndarray
+
+   .. attribute:: r_and_phi_to_x_and_y
+
+      Converts rho and phi to x and y coordinates
+
+      :type: np.ndarray
+
+   .. attribute:: r_per_run
+
+      The polar radial distance for each run
+
+      :type: np.ndarray
+
+   .. attribute:: current_direction
+
+      The direction projected onto the mean run direction
+
+      :type: np.ndarray
+
+   .. attribute:: cumulative_distance
+
+      The cumulative distance for each run
+
+      :type: list of np.ndarray
+
+   .. attribute:: projected_direction
+
+      The direction projected onto the mean run direction
+
+      :type: np.ndarray
+
+   .. attribute:: intensity_max
+
+      The maximum intensity of the field (i.e. field peak rate)
+
+      :type: float
+
+   .. attribute:: intensity_mean
+
+      The mean intensity of the field
+
+      :type: float
+
+   .. attribute:: intensity_min
+
+      The minimum intensity of the field
+
+      :type: float
+
+   .. attribute:: intensity_std
+
+      The standard deviation of the field intensity
+
+      :type: float
 
 
 
@@ -119,14 +355,66 @@ Module Contents
 
    .. py:method:: overdispersion(spike_train, sample_rate = 50)
 
+      
+      Calculate the overdispersion for each run through the field
 
-   .. py:method:: perimeter_minus_field_max()
+      :param spike_train: the spike train (spikes binned up by position) for the whole trial. Same
+                          length as the trial n_samples
+      :type spike_train: np.ndarray
+      :param sample_rate: the sample rate of the position data
+      :type sample_rate: int
+
+      :returns: the overdispersion for each run through the field
+      :rtype: np.ndarray
 
 
-   .. py:method:: r_per_run()
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:method:: runs_expected_spikes(expected_rate_at_pos, sample_rate = 50)
+
+      
+      Calculate the expected number of spikes along each run given the
+      whole ratemap.
+
+      :param expected_rate_at_pos: the rate seen at each xy position of the whole trial
+      :type expected_rate_at_pos: np.ndarray
+      :param sample_rate: the sample rate of the position data
+      :type sample_rate: int
+
+      :returns: the expected rate at each xy position for each run
+      :rtype: np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:method:: smooth_runs(k, spatial_lp_cut, sample_rate)
@@ -135,9 +423,12 @@ Module Contents
       Smooth in x and y in preparation for converting the smoothed cartesian
       coordinates to polar ones
 
-      :param k (float) - smoothing constant for the instantaneous firing rate:
-      :param spatial_lp_cut (int) - spatial lowpass cut off:
-      :param sample_rate (int) - position sample rate in Hz:
+      :param k: smoothing constant for the instantaneous firing rate
+      :type k: float
+      :param spatial_lp_cut: spatial lowpass cut off
+      :type spatial_lp_cut: int
+      :param sample_rate: position sample rate in Hz
+      :type sample_rate: int
 
 
 
@@ -176,17 +467,17 @@ Module Contents
 
 
    .. py:property:: cumulative_distance
-      :type: numpy.ndarray
+      :type: list
 
 
 
    .. py:property:: cumulative_time
-      :type: numpy.ndarray
+      :type: list
 
 
 
    .. py:property:: current_direction
-      :type: numpy.ndarray
+      :type: list
 
 
 
@@ -236,6 +527,11 @@ Module Contents
 
 
    .. py:property:: perimeter_dist_from_peak
+      :type: numpy.ndarray
+
+
+
+   .. py:property:: perimeter_minus_field_max
       :type: numpy.ndarray
 
 
@@ -360,6 +656,11 @@ Module Contents
 
 
 
+   .. py:property:: r_per_run
+      :type: numpy.ndarray
+
+
+
    .. py:property:: rho
       :type: numpy.ndarray
 
@@ -380,11 +681,16 @@ Module Contents
 
 
    .. py:property:: runs_speed
-      :type: numpy.ndarray
+      :type: list
 
 
 
    .. py:property:: spike_position_index
+
+
+   .. py:property:: xy
+      :type: numpy.ndarray
+
 
 
    .. py:property:: xy_angle_to_peak
@@ -393,11 +699,6 @@ Module Contents
 
 
    .. py:property:: xy_at_peak
-      :type: numpy.ndarray
-
-
-
-   .. py:property:: xy_coords
       :type: numpy.ndarray
 
 
@@ -419,46 +720,66 @@ Module Contents
 
    
    A custom class for dealing with segments of an LFP signal and how
-   they relate to specific runs (see RunProps below) through a
-   receptive field (see FieldProps below)
+   they relate to specific runs through a receptive field
+   (see RunProps and FieldProps below)
 
    .. attribute:: field_label
+
+      The field id
 
       :type: int
 
    .. attribute:: run_label
 
+      The run id
+
       :type: int
 
    .. attribute:: slice
+
+      slice into the LFP data for a segment
 
       :type: slice
 
    .. attribute:: spike_times
 
+      the times in seconds spikes occurred for a segment
+
       :type: np.ndarray
 
    .. attribute:: signal
+
+      raw signal for a segment
 
       :type: np.ndarray
 
    .. attribute:: filtered_signal
 
+      bandpass filtered signal for a segment
+
       :type: np.ndarray
 
    .. attribute:: phase
+
+      phase data for a segment
 
       :type: np.ndarray
 
    .. attribute:: amplitude
 
+      amplitude for a segment
+
       :type: np.ndarray
 
    .. attribute:: sample_rate
 
+      sample rate for the LFP segment
+
       :type: float, int
 
    .. attribute:: filter_band
+
+      the bandpass filter values
 
       :type: tuple[int,int]
 
@@ -523,33 +844,43 @@ Module Contents
 
    .. attribute:: label
 
+      the run id
+
       :type: int
 
    .. attribute:: slice
 
+      the slice of the position data for a run
+
       :type: slice
 
-   .. attribute:: xy_coords
+   .. attribute:: xy
 
-      :type: np.ndarray
-
-   .. attribute:: spike_count
+      the x-y coordinates for a run (global coordinates)
 
       :type: np.ndarray
 
    .. attribute:: speed
 
+      the speed at each xy coordinate
+
       :type: np.ndarray
 
    .. attribute:: peak_xy
+
+      the fields max rate xy location
 
       :type: tuple[float, float]
 
    .. attribute:: max_index
 
+      the index into the arrays of the field max
+
       :type: int
 
    .. attribute:: perimeter_coords
+
+      xy coordinates of the field perimeter
 
       :type: np.ndarray
 
@@ -561,85 +892,128 @@ Module Contents
 
    .. attribute:: min_speed
 
+      the minimum speed
+
       :type: float
 
    .. attribute:: cumulative_time
+
+      the cumulative time spent on a run
 
       :type: np.ndarray
 
    .. attribute:: duration
 
+      the total duration of a run
+
       :type: int
 
    .. attribute:: n_spikes
+
+      the total number of spikes emitted on a run
 
       :type: int
 
    .. attribute:: run_start
 
+      the position index of the run start
+
       :type: int
 
    .. attribute:: run_stop
+
+      the position index of the run stop
 
       :type: int
 
    .. attribute:: mean_direction
 
+      the mean direction of a run
+
       :type: float
 
    .. attribute:: current_direction
+
+      the current direction of a run
 
       :type: np.ndarray
 
    .. attribute:: cumulative_distance
 
+      the cumulative distance covered in a run
+
       :type: np.ndarray
 
    .. attribute:: spike_position_index
+
+      the index into the position data of the spikes on a run
 
       :type: np.ndarray
 
    .. attribute:: observed_spikes
 
+      the observed spikes on a run (binned by position samples)
+
       :type: np.ndarray
 
    .. attribute:: xy_angle_to_peak
+
+      the xy angle to the peak (radians)
 
       :type: np.ndarray
 
    .. attribute:: xy_dist_to_peak
 
+      the distance to the field max
+
       :type: np.ndarray
 
    .. attribute:: xy_dist_to_peak_normed
+
+      normalised distance to field max
 
       :type: np.ndarray
 
    .. attribute:: pos_xy
 
+      cartesian xy coordinates but normalised on a unit circle
+
       :type: np.ndarray
 
    .. attribute:: pos_phi
+
+      the angular distance between a runs main direction and the
+      direction to the peak for each position sample
 
       :type: np.ndarray
 
    .. attribute:: rho
 
+      the polar radial distance (1 = field edge)
+
       :type: np.ndarray
 
    .. attribute:: phi
+
+      the polar angle (radians)
 
       :type: np.ndarray
 
    .. attribute:: r_and_phi_to_x_and_y
 
+      converts rho and phi to x and y coordinates (range = -1 -> +1)
+
       :type: np.ndarray
 
    .. attribute:: tortuosity
 
+      the tortuosity for a run (closer to 1 = a straighter run)
+
       :type: np.ndarray
 
    .. attribute:: xy_is_smoothed
+
+      whether the xy data has been smoothed
 
       :type: bool
 
@@ -839,6 +1213,9 @@ Module Contents
    .. py:property:: run_stop
 
 
+   .. py:property:: speed
+
+
    .. py:property:: spike_position_index
 
 
@@ -872,12 +1249,10 @@ Module Contents
 
    :param A: The array to process
    :type A: np.ndarray
-   :param min_distance: The distance in bins between fields to
-   :type min_distance: float, optional
-   :param separate the regions of the image:
-   :param clear_border: Input to skimage.feature.peak_local_max.
-   :type clear_border: bool, optional
-   :param The number of: pixels to ignore at the edge of the image
+   :param \*\*kwargs: min_distance (float, optional): The distance in bins between fields to
+                      separate the regions of the image
+                      clear_border (bool, optional): Input to skimage.feature.peak_local_max.
+                      The number of pixels to ignore at the edge of the image
 
 
 
@@ -902,8 +1277,8 @@ Module Contents
    Calculates a border score totally dis-similar to that calculated in
    Solstad et al (2008)
 
-   :param A: Should be the ratemap
-   :type A: array_like
+   :param A: the ratemap
+   :type A: np.ndarray
    :param B: This should be a boolean mask where True (1)
              is equivalent to the presence of a border and False (0)
              is equivalent to 'open space'. Naievely this will be the
@@ -913,29 +1288,24 @@ Module Contents
              None then a mask is created that has 1's at the edges of the
              ratemap i.e. it is assumed that occupancy = environmental
              shape
-   :type B: array_like
+   :type B: np.ndarray, default None
    :param shape: description of environment shape. Currently
                  only 'square' or 'circle' accepted. Used to calculate the
                  proportion of the environmental boundaries to examine for
                  firing
-   :type shape: str
+   :type shape: str, default 'square'
    :param fieldThresh: Between 0 and 1 this is the percentage
                        amount of the maximum firing rate
                        to remove from the ratemap (i.e. to remove noise)
-   :type fieldThresh: float
-   :param smthKernSig: the sigma value used in smoothing the ratemap
-                       (again!) with a gaussian kernel
-   :type smthKernSig: float
+   :type fieldThresh: float, default 0.3
    :param circumPrc: The percentage amount of the circumference
                      of the environment that the field needs to be to count
                      as long enough to make it through
-   :type circumPrc: float
+   :type circumPrc: float, default 0.2
    :param binSize: bin size in cm
-   :type binSize: float
+   :type binSize: float, default 3.0
    :param minArea: min area for a field to be considered
-   :type minArea: float
-   :param debug: If True then some plots and text will be output
-   :type debug: bool
+   :type minArea: float, default 200
 
    :returns: the border score
    :rtype: float
@@ -1005,9 +1375,16 @@ Module Contents
 .. py:function:: coherence(smthd_rate, unsmthd_rate)
 
    
-   calculates coherence of receptive field via correlation of smoothed
+   Calculates the coherence of receptive field via correlation of smoothed
    and unsmoothed ratemaps
 
+   :param smthd_rate: The smoothed rate map
+   :type smthd_rate: np.ndarray
+   :param unsmthd_rate: The unsmoothed rate map
+   :type unsmthd_rate: np.ndarray
+
+   :returns: The coherence of the rate maps
+   :rtype: float
 
 
 
@@ -1029,29 +1406,19 @@ Module Contents
 .. py:function:: deform_SAC(A, circleXY=None, ellipseXY=None)
 
    
-   Deforms a SAC that is non-circular to be more circular
-
-   Basically a blatant attempt to improve grid scores, possibly
-   introduced in a paper by Matt Nolan...
+   Deforms an elliptical SAC to be circular
 
    :param A: The SAC
-   :type A: array_like
+   :type A: np.ndarray
    :param circleXY: The xy coordinates defining a circle.
-   :type circleXY: array_like, optional
-   :param Default None.:
-   :param ellipseXY: The xy coordinates defining an
-   :type ellipseXY: array_like, optional
-   :param ellipse. Default None.:
+   :type circleXY: np.ndarray, default=None
+   :param ellipseXY: The xy coordinates defining an ellipse.
+   :type ellipseXY: np.ndarray, default=None
 
    :returns: The SAC deformed to be more circular
-   :rtype: deformed_sac (array_like)
+   :rtype: np.ndarray
 
-   .. seealso::
-
-      ephysiopy.common.ephys_generic.FieldCalcs.grid_field_props
-      skimage.transform.AffineTransform
-      skimage.transform.warp
-      skimage.exposure.rescale_intensity
+   .. seealso:: :obj:`ephysiopy.common.ephys_generic.FieldCalcs.grid_field_props`, :obj:`skimage.transform.AffineTransform`, :obj:`skimage.transform.warp`, :obj:`skimage.exposure.rescale_intensity`
 
 
 
@@ -1081,7 +1448,7 @@ Module Contents
    :type A: BinnedData
 
    :returns: The labelled ratemap
-   :rtype: label (np.array)
+   :rtype: np.ndarray
 
 
 
@@ -1406,20 +1773,47 @@ Module Contents
 
 .. py:function:: get_basic_gridscore(A, **kwargs)
 
+   
+   Calculates the grid score of a spatial autocorrelogram
+
+   :param A: The spatial autocorrelogram
+   :type A: np.ndarray
+
+   :returns: The grid score of the SAC
+   :rtype: float
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
 .. py:function:: get_circular_regions(A, **kwargs)
 
    
    Returns a list of images which are expanding circular
    regions centred on the middle of the image out to the
    image edge. Used for calculating the grid score of each
-   image to find the one with the max grid score. Based on
-   some Moser paper I can't recall.
+   image to find the one with the max grid score.
 
    :param A: The SAC
    :type A: np.ndarray
+   :param \*\*kwargs: min_radius (int): The smallest radius circle to start with
 
-   :keyword min_radius: The smallest radius circle to start with
-   :kwtype min_radius: int
+   :returns: A list of images which are circular sub-regions of the
+             original SAC
+   :rtype: list
 
 
 
@@ -1446,6 +1840,11 @@ Module Contents
    SAC centre) and returns get_basic_griscore() calculated on the
    deformed (or re-formed?!) SAC
 
+   :param A: The SAC
+   :type A: np.ndarray
+
+   :returns: The gridscore of the deformed SAC
+   :rtype: float
 
 
 
@@ -1472,6 +1871,12 @@ Module Contents
    the edge of the image. The maximum of the get_basic_gridscore() for
    each of these circular sub-regions is returned as the gridscore
 
+   :param A: The SAC
+   :type A: np.ndarray
+
+   :returns: The maximum grid score of the circular sub
+             regions of the SAC
+   :rtype: float
 
 
 
@@ -1495,13 +1900,15 @@ Module Contents
    
    Calculates the mean resultant vector of a boundary map in egocentric coordinates
 
-   See Hinman et al., 2019 for more details
-
    :param ego_boundary_map: The egocentric boundary map
    :type ego_boundary_map: np.ndarray
 
    :returns: The mean resultant vector of the egocentric boundary map
    :rtype: float
+
+   .. rubric:: Notes
+
+   See Hinman et al., 2019 for more details
 
 
 
@@ -1522,7 +1929,69 @@ Module Contents
 
 .. py:function:: get_mean_resultant_angle(ego_boundary_map, **kwargs)
 
+   
+   Calculates the angle of the mean resultant vector of a
+   boundary map in egocentric coordinates
+
+   :param ego_boundary_map: The egocentric boundary map
+   :type ego_boundary_map: np.ndarray
+
+   :returns: The angle mean resultant vector of the egocentric boundary map
+   :rtype: float
+
+   .. rubric:: Notes
+
+   See Hinman et al., 2019 for more details
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
 .. py:function:: get_mean_resultant_length(ego_boundary_map, **kwargs)
+
+   
+   Calculates the length of the mean resultant vector of a
+   boundary map in egocentric coordinates
+
+   :param ego_boundary_map: The egocentric boundary map
+   :type ego_boundary_map: np.ndarray
+
+   :returns: The length of the mean resultant vector of the egocentric boundary map
+   :rtype: float
+
+   .. rubric:: Notes
+
+   See Hinman et al., 2019 for more details
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
 
 .. py:function:: get_thigmotaxis_score(xy, shape = 'circle')
 
@@ -1533,16 +2002,14 @@ Module Contents
 
    :param xy: The xy coordinates of the animal's position. 2 x nsamples
    :type xy: np.ndarray
-   :param shape: The shape of the environment. Legal values are 'circle'
-   :type shape: str
-   :param and 'square'. Default 'circle':
+   :param shape: The shape of the environment. Legal values are 'circle' and 'square'
+   :type shape: str, default='circle'
 
-   Returns:
-   thigmoxtaxis_score (float): Values closer to 1 indicate the
-   animal spent more time in the inner portion of the environment. Values closer to -1
-   indicates the animal spent more time in the outer portion of the environment.
-   A value of 0 indicates the animal spent equal time in both portions of the
-   environment.
+   :returns: Values closer to 1 mean more time was spent in the inner portion of the environment.
+             Values closer to -1 mean more time in the outer portion of the environment.
+             A value of 0 indicates the animal spent equal time in both portions of the
+             environment.
+   :rtype: float
 
 
 
@@ -1566,6 +2033,15 @@ Module Contents
    
    Globally thresholds a ratemap and counts number of fields found
 
+   :param A: The ratemap
+   :type A: np.ndarray
+   :param prc: The percentage of the peak rate to threshold the ratemap at
+   :type prc: int
+   :param min_dist: The minimum distance between peaks
+   :type min_dist: int
+
+   :returns: The number of fields found in the ratemap
+   :rtype: int
 
 
 
@@ -1589,17 +2065,19 @@ Module Contents
    
    Extracts various measures from a spatial autocorrelogram
 
-   :param A: BinnedData object containing the spatial autocorrelogram (SAC) in
-             A.binned_data[0]
-   :param maxima: The method used to detect the peaks in the SAC.
-                  Legal values are 'single' and 'centroid'. Default 'centroid'
-   :type maxima: str, optional
-   :param allProps: Whether to return a dictionary that
-   :type allProps: bool, optional
-   :param contains the attempt to fit an ellipse around the edges of the:
-   :param central size peaks. See below: Default True
+   :param A:
+             object containing the spatial autocorrelogram (SAC) in
+                 A.binned_data[0]
+   :type A: BinnedData
+   :param maxima (str: Legal values are 'single' and 'centroid'. Default 'centroid'
+   :type maxima (str: The method used to detect the peaks in the SAC.
+   :param optional): Legal values are 'single' and 'centroid'. Default 'centroid'
+   :type optional): The method used to detect the peaks in the SAC.
+   :param allProps: Whether to return a dictionary that contains the attempt to fit
+                    an ellipse around the edges of the central size peaks. See below
+   :type allProps: bool default=True
 
-   :returns: A dictionary containing measures of the SAC.
+   :returns: Measures of the SAC.
              Keys include:
                  * gridness score
                  * scale
@@ -1608,7 +2086,7 @@ Module Contents
                  * a binary mask around the extent of the 6 central fields
                  * values of the rotation procedure used to calculate gridness
                  * ellipse axes and angle (if allProps is True and the it worked)
-   :rtype: props (dict)
+   :rtype: dict
 
    .. rubric:: Notes
 
@@ -1617,7 +2095,7 @@ Module Contents
    When it is the plot produced will display a lot more informative.
    The coordinate system internally used is centred on the image centre.
 
-   .. seealso:: ephysiopy.common.binning.autoCorr2D()
+   .. seealso:: :obj:`ephysiopy.common.binning.autoCorr2D`
 
 
 
@@ -1645,15 +2123,15 @@ Module Contents
    counter-clockwise from 3 o'clock
 
    :param peakCoords: The peak coordinates as pairs of xy
-   :type peakCoords: array_like
+   :type peakCoords: np.ndarray
    :param closestPeakIdx: A 1D array of the indices in peakCoords
-   :type closestPeakIdx: array_like
-   :param of the peaks closest to the centre of the SAC:
+                          of the peaks closest to the centre of the SAC
+   :type closestPeakIdx: np.ndarray
 
    :returns: The first value in an array of the angles of
              the peaks in the SAC working counter-clockwise from a line
              extending from the middle of the SAC to 3 o'clock.
-   :rtype: peak_orientation (float)
+   :rtype: float
 
 
 
@@ -1677,21 +2155,21 @@ Module Contents
    
    Calculates the gridness score in a grid cell SAC.
 
-   Briefly, the data in `image` is rotated in `step` amounts and
+   The data in `image` is rotated in `step` amounts and
    each rotated array is correlated with the original.
    The maximum of the values at 30, 90 and 150 degrees
    is the subtracted from the minimum of the values at 60, 120
    and 180 degrees to give the grid score.
 
    :param image: The spatial autocorrelogram
-   :type image: array_like
+   :type image: np.ndarray
    :param step: The amount to rotate the SAC in each step of the
-   :type step: int, optional
-   :param rotational correlation procedure:
+                rotational correlation procedure
+   :type step: int, default=30
 
    :returns: The gridscore, the correlation values at each
              `step` and the rotational array
-   :rtype: gridmeasures (3-tuple)
+   :rtype: 3-tuple
 
    .. rubric:: Notes
 
@@ -1700,9 +2178,13 @@ Module Contents
 
    .. seealso::
 
-      skimage.transform.rotate : for how the rotation of `image` is done
-      skimage.exposure.rescale_intensity : for the resscaling following
-      rotation
+      :obj:`skimage.transform.rotate`
+          for how the rotation of `image` is done
+
+      :obj:`skimage.exposure.rescale_intensity`
+          for the resscaling following
+
+      :obj:`rotation`
 
 
 
@@ -1723,14 +2205,54 @@ Module Contents
 
 .. py:function:: infill_ratemap(rmap)
 
+   
+   The ratemaps used in the phasePrecession2D class are a) super smoothed and
+   b) very large i.e. the bins per cm is low. This
+   results in firing fields that have lots of holes (nans) in them. We want to
+   smooth over these holes so we can construct measures such as the expected
+   rate in a given bin whilst also preserving whatever 'geometry' of the
+   environment exists in the ratemap as a result of where position has been
+   sampled. That is, if non-sampled positions are designated with nans, then we
+   want to smooth over those that in theory could have been sampled and keep
+   those that never could have been.
+
+   :param rmap: The ratemap to be filled
+   :type rmap: np.ndarray
+
+   :returns: The filled ratemap
+   :rtype: np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
 .. py:function:: kl_spatial_sparsity(pos_map)
 
    
-   Calculates a measure of spatial sampling of an arena by comparing the
-   given spatial sampling to a uniform one using kl divergence
+   Calculates the spatial sampling of an arena by comparing the
+   observed spatial sampling to an expected uniform one using kl divergence
 
    Data in pos_map should be unsmoothed (not checked) and the MapType should
    be POS (checked)
+
+   :param pos_map: The position map
+   :type pos_map: BinnedData
+
+   :returns: The spatial sparsity of the position map
+   :rtype: float
 
 
 
@@ -1756,19 +2278,16 @@ Module Contents
    two distributions.
 
    :param X: Vector of M variable values
-   :type X: array_like
-   :param P1: Length-M vector of probabilities representing
-   :type P1: array_like
-   :param distribution 1:
-   :param P2: Length-M vector of probabilities representing
-   :type P2: array_like
-   :param distribution 2:
-   :param sym: If 'sym', returns a symmetric variant of the
-               Kullback-Leibler divergence, given by [KL(P1,P2)+KL(P2,P1)]/2
-   :type sym: str, optional
-   :param js: If 'js', returns the Jensen-Shannon divergence,
-   :type js: str, optional
-   :param given by: [KL(P1,Q)+KL(P2,Q)]/2, where Q = (P1+P2)/2
+   :type X: np.ndarray
+   :param P1: Length-M vectors of probabilities representing distribution 1 and 2
+   :type P1: np.ndarray
+   :param P2: Length-M vectors of probabilities representing distribution 1 and 2
+   :type P2: np.ndarray
+   :param variant: If 'sym', returns a symmetric variant of the
+                   Kullback-Leibler divergence, given by [KL(P1,P2)+KL(P2,P1)]/2
+                   If 'js', returns the Jensen-Shannon divergence, given by
+                   [KL(P1,Q)+KL(P2,Q)]/2, where Q = (P1+P2)/2
+   :type variant: str, default 'sym'
 
    :returns: The Kullback-Leibler divergence or Jensen-Shannon divergence
    :rtype: float
@@ -1824,12 +2343,11 @@ Module Contents
    The larger the divergence the more tendancy the cell has to fire when the
    animal faces a specific direction.
 
-   :param polarPlot: The binned and smoothed directional ratemap
-   :type polarPlot: 1D-array
+   :param polarPlot np.ndarray: The binned and smoothed directional ratemap
 
    :returns: The divergence from circular of the 1D-array
              from a uniform circular distribution
-   :rtype: klDivergence (float)
+   :rtype: float
 
 
 
@@ -1851,11 +2369,22 @@ Module Contents
 .. py:function:: limit_to_one(A, prc=50, min_dist=5)
 
    
-   Processes a multi-peaked ratemap (ie grid cell) and returns a matrix
+   Processes a multi-peaked ratemap and returns a matrix
    where the multi-peaked ratemap consist of a single peaked field that is
    a) not connected to the border and b) close to the middle of the
    ratemap
 
+   :param A: The ratemap
+   :type A: np.ndarray
+   :param prc: The percentage of the peak rate to threshold the ratemap at
+   :type prc: int
+   :param min_dist: The minimum distance between peaks
+   :type min_dist: int
+
+   :returns: RegionProperties of the fields (list of RegionProperties)
+             The single peaked ratemap (np.ndarray)
+             The index of the field (int)
+   :rtype: tuple
 
 
 
@@ -1880,6 +2409,15 @@ Module Contents
    Locally thresholds a ratemap to take only the surrounding prc amount
    around any local peak
 
+   :param A: The ratemap
+   :type A: np.ndarray
+   :param prc: The percentage of the peak rate to threshold the ratemap at
+   :type prc: int
+   :param min_dist: The minimum distance between peaks
+   :type min_dist: int
+
+   :returns: The thresholded ratemap
+   :rtype: np.ndarray
 
 
 
@@ -1901,25 +2439,27 @@ Module Contents
 .. py:function:: partitionFields(binned_data, field_threshold_percent = 50, field_rate_threshold = 0.5, area_threshold=0.01)
 
    
-   Partitions fields.
-
    Partitions spikes into fields by finding the watersheds around the
    peaks of a super-smoothed ratemap
 
-   :param binned_data (BinnedData) - an instance of ephysiopy.common.utils.BinnedData:
-   :param field_threshold_percent (int) - removes pixels in a field that fall below this percent: of the maximum firing rate in the field
-   :param field_rate_threshold (float) - anything below this firing rate in Hz threshold is set to 0:
-   :param area_threshold (float) - defines the minimum field size as a proportion of the: environment size. Default of 0.01 says a field has to be at
-                                                                                          least 1% of the size of the environment i.e.
-                                                                                          binned_area_width * binned_area_height to be counted as a field
+   :param binned_data: an instance of ephysiopy.common.utils.BinnedData
+   :type binned_data: BinnedData
+   :param field_threshold_percent: removes pixels in a field that fall below this percent of the maximum firing rate in the field
+   :type field_threshold_percent: int
+   :param field_rate_threshold: anything below this firing rate in Hz threshold is set to 0
+   :type field_rate_threshold: float
+   :param area_threshold: defines the minimum field size as a proportion of the
+                          environment size. Default of 0.01 says a field has to be at
+                          least 1% of the size of the environment i.e.
+                          binned_area_width * binned_area_height to be counted as a field
+   :type area_threshold: float
 
-   :returns: peaksXY (array_like): The xy coordinates of the peak rates in
+   :returns: peaksXY - The xy coordinates of the peak rates in
              each field
-             peaksRate (array_like): The peak rates in peaksXY
-             labels (numpy.ndarray): An array of the labels corresponding to
-             each field (starting  1)
-             rmap (numpy.ndarray): The ratemap of the tetrode / cluster
-   :rtype: tuple[np.ndarray] - including
+             peaksRate - The peak rates in peaksXY
+             labels - An array of the labels corresponding to each field (starting  1)
+             rmap - The ratemap of the tetrode / cluster
+   :rtype: tuple of np.ndarray
 
 
 
@@ -1940,26 +2480,56 @@ Module Contents
 
 .. py:function:: reduce_labels(A, labels, reduce_by = 50)
 
+   
+   Reduce the labelled data in A by restricting the values to reduce_by % of
+   the maximum in each local labeled section of A - kind of a quantitative local watershed
+
+   :param A: The data to be reduced
+   :type A: np.ndarray
+   :param labels: The labels to be used to partition the data
+   :type labels: np.ndarray
+   :param reduce_by: The percentage of the maximum value in each label to reduce by
+   :type reduce_by: float
+
+   :returns: The reduced data
+   :rtype: list of np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
 .. py:function:: skaggs_info(ratemap, dwelltimes, **kwargs)
 
    
    Calculates Skaggs information measure
 
-   :param ratemap: The binned up ratemap
-   :type ratemap: array_like
-   :param dwelltimes: Must be same size as ratemap
-   :type dwelltimes: array_like
+   :param ratemap: The binned up ratemap and dwelltimes. Must be the same size
+   :type ratemap: np.ndarray
+   :param dwelltimes: The binned up ratemap and dwelltimes. Must be the same size
+   :type dwelltimes: np.ndarray
 
-   :returns: Skaggs information score
-   :rtype: bits_per_spike (float)
+   :returns: Skaggs information score in bits spike
+   :rtype: float
 
    .. rubric:: Notes
 
-   THIS DATA SHOULD UNDERGO ADAPTIVE BINNING
-   See getAdaptiveMap() in binning class
+   The ratemap data should have undergone adaptive binning as per
+   the original paper. See getAdaptiveMap() in binning class
 
-   Returns Skaggs et al's estimate of spatial information
-   in bits per spike:
+   The estimate of spatial information in bits per spike:
 
    .. math:: I = sum_{x} p(x).r(x).log(r(x)/r)
 

@@ -27,8 +27,11 @@ extensions = [
     "sphinx_autodoc_typehints",
     "sphinx.ext.viewcode",
     "numpydoc",
-    # "myst_parser",
+    "myst_parser",
     "autoapi.extension",
+    "sphinx_copybutton",
+    "sphinx-prompt",
+    "matplotlib.sphinxext.plot_directive",
 ]
 
 templates_path = ["_templates"]
@@ -60,11 +63,17 @@ autoapi_keep_files = True
 autoapi_root = "api"
 autoapi_member_order = "groupwise"
 autoapi_ignore = [
-    "../ephysiopy/scripts/",
-    "../ephysiopy/tests/",
-    "api/tests",
-    "api/scripts",
+    "*tests*",
+    "*__about__*",
+    # "*version*",
+    # "*setup*",
+    "*RENAME*",
+    "*scripts*",
+    # "*debug",
 ]
 
 # -- Options for autodoc -------------------------------------------------------
 autodoc_typehints = "description"  # uses type hints to render some documentation
+
+# -- Options for myst_parser -----------------------------------------------------
+myst_enable_extensions = ["colon_fence"]

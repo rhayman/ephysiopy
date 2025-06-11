@@ -613,7 +613,7 @@ Module Contents
    .. py:attribute:: timebase
 
 
-.. py:class:: Tetrode(filename_root, tetrode, volts=True)
+.. py:class:: Tetrode(filename_root, tetrode, volts = True)
 
    Bases: :py:obj:`IO`
 
@@ -653,13 +653,12 @@ Module Contents
       
       Apply a mask to the data
 
-      :param mask: The mask to be applied. For use with
-                   np.ma.MaskedArray's mask attribute
+      :param mask:
       :type mask: np.ndarray
+      :param The mask to be applied. For use with np.ma.MaskedArray's mask attribute:
 
-      :returns: None
+      .. rubric:: Notes
 
-      Note:
       The times inside the bounds are masked ie the mask is set to True
       The mask can be a list of tuples, in which case the mask is applied
       for each tuple in the list.
@@ -691,8 +690,8 @@ Module Contents
       :param cluster: The cluster whose position indices we want
       :type cluster: int
 
-      :returns: **pos_samples** -- The indices of the position samples, dtype is int
-      :rtype: ndarray
+      :returns: The indices of the position samples, dtype is int
+      :rtype: np.ndarray
 
 
 
@@ -750,8 +749,8 @@ Module Contents
       :param cluster: The cluster whose timestamps we want
       :type cluster: int
 
-      :returns: **clustTS** -- The timestamps
-      :rtype: ndarray
+      :returns: The timestamps
+      :rtype: np.ndarray
 
       .. rubric:: Notes
 

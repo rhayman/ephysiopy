@@ -66,8 +66,7 @@ Module Contents
 
 
    
-   Helper class that provides a standard way to create an ABC using
-   inheritance.
+   Empty Axona header class
 
 
 
@@ -103,8 +102,7 @@ Module Contents
 
 
    
-   Helper class that provides a standard way to create an ABC using
-   inheritance.
+   Empty Axona header class
 
 
 
@@ -134,8 +132,7 @@ Module Contents
 
 
    
-   Helper class that provides a standard way to create an ABC using
-   inheritance.
+   Empty EEG header class for Axona
 
 
 
@@ -165,8 +162,7 @@ Module Contents
 
 
    
-   Helper class that provides a standard way to create an ABC using
-   inheritance.
+   Empty EGF header class for Axona
 
 
 
@@ -196,8 +192,7 @@ Module Contents
 
 
    
-   Helper class that provides a standard way to create an ABC using
-   inheritance.
+   Empty LFP header class for Axona
 
 
 
@@ -262,8 +257,7 @@ Module Contents
 
 
    
-   Helper class that provides a standard way to create an ABC using
-   inheritance.
+   Empty .set header class for Axona
 
 
 
@@ -297,8 +291,7 @@ Module Contents
 
 
    
-   Helper class that provides a standard way to create an ABC using
-   inheritance.
+   Empty tetrode header class for Axona
 
 
 
@@ -324,9 +317,69 @@ Module Contents
 
 .. py:function:: make_cluster_cut_entries(n_clusters = 31, n_channels = 4, n_params = 2)
 
+   
+   Create the cluster entries for the cut file
+
+   :param n_clusters: Number of clusters
+   :type n_clusters: int
+   :param n_channels: Number of channels
+   :type n_channels: int
+   :param n_params: Number of parameters
+   :type n_params: int
+
+   :returns: String of the cluster entries for the cut file
+   :rtype: str
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
 .. py:function:: make_common_entries()
 
 .. py:function:: make_cut_header(n_clusters = 31, n_channels = 4, n_params = 2)
+
+   
+   Create the header part of the cut file
+
+   :param n_clusters: Number of clusters
+   :type n_clusters: int
+   :param n_channels: Number of channels
+   :type n_channels: int
+   :param n_params: Number of parameters
+   :type n_params: int
+
+   :returns: Dictionary of the cut file header
+   :rtype: dict
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
 
 .. py:function:: make_eeg_entries()
 
@@ -335,6 +388,27 @@ Module Contents
 .. py:function:: make_pos_entries()
 
 .. py:function:: make_set_entries()
+
+   
+   Create the set entries for the .set file
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
 
 .. py:function:: make_set_meta()
 

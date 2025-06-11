@@ -169,7 +169,8 @@ class IO(object):
             with redirect_stdout(f):
                 cut_header.print()
             print(cluster_entries, file=f)
-            print(f"Exact_cut_for: {fpath.stem}    spikes: {len(cut_data)}", file=f)
+            print(
+                f"Exact_cut_for: {fpath.stem}    spikes: {len(cut_data)}", file=f)
             for num in cut_data:
                 f.write(str(num))
                 f.write(" ")
@@ -219,7 +220,7 @@ class IO(object):
             f.close()
         if os.path.splitext(filename_root)[1] != ".set":
             st = data.find(b"data_start") + len("data_start")
-            header = data[0 : st - len("data_start") - 2]
+            header = data[0: st - len("data_start") - 2]
         else:
             header = data
         headerDict = {}
@@ -346,7 +347,8 @@ class Tetrode(IO):
         self.filename_root = filename_root
         self.tetrode = tetrode
         self.volts = volts
-        self.header = self.getHeader(self.filename_root.with_suffix("." + str(tetrode)))
+        self.header = self.getHeader(
+            self.filename_root.with_suffix("." + str(tetrode)))
         data = self.getData(filename_root.with_suffix("." + str(tetrode)))
         self.spike_times = np.ma.MaskedArray(data["ts"][::4])
         self.nChans = self.getHeaderVal(self.header, "num_chans")
@@ -354,7 +356,8 @@ class Tetrode(IO):
         self.nSpikes = self.getHeaderVal(self.header, "num_spikes")
         self.duration = self.getHeaderVal(self.header, "duration")
         self.posSampleRate = self.getHeaderVal(
-            self.getHeader(self.filename_root.with_suffix(".pos")), "sample_rate"
+            self.getHeader(self.filename_root.with_suffix(
+                ".pos")), "sample_rate"
         )
         self.waveforms = np.ma.MaskedArray(
             data["waveform"].reshape(self.nSpikes, self.nChans, self.samples)
@@ -376,6 +379,33 @@ class Tetrode(IO):
         self.cut = np.ma.MaskedArray(cut)
         self.clusters = np.unique(self.cut)
         self.pos_samples = None
+
+    def __add__(self, other):
+        """
+        Adds two Tetrode objects together
+
+        Parameters
+        ----------
+        other : Tetrode
+            The other Tetrode object to add
+
+        Returns
+        -------
+        Tetrode
+            A new Tetrode object with the combined data
+        """
+        if not isinstance(other, Tetrode):
+            raise TypeError("Can only add another Tetrode object")
+        if self.tetrode != other.tetrode:
+            raise ValueError("Tetrodes must be the same")
+        new_tet = Tetrode(self.filename_root, self.tetrode)
+        new_tet.spike_times = np.ma.concatenate(
+            (self.spike_times, other.spike_times + (self.duration * self.timebase))
+        )
+        new_tet.waveforms = np.ma.concatenate(
+            (self.waveforms, other.waveforms))
+        new_tet.cut = np.ma.concatenate((self.cut, other.cut))
+        return new_tet
 
     def getSpkTS(self) -> np.ma.MaskedArray:
         """
@@ -474,6 +504,28 @@ class Tetrode(IO):
             self.cut = cut
         return np.unique(self.cut)
 
+    def get_waveforms(self, cluster: int = None) -> np.ndarray:
+        """
+        Returns the waveforms for a cluster on the tetrode
+
+        Parameters
+        ----------
+        cluster : int, optional
+            The cluster whose waveforms we want. If None then all clusters
+            are returned
+
+        Returns
+        -------
+        np.ndarray
+            The waveforms for the cluster or all clusters if None was supplied
+        """
+        if self.cut is None:
+            cut = np.array(self.getCut(self.tetrode), dtype=int)
+            self.cut = cut
+        if cluster is None:
+            return self.waveforms
+        return self.waveforms[self.cut == cluster, :, :]
+
     def apply_mask(self, mask: np.ndarray, **kwargs):
         """Apply a mask to the data
 
@@ -537,7 +589,8 @@ class EEG(IO):
                 eeg_suffix = ".egf"
             else:
                 eeg_suffix = ".egf" + str(eeg_file)
-        self.header = self.getHeader(self.filename_root.with_suffix(eeg_suffix))
+        self.header = self.getHeader(
+            self.filename_root.with_suffix(eeg_suffix))
         self.eeg = self.getData(filename_root.with_suffix(eeg_suffix))["eeg"]
         # sometimes the eeg record is longer than reported in
         # the 'num_EEG_samples'
@@ -545,9 +598,9 @@ class EEG(IO):
         # to match 'num_EEG_samples'
         # TODO: this could be taken care of in the IO base class
         if egf:
-            self.eeg = self.eeg[0 : int(self.header["num_EGF_samples"])]
+            self.eeg = self.eeg[0: int(self.header["num_EGF_samples"])]
         else:
-            self.eeg = self.eeg[0 : int(self.header["num_EEG_samples"])]
+            self.eeg = self.eeg[0: int(self.header["num_EEG_samples"])]
         self.sample_rate = int(self.getHeaderVal(self.header, "sample_rate"))
         set_header = self.getHeader(self.filename_root.with_suffix(".set"))
         eeg_ch = int(set_header["EEG_ch_1"]) - 1
@@ -608,9 +661,10 @@ class Stim(dict, IO):
         # is not correct so we need to read this from the .set
         # file and update
         setHdr = self.getHeader(filename_root.with_suffix(".set"))
-        stim_duration = [setHdr[k] for k in setHdr.keys() if "stim_pwidth" in k][0]
+        stim_duration = [setHdr[k]
+                         for k in setHdr.keys() if "stim_pwidth" in k][0]
         stim_duration = int(stim_duration)
-        stim_duration = stim_duration  # in seconds
+        stim_duration = stim_duration / 1000000  # in seconds
         self.__setitem__("stim_duration", stim_duration)
 
     def update(self, *args, **kwargs):
@@ -668,7 +722,7 @@ class ClusterSession(object):
         for fname in tet_files:
             T = IO(fname)
             idx = fname.rfind(".")
-            tetnum = int(fname[idx + 1 :])
+            tetnum = int(fname[idx + 1:])
             cut = T.getCut(tetnum)
             tetrode_clusters[tetnum] = cut
 

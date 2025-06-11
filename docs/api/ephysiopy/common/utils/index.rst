@@ -56,10 +56,67 @@ Module Contents
 
 .. py:class:: BinnedData
 
+   
+   A dataclass to store binned data. The binned data is stored in a list of numpy
+   arrays. The bin edges are stored in a list of numpy arrays. The variable to bin
+   is stored as an instance of the VariableToBin enum. The map type is stored as an
+   instance of the MapType enum. The binned data and bin edges are initialized as
+   empty lists. bin_units is how to conver the binned data
+   to "real" units e.g. for XY it might be how to convert to cms, for time to seconds
+   etc. You multiply the binned data by that number to get the real values. Note that
+   this might not make sense/ be obvious for some binning (i.e. SPEED_DIR)
+
+   The BinnedData class is the output of the main binning function in the
+   ephysiopy.common.binning.RateMap class. It is used to store the binned data as a
+   convenience mostly for easily iterating over the binned data and using the bin_edges
+   to plot the data. As such, it is used as a convenience for plotting as the bin edges
+   are used when calling pcolormesh in the plotting functions.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
    .. py:method:: T()
 
 
    .. py:method:: __add__(other)
+
+      
+      Adds the binned_data of another BinnedData instance
+      to the binned_data of this instance.
+
+      :param other: The instance to add to the current one
+      :type other: BinnedData
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:method:: __assert_equal_bin_edges__(other)
@@ -67,8 +124,54 @@ Module Contents
 
    .. py:method:: __eq__(other)
 
+      
+      Checks for equality of two instances of BinnedData
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: __getitem__(i)
+
+      
+      Returns a specified index of the binned_data as a BinnedData instance. The data
+      in binned_data is a deep copy of the original so can be modified without
+      affecting the original.
+
+      :param i: The index of binned_data to return
+      :type i: int
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:method:: __iter__()
@@ -78,6 +181,33 @@ Module Contents
 
 
    .. py:method:: __truediv__(other)
+
+      
+      Divides the binned data by the binned data of
+      another BinnedData instance i.e. spike data / pos data to get a rate map. I've
+      added a check to this for instances where the length of the binned data in the
+      numerator (i.e. binned spike arrays) is greater than the length of the denominator
+      (i.e.the binned position array).
+
+      :param other: the denominator
+      :type other: BinnedData
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:method:: correlate(other=None, as_matrix=False)
@@ -96,10 +226,8 @@ Module Contents
                         self.binned_data are returned.
       :type as_matrix: bool
 
-      :returns:
-
-                A new BinnedData instance with the correlation of the
-                    binned data of this instance and the other instance.
+      :returns: A new BinnedData instance with the correlation of the
+                binned data of this instance and the other instance.
       :rtype: BinnedData
 
 
@@ -121,6 +249,29 @@ Module Contents
 
 
    .. py:method:: set_nan_indices(indices)
+
+      
+      Sets the values of the binned data at the specified indices to NaN.
+
+      :param indices: The indices to convert to NaN
+      :type indices: np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:attribute:: bin_edges
@@ -149,9 +300,8 @@ Module Contents
 
 
    
-   Generic enumeration.
+   A human readable representation of the map type
 
-   Derive from this class to define new enumerations.
 
 
 
@@ -202,6 +352,32 @@ Module Contents
 
 .. py:class:: TrialFilter(name, start, end)
 
+   
+   A basic dataclass for holding filter values
+
+   Units:
+   time: seconds
+   dir: degrees
+   speed: cm/s
+   xrange/ yrange: cm
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
    .. py:attribute:: end
       :type:  float | str
 
@@ -220,9 +396,8 @@ Module Contents
 
 
    
-   Generic enumeration.
+   Holds a human readable representation of the variable being binned
 
-   Derive from this class to define new enumerations.
 
 
 
@@ -305,7 +480,8 @@ Module Contents
 .. py:function:: blur_image(im, n, ny = 0, ftype = 'boxcar', **kwargs)
 
    
-   Smooths a 2D image by convolving with a filter.
+   Smooths all the binned_data in an instance of BinnedData
+   by convolving with a filter.
 
    :param im: Contains the array to smooth.
    :type im: BinnedData
@@ -313,12 +489,11 @@ Module Contents
    :type n: int
    :param ny: The size of the smoothing kernel.
    :type ny: int
-   :param ftype: The type of smoothing kernel.
-                 Either 'boxcar' or 'gaussian'.
+   :param ftype: The type of smoothing kernel. Either 'boxcar' or 'gaussian'.
    :type ftype: str
 
    :returns: BinnedData instance with the smoothed data.
-   :rtype: res (BinnedData)
+   :rtype: BinnedData
 
    .. rubric:: Notes
 
@@ -349,16 +524,16 @@ Module Contents
    A pixel is part of an object perimeter if its value is one and there
    is at least one zero-valued pixel in its neighborhood.
 
-   By default the neighborhood of a pixel is 4 nearest pixels, but
-   if `n` is set to 8 the 8 nearest pixels will be considered.
+   By default, the neighborhood of a pixel is 4 nearest pixels, but
+   if `n` is set to 8, the 8 nearest pixels will be considered.
 
    :param bw: A black-and-white image.
    :type bw: array_like
-   :param n: Connectivity. Must be 4 or 8. Default is 8.
+   :param n: Connectivity. Must be 4 or 8. Default is 4.
    :type n: int, optional
 
-   :returns: A boolean image.
-   :rtype: perim (array_like)
+   :returns: **perim** -- A boolean image.
+   :rtype: array_like
 
 
 
@@ -379,7 +554,62 @@ Module Contents
 
 .. py:function:: cart2pol(x, y)
 
+   
+   Convert Cartesian coordinates to polar coordinates.
+
+   :param x: X coordinate(s).
+   :type x: float or np.ndarray
+   :param y: Y coordinate(s).
+   :type y: float or np.ndarray
+
+   :returns: * **r** (*float or np.ndarray*) -- Radial coordinate(s).
+             * **th** (*float or np.ndarray*) -- Angular coordinate(s) in radians.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
 .. py:function:: circ_abs(x)
+
+   
+   Calculate the absolute value of an angle in radians,
+   normalized to the range [-pi, pi].
+
+   :param x: Angle(s) in radians.
+   :type x: float or np.ndarray
+
+   :returns: Absolute value of the angle(s) normalized to the range [-pi, pi].
+   :rtype: float or np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
 
 .. py:function:: clean_kwargs(func, kwargs)
 
@@ -391,8 +621,7 @@ Module Contents
 
    :param func: The function to check for keyword arguments.
    :type func: function
-   :param kwargs: The keyword arguments to check.
-   :type kwargs: dict
+   :param \*\*kwargs: The keyword arguments to check.
 
    :returns: A dictionary containing only the keyword arguments that are
              accepted by the function.
@@ -418,8 +647,26 @@ Module Contents
 .. py:function:: corr_maps(map1, map2, maptype='normal')
 
    
-   correlates two ratemaps together ignoring areas that have zero sampling
+   Correlates two rate maps together, ignoring areas that have zero sampling.
 
+   :param map1: The first rate map to correlate.
+   :type map1: np.ndarray
+   :param map2: The second rate map to correlate.
+   :type map2: np.ndarray
+   :param maptype: The type of correlation to perform. Options are "normal" and "grid".
+                   Default is "normal".
+   :type maptype: str, optional
+
+   :returns: The correlation coefficient between the two rate maps.
+   :rtype: float
+
+   .. rubric:: Notes
+
+   If the shapes of the input maps are different, the smaller map will be
+   resized to match the shape of the larger map using reflection mode.
+
+   The "normal" maptype considers non-zero and non-NaN values for correlation,
+   while the "grid" maptype considers only finite values.
 
 
 
@@ -441,15 +688,14 @@ Module Contents
 .. py:function:: count_runs_and_unique_numbers(arr)
 
    
-   Counts the number of continuous runs of numbers in a 1D numpy array
-   and returns the count of runs for each unique number and the unique
-   numbers.
+   Counts the number of continuous runs of numbers in a 1D numpy array.
 
    :param arr: The input 1D numpy array of numbers.
    :type arr: np.ndarray
 
-   :returns: A tuple containing a dictionary with the count of runs for
-             each unique number and the set of unique numbers in the array.
+   :returns: A tuple containing:
+             - dict: A dictionary with the count of runs for each unique number.
+             - set: The set of unique numbers in the array.
    :rtype: tuple
 
 
@@ -476,10 +722,11 @@ Module Contents
    It seems to be faster for some possible inputs and encapsulates
    a task in a function.
 
-   .. rubric:: Example
+   .. rubric:: Examples
 
-   Given n = [0, 0, 3, 0, 0, 2, 0, 2, 1],
-   the result would be [0, 1, 2, 0, 1, 0, 1, 0].
+   >>> n = np.array([0, 0, 3, 0, 0, 2, 0, 2, 1])
+   >>> count_to(n)
+   array([0, 1, 2, 0, 1, 0, 1, 0])
 
 
 
@@ -500,10 +747,55 @@ Module Contents
 
 .. py:function:: fileContainsString(pname, searchStr)
 
+   
+   Checks if the search string is contained in a file
+
+   :param pname: The file to look in
+   :type pname: str
+   :param searchStr: The string to look for
+   :type searchStr: str
+
+   :returns: Whether the string was found or not
+   :rtype: bool
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
 .. py:function:: find_runs(x)
 
    
    Find runs of consecutive items in an array.
+
+   :param x: The array to search for runs in
+   :type x: np.ndarray, list
+
+   :returns: * **run_values** (*np.ndarray*) -- the values of each run
+             * **run_starts** (*np.ndarray*) -- the indices into x at which each run starts
+             * **run_lengths** (*np.ndarray*) -- The length of each run
+
+   .. rubric:: Examples
+
+   >>> n = np.array([0, 0, 3, 3, 0, 2, 0,0, 1])
+   >>> find_runs(n)
+   (array([0, 3, 0, 2, 0, 1]),
+   array([0, 2, 4, 5, 6, 8]),
+   array([2, 2, 1, 1, 2, 1]))
+
+   .. rubric:: Notes
 
    Taken from:
    https://gist.github.com/alimanfoo/c5977e87111abe8127453b21204c1065
@@ -528,9 +820,13 @@ Module Contents
 .. py:function:: fixAngle(a)
 
    
-   Ensure angles lie between -pi and pi
-   a must be in radians
+   Ensure angles lie between -pi and pi.
 
+   :param a: Angle(s) in radians.
+   :type a: float or np.ndarray
+
+   :returns: Angle(s) normalized to the range [-pi, pi].
+   :rtype: float or np.ndarray
 
 
 
@@ -551,16 +847,109 @@ Module Contents
 
 .. py:function:: flatten_list(list_to_flatten)
 
+   
+   Flattens a list of lists
+
+   :param list_to_flatten: the list to flatten
+   :type list_to_flatten: list
+
+   :returns: The flattened list
+   :rtype: list
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
 .. py:function:: getLabelEnds(x)
+
+   
+   Get the indices of the end of contiguous runs of non-zero values
+   in a 1D numpy array.
+
+   :param x: The input 1D numpy array.
+   :type x: np.ndarray
+
+   :returns: An array of indices marking the end of each contiguous run of
+             non-zero values.
+   :rtype: np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
 
 .. py:function:: getLabelStarts(x)
 
-.. py:function:: get_z_score(x, mean=None, sd=None, axis=0)
+   
+   Get the indices of the start of contiguous runs of non-zero values in a
+   1D numpy array.
+
+   :param x: The input 1D numpy array.
+   :type x: np.ndarray
+
+   :returns: An array of indices marking the start of each contiguous run of
+             non-zero values.
+   :rtype: np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: get_z_score(x, mean=None, sd=None, axis = 0)
 
    
    Calculate the z-scores for array x based on the mean
    and standard deviation in that sample, unless stated
 
+   :param x: The array to z-score
+   :type x: np.ndarray
+   :param mean: The mean of x. Calculated from x if not provided
+   :type mean: float, optional
+   :param sd: The standard deviation of x. Calculated from x if not provided
+   :type sd: float, optional
+   :param axis: The axis along which to operate
+   :type axis: int
+
+   :returns: The z-scored version of the input array x
+   :rtype: np.ndarray
 
 
 
@@ -581,16 +970,15 @@ Module Contents
 
 .. py:function:: labelContigNonZeroRuns(x)
 
-.. py:function:: labelledCumSum(X, L)
-
-.. py:function:: mean_norm(x, mn=None, axis=0)
-
-.. py:function:: memmapBinaryFile(path2file, n_channels=384, **kwargs)
-
    
-   Returns a numpy memmap of the int16 data in the
-   file path2file, if present
+   Label contiguous non-zero runs in a 1D numpy array.
 
+   :param x: The input 1D numpy array.
+   :type x: np.ndarray
+
+   :returns: An array where each element is labeled with an integer representing
+             the contiguous non-zero run it belongs to.
+   :rtype: np.ndarray
 
 
 
@@ -609,17 +997,120 @@ Module Contents
    ..
        !! processed by numpydoc !!
 
-.. py:function:: min_max_norm(x, min=None, max=None, axis=0)
+.. py:function:: labelledCumSum(X, L)
+
+   
+   Compute the cumulative sum of an array with labels, resetting the
+   sum at label changes.
+
+   :param X: Input array to compute the cumulative sum.
+   :type X: np.ndarray
+   :param L: Label array indicating where to reset the cumulative sum.
+   :type L: np.ndarray
+
+   :returns: The cumulative sum array with resets at label changes, masked
+             appropriately.
+   :rtype: np.ma.MaskedArray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: mean_norm(x, mn=None, axis = 0)
+
+   
+   Mean normalise an input array
+
+   :param x: The array t normalise
+   :type x: np.ndarray
+   :param mn: The mean of x
+   :type mn: float, optional
+   :param axis: The axis along which to operate
+   :type axis: int
+
+   :returns: The mean normalised version of the input array
+   :rtype: np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: memmapBinaryFile(path2file, n_channels=384, **kwargs)
+
+   
+   Returns a numpy memmap of the int16 data in the
+   file path2file, if present
+
+   :param path2file: The location of the file to be mapped
+   :type path2file: Path
+   :param n_channels: the number of channels (size of the second dimension)
+   :type n_channels: int
+   :param \*\*kwargs:
+                      'data_type' : np.dtype, default np.int16
+                          The data type of the file to be mapped.
+
+   :returns: The memory mapped data file
+   :rtype: np.memmap
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: min_max_norm(x, min=None, max=None, axis = 0)
 
    
    Normalise the input array x to lie between min and max
 
-   :param x (np.ndarray) - the array to normalise:
-   :param min (float) - the minimun value in the returned array:
-   :param max (float) - the maximum value in the returned array:
-   :param axis - the axis along which to operate. Default 0:
+   :param x: the array to normalise
+   :type x: np.ndarray
+   :param min: the minimun value in the returned array
+   :type min: float
+   :param max: the maximum value in the returned array
+   :type max: float
+   :param axis: the axis along which to operate. Default 0
+   :type axis: int
 
-   :rtype: out (np.ndarray) - the normalised array
+   :returns: the normalised array
+   :rtype: np.ndarray
 
 
 
@@ -640,20 +1131,48 @@ Module Contents
 
 .. py:function:: pol2cart(r, theta)
 
+   
+   Convert polar coordinates to Cartesian coordinates.
+
+   :param r: Radial coordinate(s).
+   :type r: float or np.ndarray
+   :param theta: Angular coordinate(s) in radians.
+   :type theta: float or np.ndarray
+
+   :returns: * **x** (*float or np.ndarray*) -- X coordinate(s).
+             * **y** (*float or np.ndarray*) -- Y coordinate(s).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
 .. py:function:: polar(x, y, deg=False)
 
    
    Converts from rectangular coordinates to polar ones.
 
-   :param x: The x and y coordinates.
-   :type x: array_like, list_like
-   :param y: The x and y coordinates.
-   :type y: array_like, list_like
-   :param deg: Radian if deg=0; degree if deg=1.
-   :type deg: int
+   :param x: The x coordinates.
+   :type x: array_like
+   :param y: The y coordinates.
+   :type y: array_like
+   :param deg: If True, returns the angle in degrees. Default is False (radians).
+   :type deg: bool, optional
 
-   :returns: The polar version of x and y.
-   :rtype: p (array_like)
+   :returns: * **r** (*array_like*) -- The radial coordinates.
+             * **theta** (*array_like*) -- The angular coordinates.
 
 
 
@@ -675,10 +1194,21 @@ Module Contents
 .. py:function:: rect(r, w, deg=False)
 
    
-   Convert from polar (r,w) to rectangular (x,y)
-   x = r cos(w)
-   y = r sin(w)
+   Convert from polar (r, w) to rectangular (x, y) coordinates.
 
+   :param r: Radial coordinate(s).
+   :type r: float or np.ndarray
+   :param w: Angular coordinate(s).
+   :type w: float or np.ndarray
+   :param deg: If True, `w` is in degrees. Default is False (radians).
+   :type deg: bool, optional
+
+   :returns: A tuple containing:
+             - x : float or np.ndarray
+                 X coordinate(s).
+             - y : float or np.ndarray
+                 Y coordinate(s).
+   :rtype: tuple
 
 
 
@@ -702,6 +1232,15 @@ Module Contents
    
    Remap the values of x to the range [new_min, new_max].
 
+   :param x: the array to remap
+   :type x: np.ndarray
+   :param new_min: the minimun value in the returned array
+   :type new_min: float
+   :param max: the maximum value in the returned array
+   :type max: float
+
+   :returns: The remapped values
+   :rtype: np.ndarray
 
 
 
@@ -723,19 +1262,27 @@ Module Contents
 .. py:function:: repeat_ind(n)
 
    
-   .. rubric:: Examples
-
-   >>> n = [0, 0, 3, 0, 0, 2, 0, 2, 1]
-   >>> res = repeat_ind(n)
-   >>> res = [2, 2, 2, 5, 5, 7, 7, 8]
+   Repeat a given index a specified number of times.
 
    The input specifies how many times to repeat the given index.
    It is equivalent to something like this:
 
-       hstack((zeros(n_i,dtype=int)+i for i, n_i in enumerate(n)))
+   hstack((zeros(n_i,dtype=int)+i for i, n_i in enumerate(n)))
 
    But this version seems to be faster, and probably scales better.
    At any rate, it encapsulates a task in a function.
+
+   :param n: A 1D array where each element specifies the number of times to repeat its index.
+   :type n: np.ndarray
+
+   :returns: A 1D array with indices repeated according to the input array.
+   :rtype: np.ndarray
+
+   .. rubric:: Examples
+
+   >>> n = np.array([0, 0, 3, 0, 0, 2, 0, 2, 1])
+   >>> repeat_ind(n)
+   array([2, 2, 2, 5, 5, 7, 7, 8])
 
 
 
@@ -770,7 +1317,7 @@ Module Contents
    :type fill_value: int
 
    :returns: The shifted vector.
-   :rtype: array_like
+   :rtype: np.ndarray
 
 
 
@@ -800,7 +1347,7 @@ Module Contents
    in the beginning and end part of the output signal.
 
    :param x: The input signal.
-   :type x: array_like
+   :type x: np.ndarray
    :param window_len: The length of the smoothing window.
    :type window_len: int
    :param window: The type of window from 'flat', 'hanning', 'hamming',
@@ -809,18 +1356,15 @@ Module Contents
    :type window: str
 
    :returns: The smoothed signal.
-   :rtype: out (array_like)
+   :rtype: np.ndarray
 
-   .. rubric:: Example
+   .. rubric:: Examples
 
    >>> t=linspace(-2,2,0.1)
    >>> x=sin(t)+randn(len(t))*0.1
    >>> y=smooth(x)
 
-   .. seealso::
-
-      numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman,
-      numpy.convolve, scipy.signal.lfilter
+   .. seealso:: :obj:`numpy.hanning`, :obj:`numpy.hamming`, :obj:`numpy.bartlett`, :obj:`numpy.blackman`, :obj:`numpy.convolve`, :obj:`scipy.signal.lfilter`
 
    .. rubric:: Notes
 
@@ -847,9 +1391,16 @@ Module Contents
 .. py:function:: window_rms(a, window_size)
 
    
-   Returns the root mean square of the input a over a window of
+   Calculates the root mean square of the input a over a window of
    size window_size
 
+   :param a: The input array
+   :type a: np.ndarray
+   :param window_size: The size of the smoothing window
+   :type window_size: int, float
+
+   :returns: The rms'd result
+   :rtype: np.ndarray
 
 
 

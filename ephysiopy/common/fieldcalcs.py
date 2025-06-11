@@ -692,7 +692,7 @@ class FieldProps(RegionProperties):
     # The angle each point on the perimeter makes to the field peak
     @property
     def perimeter_angle_from_peak(self) -> np.ndarray:
-        perimeter_minus_field_max = self.perimeter_minus_field_max()
+        perimeter_minus_field_max = self.perimeter_minus_field_max
         return np.arctan2(perimeter_minus_field_max[0], perimeter_minus_field_max[1])
 
     # The distance of each point on the perimeter to the field peak
@@ -947,10 +947,12 @@ def fieldprops(
             inconsistent handling of images with singleton dimensions. To
             recover the old behaviour, use
             ``regionprops(np.squeeze(label_image), ...)``.
-    xy : (2 x N) ndarray
+    xy : (2 x n_samples) np.ndarray
         The x-y coordinates for all runs through the field corresponding to
         a particular label
     binned_data : BinnedData instance from ephysiopy.common.utils
+    spikes_per_pos : np.ndarray
+        The number of spikes emitted at each position sample, length = n_samples
     cache : bool, optional
         Determine whether to cache calculated properties. The computation is
         much faster for cached properties, whereas the memory consumption
@@ -1174,10 +1176,9 @@ def fieldprops(
     42
 
     """
-
     assert label_image.shape == binned_data.binned_data[0].shape
-    if spikes_per_pos is not None:
-        assert len(spikes_per_pos) == xy.shape[1]
+    spikes_per_pos = np.ravel(spikes_per_pos)
+    assert len(spikes_per_pos) == xy.shape[1]
 
     if label_image.ndim not in (2, 3):
         raise TypeError("Only 2-D and 3-D images supported.")
@@ -1373,14 +1374,13 @@ def partitionFields(
         rmap - The ratemap of the tetrode / cluster
     """
     ye, xe = binned_data.bin_edges
-    rmap = binned_data[0]
     # start image processing:
     # Usually the binned_data has a large number of bins which potentially
     # leaves lots of "holes" in the ratemap (nans) as there will be lots of
     # positions that aren't sampled. Get over this by preserving areas outside
     # the sampled area as nans whilst filling in the nans that live within the
     # receptive fields
-    rmap_filled = infill_ratemap(rmap.binned_data)
+    rmap_filled = infill_ratemap(binned_data.binned_data[0])
     # get the labels
     # binarise the ratemap so that anything above field_rate_threshold is set to 1
     # and anything below to 0
@@ -1461,7 +1461,7 @@ def get_mean_resultant(ego_boundary_map: np.ndarray) -> np.complex128 | float:
 
     Returns
     -------
-    float 
+    float
         The mean resultant vector of the egocentric boundary map
 
     Notes
@@ -1480,8 +1480,8 @@ def get_mean_resultant(ego_boundary_map: np.ndarray) -> np.complex128 | float:
 
 
 def get_mean_resultant_length(ego_boundary_map: np.ndarray, **kwargs) -> float:
-    '''
-    Calculates the length of the mean resultant vector of a 
+    """
+    Calculates the length of the mean resultant vector of a
     boundary map in egocentric coordinates
 
     Parameters
@@ -1491,21 +1491,21 @@ def get_mean_resultant_length(ego_boundary_map: np.ndarray, **kwargs) -> float:
 
     Returns
     -------
-    float 
+    float
         The length of the mean resultant vector of the egocentric boundary map
 
     Notes
     -----
     See Hinman et al., 2019 for more details
 
-    '''
+    """
     MR = get_mean_resultant(ego_boundary_map, **kwargs)
     return np.abs(MR)
 
 
 def get_mean_resultant_angle(ego_boundary_map: np.ndarray, **kwargs) -> float:
-    '''
-    Calculates the angle of the mean resultant vector of a 
+    """
+    Calculates the angle of the mean resultant vector of a
     boundary map in egocentric coordinates
 
     Parameters
@@ -1515,14 +1515,14 @@ def get_mean_resultant_angle(ego_boundary_map: np.ndarray, **kwargs) -> float:
 
     Returns
     -------
-    float 
+    float
         The angle mean resultant vector of the egocentric boundary map
 
     Notes
     -----
     See Hinman et al., 2019 for more details
 
-    '''
+    """
     MR = get_mean_resultant(ego_boundary_map, **kwargs)
     return np.rad2deg(np.arctan2(np.imag(MR), np.real(MR)))
 
@@ -1641,7 +1641,7 @@ def limit_to_one(A, prc=50, min_dist=5):
     return central_field_props, central_field, central_field_idx
 
 
-def global_threshold(A, prc=50, min_dist=5)->int:
+def global_threshold(A, prc=50, min_dist=5) -> int:
     """
     Globally thresholds a ratemap and counts number of fields found
 
@@ -1682,7 +1682,7 @@ def global_threshold(A, prc=50, min_dist=5)->int:
     return nFields
 
 
-def local_threshold(A, prc=50, min_dist=5)->np.ndarray:
+def local_threshold(A, prc=50, min_dist=5) -> np.ndarray:
     """
     Locally thresholds a ratemap to take only the surrounding prc amount
     around any local peak
@@ -1701,7 +1701,7 @@ def local_threshold(A, prc=50, min_dist=5)->np.ndarray:
     np.ndarray
         The thresholded ratemap
 
-    """`
+    """
     Ac = A.copy()
     nanidx = np.isnan(Ac)
     Ac[nanidx] = 0
@@ -1906,7 +1906,7 @@ def border_score(
     field_sizes /= binSize
     if not np.any(field_sizes) > (minArea / binSize):
         warnings.warn(
-            f"No fields bigger than the minimum size of {minArea/binSize} (minArea/binSize) could be found"
+            f"No fields bigger than the minimum size of {minArea / binSize} (minArea/binSize) could be found"
         )
         return np.nan
 
@@ -2303,7 +2303,7 @@ def kldiv(
     if (np.abs(np.sum(pvect1) - 1) > 0.00001) or (np.abs(np.sum(pvect2) - 1) > 0.00001):
         print(f"Probabilities sum to {np.abs(np.sum(pvect1))} for pvect1")
         print(f"Probabilities sum to {np.abs(np.sum(pvect2))} for pvect2")
-        warnings.warn("Probabilities don" "t sum to 1.", UserWarning)
+        warnings.warn("Probabilities dont sum to 1.", UserWarning)
     if variant:
         if variant == "js":
             logqvect = np.log2((pvect2 + pvect1) / 2)
@@ -2378,7 +2378,7 @@ def grid_field_props(A: BinnedData, maxima="centroid", allProps=True, **kwargs):
     maxima (str, optional): The method used to detect the peaks in the SAC.
             Legal values are 'single' and 'centroid'. Default 'centroid'
     allProps : bool default=True
-        Whether to return a dictionary that contains the attempt to fit 
+        Whether to return a dictionary that contains the attempt to fit
         an ellipse around the edges of the central size peaks. See below
 
     Returns
@@ -2606,7 +2606,7 @@ def grid_orientation(peakCoords, closestPeakIdx):
         return np.sort(theta.compress(theta >= 0))[0]
 
 
-def gridness(image, step=30)->tuple:
+def gridness(image, step=30) -> tuple:
     """
     Calculates the gridness score in a grid cell SAC.
 
@@ -2737,7 +2737,7 @@ def get_circular_regions(A: np.ndarray, **kwargs) -> list:
     Returns a list of images which are expanding circular
     regions centred on the middle of the image out to the
     image edge. Used for calculating the grid score of each
-    image to find the one with the max grid score. 
+    image to find the one with the max grid score.
 
     Parameters
     ----------
@@ -2754,7 +2754,6 @@ def get_circular_regions(A: np.ndarray, **kwargs) -> list:
         original SAC
     """
     from skimage.measure import CircleModel, grid_points_in_poly
-
 
     min_radius = kwargs.get("min_radius", 5)
 
@@ -2774,8 +2773,8 @@ def get_circular_regions(A: np.ndarray, **kwargs) -> list:
     return result
 
 
-def get_basic_gridscore(A: np.ndarray, **kwargs)->float:
-    '''
+def get_basic_gridscore(A: np.ndarray, **kwargs) -> float:
+    """
     Calculates the grid score of a spatial autocorrelogram
 
     Parameters
@@ -2788,7 +2787,7 @@ def get_basic_gridscore(A: np.ndarray, **kwargs)->float:
     float
         The grid score of the SAC
 
-    '''
+    """
     return gridness(A, **kwargs)[0]
 
 
@@ -2816,7 +2815,7 @@ def get_expanding_circle_gridscore(A: np.ndarray, **kwargs):
     return max(gridscores)
 
 
-def get_deformed_sac_gridscore(A: np.ndarray)->float:
+def get_deformed_sac_gridscore(A: np.ndarray) -> float:
     """
     Deforms a non-circular SAC into a circular SAC (circular meaning
     the ellipse drawn around the edges of the 6 nearest peaks to the

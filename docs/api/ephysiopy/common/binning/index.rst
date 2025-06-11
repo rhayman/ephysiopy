@@ -181,7 +181,7 @@ Module Contents
                   thrown up by the fft. Default 1e-10
       :type tol: float, optional
 
-      :returns: **sac** -- The spatial autocorrelation
+      :returns: The spatial autocorrelation
       :rtype: np.ndarray
 
       .. rubric:: Notes
@@ -220,8 +220,8 @@ Module Contents
       :param weights: The weights attributed to the samples in var
       :type weights: np.ndarray
 
-      :returns: **binned_data** -- The binned variable and the bin edges
-      :rtype: tuple[np.ndarray, ...]
+      :returns: The binned variable and the bin edges
+      :rtype: tuple of np.ndarray
 
       .. rubric:: Notes
 
@@ -314,8 +314,8 @@ Module Contents
       :param xy_binsize: the binsize
       :type xy_binsize: float
 
-      :returns: **angles** -- the angles as well as the arena x-y coordinates.
-      :rtype: tuple[np.ndarray,...]
+      :returns: the angles as well as the arena x-y coordinates.
+      :rtype: tupleof np.ndarray
 
       .. rubric:: Notes
 
@@ -355,7 +355,7 @@ Module Contents
       :param tol: values below this are set to 0.
       :type tol: float
 
-      :returns: **binned_data** -- the data in A with the maps replaced by autocorrelograms
+      :returns: the data in A with the maps replaced by autocorrelograms
       :rtype: BinnedData
 
 
@@ -415,7 +415,7 @@ Module Contents
       :param tol: Tolerance below which values are set to 0.
       :type tol: float
 
-      :returns: **data** -- The data in A with the maps replaced by autocorrelograms
+      :returns: The data in A with the maps replaced by autocorrelograms
       :rtype: BinnedData
 
 
@@ -452,7 +452,7 @@ Module Contents
       :param tol: values below this are set to 0.
       :type tol: float
 
-      :returns: **binned_data** -- the data in A with the maps replaced by autocorrelograms
+      :returns: the data in A with the maps replaced by autocorrelograms
       :rtype: BinnedData
 
 
@@ -489,7 +489,7 @@ Module Contents
                     samples so this is a factor of 50 smaller than the original paper's value, given 50Hz sample rate)
       :type alpha: int, optional
 
-      :returns: **adaptive_map** -- The adaptively binned spike and pos maps.
+      :returns: The adaptively binned spike and pos maps.
                 Use this to generate Skaggs information measure
       :rtype: tuple of np.ndarray
 
@@ -556,7 +556,7 @@ Module Contents
       :param pos_times: vector of position times (in seconds)
       :type pos_times: np.ndarray
 
-      :returns: **dispersion_map** -- the overdispersion map in an instance of BinnedData
+      :returns: the overdispersion map in an instance of BinnedData
       :rtype: BinnedData
 
 
@@ -602,7 +602,7 @@ Module Contents
       :param smoothing: Optional. Smooth the data or not. Default True.
       :type smoothing: bool
 
-      :returns: **binned_data** -- An instance of BinnedData containing the binned data, the bin edges, the variable binned and
+      :returns: An instance of BinnedData containing the binned data, the bin edges, the variable binned and
                 the map type. See ephysiopy.common.utils for details of the class.
       :rtype: BinnedData
 
@@ -648,8 +648,8 @@ Module Contents
       :param downsampfreq: Optional. How much to downsample. Default 50
       :type downsampfreq: int
 
-      :returns: **H** -- the temporal windowed SAC
-      :rtype: array_like
+      :returns: the temporal windowed SAC
+      :rtype: np.ndarray
 
 
 

@@ -63,19 +63,111 @@ Module Contents
        Philos Trans R Soc Lond B Biol Sci. 2013 Dec 23;369(1635):20120532.
        doi: 10.1098/rstb.2012.0532.
 
-   :param lfp_sig: The LFP signal against which cells might precess...
-   :type lfp_sig: np.array
+   :param lfp_sig: The LFP signal
+   :type lfp_sig: np.ndarray
    :param lfp_fs: The sampling frequency of the LFP signal
    :type lfp_fs: int
    :param xy: The position data as 2 x num_position_samples
-   :type xy: np.array
+   :type xy: np.ndarray
    :param spike_ts: The times in samples at which the cell fired
-   :type spike_ts: np.array
+   :type spike_ts: np.ndarray
    :param pos_ts: The times in samples at which position was captured
-   :type pos_ts: np.array
+   :type pos_ts: np.ndarray
    :param pp_config: Contains parameters for running the analysis.
                      See phase_precession_config dict in ephysiopy.common.eegcalcs
    :type pp_config: dict
+   :param regressors: A list of the regressors to use in the analysis
+   :type regressors: list
+
+   .. attribute:: orig_xy
+
+      The original position data
+
+      :type: np.ndarray
+
+   .. attribute:: pos_ts
+
+      The position timestamps
+
+      :type: np.ndarray
+
+   .. attribute:: spike_ts
+
+      The spike timestamps
+
+      :type: np.ndarray
+
+   .. attribute:: regressors
+
+      A dictionary containing the regressors and their values
+
+      :type: dict
+
+   .. attribute:: alpha
+
+      The alpha value for hypothesis testing
+
+      :type: float
+
+   .. attribute:: hyp
+
+      The hypothesis to test
+
+      :type: int
+
+   .. attribute:: conf
+
+      Whether to calculate confidence intervals
+
+      :type: bool
+
+   .. attribute:: eeg
+
+      The EEG signal
+
+      :type: np.ndarray
+
+   .. attribute:: min_theta
+
+      The minimum theta frequency
+
+      :type: int
+
+   .. attribute:: max_theta
+
+      The maximum theta frequency
+
+      :type: int
+
+   .. attribute:: filteredEEG
+
+      The filtered EEG signal
+
+      :type: np.ndarray
+
+   .. attribute:: phase
+
+      The phase of the EEG signal
+
+      :type: np.ndarray
+
+   .. attribute:: phaseAdj
+
+      The adjusted phase of the EEG signal as a masked array
+
+      :type: np.ma.MaskedArray
+
+   .. attribute:: spike_times_in_pos_samples
+
+      The spike times in position samples (vector with length = npos)
+
+      :type: np.ndarray
+
+   .. attribute:: spk_weights
+
+      The spike weights (vector with length = npos)
+
+      :type: np.ndarray
 
 
 
@@ -96,8 +188,33 @@ Module Contents
 
    .. py:method:: _ppRegress(spkDict, whichSpk='first')
 
+      
+      Perform the regression analysis on the spike data
 
-   .. py:method:: getLFPPhaseValsForSpikeTS()
+      :param spkDict: A dictionary containing the spike properties
+      :type spkDict: dict
+      :param whichSpk: Which spike(s) in a cycle to use in the regression analysis
+      :type whichSpk: str
+
+      :returns: A list of the updated regressors
+      :rtype: list
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:method:: getPosProps(labels)
@@ -106,20 +223,11 @@ Module Contents
       Uses the output of partitionFields and returns vectors the same
       length as pos.
 
-      :param tetrode: The tetrode / cluster to examine
-      :type tetrode: int
-      :param cluster: The tetrode / cluster to examine
-      :type cluster: int
-      :param peaksXY: The x-y coords of the peaks in the ratemap
-      :type peaksXY: array_like
-      :param laserEvents: The position indices of on events
-      :type laserEvents: array_like
-      :param (laser on):
+      :param labels: The labels of the fields
+      :type labels: np.ndarray
 
-      :returns: Contains a whole bunch of information
-                for the whole trial and also on a run-by-run basis (run_dict).
-                See the end of this function for all the key / value pairs.
-      :rtype: pos_dict, run_dict (dict)
+      :returns: A list of FieldProps instances (see ephysiopy.common.fieldcalcs.FieldProps)
+      :rtype: list of FieldProps
 
 
 
@@ -141,8 +249,55 @@ Module Contents
 
    .. py:method:: getSpikePosIndices(spk_times)
 
+      
+      Get the indices of the spikes in the position data
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: getSpikeProps(field_props)
+
+      
+      Extracts the relevant spike properties from the field_props
+
+      :param field_props: A list of FieldProps instances
+      :type field_props: list
+
+      :returns: A dictionary containing the spike properties
+      :rtype: dict
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:method:: getThetaProps(field_props)
@@ -150,8 +305,10 @@ Module Contents
       
       Processes the LFP data and inserts into each run within each field
       a segment of LFP data that has had its phase and amplitude extracted
-      as well as some other metadata
+      as well as some other data
 
+      :param field_props: A list of FieldProps instances
+      :type field_props: list[FieldProps]
 
 
 
@@ -187,24 +344,11 @@ Module Contents
       information about the position, spiking and theta data and then
       do the actual regression.
 
-      :param tetrode: The tetrode to examine
-      :type tetrode: int
-      :param cluster: The cluster to examine
-      :type cluster: int
-      :param laserEvents: The on times for laser events
-      :type laserEvents: array_like, optional
-      :param if present. Default is None:
+      **kwargs
+          do_plot : bool
+          whether to plot the results of field partitions, the regression(s)
 
-      Valid keyword args:
-          plot (bool): whether to plot the results of field partitions, the regression(s)
-              etc
-      .. seealso::
-
-         ephysiopy.common.eegcalcs.phasePrecession.partitionFields()
-         ephysiopy.common.eegcalcs.phasePrecession.getPosProps()
-         ephysiopy.common.eegcalcs.phasePrecession.getThetaProps()
-         ephysiopy.common.eegcalcs.phasePrecession.getSpikeProps()
-         ephysiopy.common.eegcalcs.phasePrecession._ppRegress()
+      .. seealso:: :obj:`ephysiopy.common.eegcalcs.phasePrecession.partitionFields`, :obj:`ephysiopy.common.eegcalcs.phasePrecession.getPosProps`, :obj:`ephysiopy.common.eegcalcs.phasePrecession.getThetaProps`, :obj:`ephysiopy.common.eegcalcs.phasePrecession.getSpikeProps`, :obj:`ephysiopy.common.eegcalcs.phasePrecession._ppRegress`
 
 
 
@@ -224,25 +368,155 @@ Module Contents
           !! processed by numpydoc !!
 
 
-   .. py:method:: plotPPRegression(regressorDict, regressor2plot='pos_d_cum', ax=None)
-
-
    .. py:method:: plotRegressor(regressor, ax=None)
+
+      
+      Plot the regressor against the phase
+
+      :param regressor: The regressor to plot
+      :type regressor: str
+      :param ax: The axes to plot on
+      :type ax: matplotlib.axes.Axes
+
+      :returns: **ax** -- The axes with the plot
+      :rtype: matplotlib.axes.Axes
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:method:: update_config(pp_config)
 
+      
+      Update the relevant pp_config values
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: update_position(ppm, cm)
+
+      
+      Update the position data based on ppm and cm values
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:method:: update_rate_map()
 
+      
+      Create the ratemap from the position data
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: update_regressor_mask(key, indices)
 
+      
+      Mask entries in the 'values' and 'pha' arrays of the relevant regressor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: update_regressor_values(key, values)
+
+      
+      Check whether values is a masked array and if not make it one
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:method:: update_regressors(reg_keys)
@@ -333,7 +607,7 @@ Module Contents
    .. py:property:: pos_ts
 
 
-   .. py:attribute:: regressor
+   .. py:attribute:: regressors
       :value: 1000
 
 
@@ -360,6 +634,13 @@ Module Contents
    
    Calculates correlation between two random circular variables
 
+   :param t: The first variable
+   :type t: np.ndarray
+   :param p: The second variable
+   :type p: np.ndarray
+
+   :returns: The correlation between the two variables
+   :rtype: float
 
 
 
@@ -382,7 +663,15 @@ Module Contents
 
    
    Function used to calculate jackknife estimates of correlation
+   between two circular random variables
 
+   :param t: The first variable
+   :type t: np.ndarray
+   :param p: The second variable
+   :type p: np.ndarray
+
+   :returns: The jackknife estimates of the correlation between the two variables
+   :rtype: np.ndarray
 
 
 
@@ -410,28 +699,21 @@ Module Contents
    Returns the correlation value (rho), p-value, bootstrapped correlation
    values, shuffled p values and correlation values.
 
-   :param theta: mx1 array containing circular data (radians)
-                 whose correlation is to be measured
-   :type theta: array_like
-   :param phi: mx1 array containing circular data (radians)
-               whose correlation is to be measured
-   :type phi: array_like
-   :param regressor: number of permutations to use to calculate p-value
-                     from randomisation and bootstrap estimation of confidence
-                     intervals.
+   :param theta: The two circular variables to correlate (in radians)
+   :type theta: np.ndarray
+   :param phi: The two circular variables to correlate (in radians)
+   :type phi: np.ndarray
+   :param regressor: number of permutations to use to calculate p-value from randomisation and
+                     bootstrap estimation of confidence intervals.
                      Leave empty to calculate p-value analytically (NB confidence
-                     intervals will not be calculated). Default is 1000.
-   :type regressor: int, optional
+                     intervals will not be calculated).
+   :type regressor: int, default=1000
    :param alpha: hypothesis test level e.g. 0.05, 0.01 etc.
-                 Default is 0.05.
-   :type alpha: float, optional
-   :param hyp: hypothesis to test; -1/ 0 / 1 (-ve correlated /
-               correlated in either direction / positively correlated).
-               Default is 0.
-   :type hyp: int, optional
-   :param conf: True or False to calculate confidence intervals
-                via jackknife or bootstrap. Default is True.
-   :type conf: bool, optional
+   :type alpha: float, default=0.05
+   :param hyp: hypothesis to test; -1/ 0 / 1 (-ve correlated / correlated in either direction / positively correlated).
+   :type hyp: int, default=0
+   :param conf: True or False to calculate confidence intervals via jackknife or bootstrap.
+   :type conf: bool, default=True
 
    .. rubric:: References
 
@@ -460,12 +742,14 @@ Module Contents
    
    Finds approximation to circular-linear regression for phase precession.
 
-   :param x: n-by-1 list of in-field positions (linear variable)
-   :type x: list
-   :param t: n-by-1 list of phases, in degrees (converted to radians)
-   :type t: list
+   :param x: The linear variable and the phase variable (in radians)
+   :type x: np.ndarray
+   :param t: The linear variable and the phase variable (in radians)
+   :type t: np.ndarray
 
-   .. note:: Neither x nor t can contain NaNs, must be paired (of equal length).
+   .. rubric:: Notes
+
+   Neither x nor t can contain NaNs, must be paired (of equal length).
 
 
 
@@ -486,11 +770,116 @@ Module Contents
 
 .. py:function:: filter_runs(field_props, min_speed, min_duration, min_spikes = 0)
 
+   
+   Filter out runs that are too short, too slow or have too few spikes
+
+   :param field_props:
+   :type field_props: list of FieldProps
+   :param min_speed: the minimum speed for a run
+   :type min_speed: float, int
+   :param min_duration: the minimum duration for a run
+   :type min_duration: int, float
+   :param min_spikes: the minimum number of spikes for a run
+   :type min_spikes: int, default=0
+
+   :rtype: list of FieldProps
+
+   .. rubric:: Notes
+
+   this modifies the input list
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
 .. py:function:: getPhaseOfMinSpiking(spkPhase)
+
+   
+   Returns the phase at which the minimum number of spikes are fired
+
+   :param spkPhase: The phase of the spikes
+   :type spkPhase: np.ndarray
+
+   :returns: The phase at which the minimum number of spikes are fired
+   :rtype: float
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
 
 .. py:function:: plot_field_props(field_props)
 
+   
+   Plots the fields in the list of FieldProps
+
+   :param list of FieldProps:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
 .. py:function:: plot_lfp_segment(field, lfp_sample_rate = 250)
+
+   
+   Plot the lfp segments for a series of runs through a field including
+   the spikes emitted by the cell.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
 
 .. py:function:: plot_spikes_in_runs_per_field(field_label, run_starts, run_ends, spikes_in_time, ttls_in_time = None, **kwargs)
 
@@ -498,23 +887,25 @@ Module Contents
    Debug plotting to show spikes per run per field found in the ratemap
    as a raster plot
 
-   Args:
-   field_label (np.ndarray): The field labels for each position bin
-       a vector
-   run_start_stop_idx (np.ndarray): The start and stop indices of each run
-       has shape (n_runs, 2)
-   spikes_in_time (np.ndarray): The number of spikes in each position bin
-       a vector
+   :param field_label:
+   :type field_label: np.ndarray
+   :param The field labels for each position bin a vector:
+   :param run_starts: The start and stop indices of each run (vectors)
+   :type run_starts: np.ndarray
+   :param runs_ends: The start and stop indices of each run (vectors)
+   :type runs_ends: np.ndarray
+   :param spikes_in_time: The number of spikes in each position bin (vector)
+   :type spikes_in_time: np.ndarray
+   :param ttls_in_time: TTL occurences in time (vector)
+   :type ttls_in_time: np.ndarray
+   :param \*\*kwargs:
+                      separate_plots : bool
+                          If True then each field will be plotted in a separate figure
+                      single_axes : bool
+                          If True will plot all the runs/ spikes in a single axis with fields delimited by horizontal lines
 
-   kwargs:
-   separate_plots (bool): If True then each field will be plotted in a
-   separate figure
-
-   single_axes (bool): If True will plot all the runs/ spikes in a single
-   axis with fields delimited by horizontal lines
-
-   Returns:
-   fig, axes (tuple): The figure and axes objects
+   :returns: **fig, axes** -- The figure and axes objects
+   :rtype: tuple
 
 
 
@@ -538,6 +929,13 @@ Module Contents
    
    Calculates shuffled p-values for correlation
 
+   :param theta: The two circular variables to correlate (in radians)
+   :type theta: np.ndarray
+   :param phi: The two circular variables to correlate (in radians)
+   :type phi: np.ndarray
+
+   :returns: The shuffled p-value for the correlation between the two variables
+   :rtype: float
 
 
 
@@ -571,6 +969,27 @@ Module Contents
 .. py:data:: jet_cmap
 
 .. py:data:: phase_precession_config
+
+   
+   A list of the regressors that can be used in the phase precession analysis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
 
 .. py:data:: subaxis_title_fontsize
    :value: 10

@@ -1,8 +1,8 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, InitVar
 import numpy as np
 import astropy.convolution as cnv
 import skimage
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import inspect
 from enum import Enum
 import copy
@@ -37,6 +37,10 @@ class MapType(Enum):
     CROSS_CORR = 6
 
 
+# A named tuple used in BinnedData for uniquely identifying a cluster/ channel
+ClusterID = namedtuple("ClusterID", ["Cluster", "Channel"])
+
+
 @dataclass
 class BinnedData:
     """
@@ -60,14 +64,17 @@ class BinnedData:
     map_type: MapType = MapType.RATE
     binned_data: list[np.ndarray] = field(default_factory=list)
     bin_edges: list[np.ndarray] = field(default_factory=list)
+    cluster_id: list[ClusterID] = field(default_factory=list)
 
     def __iter__(self):
-        yield from self.binned_data
+        current = 0
+        while current < len(self.binned_data):
+            yield self.__getitem__(current)
+            current += 1
 
     def __assert_equal_bin_edges__(self, other):
         assert np.all(
-            [np.all(sbe == obe)
-             for sbe, obe in zip(self.bin_edges, other.bin_edges)]
+            [np.all(sbe == obe) for sbe, obe in zip(self.bin_edges, other.bin_edges)]
         ), "Bin edges do not match"
 
     def __len__(self):
@@ -87,8 +94,9 @@ class BinnedData:
         return BinnedData(
             variable=self.variable,
             map_type=self.map_type,
-            binned_data=copy.deepcopy(self.binned_data[i]),
+            binned_data=[copy.deepcopy(self.binned_data[i])],
             bin_edges=self.bin_edges,
+            cluster_id=self.cluster_id[i],
         )
 
     def __truediv__(self, other):
@@ -120,6 +128,7 @@ class BinnedData:
                                 for b in other.binned_data
                             ],
                             bin_edges=self.bin_edges,
+                            cluster_id=self.cluster_id,
                         )
 
             return BinnedData(
@@ -129,6 +138,7 @@ class BinnedData:
                     a / b for a, b in zip(self.binned_data, other.binned_data)
                 ],
                 bin_edges=self.bin_edges,
+                cluster_id=self.cluster_id,
             )
 
     def __add__(self, other):
@@ -149,6 +159,7 @@ class BinnedData:
                 map_type=self.map_type,
                 binned_data=self.binned_data + other.binned_data,
                 bin_edges=self.bin_edges,
+                cluster_id=self.cluster_id,
             )
 
     def __eq__(self, other) -> bool:
@@ -175,6 +186,31 @@ class BinnedData:
         else:
             return False
 
+    def get_cluster(self, id: ClusterID):
+        """
+        Returns the binned data for the specified cluster id
+
+        Parameters
+        ----------
+        id : ClusterID
+            The cluster id to return
+
+        Returns
+        -------
+        BinnedData
+            A new BinnedData instance with the binned data for the specified cluster id
+
+        """
+        if id in self.cluster_id:
+            idx = self.cluster_id.index(id)
+            return BinnedData(
+                variable=self.variable,
+                map_type=self.map_type,
+                binned_data=[self.binned_data[idx]],
+                bin_edges=self.bin_edges,
+                cluster_id=id,
+            )
+
     def set_nan_indices(self, indices):
         """
         Sets the values of the binned data at the specified indices to NaN.
@@ -193,6 +229,7 @@ class BinnedData:
             map_type=self.map_type,
             binned_data=[a.T for a in self.binned_data],
             bin_edges=self.bin_edges[::-1],
+            cluster_id=self.cluster_id,
         )
 
     def correlate(self, other=None, as_matrix=False) -> list[float] | np.ndarray:
@@ -223,14 +260,12 @@ class BinnedData:
             self.__assert_equal_bin_edges__(other)
         if other is not None:
             result = np.reshape(
-                [corr_maps(a, b)
-                 for a in self.binned_data for b in other.binned_data],
+                [corr_maps(a, b) for a in self.binned_data for b in other.binned_data],
                 newshape=(len(self.binned_data), len(other.binned_data)),
             )
         else:
             result = np.reshape(
-                [corr_maps(a, b)
-                 for a in self.binned_data for b in self.binned_data],
+                [corr_maps(a, b) for a in self.binned_data for b in self.binned_data],
                 newshape=(len(self.binned_data), len(self.binned_data)),
             )
         if as_matrix:
@@ -1112,7 +1147,7 @@ def bwperim(bw, n=4):
     -------
     perim : array_like
         A boolean image.
-     """
+    """
 
     if n not in (4, 8):
         raise ValueError("mahotas.bwperim: n must be 4 or 8")

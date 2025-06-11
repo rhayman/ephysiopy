@@ -5,7 +5,10 @@ from collections import namedtuple
 from astropy.convolution import convolve, Box1DKernel, Gaussian1DKernel
 from collections.abc import Sequence
 import h5py
+import seaborn as sns
+import pandas as pd
 import matplotlib.pylab as plt
+import matplotlib.transforms as transforms
 import numpy as np
 from scipy.special import erf
 from phylib.io.model import TemplateModel
@@ -94,6 +97,248 @@ def get_param(waveforms, param="Amp", t=200, fet=1) -> np.ndarray:
                     else:
                         out[:, rng[0, i] : rng[1, i]] = A
             return out
+
+
+def get_peak_to_trough_time(waveforms: np.ndarray) -> np.ndarray:
+    """
+    Returns the time in seconds of the peak to trough in a waveform.
+
+    Parameters
+    ----------
+    waveforms : np.ndarray
+        The waveforms to calculate the peak to trough time for.
+
+    Returns
+    -------
+    np.ndarray
+        The time of the peak to trough in seconds.
+    """
+    peak_times = get_param(waveforms, "tP")
+    trough_times = get_param(waveforms, "tT")
+    return np.mean(trough_times - peak_times)
+
+
+def get_burstiness(
+    isi_matrix: np.ndarray, whiten: bool = False, plot_pcs: bool = False
+) -> np.ndarray:
+    """
+    Returns the burstiness of a waveform.
+
+    Parameters
+    ----------
+    isi_matrix : np.ndarray
+        A matrix of normalized interspike intervals (ISIs) for the neurons.
+        Rows are neurons, columns are ISI time bins.
+
+    Returns
+    -------
+    np.ndarray
+
+    Notes
+    -----
+    Algorithm:
+
+    1) The interspike intervals between 0 and 60ms were binned into 2ms bins,
+    and the area of the histogram was normalised to 1 to produce a
+    probability distribution histogram for each neuron
+
+    2) A principal components analysis (PCA) is performed on the matrix of
+    the ISI probability distributions of all neurons
+
+    3) Neurons were then assigned to two clusters using a k-means clustering
+    algorithm on the first three principal components
+
+    4) a linear discriminant analysis performed in MATLAB (‘classify’) was
+    undertaken to determine the optimal linear discriminant (Fishers Linear
+    Discriminant) i.e., the plane which best separated the two clusters in a
+    three-dimensional scatter plot of the principal components.
+
+    Training on 80% of the data and testing on the remaining 20% resulted in a
+    good separation of the two clusters.
+
+    5) A burstiness score was assigned to each neuron which was calculated by
+    computing the shortest distance between the plotted point for each neuron
+    in the three-dimensional cluster space (principal components 1,2 and 3),
+    and the plane separating the two clusters (i.e., the optimal linear
+    discriminant).
+
+    6) To ensure the distribution of these burstiness scores was bimodal,
+    reflecting the presence of two classes of neuron (‘bursty’ versus
+    ‘non-bursty’), probability density functions for Gaussian mixture models
+    with between one and four underlying Gaussian curves were fitted and the
+    fit of each compared using the Akaike information criterion (AIC)
+
+    7) Optionally plot the principal components and the centres of the
+    kmeans results
+
+    """
+    isi_matrix = np.asarray(isi_matrix)
+    # A) check for NaN values in the isi_matrix and remove
+    remove_idx = np.isnan(np.sum(isi_matrix, -1))
+    if np.any(remove_idx):
+        warnings.warn("NaN values detected in isi_matrix, removing those rows")
+        isi_matrix = isi_matrix[~remove_idx, :]
+
+    # B) do the PCA
+    from sklearn.decomposition import PCA
+
+    pca = PCA(n_components=3, whiten=whiten)
+    pca.fit(isi_matrix)
+    pca_matrix = pca.transform(isi_matrix)  # columns are principal components
+
+    # C) do the k-means clustering
+    from scipy.cluster.vq import kmeans2
+
+    km = kmeans2(
+        pca_matrix,
+        2,
+        minit="points",
+        iter=20,
+        missing="raise",
+        seed=np.random.default_rng(21),
+    )
+
+    # D) do the linear discriminant analysis
+    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
+
+    lda = LDA()
+    lda.fit(pca_matrix, km[1])
+
+    # E) calculate the distance from the plane
+    from scipy.spatial.distance import cdist
+
+    # get the coefficients of the plane
+    coeffs = lda.coef_[0]
+    # intercept = lda.intercept_[0]
+    # calculate the distance from the plane
+    distances = cdist(pca_matrix, [coeffs], metric="mahalanobis")
+    # normalize the distances
+    distances = (distances - np.min(distances)) / (
+        np.max(distances) - np.min(distances)
+    )
+    # project the ISI distributions onto the optimal linear discriminant
+    # of the two clusters
+    pca_matrix_normed = pca_matrix - np.mean(pca_matrix, axis=0)
+    pca_matrix_normed = pca_matrix_normed / np.std(pca_matrix_normed, axis=0)
+    # project onto the plane
+    pca_distances = np.dot(pca_matrix_normed, coeffs.T)
+
+    if plot_pcs:
+        # F) plot the principal components and the centres
+        # of the kmeans results
+        fig = plt.figure(figsize=(10, 8))
+        ax = fig.add_subplot(projection="3d")
+        k1 = km[1] == 0
+        k2 = km[1] == 1
+        ax.scatter(
+            pca_matrix[k1, 0],
+            pca_matrix[k1, 1],
+            pca_matrix[k1, 2],
+            c="blue",
+            label="Cluster 1",
+            alpha=0.5,
+        )
+
+        ax.scatter(
+            pca_matrix[k2, 0],
+            pca_matrix[k2, 1],
+            pca_matrix[k2, 2],
+            c="red",
+            label="Cluster 2",
+            alpha=0.5,
+        )
+        plt.scatter(
+            km[0][:, 0],
+            km[0][:, 1],
+            marker="x",
+            s=100,
+            color="green",
+            label="K-means centroids",
+        )
+        ax.set_xlabel("PC 1")
+        ax.set_ylabel("PC 2")
+        ax.set_zlabel("PC 3")
+        plt.title("PCA of ISI Matrix with K-means Clustering")
+        plt.legend()
+
+        # Plot the ISI data sorted by the distances to the discriminant
+        # boundary
+        _, ax2 = plt.subplots(figsize=(5, 12))
+        sorted_indices = np.argsort(pca_distances.squeeze())
+        # normalise the ISIS matrix for better visualisation
+        isi_matrix = isi_matrix / np.max(isi_matrix, axis=-1, keepdims=True)
+        xi = np.linspace(0, 60, isi_matrix.shape[1] + 1)
+        yi = np.arange(isi_matrix.shape[0] + 1)
+        vmax = np.max(isi_matrix[sorted_indices, :])
+
+        ax2.pcolormesh(
+            xi,
+            yi,
+            isi_matrix[sorted_indices, :],
+            cmap="viridis",
+            edgecolors="face",
+            vmax=vmax,
+        )
+        ax2.set_aspect(0.1)
+        ax2.set_xlabel("ISI bins(ms)")
+        ax2.set_xticks([0, 60])
+        ax2.set_ylabel("Cells")
+        ax2.set_yticks([])
+        ax2.annotate(
+            "Less bursty",
+            xy=(-0.1, 0.95),
+            xytext=(-0.1, 0.7),
+            xycoords="axes fraction",
+            arrowprops=dict(arrowstyle="->", color="black"),
+            rotation=90,
+            fontsize=10,
+            color="black",
+            ha="center",
+        )
+        ax2.annotate(
+            "More bursty",
+            xy=(-0.1, 0.05),
+            xytext=(-0.1, 0.2),
+            xycoords="axes fraction",
+            arrowprops=dict(arrowstyle="->", color="black"),
+            rotation=90,
+            fontsize=10,
+            color="black",
+            ha="center",
+        )
+
+        # Plot the distances as a histogram
+        fig3 = plt.figure()
+        ax3 = fig3.add_subplot(111)
+        N, bins, patches = ax3.hist(pca_distances, bins=150, density=True, color="blue")
+        for bin_patch in zip(bins[:-1], patches):
+            if bin_patch[0] < lda.intercept_:
+                bin_patch[1].set_facecolor("red")
+        axtrans = transforms.blended_transform_factory(ax3.transData, ax3.transAxes)
+        ax3.vlines(
+            lda.intercept_, ymin=0, ymax=1, colors="black", transform=axtrans, zorder=1
+        )
+        ax3.set_xlabel("Burstiness")
+        ax3.set_ylabel("Probability")
+
+        # Try a plot using seaborn
+        _, ax4 = plt.subplots(figsize=(7, 5))
+        df = pd.DataFrame({"Burstiness": pca_distances, "Cluster": km[1]})
+        sns.histplot(
+            df,
+            x="Burstiness",
+            stat="density",
+            bins=150,
+            kde=True,
+            ax=ax4,
+        )
+        axtrans = transforms.blended_transform_factory(ax4.transData, ax4.transAxes)
+        ax4.vlines(
+            lda.intercept_, ymin=0, ymax=1, colors="black", transform=axtrans, zorder=1
+        )
+        plt.show()
+    # return the distances as the burstiness score
+    return pca_distances.squeeze(), pca_matrix, isi_matrix
 
 
 def mahal(u, v):
@@ -253,11 +498,13 @@ def xcorr(
     )
     if normed:
         counts = counts / len(x1)
+    ids = kwargs.pop("cluster_id", [])
     return BinnedData(
         variable=VariableToBin.TIME,
         map_type=MapType.SPK,
         binned_data=[counts],
         bin_edges=[bins],
+        cluster_id=ids,
     )
 
 
@@ -375,6 +622,13 @@ class SpikeCalcsGeneric(object):
     class where there was one instance per recording session and clusters
     were selected by passing in the cluster id to the methods.
 
+    NB Axona waveforms are nSpikes x nChannels x nSamples - this boils
+    down to nSpikes x 4 x 50
+    NB KiloSort waveforms are nSpikes x nSamples x nChannels - these are ordered
+    by 'best' channel first and then the rest of the channels. This boils
+    down to nSpikes x 61 x 12 SO THIS NEEDS TO BE CHANGED to
+    nSpikes x nChannels x nSamples
+
     Parameters
     ----------
     spike_times : np.ndarray
@@ -487,12 +741,14 @@ class SpikeCalcsGeneric(object):
         Parameters
         ----------
         channel_id : Sequence, optional
-            The channel IDs to return the waveforms for. If None, returns waveforms for all channels.
+            The channel IDs to return the waveforms for.
+            If None, returns waveforms for all channels.
 
         Returns
         -------
         np.ndarray | None
-            The waveforms of the cluster, or None if no waveforms are available.
+            The waveforms of the cluster,
+            or None if no waveforms are available.
 
 
         """
@@ -640,23 +896,22 @@ class SpikeCalcsGeneric(object):
             raise IndexError("No duration provided, give me one!")
         return self.n_spikes / self.duration
 
-    def mean_isi_range(self, isi_range: int) -> float:
+    def mean_isi_range(self, isi_range: float) -> float:
         """
-        Calculates the mean of the autocorrelation from 0 to n milliseconds.
+        Calculates the mean of the autocorrelation from 0 to n seconds.
         Used to help classify a neuron's type (principal, interneuron, etc).
 
         Parameters
         ----------
         isi_range : int
-            The range in ms to calculate the mean over.
+            The range in seconds to calculate the mean over.
 
         Returns
         -------
         float
-            The mean of the autocorrelogram between 0 and n milliseconds.
+            The mean of the autocorrelogram between 0 and n seconds.
         """
-        bins = 201
-        trange = np.array((-500, 500))
+        trange = np.array((-0.5, 0.5))
         ac = self.acorr(Trange=trange)
         bins = ac.bin_edges[0]
         counts = ac.binned_data[0]
@@ -683,6 +938,23 @@ class SpikeCalcsGeneric(object):
         x = self.waveforms(channel_id)
         if x is not None:
             return np.mean(x, axis=0), np.std(x, axis=0)
+        else:
+            return None
+
+    def get_best_channel(self) -> int | None:
+        """
+        Returns the channel with the highest mean amplitude of the waveforms.
+
+        Returns
+        -------
+        int | None
+            The index of the channel with the highest mean amplitude,
+            or None if no waveforms are available.
+        """
+        wvs = self.waveforms()
+        if wvs is not None:
+            amps = np.mean(np.ptp(wvs, axis=-1), axis=0)
+            return np.argmax(amps)
         else:
             return None
 
@@ -850,7 +1122,7 @@ class SpikeCalcsGeneric(object):
         # make sure the original mask is preserved
         speed_mask = np.logical_or(speed_mask, orig_speed_mask)
         speed_filt = np.ma.MaskedArray(speed, speed_mask)
-        ## speed might contain nans so mask these too
+        # speed might contain nans so mask these too
         speed_filt = np.ma.fix_invalid(speed_filt)
         speed_mask = speed_filt.mask
         spk_hist_filt = np.ma.MaskedArray(spk_hist, speed_mask)
@@ -1230,11 +1502,52 @@ class SpikeCalcsGeneric(object):
         R = min(Ri)
         return Q, R
 
+    def plot_waveforms(self, n_waveforms: int = 2000, n_channels: int = 4):
+        """
+        Plots the waveforms of the cluster.
+
+        Parameters
+        ----------
+        n_waveforms : int, optional
+            The number of waveforms to plot.
+        n_channels : int, optional
+            The number of channels to plot.
+
+        Returns
+        -------
+        None
+        """
+        if self._waves is None:
+            raise ValueError("No waveforms available for this cluster.")
+
+        from matplotlib import pyplot as plt
+
+        fig, axes = plt.subplots(n_channels, 1, figsize=(5, 10))
+        for i in range(n_channels):
+            axes[i].plot(self.waveforms()[:n_waveforms, i, :].T, c="gray")
+            # plot mean waveform on top
+            axes[i].plot(np.mean(self.waveforms()[:n_waveforms, i, :], axis=0), c="red")
+            axes[i].set_title(f"Channel {i}")
+            axes[i].set_xlabel("Time (ms)")
+            axes[i].set_ylabel("Amplitude (uV)")
+        plt.tight_layout()
+        plt.show()
+
 
 class SpikeCalcsAxona(SpikeCalcsGeneric):
     """
     Replaces SpikeCalcs from ephysiopy.axona.spikecalcs
     """
+
+    def __init__(
+        self,
+        spike_times: np.ndarray,
+        cluster: int,
+        waveforms: np.ndarray = None,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(spike_times, cluster, waveforms, *args, **kwargs)
 
     def half_amp_dur(self, waveforms) -> float:
         """

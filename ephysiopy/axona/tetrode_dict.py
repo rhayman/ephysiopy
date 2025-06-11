@@ -1,5 +1,6 @@
 from ephysiopy.axona import axonaIO
 import numpy as np
+import warnings
 
 
 class TetrodeDict(dict):
@@ -35,9 +36,10 @@ class TetrodeDict(dict):
                         self[key] = val
                         return val
                     except Exception:
-                        raise KeyError(f"Tetrode {key} not available")
+                        # warnings.warn(f"Tetrode {key} not available")
+                        pass
                 else:
-                    raise KeyError(f"Tetrode {key} not available")
+                    warnings.warn(f"Tetrode {key} not available")
 
     def get_spike_samples(self, tetrode: int, cluster: int) -> np.ndarray:
         """

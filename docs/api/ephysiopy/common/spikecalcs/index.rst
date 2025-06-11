@@ -81,14 +81,12 @@ Module Contents
       Calculates the half amplitude duration of a spike.
 
       :param A: An nSpikes x nElectrodes x nSamples array.
-      :type A: ndarray
+      :type A: np.ndarray
 
-      :returns:
-
-                The half-amplitude duration for the channel
-                    (electrode) that has the strongest (highest amplitude)
-                    signal. Units are ms.
-      :rtype: had (float)
+      :returns: The half-amplitude duration for the channel
+                (electrode) that has the strongest (highest amplitude)
+                signal. Units are ms.
+      :rtype: float
 
 
 
@@ -116,12 +114,10 @@ Module Contents
       :param cluster: The cluster whose waveforms are to be analysed
       :type cluster: int
 
-      :returns:
-
-                The mean peak-to-trough time for the channel
-                    (electrode) that has the strongest (highest amplitude) signal.
-                    Units are ms.
-      :rtype: p2t (float)
+      :returns: The mean peak-to-trough time for the channel
+                (electrode) that has the strongest (highest amplitude) signal.
+                Units are ms.
+      :rtype: float
 
 
 
@@ -152,10 +148,17 @@ Module Contents
       TODO: aspect of plot boxes in ImageGrid not right as scaled by range of
       values now
 
-      :param waveforms (np.ndarray) - the array of waveform data. For Axona recordings this: is nSpikes x nChannels x nSamplesPerWaveform
-      :param param (str) - the parameter to plot. See get_param at the top of this file: for valid args
-      :param clusts (optional - int or list) - which clusters to colour in:
-      :param cluster_vec (optional - np.ndarray or list) - the cluster identity of each spike in waveforms: Must be nSpikes long
+      :param waveforms: the array of waveform data. For Axona recordings this
+                        is nSpikes x nChannels x nSamplesPerWaveform
+      :type waveforms: np.ndarray
+      :param param: the parameter to plot. See get_param at the top of this file
+                    for valid args
+      :type param: str
+      :param clusts: which clusters to colour in
+      :type clusts: int, list or None, default None
+      :param cluster_vec: the cluster identity of each spike in waveforms must be nSpikes long
+      :type cluster_vec: np.ndarray, list or None, default None
+      :param \*\*kwargs: passed into ImageGrid
 
 
 
@@ -187,10 +190,98 @@ Module Contents
    class where there was one instance per recording session and clusters
    were selected by passing in the cluster id to the methods.
 
-   :param spike_times: The times of spikes in the trial in seconds
-   :type spike_times: array_like
-   :param waveforms: An nSpikes x nChannels x nSamples array
-   :type waveforms: np.array, optional
+   :param spike_times: The times of spikes in the trial in seconds.
+   :type spike_times: np.ndarray
+   :param cluster: The cluster ID.
+   :type cluster: int
+   :param waveforms: An nSpikes x nChannels x nSamples array.
+   :type waveforms: np.ndarray, optional
+   :param \*\*kwargs: Additional keyword arguments.
+   :type \*\*kwargs: dict
+
+   .. attribute:: spike_times
+
+      The times of spikes in the trial in seconds.
+
+      :type: np.ma.MaskedArray
+
+   .. attribute:: _waves
+
+      The waveforms of the spikes.
+
+      :type: np.ma.MaskedArray or None
+
+   .. attribute:: cluster
+
+      The cluster ID.
+
+      :type: int
+
+   .. attribute:: n_spikes
+
+      the total number of spikes for the current cluster
+
+      :type: int
+
+   .. attribute:: duration
+
+      total duration of the trial in seconds
+
+      :type: float, int
+
+   .. attribute:: event_ts
+
+      The times that events occurred in seconds.
+
+      :type: np.ndarray or None
+
+   .. attribute:: event_window
+
+      The window, in seconds, either side of the stimulus, to examine.
+
+      :type: np.ndarray
+
+   .. attribute:: stim_width
+
+      The width, in ms, of the stimulus.
+
+      :type: float or None
+
+   .. attribute:: secs_per_bin
+
+      The size of bins in PSTH.
+
+      :type: float
+
+   .. attribute:: sample_rate
+
+      The sample rate of the recording.
+
+      :type: int
+
+   .. attribute:: pos_sample_rate
+
+      The sample rate of the position data.
+
+      :type: int
+
+   .. attribute:: pre_spike_samples
+
+      The number of samples before the spike.
+
+      :type: int
+
+   .. attribute:: post_spike_samples
+
+      The number of samples after the spike.
+
+      :type: int
+
+   .. attribute:: KSMeta
+
+      The metadata from KiloSort.
+
+      :type: KSMetaTuple
 
 
 
@@ -212,16 +303,15 @@ Module Contents
    .. py:method:: acorr(Trange = np.array([-0.5, 0.5]), **kwargs)
 
       
-      Calculates the autocorrelogram of a spike train
+      Calculates the autocorrelogram of a spike train.
 
-      :param ts: The spike times
-      :type ts: np.ndarray
-      :param Trange: The range of times to calculate the
-                     autocorrelogram over
-      :type Trange: np.ndarray
+      :param Trange: The range of times to calculate the autocorrelogram over (default is [-0.5, 0.5]).
+      :type Trange: np.ndarray, optional
+      :param \*\*kwargs: Additional keyword arguments.
+      :type \*\*kwargs: dict
 
-      Returns:
-      result: (BinnedData): Container for the binned data
+      :returns: Container for the binned data.
+      :rtype: BinnedData
 
 
 
@@ -244,10 +334,10 @@ Module Contents
    .. py:method:: apply_filter(*trial_filter)
 
       
-      Applies a mask to the spike times
+      Applies a mask to the spike times.
 
-      Args
-          mask (list or tuple): The mask to apply to the spike times
+      :param trial_filter: The filter
+      :type trial_filter: TrialFilter
 
 
 
@@ -269,21 +359,14 @@ Module Contents
 
    .. py:method:: contamination_percent(**kwargs)
 
-
-   .. py:method:: get_ifr(spike_times, n_samples, **kwargs)
-
       
-      Returns the instantaneous firing rate of the cluster
+      Returns the contamination percentage of a spike train.
 
-      :param ts: The times in seconds at which the cluster fired.
-      :type ts: np.array
-      :param n_samples: The number of samples to use in the calculation.
-                        Practically this should be the number of position
-                        samples in the recording.
-      :type n_samples: int
+      :param \*\*kwargs: Passed into the contamination_percent function.
 
-      :returns: The instantaneous firing rate of the cluster
-      :rtype: ifr (np.array)
+      :returns: Q - A measure of refractoriness.
+                R - A second measure of refractoriness (kicks in for very low firing rates).
+      :rtype: tuple of float
 
 
 
@@ -303,12 +386,48 @@ Module Contents
           !! processed by numpydoc !!
 
 
-   .. py:method:: get_ifr_power_spectrum(**kwargs)
+   .. py:method:: get_ifr(spike_times, n_samples, **kwargs)
+
+      
+      Returns the instantaneous firing rate of the cluster
+
+      :param ts: The times in seconds at which the cluster fired.
+      :type ts: np.ndarray
+      :param n_samples: The number of samples to use in the calculation.
+                        Practically this should be the number of position
+                        samples in the recording.
+      :type n_samples: int
+
+      :returns: The instantaneous firing rate of the cluster
+      :rtype: np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: get_ifr_power_spectrum()
 
       
       Returns the power spectrum of the instantaneous firing rate of a cell
 
-      This is what is used to calculate the theta_mod_idxV3 score above
+      Used to calculate the theta_mod_idxV3 score above
+
+      :returns: The frequency and power of the instantaneous firing rate
+      :rtype: tuple of np.ndarray
 
 
 
@@ -330,42 +449,72 @@ Module Contents
 
    .. py:method:: get_shuffled_ifr_sp_corr(ts, speed, nShuffles = 100, **kwargs)
 
+      
+      Returns an nShuffles x nSamples sized array of shuffled
+      instantaneous firing rate x speed correlations
 
-   .. py:method:: ifr_sp_corr(ts, speed, minSpeed=2.0, maxSpeed=40.0, sigma=3, nShuffles=100, plot=False, **kwargs)
+      :param ts: the times in seconds at which the cluster fired
+      :type ts: np.ndarray
+      :param speed: the speed vector
+      :type speed: np.ndarray
+      :param nShuffles: the number of times to shuffle the timestamp vector 'ts'
+      :type nShuffles: int
+      :param \*\*kwargs: Passed into ifr_sp_corr
+
+      :returns: A nShuffles x nSamples sized array of the shuffled firing rate vs
+                speed correlations.
+      :rtype: np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: ifr_sp_corr(ts, speed, minSpeed=2.0, maxSpeed=40.0, sigma=3, nShuffles=100, **kwargs)
 
       
       Calculates the correlation between the instantaneous firing rate and
       speed.
 
       :param ts: The times in seconds at which the cluster fired.
-      :type ts: np.array
-      :param speed: Instantaneous speed (1 x nSamples).
-      :type speed: np.array
+      :type ts: np.ndarray
+      :param speed: Instantaneous speed (nSamples lenght vector).
+      :type speed: np.ndarray
       :param minSpeed: Speeds below this value are ignored.
-                       Defaults to 2.0 cm/s as with Kropff et al., 2015.
-      :type minSpeed: float, optional
+      :type minSpeed: float, default=2.0
       :param maxSpeed: Speeds above this value are ignored.
-                       Defaults to 40.0 cm/s.
-      :type maxSpeed: float, optional
+      :type maxSpeed: float, default=40.0
       :param sigma: The standard deviation of the gaussian used
-                    to smooth the spike train. Defaults to 3.
-      :type sigma: int, optional
+                    to smooth the spike train.
+      :type sigma: int, default=3
       :param nShuffles: The number of resamples to feed into
-                        the permutation test. Defaults to 9999.
-                        See scipy.stats.PermutationMethod.
-      :type nShuffles: int, optional
-      :param plot: Whether to plot the result.
-                   Defaults to False.
-      :type plot: bool, optional
+                        the permutation test.
+      :type nShuffles: int, default=100
+      :param \*\*kwargs:
+                         method: how the significance of the speed vs firing rate correlation
+                                 is calculated
 
-      kwargs:
-          method: how the significance of the speed vs firing rate correlation
-                  is calculated - see the documentation for scipy.stats.PermutationMethod
+      .. rubric:: Examples
 
-                  An example of how I was calculating this is:
+      An example of how I was calculating this is:
 
-                  >> rng = np.random.default_rng()
-                  >> method = stats.PermutationMethod(n_resamples=nShuffles, random_state=rng)
+      >> rng = np.random.default_rng()
+      >> method = stats.PermutationMethod(n_resamples=nShuffles, random_state=rng)
+
+      .. seealso:: :obj:`See`
 
 
 
@@ -388,13 +537,13 @@ Module Contents
    .. py:method:: mean_isi_range(isi_range)
 
       
-      Calculates the mean of the autocorrelation from 0 to n milliseconds
-      Used to help classify a neurons type (principal, interneuron etc)
+      Calculates the mean of the autocorrelation from 0 to n milliseconds.
+      Used to help classify a neuron's type (principal, interneuron, etc).
 
-      :param isi_range: The range in ms to calculate the mean over
+      :param isi_range: The range in ms to calculate the mean over.
       :type isi_range: int
 
-      :returns: The mean of the autocorrelogram between 0 and n milliseconds
+      :returns: The mean of the autocorrelogram between 0 and n milliseconds.
       :rtype: float
 
 
@@ -418,19 +567,16 @@ Module Contents
    .. py:method:: mean_waveform(channel_id = None)
 
       
-      Returns the mean waveform and sem for a given spike train on a
-      particular channel
+      Returns the mean waveform and standard error of the mean (SEM) for a given spike train on a
+      particular channel.
 
-      :param cluster_id: The cluster to get the mean waveform for
-      :type cluster_id: int
+      :param channel_id: The channel IDs to return the mean waveform for. If None, returns mean waveforms for all channels.
+      :type channel_id: Sequence, optional
 
-      :returns:
-
-                The mean waveforms, usually 4x50 for tetrode
-                                    recordings
-                std_wvs (ndarray): The standard deviations of the waveforms,
-                                    usually 4x50 for tetrode recordings
-      :rtype: mn_wvs (ndarray)
+      :returns: A tuple containing:
+                - mn_wvs (np.ndarray): The mean waveforms, usually 4x50 for tetrode recordings.
+                - std_wvs (np.ndarray): The standard deviations of the waveforms, usually 4x50 for tetrode recordings.
+      :rtype: tuple
 
 
 
@@ -459,11 +605,11 @@ Module Contents
       :param bin_width_secs: The width of each bin in seconds.
       :type bin_width_secs: float
 
-      :returns: Rows are counts of spikes per bin_width_secs.
+      :returns: **result** -- Rows are counts of spikes per bin_width_secs.
                 Size of columns ranges from self.event_window[0] to
                 self.event_window[1] with bin_width_secs steps;
                 so x is count, y is "event".
-      :rtype: result (np.ndarray)
+      :rtype: np.ndarray
 
 
 
@@ -488,14 +634,9 @@ Module Contents
       
       Calculate the PSTH of event_ts against the spiking of a cell
 
-      :param cluster_id: The cluster for which to calculate the psth
-      :type cluster_id: int
-
-      :returns:
-
-                The list of time differences between the spikes of
-                                the cluster and the events (x) and the trials (y)
-      :rtype: x, y (list)
+      :returns: * **x, y** (*list*)
+                * *The list of time differences between the spikes of the cluster*
+                * *and the events (x) and the trials (y)*
 
 
 
@@ -536,13 +677,9 @@ Module Contents
                                response. NB this is either +1 for excited or -1 for inhibited.
       :type return_magnitude: int
 
-      :returns: Whether the cell responds or not.
-                OR
-                tuple: responds (bool), normed_response_curve (np.ndarray).
-                OR
-                tuple: responds (bool), normed_response_curve (np.ndarray),
-                    response_magnitude (np.ndarray).
-      :rtype: responds (bool)
+      :returns: With named fields "responds" (bool), "normed_response_curve" (np.ndarray),
+                "response_magnitude" (np.ndarray)
+      :rtype: namedtuple
 
 
 
@@ -569,19 +706,17 @@ Module Contents
       smoothed in time with a gaussian kernel M in width and standard
       deviation equal to sigma.
 
-      :param x1: The pos indices the spikes occurred at.
-      :type x1: np.array
       :param npos: The number of position samples captured.
       :type npos: int
       :param sigma: The standard deviation of the gaussian used to
                     smooth the spike train.
-      :type sigma: float
+      :type sigma: float, default=3.0
       :param shuffle: The number of seconds to shift the spike
                       train by. Default is None.
-      :type shuffle: int, optional
+      :type shuffle: int, default=None
 
       :returns: The smoothed spike train.
-      :rtype: smoothed_spikes (np.array)
+      :rtype: np.ndarray
 
 
 
@@ -610,10 +745,6 @@ Module Contents
       This function is used to look for differences in theta frequency in
       different running directions as per Blair.
       See Welday paper - https://doi.org/10.1523/jneurosci.0712-11.2011
-
-      :param x1: The spike train for which the autocorrelogram will be
-                 calculated.
-      :type x1: np.ndarray
 
       :returns: The frequency with the maximum power in the theta band.
       :rtype: float
@@ -649,13 +780,15 @@ Module Contents
       a metric that lives between 0 and 1
 
       :param x1: The spike time-series.
-      :type x1: np.array
+      :type x1: np.ndarray
 
       :returns: The difference of the values at the first peak
                 and trough of the autocorrelogram.
-      :rtype: thetaMod (float)
+      :rtype: float
 
-      NB This is a fairly skewed metric with a distribution strongly biased
+      .. rubric:: Notes
+
+      This is a fairly skewed metric with a distribution strongly biased
       to -1 (although more evenly distributed than theta_mod_idxV2 below)
 
 
@@ -684,6 +817,12 @@ Module Contents
       autocorrelogram at the trough between 50-70ms and the
       peak between 100-140ms over their sum (data is binned into 5ms bins)
 
+      :returns: The difference of the values at the first peak
+                and trough of the autocorrelogram.
+      :rtype: float
+
+      .. rubric:: Notes
+
       Measure used in Cacucci et al., 2004 and Kropff et al 2015
 
 
@@ -711,7 +850,7 @@ Module Contents
       by Kornienko et al., (2024) (Kevin Allens lab)
       see https://doi.org/10.7554/eLife.35949.001
 
-      Basically uses the binned spike train instead of the autocorrelogram as
+      Uses the binned spike train instead of the autocorrelogram as
       the input to the periodogram function (they use pwelch in R; periodogram is a
       simplified call to welch in scipy.signal)
 
@@ -721,6 +860,12 @@ Module Contents
 
       Produces a fairly normally distributed looking score with a mean and median
       pretty close to 0
+
+      :param \*\*kwargs: Passed into get_ifr_power_spectrum
+
+      :returns: The difference of the values at the first peak
+                and trough of the autocorrelogram.
+      :rtype: float
 
 
 
@@ -748,8 +893,10 @@ Module Contents
       
       Takes in a TemplateModel instance from a phy session and
       parses out the relevant metrics for the cluster and places
-      into the namedtuple KSMeta
+      into the namedtuple KSMeta.
 
+      :param value: A dictionary containing the relevant metrics for the cluster.
+      :type value: dict
 
 
 
@@ -770,6 +917,32 @@ Module Contents
 
 
    .. py:method:: waveforms(channel_id = None)
+
+      
+      Returns the waveforms of the cluster.
+
+      :param channel_id: The channel IDs to return the waveforms for. If None, returns waveforms for all channels.
+      :type channel_id: Sequence, optional
+
+      :returns: The waveforms of the cluster, or None if no waveforms are available.
+      :rtype: np.ndarray | None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:property:: KSMeta
@@ -912,10 +1085,98 @@ Module Contents
    class where there was one instance per recording session and clusters
    were selected by passing in the cluster id to the methods.
 
-   :param spike_times: The times of spikes in the trial in seconds
-   :type spike_times: array_like
-   :param waveforms: An nSpikes x nChannels x nSamples array
-   :type waveforms: np.array, optional
+   :param spike_times: The times of spikes in the trial in seconds.
+   :type spike_times: np.ndarray
+   :param cluster: The cluster ID.
+   :type cluster: int
+   :param waveforms: An nSpikes x nChannels x nSamples array.
+   :type waveforms: np.ndarray, optional
+   :param \*\*kwargs: Additional keyword arguments.
+   :type \*\*kwargs: dict
+
+   .. attribute:: spike_times
+
+      The times of spikes in the trial in seconds.
+
+      :type: np.ma.MaskedArray
+
+   .. attribute:: _waves
+
+      The waveforms of the spikes.
+
+      :type: np.ma.MaskedArray or None
+
+   .. attribute:: cluster
+
+      The cluster ID.
+
+      :type: int
+
+   .. attribute:: n_spikes
+
+      the total number of spikes for the current cluster
+
+      :type: int
+
+   .. attribute:: duration
+
+      total duration of the trial in seconds
+
+      :type: float, int
+
+   .. attribute:: event_ts
+
+      The times that events occurred in seconds.
+
+      :type: np.ndarray or None
+
+   .. attribute:: event_window
+
+      The window, in seconds, either side of the stimulus, to examine.
+
+      :type: np.ndarray
+
+   .. attribute:: stim_width
+
+      The width, in ms, of the stimulus.
+
+      :type: float or None
+
+   .. attribute:: secs_per_bin
+
+      The size of bins in PSTH.
+
+      :type: float
+
+   .. attribute:: sample_rate
+
+      The sample rate of the recording.
+
+      :type: int
+
+   .. attribute:: pos_sample_rate
+
+      The sample rate of the position data.
+
+      :type: int
+
+   .. attribute:: pre_spike_samples
+
+      The number of samples before the spike.
+
+      :type: int
+
+   .. attribute:: post_spike_samples
+
+      The number of samples after the spike.
+
+      :type: int
+
+   .. attribute:: KSMeta
+
+      The metadata from KiloSort.
+
+      :type: KSMetaTuple
 
 
 
@@ -937,10 +1198,19 @@ Module Contents
    .. py:method:: get_channel_depth_from_templates(pname)
 
       
-      Determine depth of template as well as closest channel. Adopted from
+      Determine depth of template as well as closest channel.
+
+      :param pname: The path to the directory containing the KiloSort results.
+      :type pname: Path
+
+      :returns: The depth of the template and the index of the closest channel.
+      :rtype: tuple of np.ndarray
+
+      .. rubric:: Notes
+
+      Adopted from
       'templatePositionsAmplitudes' by N. Steinmetz
       (https://github.com/cortex-lab/spikes)
-
 
 
 
@@ -966,6 +1236,13 @@ Module Contents
       Determine the best channel (one with highest amplitude spikes)
       for a given cluster.
 
+      :param pname: The path to the directory containing the KiloSort results.
+      :type pname: Path
+      :param cluster: The cluster to get the template ID for.
+      :type cluster: int
+
+      :returns: The template ID for the cluster.
+      :rtype: int
 
 
 
@@ -985,7 +1262,7 @@ Module Contents
           !! processed by numpydoc !!
 
 
-   .. py:method:: get_waveforms(cluster, cluster_data, n_waveforms = 2000, n_channels = 64, channel_range=None, **kwargs)
+   .. py:method:: get_waveforms(cluster, cluster_data, n_waveforms = 2000, n_channels = 64, channel_range=None)
 
       
       Returns waveforms for a cluster.
@@ -996,11 +1273,12 @@ Module Contents
                            session that contains the cluster.
       :type cluster_data: KiloSortSession
       :param n_waveforms: The number of waveforms to return.
-                          Defaults to 2000.
-      :type n_waveforms: int, optional
-      :param n_channels: The number of channels in the
-                         recording. Defaults to 64.
-      :type n_channels: int, optional
+      :type n_waveforms: int, default=2000
+      :param n_channels: The number of channels in the recording.
+      :type n_channels: int, default=64
+
+      :returns: The waveforms for the cluster.
+      :rtype: np.ndarray
 
 
 
@@ -1060,25 +1338,19 @@ Module Contents
    Returns the L-ratio and Isolation Distance measures calculated
    on the principal components of the energy in a spike matrix.
 
-   :param waveforms: The waveforms to be processed.
-                     If None, the function will return None.
+   :param waveforms: The waveforms to be processed. If None, the function will return None.
    :type waveforms: np.ndarray, optional
-   :param spike_clusters: The spike clusters to be
-                          processed.
+   :param spike_clusters: The spike clusters to be processed.
    :type spike_clusters: np.ndarray, optional
    :param cluster_id: The ID of the cluster to be processed.
    :type cluster_id: int, optional
-   :param fet: The feature to be used in the PCA calculation.
-   :type fet: int, default=1
+   :param fet: The feature to be used in the PCA calculation (default is 1).
+   :type fet: int, optional
 
-   :returns:
-
-             A tuple containing the L-ratio and Isolation Distance of the
-                 cluster.
+   :returns: A tuple containing the L-ratio and Isolation Distance of the cluster.
    :rtype: tuple
 
-   :raises Exception: If an error occurs during the calculation of the L-ratio or
-       Isolation Distance.
+   :raises Exception: If an error occurs during the calculation of the L-ratio or Isolation Distance.
 
 
 
@@ -1103,18 +1375,17 @@ Module Contents
    Computes the cross-correlogram between two sets of spikes and
    estimates how refractory the cross-correlogram is.
 
-   :param st1: The first set of spikes.
-   :type st1: np.array
-   :param st2: The second set of spikes.
-   :type st2: np.array
+   :param x1: The first set of spikes.
+   :type x1: np.ndarray
+   :param x2: The second set of spikes. If None, x1 is used.
+   :type x2: np.ndarray, optional
+   :param \*\*kwargs: Additional keyword arguments that can be fed into xcorr.
+   :type \*\*kwargs: dict
 
-   kwargs:
-       Anything that can be fed into xcorr above
-
-   :returns: a measure of refractoriness
-             R (float): a second measure of refractoriness
-                     (kicks in for very low firing rates)
-   :rtype: Q (float)
+   :returns: A tuple containing:
+             - Q (float): A measure of refractoriness.
+             - R (float): A second measure of refractoriness (kicks in for very low firing rates).
+   :rtype: tuple
 
    .. rubric:: Notes
 
@@ -1123,7 +1394,6 @@ Module Contents
    The contamination metrics are calculated based on
    an analysis of the 'shoulders' of the cross-correlogram.
    Specifically, the spike counts in the ranges +/-5-25ms and
-   +/-250-500ms are compared for refractoriness
 
 
 
@@ -1170,26 +1440,26 @@ Module Contents
 .. py:function:: get_param(waveforms, param='Amp', t=200, fet=1)
 
    
-   Returns the requested parameter from a spike train as a numpy array
+   Returns the requested parameter from a spike train as a numpy array.
 
-   :param waveforms: Shape of array can be nSpikes x nSamples
-                     OR
-                     a nSpikes x nElectrodes x nSamples
-   :type waveforms: numpy array
+   :param waveforms: Shape of array can be nSpikes x nSamples OR nSpikes x nElectrodes x nSamples.
+   :type waveforms: np.ndarray
    :param param: Valid values are:
-                 'Amp' - peak-to-trough amplitude (default)
-                 'P' - height of peak
-                 'T' - depth of trough
-                 'Vt' height at time t
-                 'tP' - time of peak (in seconds)
-                 'tT' - time of trough (in seconds)
-                 'PCA' - first n fet principal components (defaults to 1)
-   :type param: str
+                 - 'Amp': peak-to-trough amplitude
+                 - 'P': height of peak
+                 - 'T': depth of trough
+                 - 'Vt': height at time t
+                 - 'tP': time of peak (in seconds)
+                 - 'tT': time of trough (in seconds)
+                 - 'PCA': first n fet principal components (defaults to 1)
+   :type param: str, default='Amp'
    :param t: The time used for Vt
-   :type t: int
-   :param fet: The number of principal components
-               (use with param 'PCA')
-   :type fet: int
+   :type t: int, default=200
+   :param fet: The number of principal components (use with param 'PCA').
+   :type fet: int, default=1
+
+   :returns: The requested parameter as a numpy array.
+   :rtype: np.ndarray
 
 
 
@@ -1214,25 +1484,15 @@ Module Contents
    Returns the L-ratio and Isolation Distance measures calculated on the
    principal components of the energy in a spike matrix.
 
-   :param waveforms: The waveforms to be processed. If
-                     None, the function will return None.
-   :type waveforms: np.ndarray, optional
-   :param spike_clusters: The spike clusters to be
-                          processed.
-   :type spike_clusters: np.ndarray, optional
-   :param cluster_id: The ID of the cluster to be processed.
-   :type cluster_id: int, optional
-   :param fet: The feature to be used in the PCA calculation.
-   :type fet: int, default=1
+   :param u: The first set of waveforms.
+   :type u: np.ndarray
+   :param v: The second set of waveforms.
+   :type v: np.ndarray
 
-   :returns:
+   :returns: The Mahalanobis distances.
+   :rtype: np.ndarray
 
-             A tuple containing the L-ratio and Isolation Distance of the
-                 cluster.
-   :rtype: tuple
-
-   :raises Exception: If an error occurs during the calculation of the L-ratio or
-       Isolation Distance.
+   :raises Warning: If input size mismatch, too few rows, or complex inputs are detected.
 
 
 
@@ -1254,28 +1514,22 @@ Module Contents
 .. py:function:: xcorr(x1, x2 = None, Trange = np.array([-0.5, 0.5]), binsize = 0.001, normed=False, **kwargs)
 
    
-   Calculates the ISIs in x1 or x1 vs x2 within a given range
+   Calculates the ISIs in x1 or x1 vs x2 within a given range.
 
-   :param x1: The times of the spikes emitted by the
-              cluster(s) in seconds
-   :type x1: array_like
-   :param x2: The times of the spikes emitted by the
-              cluster(s) in seconds
-   :type x2: array_like
-   :param Trange: Range of times to bin up in seconds
-                  Defaults to [-0.5, +0.5]
-   :type Trange: array_like
-   :param binsize: The size of the bins in seconds
-   :type binsize: float
-   :param normed: Whether to divide the counts by the total
-                  number of spikes to give a probabilty
-   :type normed: bool
-   :param \*\*kwargs - just there to suck up spare parameters:
+   :param x1: The times of the spikes emitted by the first cluster in seconds.
+   :type x1: np.ndarray
+   :param x2: The times of the spikes emitted by the second cluster in seconds. If None, x1 is used.
+   :type x2: np.ndarray, optional
+   :param Trange: Range of times to bin up in seconds (default is [-0.5, 0.5]).
+   :type Trange: np.ndarray or list, optional
+   :param binsize: The size of the bins in seconds (default is 0.001).
+   :type binsize: float, optional
+   :param normed: Whether to divide the counts by the total number of spikes to give a probability (default is False).
+   :type normed: bool, optional
+   :param \*\*kwargs: Additional keyword arguments.
+   :type \*\*kwargs: dict
 
-   :returns:
-
-             A BinnedData object containing the binned data and the
-                         bin edges
+   :returns: A BinnedData object containing the binned data and the bin edges.
    :rtype: BinnedData
 
 

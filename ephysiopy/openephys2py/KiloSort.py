@@ -146,6 +146,13 @@ class KiloSortSession(object):
             self.spike_times = np.ma.MaskedArray(
                 np.squeeze(np.load(os.path.join(self.fname_root, "spike_times.npy")))
             )
+        if fileExists(self.fname_root, "templates.npy"):
+            self.templates = np.load(os.path.join(self.fname_root, "templates.npy"))
+        if fileExists(self.fname_root, "templates_ind.npy"):
+            self.templates_ind = np.load(
+                os.path.join(self.fname_root, "templates_ind.npy")
+            )
+
             return True
         warnings.warn(
             "No spike times or clusters were found \
@@ -190,6 +197,98 @@ class KiloSortSession(object):
         """
         if cluster in self.ks_cluster_id:
             return self.spike_times[self.spk_clusters == cluster]
+
+    def get_cluster_channels(self, cluster: int) -> np.ndarray:
+        """
+        Returns the most relevant channels for a given cluster.
+
+        Parameters
+        ----------
+        cluster : int
+            The cluster ID.
+
+        Returns
+        -------
+        np.ndarray
+            The channels for the specified cluster.
+        """
+        spike_ids = self.get_cluster_spikes(cluster)
+        return self._get_template_from_spikes(spike_ids).channel_ids
+
+    def _get_template_from_spikes(self, spike_ids):
+        """
+        Returns the template for a given set of spike ids.
+
+        Parameters
+        ----------
+        spike_ids : np.ndarray
+            The spike indices.
+
+        Returns
+        -------
+        np.ndarray
+            The template for the specified spikes.
+        """
+        st = self.spike_templates[spike_ids]
+        template_ids, counts = np.unique(st, return_counts=True)
+        ind = np.argmax(counts)
+        template_id = template_ids[ind]
+        template = self.get_template(template_id)
+        return template
+
+    def get_template(self, template_id: int):
+        """
+        Returns the template for a given template ID.
+
+        Parameters
+        ----------
+        template_id : int
+            The template ID.
+
+        Returns
+        -------
+        np.ndarray
+            The template for the specified ID.
+        """
+        data, cols = self.templates, self.templates_ind
+        template_w, channel_ids = data[template_id], cols[template_id]
+        # template_w is (n_samples, n_channels):
+
+    def get_cluster_spikes(self, cluster: int) -> np.ndarray:
+        """
+        Returns the spike ids that belong to a given template.
+
+        Parameters
+        ----------
+        cluster : int
+            The cluster ID.
+
+        Returns
+        -------
+        np.ndarray
+            The spike indices for the specified cluster.
+        """
+        return self._spikes_in_clusters(self.spike_clusters, [cluster])
+
+    def _spikes_in_clusters(self, clusters, cluster_ids):
+        """
+        Returns the spike ids that belong to a given cluster.
+
+        Parameters
+        ----------
+        clusters : np.ndarray
+            The cluster IDs for each spike.
+        cluster_ids : list
+            The cluster IDs to filter.
+
+        Returns
+        -------
+        np.ndarray
+            The spike indices for the specified cluster.
+        """
+        if len(clusters) == 0 or len(cluster_ids) == 0:
+            return np.array([], dtype=int)
+        return np.nonzero(np.isin(clusters, cluster_ids))[0]
 
     def apply_mask(self, mask, **kwargs):
         """

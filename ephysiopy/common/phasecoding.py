@@ -238,7 +238,7 @@ def plot_spikes_in_runs_per_field(
         ax.set_yticks(ytick_locs, list(map(str, np.unique(run_field_id))))
         ax.set_ylabel("Field ID", rotation=90, labelpad=10)
         ax.set_xlabel("Time (s)")
-        ax.set_xticks([0, max_run_len], ["0", f"{(max_run_len)/50:.2f}"])
+        ax.set_xticks([0, max_run_len], ["0", f"{(max_run_len) / 50:.2f}"])
         axes2 = ax.twinx()
         axes2.set_yticks(ytick_locs, list(map(str, spikes_per_run)))
         axes2.set_ylim(ax.get_ylim())
@@ -1454,7 +1454,7 @@ def plot_field_props(field_props: list[FieldProps]):
         [f.xy_dist_to_peak / f.xy_dist_to_peak.max() for f in field_props]
     )
     face_colours = dist_cmap(distances)
-    offsets = np.concatenate([f.xy_coords.T for f in field_props])
+    offsets = np.concatenate([f.xy.T for f in field_props])
     rects = RegularPolyCollection(
         numsides=4,
         rotation=0,

@@ -166,16 +166,56 @@ Module Contents
 
    .. py:method:: __filterLFP__(data, sample_rate)
 
+      
+      Filters the LFP data.
+
+      :param data: The LFP data to be filtered.
+      :type data: np.array
+      :param sample_rate: The sampling rate of the data.
+      :type sample_rate: int
+
+      :returns: The filtered LFP data.
+      :rtype: np.array
+
+      .. rubric:: Notes
+
+      Applies a bandpass filter to the LFP data using the specified sample rate.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: convertPosData(xy, xy_ts)
 
       
       Performs the conversion of the array parts of the data.
 
-      Note: As well as upsampling the data to the Axona pos sampling rate (50Hz),
-      we have to insert some columns into the pos array as Axona format
-      expects it like: pos_format: t,x1,y1,x2,y2,numpix1,numpix2
-      We can make up some of the info and ignore other bits.
+      :param xy: The x and y coordinates.
+      :type xy: np.array
+      :param xy_ts: The timestamps for the x and y coordinates.
+      :type xy_ts: np.array
+
+      :returns: The converted position data.
+      :rtype: np.array
+
+      .. rubric:: Notes
+
+      Upsamples the data to the Axona position sampling rate (50Hz) and inserts
+      columns into the position array to match the Axona format.
 
 
 
@@ -198,11 +238,15 @@ Module Contents
    .. py:method:: convertSpikeData(hdf5_tetrode_data)
 
       
-      Does the spike conversion from OE Spike Sorter format to Axona format tetrode files.
+      Converts spike data from the Open Ephys Spike Sorter format to Axona format tetrode files.
 
-      :param hdf5_tetrode_data: This kind of looks like a dictionary and can,
-                                it seems, be treated as one more or less. See http://docs.h5py.org/en/stable/high/group.html
+      :param hdf5_tetrode_data: The HDF5 group containing the tetrode data.
       :type hdf5_tetrode_data: h5py._hl.group.Group
+
+      .. rubric:: Notes
+
+      Converts the spike data and timestamps, scales them appropriately, and saves
+      them in the Axona tetrode format.
 
 
 
@@ -225,25 +269,28 @@ Module Contents
    .. py:method:: convertTemplateDataToAxonaTetrode(max_n_waves=2000, **kwargs)
 
       
-      Converts the data held in a TemplateModel instance into tetrode
-      format Axona data files.
+      Converts the data held in a TemplateModel instance into tetrode format Axona data files.
 
-      For each cluster, there'll be a channel that has a peak amplitude and this contains that peak channel.
-      While the other channels with a large signal in might be on the same tetrode, KiloSort (or whatever) might find
-      channels *not* within the same tetrode. For a given cluster, we can extract from the TemplateModel the 12 channels across
-      which the signal is strongest using Model.get_cluster_channels(). If a channel from a tetrode is missing from this list then the
-      spikes for that channel(s) will be zeroed when saved to Axona format.
+      :param max_n_waves: The maximum number of waveforms to process.
+      :type max_n_waves: int, default=2000
 
-      .. rubric:: Example
+      .. rubric:: Notes
+
+      For each cluster, the channel with the peak amplitude is identified, and the
+      data is converted to the Axona tetrode format. If a channel from a tetrode is
+      missing, the spikes for that channel are zeroed when saved to the Axona format.
+
+      .. rubric:: Examples
 
       If cluster 3 has a peak channel of 1 then get_cluster_channels() might look like:
       [ 1,  2,  0,  6, 10, 11,  4,  12,  7,  5,  8,  9]
-      Here the cluster has the best signal on 1, then 2, 0 etc, but note that channel 3 isn't in the list.
-      In this case the data for channel 3 will be zeroed when saved to Axona format.
+      Here the cluster has the best signal on 1, then 2, 0 etc, but note that channel 3
+      isn't in the list. In this case the data for channel 3 will be zeroed
+      when saved to Axona format.
 
       .. rubric:: References
 
-      1) https://phy.readthedocs.io/en/latest/api/#phyappstemplatetemplatemodel
+      .. [Rd5d247d6957d-1] https://phy.readthedocs.io/en/latest/api/#phyappstemplatetemplatemodel
 
 
 
@@ -268,12 +315,17 @@ Module Contents
       
       Exports LFP data to file.
 
-      :param channel: The channel number.
-      :type channel: int
-      :param lfp_type: The type of LFP data. Legal values are 'egf' or 'eeg'.
-      :type lfp_type: str
-      :param gain: Multiplier for the LFP data.
-      :type gain: int
+      :param channel: The channel number. Default is 0.
+      :type channel: int, optional
+      :param lfp_type: The type of LFP data. Legal values are 'egf' or 'eeg'. Default is 'eeg'.
+      :type lfp_type: str, optional
+      :param gain: Multiplier for the LFP data. Default is 5000.
+      :type gain: int, optional
+
+      .. rubric:: Notes
+
+      Converts and exports LFP data from the Open Ephys format to the Axona format.
+          gain (int): Multiplier for the LFP data.
 
 
 
@@ -294,6 +346,34 @@ Module Contents
 
 
    .. py:method:: exportPos(ppm=300, jumpmax=100, as_text=False, **kwargs)
+
+      
+      Exports position data to either text or Axona format.
+
+      :param ppm: Pixels per meter. Defaults to 300.
+      :type ppm: int, optional
+      :param jumpmax: Maximum allowed jump in position data. Defaults to 100.
+      :type jumpmax: int,def
+      :param as_text: If True, exports position data to text format. Defaults to False.
+      :type as_text: bool, optional
+      :param \*\*kwargs: Additional keyword arguments.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:method:: exportSetFile(**kwargs)
@@ -322,6 +402,30 @@ Module Contents
 
    .. py:method:: exportSpikes()
 
+      
+      Exports spiking data.
+
+      .. rubric:: Notes
+
+      Converts spiking data from the Open Ephys format to the Axona format.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: getOEData()
 
@@ -335,6 +439,9 @@ Module Contents
                              the default has changed in different versions of OE from 'recording0'
                              to 'recording1'.
       :type recording_name: str
+
+      :returns: An instance of OpenEphysBase containing the loaded data.
+      :rtype: OpenEphysBase
 
 
 
@@ -357,12 +464,19 @@ Module Contents
    .. py:method:: makeLFPData(data, eeg_type='eeg', gain=5000)
 
       
-      Downsamples the data in data and saves the result as either an egf or eeg file
-      depending on the choice of either eeg_type which can take a value of either 'egf' or 'eeg'.
-      Gain is the scaling factor.
+      Downsamples the data and saves the result as either an EGF or EEG file.
 
       :param data: The data to be downsampled. Must have dtype as np.int16.
-      :type data: np.array
+      :type data: np.ndarray
+      :param eeg_type: The type of LFP data. Legal values are 'egf' or 'eeg'. Default is 'eeg'.
+      :type eeg_type: str, optional
+      :param gain: The scaling factor. Default is 5000.
+      :type gain: int, optional
+
+      .. rubric:: Notes
+
+      Downsamples the data to the specified rate and applies a filter. The data is
+      then scaled and saved in the Axona format.
 
 
 
@@ -384,12 +498,51 @@ Module Contents
 
    .. py:method:: makeSetData(lfp_channel=4, **kwargs)
 
+      
+      Creates and writes the SET file data.
+
+      :param lfp_channel: The LFP channel number. Default is 4.
+      :type lfp_channel: int, optional
+
+      .. rubric:: Notes
+
+      Creates the SET file header and entries based on the provided parameters and
+      writes the data to the Axona format.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: resample(data, src_rate=30, dst_rate=50, axis=0)
 
       
-      Resamples data using FFT
+      Resamples data using FFT.
 
+      :param data: The input data to be resampled.
+      :type data: array_like
+      :param src_rate: The original sampling rate of the data. Defaults to 30.
+      :type src_rate: int, optional
+      :param dst_rate: The desired sampling rate of the resampled data. Defaults to 50.
+      :type dst_rate: int, optional
+      :param axis: The axis along which to resample. Defaults to 0.
+      :type axis: int, optional
+
+      :returns: **new_data** -- The resampled data.
+      :rtype: ndarray
 
 
 
@@ -411,8 +564,70 @@ Module Contents
 
    .. py:method:: writeCutData(itet, header, data)
 
+      
+      Writes cut data to the Axona format.
+
+      :param itet: The tetrode identifier.
+      :type itet: str
+      :param header: The header information for the cut file.
+      :type header: dataclass
+      :param data: The cut data to be written.
+      :type data: np.array
+
+      .. rubric:: Notes
+
+      Writes the cut data and header to the Axona format.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: writeLFP2AxonaFormat(header, data, eeg_type='eeg')
+
+      
+      Writes LFP data to the Axona format.
+
+      :param header: The header information for the LFP file.
+      :type header: dataclass
+      :param data: The LFP data to be written.
+      :type data: np.array
+      :param eeg_type: The type of LFP data. Legal values are 'egf' or 'eeg'. Default is 'eeg'.
+      :type eeg_type: str, optional
+
+      .. rubric:: Notes
+
+      Writes the LFP data and header to the Axona format.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:method:: writePos2AxonaFormat(header, data)
@@ -420,8 +635,66 @@ Module Contents
 
    .. py:method:: writeSetData(header)
 
+      
+      Writes SET data to the Axona format.
+
+      :param header: The header information for the SET file.
+      :type header: dataclass
+
+      .. rubric:: Notes
+
+      Writes the SET data and header to the Axona format.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: writeTetrodeData(itet, header, data)
+
+      
+      Writes tetrode data to the Axona format.
+
+      :param itet: The tetrode identifier.
+      :type itet: str
+      :param header: The header information for the tetrode file.
+      :type header: dataclass
+      :param data: The tetrode data to be written.
+      :type data: np.array
+
+      .. rubric:: Notes
+
+      Writes the tetrode data and header to the Axona format.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:attribute:: AxonaData

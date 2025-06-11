@@ -17,11 +17,16 @@ from ephysiopy.common.utils import (
 # Suppress warnings generated from doing the ffts for the spatial
 # autocorrelogram
 warnings.filterwarnings("ignore", message="invalid value encountered in sqrt")
-warnings.filterwarnings("ignore", message="invalid value encountered in subtract")
-warnings.filterwarnings("ignore", message="invalid value encountered in greater")
-warnings.filterwarnings("ignore", message="invalid value encountered in true_divide")
-warnings.filterwarnings("ignore", message="invalid value encountered in divide")
-warnings.filterwarnings("ignore", message="divide by zero encountered in true_divide")
+warnings.filterwarnings(
+    "ignore", message="invalid value encountered in subtract")
+warnings.filterwarnings(
+    "ignore", message="invalid value encountered in greater")
+warnings.filterwarnings(
+    "ignore", message="invalid value encountered in true_divide")
+warnings.filterwarnings(
+    "ignore", message="invalid value encountered in divide")
+warnings.filterwarnings(
+    "ignore", message="divide by zero encountered in true_divide")
 np.seterr(divide="ignore", invalid="ignore")
 
 
@@ -140,7 +145,7 @@ class RateMap(object):
     @property
     def inCms(self):
         # Whether the units are in cms or not
-        return self._inCms
+        return self.PosCalcs.convert2cm
 
     @inCms.setter
     def inCms(self, value):
@@ -259,12 +264,10 @@ class RateMap(object):
         """
         Gets the min/max of the x/y data
         """
-        x_lims = getattr(self, "x_lims", None)
-        y_lims = getattr(self, "y_lims", None)
-        if x_lims is None:
-            x_lims = (np.nanmin(self.xy[0]), np.nanmax(self.xy[0]))
-        if y_lims is None:
-            y_lims = (np.nanmin(self.xy[1]), np.nanmax(self.xy[1]))
+        x_lims = (np.nanmin(self.PosCalcs.xy[0]), np.nanmax(
+            self.PosCalcs.xy[0]))
+        y_lims = (np.nanmin(self.PosCalcs.xy[1]), np.nanmax(
+            self.PosCalcs.xy[1]))
         self.x_lims = x_lims
         self.y_lims = y_lims
         return x_lims, y_lims
@@ -294,7 +297,8 @@ class RateMap(object):
         elif self.var2Bin.value == VariableToBin.SPEED.value:
             maxspeed = np.nanmax(self.speed)
             # assume min speed = 0
-            self.binedges = np.linspace(0, maxspeed, int(maxspeed / binsize)).tolist()
+            self.binedges = np.linspace(
+                0, maxspeed, int(maxspeed / binsize)).tolist()
         elif self.var2Bin.value == VariableToBin.XY.value:
             x_lims, y_lims = self._getXYLimits()
             nxbins = int(np.ceil((x_lims[1] - x_lims[0]) / binsize))
@@ -325,10 +329,12 @@ class RateMap(object):
                 )
         elif self.var2Bin.value == VariableToBin.EGO_BOUNDARY.value:
             if isinstance(binsize, (float, int)):
-                self.binedges = np.linspace(0, 50, 20), np.linspace(0, 2 * np.pi, 120)
+                self.binedges = np.linspace(
+                    0, 50, 20), np.linspace(0, 2 * np.pi, 120)
             elif isinstance(binsize, tuple):
-                self.binedges = np.linspace(0, 50, int(50 / binsize[0])), np.linspace(
-                    0, 2 * np.pi, int((2 * np.pi) / binsize[1])
+                self.binedges = (
+                    np.linspace(0, 50, int(50 / binsize[0])),
+                    np.linspace(0, 2 * np.pi, int((2 * np.pi) / binsize[1])),
                 )
         self._calc_bin_dims()
         return self.binedges
@@ -339,7 +345,7 @@ class RateMap(object):
         var_type=VariableToBin.XY,
         map_type=MapType.RATE,
         smoothing=True,
-        **kwargs
+        **kwargs,
     ) -> BinnedData | None:
         """
         Bins up the variable type var_type and returns a tuple of
@@ -422,7 +428,8 @@ class RateMap(object):
             bin_edges = self._calc_bin_edges(binsize)
         else:
             bin_edges = None
-        binned_pos, binned_pos_edges = self._bin_data(sample, bin_edges, pos_weights)
+        binned_pos, binned_pos_edges = self._bin_data(
+            sample, bin_edges, pos_weights)
         binned_pos = binned_pos / self.PosCalcs.sample_rate
         nanIdx = binned_pos == 0
         pos = BinnedData(var_type, MapType.POS, [binned_pos], binned_pos_edges)
@@ -434,7 +441,7 @@ class RateMap(object):
                     self.smooth_sz,
                     ftype=self.smoothingType,
                     boundary=boundary,
-                    **kwargs
+                    **kwargs,
                 )
                 sm_pos.set_nan_indices(nanIdx)
                 return sm_pos
@@ -454,7 +461,7 @@ class RateMap(object):
                     self.smooth_sz,
                     ftype=self.smoothingType,
                     boundary=boundary,
-                    **kwargs
+                    **kwargs,
                 )
             else:
                 return spk
@@ -465,10 +472,12 @@ class RateMap(object):
                 smthd_rate = []
                 for i in range(binned_spk.shape[0]):
                     smthd_rate.append(
-                        self.getAdaptiveMap(binned_pos, binned_spk[i, ...], alpha)[0]
+                        self.getAdaptiveMap(
+                            binned_pos, binned_spk[i, ...], alpha)[0]
                     )
             else:
-                smthd_rate, _, _ = self.getAdaptiveMap(binned_pos, binned_spk, alpha)
+                smthd_rate, _, _ = self.getAdaptiveMap(
+                    binned_pos, binned_spk, alpha)
             return BinnedData(var_type, map_type, smthd_rate, binned_pos_edges)
 
         if not smoothing:
@@ -484,7 +493,7 @@ class RateMap(object):
                 self.smooth_sz,
                 ftype=self.smoothingType,
                 boundary=boundary,
-                **kwargs
+                **kwargs,
             )
         else:  # default case
             sm_pos = blur_image(
@@ -492,14 +501,14 @@ class RateMap(object):
                 self.smooth_sz,
                 ftype=self.smoothingType,
                 boundary=boundary,
-                **kwargs
+                **kwargs,
             )
             sm_spk = blur_image(
                 spk,
                 self.smooth_sz,
                 ftype=self.smoothingType,
                 boundary=boundary,
-                **kwargs
+                **kwargs,
             )
             rmap = sm_spk / sm_pos
         rmap.set_nan_indices(nanIdx)
@@ -574,12 +583,15 @@ class RateMap(object):
             bin_edges = self.binedges
         if len(bin_edges) == 1:
             hist = bh.Histogram(
-                bh.axis.Regular(len(bin_edges[0]), bin_edges[0][0], bin_edges[0][-1])
+                bh.axis.Regular(len(bin_edges[0]),
+                                bin_edges[0][0], bin_edges[0][-1])
             )
         else:
             hist = bh.Histogram(
-                bh.axis.Regular(len(bin_edges[0]), bin_edges[0][0], bin_edges[0][-1]),
-                bh.axis.Regular(len(bin_edges[1]), bin_edges[1][0], bin_edges[1][-1]),
+                bh.axis.Regular(
+                    len(bin_edges[0]), bin_edges[0][0], bin_edges[0][-1]),
+                bh.axis.Regular(
+                    len(bin_edges[1]), bin_edges[1][0], bin_edges[1][-1]),
             )
         ndhist = []
         for w in weights:
@@ -685,7 +697,7 @@ class RateMap(object):
         return smthdrate, smthdspk, smthdpos
 
     def autoCorr2D(
-        self, A: BinnedData, nodwell: np.ndarray, tol: float = 1e-10
+        self, A: BinnedData, nodwell: np.ndarray = None, tol: float = 1e-10, **kwargs
     ) -> BinnedData:
         """
         Performs autocorrelations on all the maps in an instance of BinnedData.
@@ -694,8 +706,8 @@ class RateMap(object):
         ----------
         A : BinnedData
             The binned data
-        nodwell : np.ndarray
-            An array with NaNs where there was no position sampled.
+        nodwell : np.ndarray or None
+            An array with NaNs where there was no position sampled. If None, it's created from A where there are NaNs.
         tol : float
             Tolerance below which values are set to 0.
 
@@ -705,7 +717,10 @@ class RateMap(object):
             The data in A with the maps replaced by autocorrelograms
         """
         result = BinnedData(A.variable, MapType.AUTO_CORR)
+        result.cluster_id = kwargs.get("cluster_id", [])
         for rmap in A.binned_data:
+            if nodwell is None:
+                nodwell = np.isnan(rmap)
             rr = self._autoCorr2D(rmap, nodwell, tol)
             result.binned_data += [rr]
         xlen = len(A.bin_edges[0]) - 1
@@ -773,7 +788,8 @@ class RateMap(object):
         )
         sumOfSquares_x = np.fft.fftshift(
             np.real(
-                np.fft.ifft(np.fft.ifft(Fn * np.conj(FsumOfSquares_x), axis=1), axis=0)
+                np.fft.ifft(np.fft.ifft(
+                    Fn * np.conj(FsumOfSquares_x), axis=1), axis=0)
             ),
             axes=(0, 1),
         )
@@ -789,7 +805,8 @@ class RateMap(object):
         N[N <= 1] = np.nan
         # [Step 4] Compute correlation matrix
         mapStd = np.sqrt((sumOfSquares_x * N) - sums_x**2)
-        mapCovar = (rawCorr * N) - sums_x * sums_x[::-1, :, :][:, ::-1, :][:, :, :]
+        mapCovar = (rawCorr * N) - sums_x * \
+            sums_x[::-1, :, :][:, ::-1, :][:, :, :]
 
         return np.squeeze(mapCovar / mapStd / mapStd[::-1, :, :][:, ::-1, :][:, :, :])
 
@@ -996,7 +1013,7 @@ class RateMap(object):
         # 1b. Keep looping until we have dealt with all spikes
         for i, s in enumerate(spkIdx):
             t = np.searchsorted(spkIdx, (s, s + winSizeBins))
-            nSpikesInWin[i] = len(spkIdx[t[0] : t[1]]) - 1  # ignore ith spike
+            nSpikesInWin[i] = len(spkIdx[t[0]: t[1]]) - 1  # ignore ith spike
 
         # [Stage 2] Prepare for main loop
         # 2a. Work out offset inidices to be used when storing spike data
@@ -1027,17 +1044,19 @@ class RateMap(object):
                 dtype=int,
             )
             WL = len(winInd_dwell)
-            dwell[:, filled_pvals : filled_pvals + WL] = np.rot90(
+            dwell[:, filled_pvals: filled_pvals + WL] = np.rot90(
                 np.array(np.rot90(xy[:, winInd_dwell]) - xy[:, spkIdx[i]])
             )
             filled_pvals = filled_pvals + WL
             # calculate spike displacements
             winInd_spks = (
-                i + np.nonzero(spkIdx[i + 1 : n_spks] < spkIdx[i] + winSizeBins)[0]
+                i + np.nonzero(spkIdx[i + 1: n_spks] <
+                               spkIdx[i] + winSizeBins)[0]
             )
             WL = len(winInd_spks)
-            spike[:, filled_svals : filled_svals + WL] = np.rot90(
-                np.array(np.rot90(xy[:, spkIdx[winInd_spks]]) - xy[:, spkIdx[i]])
+            spike[:, filled_svals: filled_svals + WL] = np.rot90(
+                np.array(
+                    np.rot90(xy[:, spkIdx[winInd_spks]]) - xy[:, spkIdx[i]])
             )
             filled_svals = filled_svals + WL
 
@@ -1107,7 +1126,8 @@ class RateMap(object):
         Angles are in radians.
         """
         arena_width = np.ceil(
-            np.nanmean((np.nanmax(self.xy.data, 1) - np.nanmin(self.xy.data, 1)) / 2)
+            np.nanmean((np.nanmax(self.xy.data, 1) -
+                       np.nanmin(self.xy.data, 1)) / 2)
         )
         arena_width = arena_width.tolist()
         arena_centre = Point(np.nanmin(self.xy.data, 1) + arena_width)
@@ -1115,8 +1135,10 @@ class RateMap(object):
         if "circle" in arena_shape:
             arena_boundary = arena_centre.buffer(arena_width).boundary
         elif "square" in arena_shape:
-            arena_boundary = arena_centre.buffer(arena_width, cap_style=3).boundary
-        arena_boundary = arena_boundary.segmentize(max_segment_length=xy_binsize)
+            arena_boundary = arena_centre.buffer(
+                arena_width, cap_style=3).boundary
+        arena_boundary = arena_boundary.segmentize(
+            max_segment_length=xy_binsize)
         arena_xy = np.array(arena_boundary.xy).T
         animal_xy = self.xy
         dx = np.atleast_2d(animal_xy[0]) - np.atleast_2d(arena_xy[:, 0]).T
