@@ -80,7 +80,7 @@ def make_cluster_ids(cluster: int | list, channel: int | list) -> list:
     if isinstance(channel, int):
         channel = [channel]
     for cl_ch in zip(cluster, channel):
-        ids.append(ClusterID(cl_ch[0], cl_ch[1]))
+        ids.append(ClusterID(cl_ch[1], cl_ch[0]))
     return ids
 
 
@@ -384,6 +384,9 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 
             Valid names are:
                 'dir' - the directional range to filter for
+                    NB Following mathmatical convention, 0/360 degrees is
+                    3 o'clock, 90 degrees is 12 o'clock, 180 degrees is
+                    9 o'clock and 270 degrees
                 'speed' - min and max speed to filter for
                 'xrange' - min and max values to filter x pos values
                 'yrange' - same as xrange but for y pos
@@ -410,28 +413,6 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
                 elif i_filter.name is None:
                     mask = False
                 else:
-                    if "dir" in i_filter.name and isinstance(i_filter.start, str):
-                        if len(i_filter.start) == 1:
-                            if "w" in i_filter.start:
-                                start = 135
-                                end = 225
-                            elif "e" in i_filter.start:
-                                start = 315
-                                end = 45
-                            elif "s" in i_filter.start:
-                                start = 225
-                                end = 315
-                            elif "n" in i_filter.start:
-                                start = 45
-                                end = 135
-                            else:
-                                raise ValueError("Invalid direction")
-                        else:
-                            raise ValueError(
-                                "filter must contain a key / value pair")
-                        bool_arr = np.logical_and(
-                            self.PosCalcs.dir > start, self.PosCalcs.dir < end
-                        )
                     if "speed" in i_filter.name:
                         if i_filter.start > i_filter.end:
                             raise ValueError(
@@ -439,10 +420,10 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
                             )
                         else:
                             bool_arr = np.logical_and(
-                                self.PosCalcs.speed > i_filter.start,
-                                self.PosCalcs.speed < i_filter.end,
+                                self.PosCalcs.speed >= i_filter.start,
+                                self.PosCalcs.speed <= i_filter.end,
                             )
-                    elif "dir" in i_filter.name:
+                    elif "dir" in i_filter.name and not isinstance(i_filter.start, str):
                         if i_filter.start < i_filter.end:
                             bool_arr = np.logical_and(
                                 self.PosCalcs.dir > i_filter.start,
@@ -452,6 +433,49 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
                             bool_arr = np.logical_or(
                                 self.PosCalcs.dir > i_filter.start,
                                 self.PosCalcs.dir < i_filter.end,
+                            )
+                    elif "dir" in i_filter.name and isinstance(i_filter.start, str):
+                        if len(i_filter.start) == 1:
+                            # if "w" in i_filter.start:
+                            #     start = 135  # orig: 135
+                            #     end = 225  # orig: 225
+                            # elif "e" in i_filter.start:
+                            #     start = 315  # orig: 315
+                            #     end = 45  # orig: 45
+                            # elif "s" in i_filter.start:
+                            #     start = 225  # orig:225
+                            #     end = 315  # orig: 315
+                            # elif "n" in i_filter.start:
+                            #     start = 45  # orig: 45
+                            #     end = 135  # orig: 135
+                            # else:
+                            #     raise ValueError("Invalid direction")
+                            if "w" in i_filter.start:
+                                start = 45  # rotated: 225 - 180
+                                end = 135  # rotated: 315 - 180
+                            elif "e" in i_filter.start:
+                                start = 225  # rotated: 45 - 180
+                                end = 315  # rotated: 135 - 180
+                            elif "s" in i_filter.start:
+                                start = 135  # rotated: 315 - 180
+                                end = 225  # rotated: 45 - 180
+                            elif "n" in i_filter.start:
+                                start = 315  # rotated: 135 - 180
+                                end = 45  # rotated: 225 - 180
+                            else:
+                                raise ValueError("Invalid direction")
+                        else:
+                            raise ValueError(
+                                "filter must contain a key / value pair")
+                        if start < end:
+                            bool_arr = np.logical_and(
+                                self.PosCalcs.dir > start,
+                                self.PosCalcs.dir < end,
+                            )
+                        else:
+                            bool_arr = np.logical_or(
+                                self.PosCalcs.dir > start,
+                                self.PosCalcs.dir < end,
                             )
                     elif "xrange" in i_filter.name:
                         bool_arr = np.logical_and(
@@ -566,20 +590,23 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         elif isinstance(cluster, list) and len(cluster) > 1:
             if isinstance(channel, int):
                 channel = [channel for c in cluster]
-            idx = []
+            spk_times = []
             for clust, chan in zip(cluster, channel):
-                spk_times = self.get_spike_times(clust, chan)
-                _idx = np.searchsorted(pos_times, spk_times, side="right") - 1
+                spk_times.append(self.get_spike_times(clust, chan))
+
+        if isinstance(spk_times, list):
+            idx = []
+            for spk in spk_times:
+                _idx = np.searchsorted(pos_times, spk, side="right") - 1
                 if np.any(_idx >= self.PosCalcs.npos):
                     _idx = np.delete(
-                        _idx, np.s_[np.argmax(_idx >= self.PosCalcs.npos):]
-                    )
+                        _idx, np.s_[np.argmax(_idx >= self.PosCalcs.npos):])
                 idx.append(_idx)
-            return idx
-
-        idx = np.searchsorted(pos_times, spk_times, side="right") - 1
-        if np.any(idx >= self.PosCalcs.npos):
-            idx = np.delete(idx, np.s_[np.argmax(idx >= self.PosCalcs.npos):])
+        else:
+            idx = np.searchsorted(pos_times, spk_times, side="right") - 1
+            if np.any(idx >= self.PosCalcs.npos):
+                idx = np.delete(
+                    idx, np.s_[np.argmax(idx >= self.PosCalcs.npos):])
 
         if kwargs.get("do_shuffle", False):
             n_shuffles = kwargs.get("n_shuffles", 100)
@@ -596,7 +623,22 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
                     idx, shift, maxlen=self.PosCalcs.npos))
             return shifted_idx
 
-        return [idx]
+        if isinstance(idx, list):
+            return idx
+        else:
+            return [idx]
+
+    def get_all_maps(self, channels_clusters: dict, var2bin: VariableToBin.XY, maptype: MapType, **kwargs) -> dict:
+        old_data = None
+        for channel, clusters in channels_clusters.items():
+            channels = [channel] * len(clusters)
+            data = self._get_map(clusters, channels, var2bin,
+                                 map_type=maptype, **kwargs)
+            if old_data is None:
+                old_data = data
+            else:
+                old_data = old_data + data
+        return old_data
 
     def _get_map(
         self,
@@ -659,6 +701,10 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         ):  # likely the result of a shuffle arg passed to get_spike_pos_idx
             # TODO: but not necessarily - could be multiple clusters/ channels have been passed
             weights = []
+            if isinstance(spk_times_in_pos_samples[0], list):
+                from ephysiopy.common.utils import flatten_list
+                spk_times_in_pos_samples = flatten_list(
+                    spk_times_in_pos_samples)
             for spk_idx in spk_times_in_pos_samples:
                 w = np.bincount(spk_idx, minlength=npos)
                 if len(w) > npos:
@@ -670,7 +716,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         rmap = self.RateMap.get_map(spk_weights, **kwargs)
         # add the cluster and channel id to the rate map
         # I assume this will be in the same order as they are added...
-        ids = make_cluster_ids(cluster, channel)
+        ids = make_cluster_ids(channel, cluster)
         rmap.cluster_id = ids
         return rmap
 
@@ -925,12 +971,16 @@ class AxonaTrial(TrialInterface):
     def load_cluster_data(self, *args, **kwargs):
         return False
 
-    def get_available_clusters_channels(self) -> dict:
+    def get_available_clusters_channels(self, remove0=True) -> dict:
         clust_chans = {}
         for k in self.TETRODE.valid_keys:
             if isinstance(k, int):  # only other key is 'volts'
                 try:
-                    clust_chans[k] = self.TETRODE[k].clusters.tolist()
+                    clusters = self.TETRODE[k].clusters.tolist()
+                    if remove0:
+                        clusters.remove(0)
+                    if clusters:
+                        clust_chans[k] = clusters
                 except AttributeError:
                     pass
         return clust_chans

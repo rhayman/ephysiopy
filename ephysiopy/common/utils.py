@@ -74,7 +74,8 @@ class BinnedData:
 
     def __assert_equal_bin_edges__(self, other):
         assert np.all(
-            [np.all(sbe == obe) for sbe, obe in zip(self.bin_edges, other.bin_edges)]
+            [np.all(sbe == obe)
+             for sbe, obe in zip(self.bin_edges, other.bin_edges)]
         ), "Bin edges do not match"
 
     def __len__(self):
@@ -159,7 +160,7 @@ class BinnedData:
                 map_type=self.map_type,
                 binned_data=self.binned_data + other.binned_data,
                 bin_edges=self.bin_edges,
-                cluster_id=self.cluster_id,
+                cluster_id=self.cluster_id + other.cluster_id,
             )
 
     def __eq__(self, other) -> bool:
@@ -260,12 +261,14 @@ class BinnedData:
             self.__assert_equal_bin_edges__(other)
         if other is not None:
             result = np.reshape(
-                [corr_maps(a, b) for a in self.binned_data for b in other.binned_data],
+                [corr_maps(a, b)
+                 for a in self.binned_data for b in other.binned_data],
                 newshape=(len(self.binned_data), len(other.binned_data)),
             )
         else:
             result = np.reshape(
-                [corr_maps(a, b) for a in self.binned_data for b in self.binned_data],
+                [corr_maps(a, b)
+                 for a in self.binned_data for b in self.binned_data],
                 newshape=(len(self.binned_data), len(self.binned_data)),
             )
         if as_matrix:
@@ -303,7 +306,7 @@ class TrialFilter:
     start: float | str
     end: float | str
 
-    def __init__(self, name: str, start: float | str, end: float | str):
+    def __init__(self, name: str, start: float | str, end: float | str = None):
         """
         Parameters
         ----------
@@ -700,10 +703,19 @@ def shift_vector(v, shift, maxlen=None):
         return v
     if maxlen is None:
         return v
-    if shift > 0:
-        shifted = v + shift
-        shifted[shifted >= maxlen] -= maxlen
-        return np.sort(shifted)
+    if isinstance(v, list):
+        out = []
+        if shift > 0:
+            for _v in v:
+                shifted = _v + shift
+                shifted[shifted >= maxlen] -= maxlen
+                out.append(np.sort(shifted))
+            return out
+    else:
+        if shift > 0:
+            shifted = v + shift
+            shifted[shifted >= maxlen] -= maxlen
+            return np.sort(shifted)
 
 
 def count_to(n: np.ndarray) -> np.ndarray:

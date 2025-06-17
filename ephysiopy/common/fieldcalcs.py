@@ -1423,6 +1423,7 @@ def partitionFields(
     labels = skimage.morphology.remove_small_objects(
         labels, min_size=min_field_size, connectivity=2
     )
+    # breakpoint()
     # relable the fields
     labels = skimage.segmentation.relabel_sequential(labels)[0]
 

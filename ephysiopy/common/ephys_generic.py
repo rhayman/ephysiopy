@@ -567,7 +567,8 @@ class PosCalcsGeneric(object):
                         xy_f[1, pos2 + 1] - xy_f[1, pos2],
                     )
                 )
-            ),
+            )
+            + 90,
             360,
         )
         self.dir[-1] = self.dir[-2]

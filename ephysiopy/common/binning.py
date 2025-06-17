@@ -468,16 +468,11 @@ class RateMap(object):
         if map_type.value == MapType.ADAPTIVE.value:
             alpha = kwargs.pop("alpha", 4)
             # deal with a stack of binned maps
-            if binned_spk.ndim == 3:
-                smthd_rate = []
-                for i in range(binned_spk.shape[0]):
-                    smthd_rate.append(
-                        self.getAdaptiveMap(
-                            binned_pos, binned_spk[i, ...], alpha)[0]
-                    )
-            else:
-                smthd_rate, _, _ = self.getAdaptiveMap(
-                    binned_pos, binned_spk, alpha)
+
+            smthd_rate = []
+            for bs in binned_spk:
+                smthd_rate.append(self.getAdaptiveMap(
+                    binned_pos, bs, alpha)[0])
             return BinnedData(var_type, map_type, smthd_rate, binned_pos_edges)
 
         if not smoothing:

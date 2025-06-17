@@ -403,6 +403,13 @@ class FigureMaker(object):
         -------
         plt.Axes
             The axes containing the head direction map plot.
+
+        Notes
+        -----
+        NB Following mathmatical convention, 0/360 degrees is
+        3 o'clock, 90 degrees is 12 o'clock, 180 degrees is
+        9 o'clock and 270 degrees
+
         """
         rmap = self.get_hd_map(cluster, channel, **kwargs)
 
