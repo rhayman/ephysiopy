@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field, InitVar
+from dataclasses import dataclass, field
 import numpy as np
 import astropy.convolution as cnv
 import skimage
@@ -22,6 +22,8 @@ class VariableToBin(Enum):
     SPEED_DIR = 5
     EGO_BOUNDARY = 6
     TIME = 7
+    X = 8  # linear track
+    Y = 9  # linear track
 
 
 class MapType(Enum):
@@ -327,6 +329,55 @@ class TrialFilter:
         self.name = name
         self.start = start
         self.end = end
+
+
+def filter_data(data: np.ndarray, f: TrialFilter) -> np.ndarray:
+    """
+    Filters the input data based on the specified TrialFilter.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        The data to filter.
+    f : TrialFilter
+        The filter to apply.
+
+    Returns
+    -------
+    np.ndarray
+        A boolean array where Trues are the 'to-be' masked values.
+
+    Notes
+    -----
+    When calculating the filters, be sure to do the calculations on the
+    'data' property of the masked arrays so you get access to the
+    underlying data without the mask.
+    """
+    if f.name == "dir":
+        # modify values based if first is a str
+        if isinstance(f.start, str):
+            if "w" in f.start:
+                f.start = 135  # rotated: 225 - 180 # orig 45
+                f.end = 225  # rotated: 315 - 180 # orig 135
+            elif "e" in f.start:
+                f.start = 315  # rotated: 45 - 180 # orig 225
+                f.end = 45  # rotated: 135 - 180 # orig 315
+            elif "s" in f.start:
+                f.start = 225  # rotated: 315 - 180 # orig 135
+                f.end = 315  # rotated: 45 - 180 # orig 225
+            elif "n" in f.start:
+                f.start = 45  # rotated: 135 - 180 # orig 315
+                f.end = 135  # rotated: 225 - 180 # orig 45
+            else:
+                raise ValueError("Invalid direction")
+
+        if f.start < f.end:
+            return np.logical_and(data >= f.start, data <= f.end)
+        else:
+            # Handle the case where the direction wraps around
+            return np.logical_or(data >= f.start, data <= f.end)
+    else:
+        return np.logical_and(data >= f.start, data <= f.end)
 
 
 def memmapBinaryFile(path2file: Path, n_channels=384, **kwargs) -> np.ndarray:

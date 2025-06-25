@@ -316,14 +316,14 @@ class KiloSortSession(object):
         pos_times_in_samples = np.ma.MaskedArray(xy_ts * sample_rate, dtype=int)
         mask = np.isin(spike_pos_samples, pos_times_in_samples)
         if isinstance(self.spike_times, np.ma.MaskedArray):
-            self.spike_times.mask = mask.data
+            self.spike_times.mask = mask
         else:
             self.spike_times = np.ma.MaskedArray(self.spike_times, mask)
         if isinstance(self.spk_clusters, np.ma.MaskedArray):
-            self.spk_clusters.mask = mask.data
+            self.spk_clusters.mask = mask
         else:
             self.spk_clusters = np.ma.MaskedArray(self.spk_clusters, mask)
         if isinstance(self.amplitudes, np.ma.MaskedArray):
-            self.amplitudes.mask = mask.data
+            self.amplitudes.mask = mask
         else:
             self.amplitudes = np.ma.MaskedArray(self.amplitudes, mask)

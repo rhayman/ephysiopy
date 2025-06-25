@@ -1,3 +1,4 @@
+from ephysiopy.common.fieldcalcs import FieldProps
 import matplotlib
 import matplotlib.cm
 import matplotlib.pyplot as plt
@@ -39,7 +40,43 @@ cbar_fontsize = 8
 cbar_tick_fontsize = 6
 
 
-def getPhaseOfMinSpiking(spkPhase: np.ndarray) -> float:
+def get_cycle_labels(
+    phase: np.ndarray, min_allowed_min_spike_phase: float
+) -> tuple[np.ndarray, ...]:
+    """
+    Get the cycle labels for a given phase array
+
+    Parameters
+    ----------
+    phase : np.ndarray
+        The phases at which the spikes were fired.
+    min_allowed_min_spike_phase : float
+        The minimum allowed phase for cycles to start.
+
+    Returns
+    -------
+    np.ndarray
+        The cycle labels for the phase array
+    """
+    # force phase to lie between 0 and 2PI
+    minSpikingPhase = get_phase_of_min_spiking(phase)
+    phaseAdj = fixAngle(
+        phase - minSpikingPhase * (np.pi / 180) + min_allowed_min_spike_phase
+    )
+    isNegFreq = np.diff(np.unwrap(phaseAdj)) < 0
+    isNegFreq = np.append(isNegFreq, isNegFreq[-1])
+    # get start of theta cycles as points where diff > pi
+    phaseDf = np.diff(phaseAdj)
+    cycleStarts = phaseDf[1::] < -np.pi
+    cycleStarts = np.append(cycleStarts, True)
+    cycleStarts = np.insert(cycleStarts, 0, True)
+    cycleStarts[isNegFreq] = False
+    cycleLabel = np.cumsum(cycleStarts)
+
+    return cycleLabel, phaseAdj
+
+
+def get_phase_of_min_spiking(spkPhase: np.ndarray) -> float:
     """
     Returns the phase at which the minimum number of spikes are fired
 
@@ -66,6 +103,71 @@ def getPhaseOfMinSpiking(spkPhase: np.ndarray) -> float:
         int(np.ceil(np.nanmean(np.nonzero(phaseDist == np.min(phaseDist))[0])))
     ]
     return phaseMin
+
+
+def get_bad_cycles(
+    filtered_eeg: np.ndarray,
+    negative_freqs: np.ndarray,
+    cycle_labels: np.array,
+    min_power_percent_threshold: float,
+    min_theta: float,
+    max_theta: float,
+    lfp_fs: float,
+) -> np.ndarray:
+    """
+    Get the cycles that are bad based on their length and power
+
+    Parameters
+    ----------
+    phase : np.ndarray
+        The phases at which the spikes were fired.
+    filtered_eeg : np.ndarray
+        The filtered EEG signal
+    negative_freqs : np.ndarray
+        A boolean array indicating negative frequencies
+    cycle_labels : np.ndarray
+        The cycle labels for the phase array
+    min_power_percent_threshold : float
+        The minimum power percent threshold for rejecting cycles
+    min_theta : float
+        The minimum theta frequency
+    max_theta : float
+        The maximum theta frequency
+    lfp_fs : float
+        The sampling frequency of the LFP signal
+
+    Returns
+    -------
+    np.ndarray
+        A boolean array indicating bad cycles
+    """
+    power = np.power(filtered_eeg, 2)
+    cycle_valid_power = np.bincount(
+        cycle_labels[~negative_freqs], weights=power[~negative_freqs]
+    )
+    cycle_valid_bincount = np.bincount(cycle_labels[~negative_freqs])
+    cycle_valid_mn_power = cycle_valid_power / cycle_valid_bincount
+    power_rejection_thresh = np.percentile(
+        cycle_valid_mn_power, min_power_percent_threshold
+    )
+    # get the cycles that are below the rejection threshold
+    bad_power_cycle = cycle_valid_mn_power < power_rejection_thresh
+
+    # find cycle too long or too short
+    allowed_cycle_len = (
+        np.floor((1.0 / max_theta) * lfp_fs).astype(int),
+        np.ceil((1.0 / min_theta) * lfp_fs).astype(int),
+    )
+    cycle_bincount_total = np.bincount(cycle_labels)
+    bad_len_cycles = np.logical_or(
+        cycle_bincount_total < allowed_cycle_len[0],
+        cycle_bincount_total > allowed_cycle_len[1],
+    )
+    bad_cycle = np.logical_or(bad_len_cycles, bad_power_cycle)
+    in_bad_cycle = bad_cycle[cycle_labels]
+    is_bad = np.logical_or(in_bad_cycle, negative_freqs)
+
+    return is_bad
 
 
 def ccc(t, p):
@@ -589,7 +691,7 @@ class phasePrecession2D(object):
 
     @property
     def spike_eeg_idx(self):
-        return (self.spike_ts * self.lfp_sample_rate).astype(int)
+        return (self.spike_ts * self.lfp_fs).astype(int)
 
     @property
     def spike_pos_idx(self):
@@ -929,56 +1031,27 @@ class phasePrecession2D(object):
         spikeTS = self.spike_ts
         phase = np.ma.MaskedArray(self.phase, mask=True)
         filteredEEG = self.filteredEEG
-        oldAmplt = filteredEEG.copy()
         # get indices of spikes into eeg
         spkEEGIdx = self.spike_eeg_idx
         spkCount = np.bincount(spkEEGIdx, minlength=len(phase))
         spkPhase = phase.copy()
         # unmask the valid entries
         spkPhase.mask[spkEEGIdx] = False
-        minSpikingPhase = getPhaseOfMinSpiking(spkPhase)
-        # force phase to lie between 0 and 2PI
-        phaseAdj = fixAngle(
-            phase - minSpikingPhase * (np.pi / 180) + self.allowed_min_spike_phase
-        )
+
+        cycleLabel, phaseAdj = get_cycle_labels(spkPhase, self.allowed_min_spike_phase)
+
         isNegFreq = np.diff(np.unwrap(phaseAdj)) < 0
         isNegFreq = np.append(isNegFreq, isNegFreq[-1])
-        # get start of theta cycles as points where diff > pi
-        phaseDf = np.diff(phaseAdj)
-        cycleStarts = phaseDf[1::] < -np.pi
-        cycleStarts = np.append(cycleStarts, True)
-        cycleStarts = np.insert(cycleStarts, 0, True)
-        cycleStarts[isNegFreq] = False
-        cycleLabel = np.cumsum(cycleStarts)
 
-        # caculate power and find low power cycles
-        power = np.power(filteredEEG, 2)
-        cycleTotValidPow = np.bincount(
-            cycleLabel[~isNegFreq], weights=power[~isNegFreq]
+        isBad = get_bad_cycles(
+            filteredEEG,
+            isNegFreq,
+            cycleLabel,
+            self.min_power_percent_threshold,
+            self.min_theta,
+            self.max_theta,
+            self.lfp_fs,
         )
-        cycleValidBinCount = np.bincount(cycleLabel[~isNegFreq])
-        cycleValidMnPow = cycleTotValidPow / cycleValidBinCount
-        powRejectThresh = np.percentile(
-            cycleValidMnPow, self.min_power_percent_threshold
-        )
-        cycleHasBadPow = cycleValidMnPow < powRejectThresh
-
-        # find cycles too long or too short
-        allowed_theta_len = (
-            np.floor((1.0 / self.max_theta) * self.lfp_sample_rate).astype(int),
-            np.ceil((1.0 / self.min_theta) * self.lfp_sample_rate).astype(int),
-        )
-        cycleTotBinCount = np.bincount(cycleLabel)
-        cycleHasBadLen = np.logical_or(
-            cycleTotBinCount < allowed_theta_len[0],
-            cycleTotBinCount > allowed_theta_len[1],
-        )
-
-        # remove data calculated as 'bad'
-        isBadCycle = np.logical_or(cycleHasBadLen, cycleHasBadPow)
-        isInBadCycle = isBadCycle[cycleLabel]
-        isBad = np.logical_or(isInBadCycle, isNegFreq)
-        # breakpoint()
         # TODO: above phaseAdj is being created as a Masked array with all mask values as True...
         phaseAdj = np.ma.MaskedArray(phaseAdj, mask=np.invert(isBad))
         self.phaseAdj = phaseAdj
@@ -988,7 +1061,7 @@ class phasePrecession2D(object):
         spkCount = np.ma.MaskedArray(spkCount, mask=np.invert(isBad))
         # Extract all the relevant values from the arrays above and
         # add to each run
-        lfp_to_pos_ratio = self.lfp_sample_rate / self.pos_sample_rate
+        lfp_to_pos_ratio = self.lfp_fs / self.pos_sample_rate
         for field in field_props:
             for run in field.runs:
                 lfp_slice = slice(
@@ -997,8 +1070,8 @@ class phasePrecession2D(object):
                 )
                 spike_times = spikeTS[
                     np.logical_and(
-                        spikeTS > lfp_slice.start / self.lfp_sample_rate,
-                        spikeTS < lfp_slice.stop / self.lfp_sample_rate,
+                        spikeTS >= lfp_slice.start / self.lfp_fs,
+                        spikeTS <= lfp_slice.stop / self.lfp_fs,
                     )
                 ]
                 lfp_segment = LFPSegment(
@@ -1010,7 +1083,7 @@ class phasePrecession2D(object):
                     self.filteredEEG[lfp_slice],
                     phaseAdj[lfp_slice],
                     ampAdj[lfp_slice],
-                    self.lfp_sample_rate,
+                    self.lfp_fs,
                     [self.min_theta, self.max_theta],
                 )
                 run.lfp_data = lfp_segment
@@ -1293,58 +1366,10 @@ class phasePrecession2D(object):
     #
     # def getLFPPhaseValsForSpikeTS(self):
     #     ts = self.spike_times_in_pos_samples * (
-    #         self.lfp_sample_rate / self.pos_sample_rate
+    #         self.lfp_fs / self.pos_sample_rate
     #     )
     #     ts_idx = np.array(np.floor(ts), dtype=int)
     #     return self.phase[ts_idx]
-
-
-from ephysiopy.common.fieldcalcs import FieldProps
-
-
-def filter_runs(
-    field_props: list[FieldProps],
-    min_speed: float | int,
-    min_duration: float | int,
-    min_spikes: int = 0,
-) -> list[FieldProps]:
-    """
-    Filter out runs that are too short, too slow or have too few spikes
-
-    Parameters
-    ----------
-    field_props : list of FieldProps
-    min_speed : float, int
-        the minimum speed for a run
-    min_duration : int, float
-        the minimum duration for a run
-    min_spikes : int, default=0
-        the minimum number of spikes for a run
-
-    Returns
-    -------
-    list of FieldProps
-
-    Notes
-    -----
-    this modifies the input list
-    """
-
-    for idx, field in enumerate(field_props):
-        runs_to_keep = [
-            run
-            for run in field.runs
-            if (
-                run.duration >= min_duration
-                and run.min_speed >= min_speed
-                and run.n_spikes >= min_spikes
-            )
-        ]
-        if len(runs_to_keep) > 0:
-            field.runs = runs_to_keep
-        else:
-            field_props.pop(idx)
-    return field_props
 
 
 def plot_field_props(field_props: list[FieldProps]):

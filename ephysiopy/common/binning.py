@@ -258,7 +258,7 @@ class RateMap(object):
 
     def apply_mask(self, mask):
         # self.PosCalcs.apply_mask(mask)
-        self.pos_weights.mask = mask.data
+        self.pos_weights.mask = mask
 
     def _getXYLimits(self):
         """
@@ -299,6 +299,18 @@ class RateMap(object):
             # assume min speed = 0
             self.binedges = np.linspace(
                 0, maxspeed, int(maxspeed / binsize)).tolist()
+        elif self.var2Bin.value == VariableToBin.X.value:
+            x_lims = self.x_lims
+            if x_lims is None:
+                x_lims = self._getXYLimits()[0]
+            nxbins = int(np.ceil((x_lims[1] - x_lims[0]) / binsize))
+            self.binedges = np.linspace(x_lims[0], x_lims[1], nxbins)
+        elif self.var2Bin.value == VariableToBin.Y.value:
+            y_lims = self.y_lims
+            if y_lims is None:
+                y_lims = self._getXYLimits()[1]
+            nybins = int(np.ceil((y_lims[1] - y_lims[0]) / binsize))
+            self.binedges = np.linspace(y_lims[0], y_lims[1], nybins)
         elif self.var2Bin.value == VariableToBin.XY.value:
             x_lims, y_lims = self._getXYLimits()
             nxbins = int(np.ceil((x_lims[1] - x_lims[0]) / binsize))
@@ -390,6 +402,10 @@ class RateMap(object):
             sample = self.speed
         elif var_type.value == VariableToBin.XY.value:
             sample = self.xy
+        elif var_type.value == VariableToBin.X.value:
+            sample = self.xy[0]
+        elif var_type.value == VariableToBin.Y.value:
+            sample = self.xy[1]
         elif var_type.value == VariableToBin.XY_TIME.value:
             sample = np.concatenate(
                 (np.atleast_2d(self.xy), np.atleast_2d(self.pos_times))
@@ -428,6 +444,7 @@ class RateMap(object):
             bin_edges = self._calc_bin_edges(binsize)
         else:
             bin_edges = None
+        # breakpoint()
         binned_pos, binned_pos_edges = self._bin_data(
             sample, bin_edges, pos_weights)
         binned_pos = binned_pos / self.PosCalcs.sample_rate

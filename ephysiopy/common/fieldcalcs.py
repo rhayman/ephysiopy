@@ -4,11 +4,12 @@ from scipy import ndimage as ndi
 from scipy import spatial
 from scipy import stats
 import warnings
-from skimage.segmentation import watershed
+from skimage.segmentation import watershed, relabel_sequential
 from ephysiopy.common.utils import (
     blur_image,
     BinnedData,
     MapType,
+    VariableToBin,
     bwperim,
     circ_abs,
     labelContigNonZeroRuns,
@@ -17,6 +18,7 @@ from ephysiopy.common.utils import (
     pol2cart,
     cart2pol,
     repeat_ind,
+    min_max_norm,
 )
 import skimage
 from skimage.measure._regionprops import (
@@ -56,6 +58,7 @@ PROPS["perimeter_angle_from_peak"] = "perimeter_angle_from_peak"
 PROPS["perimeter_dist_from_peak"] = "perimeter_dist_from_peak"
 PROPS["r_unsmoothed"] = "r_unsmoothed"
 PROPS["r_and_phi_to_x_and_y"] = "r_and_phi_to_x_and_y"
+# PROPS["phase"] = "phase"
 PROP_VALS = set(PROPS.values())
 
 
@@ -285,7 +288,7 @@ class RunProps(object):
 
     @property
     def n_spikes(self):
-        return np.nansum(self._spike_count)
+        return np.nansum(self._spike_count).astype(int)
 
     @property
     def run_start(self):
@@ -471,6 +474,25 @@ class RunProps(object):
         traversed_distance = np.sum(np.hypot(xy_df[0], xy_df[1]))
         return direct_line_distance / traversed_distance
 
+    @property
+    def phase(self) -> np.ndarray:
+        """
+        The phases of the LFP signal for this run
+
+        Returns
+        -------
+        np.ndarray
+            the phase of the LFP signal for this run
+        """
+        if self.lfp_segment is not None:
+            # reshape the phase to take the circmean
+            n_pos = int(self._slice.stop - self._slice.start)
+            n_lfp = int(self.lfp_segment.phase.shape[0])
+            ratio = int(n_lfp / n_pos)
+            phase_r = np.reshape(self.lfp_segment.phase, (ratio, n_pos))
+            # take the circular mean of the phase
+            return stats.circmean(phase_r, axis=0)
+
 
 class FieldProps(RegionProperties):
     """
@@ -632,7 +654,38 @@ class FieldProps(RegionProperties):
 
     @property
     def runs_observed_spikes(self) -> np.ndarray:
-        return np.concatenate([r.observed_spikes for r in self.runs])
+        return [r.observed_spikes for r in self.runs]
+
+    @property
+    def runs_normalized_position(self) -> list:
+        """
+        Only makes sense to run this on linear track data unless
+        we want to pass the unit circle distance or something...
+
+        Get the normalized position for each run through the field.
+
+        Normalized position is the position of the run relative to the
+        start of the field (0) to the end of the field (1).
+        """
+        if (
+            self.binned_data.variable.value == VariableToBin.X.value
+            or self.binned_data.variable.value == VariableToBin.Y.value
+        ):
+
+            w = np.diff(self.binned_data.bin_edges[0])[0]
+            pos_min = self.binned_data.bin_edges[0][self.slice[0].start]
+            pos_max = self.binned_data.bin_edges[0][self.slice[0].stop - 1] + w
+            return [min_max_norm(r.xy[0], pos_min, pos_max) for r in self.runs]
+
+    @property
+    def phase(self) -> list:
+        """
+        The phases of the LFP signal for all runs through this field
+        """
+        phases = [r.phase for r in self.runs if r.phase is not None]
+        if len(phases) == 0:
+            return None
+        return phases
 
     @property
     def spike_position_index(self):
@@ -642,9 +695,15 @@ class FieldProps(RegionProperties):
     @property
     def xy_at_peak(self) -> np.ndarray:
         mi = self.max_index
-        x_max = self.binned_data.bin_edges[1][mi[1] + self.slice[1].start]
-        y_max = self.binned_data.bin_edges[0][mi[0] + self.slice[0].start]
-        return np.array([x_max, y_max])
+        if len(self.slice) == 1:
+            # If the field is 1D then we only have one coordinate
+            x_max = self.binned_data.bin_edges[0][mi[0] + self.slice[0].start]
+            return np.array([x_max])
+        # If the field is 2D then we have two coordinates
+        if len(self.slice) != 2:
+            x_max = self.binned_data.bin_edges[1][mi[1] + self.slice[1].start]
+            y_max = self.binned_data.bin_edges[0][mi[0] + self.slice[0].start]
+            return np.array([x_max, y_max])
 
     @property
     def xy(self) -> np.ndarray:
@@ -670,6 +729,8 @@ class FieldProps(RegionProperties):
     # The perimeter of the masked region as an array of bool
     @property
     def bw_perim(self) -> np.ndarray:
+        if self.image.ndim == 1:
+            return self.image
         return bwperim(self.image)
 
     @property
@@ -679,15 +740,24 @@ class FieldProps(RegionProperties):
     @property
     def global_perimeter_coords(self) -> np.ndarray:
         perim_xy = self.perimeter_coords
-        x = self.binned_data.bin_edges[1][perim_xy[1] + self.slice[1].start]
-        y = self.binned_data.bin_edges[0][perim_xy[0] + self.slice[0].start]
-        return np.array([x, y])
+        if len(self.binned_data.bin_edges) == 1:
+            # If the field is 1D then we only have one coordinate
+            x = self.binned_data.bin_edges[0][perim_xy[0] + self.slice[0].start]
+            return np.array([x])
+        else:
+            x = self.binned_data.bin_edges[1][perim_xy[1] + self.slice[1].start]
+            y = self.binned_data.bin_edges[0][perim_xy[0] + self.slice[0].start]
+            return np.array([x, y])
 
     @property
     def perimeter_minus_field_max(self) -> np.ndarray:
         mi = self.max_index
         perimeter_coords = self.perimeter_coords
-        return np.array([perimeter_coords[0] - mi[0], perimeter_coords[1] - mi[1]])
+        if len(self.slice) == 1:
+            # If the field is 1D then we only have one coordinate
+            return np.array([perimeter_coords[0] - mi[0]])
+        else:
+            return np.array([perimeter_coords[0] - mi[0], perimeter_coords[1] - mi[1]])
 
     # The angle each point on the perimeter makes to the field peak
     @property
@@ -1177,11 +1247,16 @@ def fieldprops(
 
     """
     assert label_image.shape == binned_data.binned_data[0].shape
+    # could have linear track type data where xy is 1-D so
+    # make it at least 2d for ease of processing
+    if xy.ndim == 1:
+        xy = np.expand_dims(xy, axis=0)
+
     spikes_per_pos = np.ravel(spikes_per_pos)
     assert len(spikes_per_pos) == xy.shape[1]
 
-    if label_image.ndim not in (2, 3):
-        raise TypeError("Only 2-D and 3-D images supported.")
+    if label_image.ndim not in (1, 2, 3):
+        raise TypeError("Only 1-D, 2-D and 3-D images supported.")
 
     if not np.issubdtype(label_image.dtype, np.integer):
         if np.issubdtype(label_image.dtype, bool):
@@ -1207,20 +1282,48 @@ def fieldprops(
             )
 
     pos_sample_rate = kwargs.get("pos_sample_rate", 50)
-    ye, xe = binned_data.bin_edges
-    x_bins = np.digitize(xy[0], xe[:-1])
-    y_bins = np.digitize(xy[1], ye[:-1])
-    xy_field_label = label_image[y_bins - 1, x_bins - 1]
+
+    if len(binned_data.bin_edges) == 1:
+        be = binned_data.bin_edges[0]
+        x_bins = np.digitize(xy[0], be[:-1])
+        xy_field_label = label_image[x_bins - 1]
+
+    elif len(binned_data.bin_edges) == 2:
+        ye, xe = binned_data.bin_edges
+        x_bins = np.digitize(xy[0], xe[:-1])
+        y_bins = np.digitize(xy[1], ye[:-1])
+        xy_field_label = label_image[y_bins - 1, x_bins - 1]
+    # deal with pos values that are masked and set to 0
+    # if the mask ndim == 0 then no mask has been applied
+    if xy.mask.ndim == 1:
+        xy_field_label[xy.mask[0, :] == True] = 0
+
     labelled_runs = labelContigNonZeroRuns(xy_field_label)
     run_starts = getLabelStarts(labelled_runs)
     run_stops = getLabelEnds(labelled_runs)
 
+    # filter out short runs here
+    short_runs = np.where((run_stops - run_starts) < kwargs.get("min_run_length", 2))[0]
+
+    short_run_starts = run_starts[short_runs]
+    short_run_stops = run_stops[short_runs]
+    for r in zip(short_run_starts, short_run_stops):
+        labelled_runs[slice(r[0], r[1] + 1)] = 0
+
+    # need to recalculate the xy_field_label after filtering
+    # for short runs and relabelling
+    xy_field_label[labelled_runs == 0] = 0
+
     # calculate the speed for possibly filtering runs later
     speed = None
     if xy is not None:
-        speed = np.ma.MaskedArray(
-            np.abs(np.ma.ediff1d(np.hypot(xy[0], xy[1])) * pos_sample_rate)
-        )
+        if len(xy) == 1:
+            speed = np.ma.MaskedArray(np.abs(np.ma.ediff1d(xy[0]) * pos_sample_rate))
+        else:
+            speed = np.ma.MaskedArray(
+                np.abs(np.ma.ediff1d(np.hypot(xy[0], xy[1])) * pos_sample_rate)
+            )
+
         speed = np.append(speed, speed[-1])
 
     regions = []
@@ -1235,12 +1338,10 @@ def fieldprops(
 
         label = i + 1
 
-        # get the runs through this field and filter for min run length
+        # get the runs through this field
         run_index = np.unique(labelled_runs[xy_field_label == label])
         run_slices = [
-            slice(run_starts[ri - 1], run_stops[ri - 1] + 1)
-            for ri in run_index
-            if (run_stops[ri - 1] - run_starts[ri - 1]) > 2
+            slice(run_starts[ri - 1], run_stops[ri - 1] + 1) for ri in run_index
         ]
         props = FieldProps(
             sl,
@@ -1258,6 +1359,10 @@ def fieldprops(
         perimeter_coords = props.perimeter_coords
         runs = []
         for rs in run_slices:
+            # make sure the run isn't completely masked
+            if not np.all(xy[:, rs]):
+                continue
+
             r = RunProps(
                 run_id,
                 rs,
@@ -1276,6 +1381,29 @@ def fieldprops(
         regions.append(props)
 
     return regions
+
+
+def get_run(field_props: list[FieldProps], run_num: int) -> RunProps:
+    """
+    Get a specific run from the field properties
+
+    Parameters
+    ----------
+    field_props : list of FieldProps
+        The field properties to search through
+    run_num : int
+        The run number to search for
+
+    Returns
+    -------
+    RunProps
+        The run properties for the specified run number
+    """
+    for field in field_props:
+        for run in field.runs:
+            if run.label == run_num:
+                return run
+    raise ValueError(f"Run {run_num} not found in field properties.")
 
 
 def infill_ratemap(rmap: np.ndarray) -> np.ndarray:
@@ -1308,6 +1436,51 @@ def infill_ratemap(rmap: np.ndarray) -> np.ndarray:
     output = interpolate_replace_nans(rmap, k)
     output[np.invert(mask)] = np.nan
     return output
+
+
+def filter_runs(
+    field_props: list[FieldProps],
+    min_speed: float | int,
+    min_duration: float | int,
+    min_spikes: int = 0,
+) -> list[FieldProps]:
+    """
+    Filter out runs that are too short, too slow or have too few spikes
+
+    Parameters
+    ----------
+    field_props : list of FieldProps
+    min_speed : float, int
+        the minimum speed for a run in cm/s
+    min_duration : int, float
+        the minimum duration for a run in samples
+    min_spikes : int, default=0
+        the minimum number of spikes for a run
+
+    Returns
+    -------
+    list of FieldProps
+
+    Notes
+    -----
+    this modifies the input list
+    """
+
+    for idx, field in enumerate(field_props):
+        runs_to_keep = [
+            run
+            for run in field.runs
+            if (
+                run.duration >= min_duration
+                and run.min_speed >= min_speed
+                and run.n_spikes >= min_spikes
+            )
+        ]
+        if len(runs_to_keep) > 0:
+            field.runs = runs_to_keep
+        else:
+            field_props.pop(idx)
+    return field_props
 
 
 def reduce_labels(A: np.ndarray, labels: np.ndarray, reduce_by: float = 50) -> list:
@@ -1373,7 +1546,6 @@ def partitionFields(
         labels - An array of the labels corresponding to each field (starting  1)
         rmap - The ratemap of the tetrode / cluster
     """
-    ye, xe = binned_data.bin_edges
     # start image processing:
     # Usually the binned_data has a large number of bins which potentially
     # leaves lots of "holes" in the ratemap (nans) as there will be lots of
@@ -1397,8 +1569,6 @@ def partitionFields(
     peakCoords = np.array(
         ndi.maximum_position(rmap_filled, labels=labels, index=fieldId)
     ).astype(int)
-    # ... and convert these to actual x-y coordinates wrt to the position data
-    peaksXY = np.vstack((xe[peakCoords[:, 1]], ye[peakCoords[:, 0]]))
 
     # TODO: this labeled_comprehension is not working too well for fields that
     # have a fairly uniform firing rate distribution across them (using np.nanmax
@@ -1435,12 +1605,26 @@ def partitionFields(
     peakCoords = np.array(
         ndi.maximum_position(rmap_filled, labels=labels, index=fieldId)
     ).astype(int)
-    peaksXY = np.vstack((xe[peakCoords[:, 1]], ye[peakCoords[:, 0]]))
-    peakRates = rmap_filled[peakCoords[:, 0], peakCoords[:, 1]]
-    peakLabels = labels[peakCoords[:, 0], peakCoords[:, 1]]
-    peaksXY = peaksXY[:, peakLabels - 1]
-    peaksRate = peakRates[peakLabels - 1]
-    return peaksXY, peaksRate, labels, rmap_filled
+
+    if len(binned_data.bin_edges) == 1:
+        # if there is only one bin edge then we are dealing with a 1D ratemap
+        be = binned_data.bin_edges[0]
+        peaksXY = be[peakCoords[:, 0]]
+        peakRates = rmap_filled[peakCoords[:, 0]]
+        peakLabels = labels[peakCoords[:, 0]]
+        peaksXY = peaksXY[peakLabels - 1]
+        peaksRate = peakRates[peakLabels - 1]
+        return peaksXY, peaksRate, labels, rmap_filled
+
+    else:
+        # if there are two bin edges then we are dealing with a 2D ratemap
+        ye, xe = binned_data.bin_edges
+        peaksXY = np.vstack((xe[peakCoords[:, 1]], ye[peakCoords[:, 0]]))
+        peakRates = rmap_filled[peakCoords[:, 0], peakCoords[:, 1]]
+        peakLabels = labels[peakCoords[:, 0], peakCoords[:, 1]]
+        peaksXY = peaksXY[:, peakLabels - 1]
+        peaksRate = peakRates[peakLabels - 1]
+        return peaksXY, peaksRate, labels, rmap_filled
 
 
 """

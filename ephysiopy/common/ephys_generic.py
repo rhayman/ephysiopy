@@ -151,6 +151,7 @@ class EEGCalcsGeneric(object):
         """
         if not isinstance(other, EEGCalcsGeneric):
             raise TypeError("Can only add another EEGCalcsGeneric object")
+
         new_sig = np.ma.concatenate((self.sig, other.sig))
         return EEGCalcsGeneric(new_sig, self.fs)
 
@@ -176,7 +177,7 @@ class EEGCalcsGeneric(object):
             # mask now might be shorter than self.sig so we need to pad it
             if len(mask) < len(self.sig):
                 mask = np.pad(mask, (0, len(self.sig) - len(mask)))
-            self.sig.mask = mask.data
+            self.sig.mask = mask
         else:
             self.sig.mask = False
 
@@ -555,23 +556,12 @@ class PosCalcsGeneric(object):
 
         """
         # keep track of valid/ non-valid indices
-        good = np.isfinite(xy[0])
-        pos2 = np.arange(0, self.npos - 1)
+        good = np.isfinite(xy[0].data)
         xy_f = xy.astype(float)
-        self.dir[pos2] = np.mod(
-            (
-                (180 / np.pi)
-                * (
-                    np.arctan2(
-                        -(xy_f[0, pos2 + 1] - xy_f[0, pos2]),
-                        xy_f[1, pos2 + 1] - xy_f[1, pos2],
-                    )
-                )
-            )
-            + 90,
-            360,
+        self.dir = np.mod(
+            np.arctan2(np.diff(xy_f[1]), np.diff(xy_f[0])) * (180 / np.pi), 360
         )
-        self.dir[-1] = self.dir[-2]
+        self.dir = np.append(self.dir, self.dir[-1])
         self.dir[~good] = np.ma.masked
         return self.dir
 
@@ -719,7 +709,7 @@ class PosCalcsGeneric(object):
         Parameters
         ----------
         mask : np.ndarray
-            The mask to be applied. For use with np.ma.MaskedArray's mask attribute
+            The mask to be applied.
 
         Notes
         -----
@@ -728,16 +718,14 @@ class PosCalcsGeneric(object):
         the start and end times of the mask i.e. [(start1, end1), (start2, end2)]
         everything inside of these times is masked
         """
-        if isinstance(self.xy, np.ma.MaskedArray):
-            self.xy.mask = mask
-        if isinstance(self.xyTS, np.ma.MaskedArray):
-            self.xyTS.mask = mask
+        self.xy.mask = mask
+        self.xyTS.mask = mask
         self.dir.mask = mask
         self.speed.mask = mask
 
 
 """
-Methods for quantifying data from AUX channels from the openephys 
+Methods for quantifying data from AUX channels from the openephys
 headstages.
 
 Idea is to find periods of quiescence for ripple/ MUA/ replay analysis
