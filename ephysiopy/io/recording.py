@@ -11,8 +11,11 @@ from phylib.io.model import TemplateModel
 
 from ephysiopy.axona.axonaIO import IO, Pos
 from ephysiopy.axona.tetrode_dict import TetrodeDict
-from ephysiopy.common.ephys_generic import EEGCalcsGeneric, PosCalcsGeneric
-from ephysiopy.common.spikecalcs import xcorr
+from ephysiopy.common.ephys_generic import (
+    EEGCalcsGeneric,
+    PosCalcsGeneric,
+)
+from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.utils import VariableToBin, MapType, BinnedData, filter_data
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
@@ -538,13 +541,14 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
                 _idx = np.searchsorted(pos_times, spk, side="right") - 1
                 if np.any(_idx >= self.PosCalcs.npos):
                     _idx = np.delete(
-                        _idx, np.s_[np.argmax(_idx >= self.PosCalcs.npos) :]
+                        _idx, np.s_[np.argmax(_idx >= self.PosCalcs.npos):]
                     )
                 idx.append(_idx)
         else:
             idx = np.searchsorted(pos_times, spk_times, side="right") - 1
             if np.any(idx >= self.PosCalcs.npos):
-                idx = np.delete(idx, np.s_[np.argmax(idx >= self.PosCalcs.npos) :])
+                idx = np.delete(
+                    idx, np.s_[np.argmax(idx >= self.PosCalcs.npos):])
 
         if kwargs.get("do_shuffle", False):
             n_shuffles = kwargs.get("n_shuffles", 100)
@@ -557,7 +561,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             )
             shifted_idx = []
             for shift in time_shifts:
-                shifted_idx.append(shift_vector(idx, shift, maxlen=self.PosCalcs.npos))
+                shifted_idx.append(shift_vector(
+                    idx, shift, maxlen=self.PosCalcs.npos))
             return shifted_idx
 
         if isinstance(idx, list):
@@ -621,7 +626,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         # TODO: _get_spike_pos_idx always returns a list now so this fcn needs
         # amending as will the get_map() one in binning.RateMap as it looks
         # like that expects a np.ndarray
-        spk_times_in_pos_samples = self._get_spike_pos_idx(cluster, channel, **kwargs)
+        spk_times_in_pos_samples = self._get_spike_pos_idx(
+            cluster, channel, **kwargs)
         npos = self._PosCalcs.npos
         # This conditional just picks out the right spk_weights
         # given the inputs
@@ -641,7 +647,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             if isinstance(spk_times_in_pos_samples[0], list):
                 from ephysiopy.common.utils import flatten_list
 
-                spk_times_in_pos_samples = flatten_list(spk_times_in_pos_samples)
+                spk_times_in_pos_samples = flatten_list(
+                    spk_times_in_pos_samples)
             for spk_idx in spk_times_in_pos_samples:
                 w = np.bincount(spk_idx, minlength=npos)
                 if len(w) > npos:
@@ -812,7 +819,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             cluster, channel, VariableToBin.XY, map_type=MapType.ADAPTIVE, **kwargs
         )
 
-    def get_xcorr(
+    def get_acorr(
         self, cluster: int | list, channel: int | list, **kwargs
     ) -> BinnedData:
         """
@@ -832,10 +839,74 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         BinnedData
             The cross-correlation as a BinnedData object.
         """
+        from ephysiopy.common.spikecalcs import xcorr
+
         ts = self.get_spike_times(cluster, channel)
         ids = make_cluster_ids(cluster, channel)
         kwargs["cluster_id"] = ids
         return xcorr(ts, **kwargs)
+
+    def get_xcorr(
+        self,
+        cluster_a: int | list,
+        cluster_b: int | list,
+        channel_a: int | list,
+        channel_b: int | list,
+        **kwargs,
+    ) -> BinnedData:
+        """
+        Computes the cross-correlation for a given cluster and channel.
+
+        Parameters
+        ----------
+        cluster : int or list
+            The cluster(s).
+        channel : int or list
+            The channel(s).
+        **kwargs : dict, optional
+            Additional keyword arguments passed to the xcorr function.
+
+        Returns
+        -------
+        BinnedData
+            The cross-correlation as a BinnedData object.
+        """
+        from ephysiopy.common.spikecalcs import xcorr
+
+        ts_a = self.get_spike_times(cluster_a, channel_a)
+        ts_b = self.get_spike_times(cluster_b, channel_b)
+        ids = make_cluster_ids([cluster_a, cluster_b], [channel_a, channel_b])
+        kwargs["cluster_id"] = ids
+        return xcorr(ts_a, ts_b, **kwargs)
+
+    def get_psth(
+        self, cluster: int | list, channel: int | list, **kwargs
+    ) -> BinnedData:
+        """
+        Computes the peri-stimulus time histogram (PSTH) for a given cluster and channel.
+
+        Parameters
+        ----------
+        cluster : int or list
+            The cluster(s).
+        channel : int or list
+            The channel(s).
+        **kwargs : dict, optional
+            Additional keyword arguments passed to the psth function.
+
+        Returns
+        -------
+        BinnedData
+            The PSTH as a BinnedData object.
+        """
+        spike_times = self.get_spike_times(cluster, channel)
+        S = SpikeCalcsGeneric(spike_times, cluster=cluster)
+        if self.ttl_data is None:
+            self.load_ttl()
+        S.event_ts = self.ttl_data["ttl_timestamps"]
+        dt = kwargs.get("dt", (-0.05, 0.1))
+        S.event_window = np.array(dt)
+        return S.psth()
 
 
 class AxonaTrial(TrialInterface):
@@ -844,7 +915,8 @@ class AxonaTrial(TrialInterface):
         pname = Path(pname)
         super().__init__(pname, **kwargs)
         self._settings = None
-        self.TETRODE = TetrodeDict(str(self.pname.with_suffix("")), volts=use_volts)
+        self.TETRODE = TetrodeDict(
+            str(self.pname.with_suffix("")), volts=use_volts)
         self.load_settings()
 
     def __add__(self, other):
@@ -854,6 +926,7 @@ class AxonaTrial(TrialInterface):
             else:
                 new_AxonaTrial = AxonaTrial(self.pname)
                 # make sure position data is loaded
+                print("Merging position data...")
                 ppm = self.settings["tracker_pixels_per_metre"]
                 self.load_pos_data(int(ppm))
                 ppm = other.settings["tracker_pixels_per_metre"]
@@ -861,6 +934,9 @@ class AxonaTrial(TrialInterface):
                 # merge position data
                 new_AxonaTrial.PosCalcs = self.PosCalcs + other.PosCalcs
                 new_AxonaTrial.PosCalcs.postprocesspos({"SampleRate": 50})
+
+                print("Done merging position data.")
+                print("Merging LFP data...")
 
                 # load EEG data
                 self.load_lfp()
@@ -874,10 +950,13 @@ class AxonaTrial(TrialInterface):
                     new_AxonaTrial.EEGCalcs = other.EEGCalcs
                 else:
                     new_AxonaTrial.EEGCalcs = None
+                print("Done merging LFP data.")
 
                 # merge tetrode data
+                print("Merging tetrode data...")
                 self_tetrodes = self.get_available_clusters_channels().keys()
                 other_tetrodes = other.get_available_clusters_channels().keys()
+                print("Got all tetrodes...")
                 for tetrode in self_tetrodes:
                     if tetrode in other_tetrodes:
                         new_AxonaTrial.TETRODE[tetrode] = (
@@ -886,6 +965,8 @@ class AxonaTrial(TrialInterface):
                     else:
                         print(f"Missing tetrode {tetrode} in other trial")
                         new_AxonaTrial.TETRODE[tetrode] = self.TETRODE[tetrode]
+
+                print("Done merging tetrode data.")
 
                 new_AxonaTrial.concatenated = True
                 return new_AxonaTrial
@@ -948,7 +1029,8 @@ class AxonaTrial(TrialInterface):
                     ppm=ppm,
                     jumpmax=jumpmax,
                 )
-                P.sample_rate = AxonaPos.getHeaderVal(AxonaPos.header, "sample_rate")
+                P.sample_rate = AxonaPos.getHeaderVal(
+                    AxonaPos.header, "sample_rate")
                 P.xyTS = AxonaPos.ts / P.sample_rate  # in seconds now
                 P.postprocesspos(tracker_params={"SampleRate": P.sample_rate})
                 print("Loaded pos data")
@@ -981,7 +1063,8 @@ class AxonaTrial(TrialInterface):
                 else:
                     spikes = []
                     for tc in zip(tetrode, cluster):
-                        spikes.append(self.TETRODE.get_spike_samples(tc[0], tc[1]))
+                        spikes.append(
+                            self.TETRODE.get_spike_samples(tc[0], tc[1]))
                     return spikes
 
     def get_waveforms(self, cluster: int | list, channel: int | list, *args, **kwargs):
@@ -1063,7 +1146,8 @@ class OpenEphysBase(TrialInterface):
                 if "Start Time" in line:
                     tokens = line.split(":")
                     start_time = int(tokens[-1])
-                    sample_rate = int(tokens[0].split("@")[-1].strip().split()[0])
+                    sample_rate = int(tokens[0].split(
+                        "@")[-1].strip().split()[0])
                     recording_start_time = start_time / float(sample_rate)
         self.recording_start_time = recording_start_time
         return recording_start_time
@@ -1119,7 +1203,8 @@ class OpenEphysBase(TrialInterface):
             self.template_model = TemplateModel(
                 dir_path=self.path2KiloSortData,
                 sample_rate=3e4,
-                dat_path=Path(self.path2KiloSortData).joinpath("continuous.dat"),
+                dat_path=Path(self.path2KiloSortData).joinpath(
+                    "continuous.dat"),
                 n_channels_dat=int(n_channels),
             )
             print("Loaded neural data")
@@ -1145,7 +1230,8 @@ class OpenEphysBase(TrialInterface):
         if self.template_model is None:
             self.load_neural_data()
         unique_clusters = np.unique(self.template_model.spike_clusters)
-        clust_chans = dict.fromkeys(np.unique(self.template_model.clusters_channels))
+        clust_chans = dict.fromkeys(
+            np.unique(self.template_model.clusters_channels))
         for clust_id, chan in enumerate(self.template_model.clusters_channels):
             if clust_id in unique_clusters:
                 clust_chans[chan] = [
@@ -1228,7 +1314,7 @@ class OpenEphysBase(TrialInterface):
                     pos_ts = tracker.load_ttl_times(Path(self.path2EventsData))
                 else:
                     pos_ts = tracker.load_times(Path(self.path2PosData))
-                pos_ts = pos_ts[0 : len(pos_data)]
+                pos_ts = pos_ts[0: len(pos_data)]
             sample_rate = tracker.sample_rate
             # sample_rate = float(sample_rate) if sample_rate is not None else 50
             # the timestamps for the Tracker Port plugin are fucked so
@@ -1279,7 +1365,8 @@ class OpenEphysBase(TrialInterface):
         if "StimControl_id" in kwargs.keys():
             stim_id = kwargs["StimControl_id"]
             if stim_id in self.settings.processors.keys():
-                duration = getattr(self.settings.processors[stim_id], "Duration")
+                duration = getattr(
+                    self.settings.processors[stim_id], "Duration")
             else:
                 return False
             self.ttl_data["stim_duration"] = int(duration)
@@ -1288,7 +1375,8 @@ class OpenEphysBase(TrialInterface):
             high_ttl = ttl_ts[states == chan]
             # get into seconds
             high_ttl = (high_ttl * 1000.0) - recording_start_time
-            self.ttl_data["ttl_timestamps"] = high_ttl / 1000.0  # in seconds now
+            self.ttl_data["ttl_timestamps"] = high_ttl / \
+                1000.0  # in seconds now
         if "RippleDetector" in args:
             if self.path2RippleDetector:
                 detector_settings = self.settings.get_processor("Ripple")
@@ -1358,7 +1446,8 @@ class OpenEphysBase(TrialInterface):
                 self.aux_bitvolts = aux_bitvolts
                 return True
         else:
-            warnings.warn("No AUX data found in structure.oebin file, so not loaded")
+            warnings.warn(
+                "No AUX data found in structure.oebin file, so not loaded")
         return False
 
     def apply_filter(self, *trial_filter: TrialFilter) -> np.ndarray:
@@ -1380,7 +1469,8 @@ class OpenEphysBase(TrialInterface):
             exp_name / rec_name / "events" / "*Tracking_Port*/BINARY_group*"
         )
         TrackMe_match = (
-            exp_name / rec_name / "continuous" / "TrackMe-[0-9][0-9][0-9].TrackingNode"
+            exp_name / rec_name / "continuous" /
+            "TrackMe-[0-9][0-9][0-9].TrackingNode"
         )
         RippleDetector_match = (
             exp_name / rec_name / "events" / "Ripple_Detector*" / "TTL"
@@ -1395,25 +1485,32 @@ class OpenEphysBase(TrialInterface):
             # of the folder
             # the older way:
             acq_method = "Neuropix-PXI-[0-9][0-9][0-9]."
-            APdata_match = exp_name / rec_name / "continuous" / (acq_method + "0")
-            LFPdata_match = exp_name / rec_name / "continuous" / (acq_method + "1")
+            APdata_match = exp_name / rec_name / \
+                "continuous" / (acq_method + "0")
+            LFPdata_match = exp_name / rec_name / \
+                "continuous" / (acq_method + "1")
             # the new way:
             Rawdata_match = (
-                exp_name / rec_name / "continuous" / (acq_method + "Probe[A-Z]")
+                exp_name / rec_name / "continuous" /
+                (acq_method + "Probe[A-Z]")
             )
         elif self.rec_kind == RecordingKind.FPGA:
             acq_method = "Rhythm_FPGA-[0-9][0-9][0-9]."
-            APdata_match = exp_name / rec_name / "continuous" / (acq_method + "0")
-            LFPdata_match = exp_name / rec_name / "continuous" / (acq_method + "1")
+            APdata_match = exp_name / rec_name / \
+                "continuous" / (acq_method + "0")
+            LFPdata_match = exp_name / rec_name / \
+                "continuous" / (acq_method + "1")
             Rawdata_match = (
-                exp_name / rec_name / "continuous" / (acq_method + "Probe[A-Z]")
+                exp_name / rec_name / "continuous" /
+                (acq_method + "Probe[A-Z]")
             )
         else:
             acq_method = "Acquisition_Board-[0-9][0-9][0-9].*"
             APdata_match = exp_name / rec_name / "continuous" / acq_method
             LFPdata_match = exp_name / rec_name / "continuous" / acq_method
             Rawdata_match = (
-                exp_name / rec_name / "continuous" / (acq_method + "Probe[A-Z]")
+                exp_name / rec_name / "continuous" /
+                (acq_method + "Probe[A-Z]")
             )
         Events_match = (
             # only dealing with a single TTL channel at the moment
@@ -1437,47 +1534,55 @@ class OpenEphysBase(TrialInterface):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
                                 if verbose:
-                                    print(f"Pos data at: {self.path2PosData}\n")
+                                    print(
+                                        f"Pos data at: {self.path2PosData}\n")
                             self.path2PosOEBin = Path(d).parents[1]
                         if PurePath(d).match("*pos_data*"):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
                                 if verbose:
-                                    print(f"Pos data at: {self.path2PosData}\n")
+                                    print(
+                                        f"Pos data at: {self.path2PosData}\n")
                         if PurePath(d).match(str(TrackingPlugin_match)):
                             if self.path2PosData is None:
                                 self.path2PosData = os.path.join(d)
                                 if verbose:
-                                    print(f"Pos data at: {self.path2PosData}\n")
+                                    print(
+                                        f"Pos data at: {self.path2PosData}\n")
                     if "continuous.dat" in ff:
                         if PurePath(d).match(str(APdata_match)):
                             self.path2APdata = os.path.join(d)
                             if verbose:
-                                print(f"Continuous AP data at: {self.path2APdata}\n")
+                                print(
+                                    f"Continuous AP data at: {self.path2APdata}\n")
                             self.path2APOEBin = Path(d).parents[1]
                         if PurePath(d).match(str(LFPdata_match)):
                             self.path2LFPdata = os.path.join(d)
                             if verbose:
-                                print(f"Continuous LFP data at: {self.path2LFPdata}\n")
+                                print(
+                                    f"Continuous LFP data at: {self.path2LFPdata}\n")
                         if PurePath(d).match(str(Rawdata_match)):
                             self.path2APdata = os.path.join(d)
                             self.path2LFPdata = os.path.join(d)
                         if PurePath(d).match(str(TrackMe_match)):
                             self.path2PosData = os.path.join(d)
                             if verbose:
-                                print(f"TrackMe posdata at: {self.path2PosData}\n")
+                                print(
+                                    f"TrackMe posdata at: {self.path2PosData}\n")
                     if "sync_messages.txt" in ff:
                         if PurePath(d).match(str(sync_file_match)):
                             sync_file = os.path.join(d, "sync_messages.txt")
                             if fileContainsString(sync_file, "Start Time"):
                                 self.sync_message_file = sync_file
                                 if verbose:
-                                    print(f"sync_messages file at: {sync_file}\n")
+                                    print(
+                                        f"sync_messages file at: {sync_file}\n")
                     if "full_words.npy" in ff:
                         if PurePath(d).match(str(Events_match)):
                             self.path2EventsData = os.path.join(d)
                             if verbose:
-                                print(f"Event data at: {self.path2EventsData}\n")
+                                print(
+                                    f"Event data at: {self.path2EventsData}\n")
                         if PurePath(d).match(str(RippleDetector_match)):
                             self.path2RippleDetector = os.path.join(d)
                             if verbose:
@@ -1491,7 +1596,8 @@ class OpenEphysBase(TrialInterface):
                     if "spike_templates.npy" in ff:
                         self.path2KiloSortData = os.path.join(d)
                         if verbose:
-                            print(f"Found KiloSort data at {self.path2KiloSortData}\n")
+                            print(
+                                f"Found KiloSort data at {self.path2KiloSortData}\n")
 
 
 class OpenEphysNWB(OpenEphysBase):
@@ -1512,7 +1618,8 @@ class OpenEphysNWB(OpenEphysBase):
             xy = np.array(nwbData[self.path2PosData + "/data"])
             xy = xy[:, 0:2]
             ts = np.array(nwbData[self.path2PosData]["timestamps"])
-            P = PosCalcsGeneric(xy[0, :], xy[1, :], cm=True, ppm=ppm, jumpmax=jumpmax)
+            P = PosCalcsGeneric(xy[0, :], xy[1, :],
+                                cm=True, ppm=ppm, jumpmax=jumpmax)
             P.xyTS = ts
             P.sample_rate = 1.0 / np.mean(np.diff(ts))
             P.postprocesspos()

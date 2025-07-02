@@ -93,9 +93,9 @@ def get_param(waveforms, param="Amp", t=200, fet=1) -> np.ndarray:
                         )
                     )
                     if A.ndim < 2:
-                        out[:, rng[0, i] : rng[1, i]] = np.atleast_2d(A).T
+                        out[:, rng[0, i]: rng[1, i]] = np.atleast_2d(A).T
                     else:
-                        out[:, rng[0, i] : rng[1, i]] = A
+                        out[:, rng[0, i]: rng[1, i]] = A
             return out
 
 
@@ -310,11 +310,13 @@ def get_burstiness(
         # Plot the distances as a histogram
         fig3 = plt.figure()
         ax3 = fig3.add_subplot(111)
-        N, bins, patches = ax3.hist(pca_distances, bins=150, density=True, color="blue")
+        N, bins, patches = ax3.hist(
+            pca_distances, bins=150, density=True, color="blue")
         for bin_patch in zip(bins[:-1], patches):
             if bin_patch[0] < lda.intercept_:
                 bin_patch[1].set_facecolor("red")
-        axtrans = transforms.blended_transform_factory(ax3.transData, ax3.transAxes)
+        axtrans = transforms.blended_transform_factory(
+            ax3.transData, ax3.transAxes)
         ax3.vlines(
             lda.intercept_, ymin=0, ymax=1, colors="black", transform=axtrans, zorder=1
         )
@@ -332,7 +334,8 @@ def get_burstiness(
             kde=True,
             ax=ax4,
         )
-        axtrans = transforms.blended_transform_factory(ax4.transData, ax4.transAxes)
+        axtrans = transforms.blended_transform_factory(
+            ax4.transData, ax4.transAxes)
         ax4.vlines(
             lda.intercept_, ymin=0, ymax=1, colors="black", transform=axtrans, zorder=1
         )
@@ -491,7 +494,7 @@ def xcorr(
     irange = x2[:, np.newaxis] + Trange[np.newaxis, :]
     dts = np.searchsorted(x1, irange)
     for i, t in enumerate(dts):
-        y.extend((x1[t[0] : t[1]] - x2[i]))
+        y.extend((x1[t[0]: t[1]] - x2[i]))
     y = np.array(y, dtype=float)
     counts, bins = np.histogram(
         y[y != 0], bins=int(np.ptp(Trange) / binsize) + 1, range=(Trange[0], Trange[1])
@@ -560,7 +563,8 @@ def contamination_percent(
     far = [[-0.5, -0.249], [0.25, 0.501]]
 
     def get_shoulder(bins, vals):
-        all = np.array([np.logical_and(bins >= i[0], bins < i[1]) for i in vals])
+        all = np.array([np.logical_and(bins >= i[0], bins < i[1])
+                       for i in vals])
         return np.any(all, 0)
 
     inner_left = get_shoulder(b, left)
@@ -579,7 +583,8 @@ def contamination_percent(
     Q01 = max(get_normd_shoulder(inner_left), get_normd_shoulder(inner_right))
 
     R00 = max(
-        np.mean(c[outer[:-1]]), np.mean(c[inner_left[:-1]]), np.mean(c[inner_right[1:]])
+        np.mean(c[outer[:-1]]), np.mean(c[inner_left[:-1]]
+                                        ), np.mean(c[inner_right[1:]])
     )
 
     middle_idx = np.nonzero(b == 0)[0]
@@ -852,7 +857,8 @@ class SpikeCalcsGeneric(object):
         """
         if trial_filter:
             for i_filter in trial_filter:
-                assert isinstance(i_filter, TrialFilter), "Filter must be a TrialFilter"
+                assert isinstance(
+                    i_filter, TrialFilter), "Filter must be a TrialFilter"
                 assert i_filter.name == "time", "Only time filters are supported"
         self.spike_times.mask = False
         if self._waves and self._waves is not None:
@@ -981,7 +987,7 @@ class SpikeCalcsGeneric(object):
         x = []
         y = []
         for i, t in enumerate(dts):
-            tmp = self.spike_times[t[0] : t[1]] - event_ts[i]
+            tmp = self.spike_times[t[0]: t[1]] - event_ts[i]
             x.extend(tmp)
             y.extend(np.repeat(i, len(tmp)))
         return x, y
@@ -1013,10 +1019,11 @@ class SpikeCalcsGeneric(object):
 
         irange = event_ts[:, np.newaxis] + self.event_window[np.newaxis, :]
         dts = np.searchsorted(self.spike_times, irange)
-        bins = np.arange(self.event_window[0], self.event_window[1], bin_width_secs)
+        bins = np.arange(self.event_window[0],
+                         self.event_window[1], bin_width_secs)
         result = np.empty(shape=(len(bins) - 1, len(event_ts)), dtype=np.int64)
         for i, t in enumerate(dts):
-            tmp = self.spike_times[t[0] : t[1]] - event_ts[i]
+            tmp = self.spike_times[t[0]: t[1]] - event_ts[i]
             indices = np.digitize(tmp, bins=bins)
             counts = np.bincount(indices, minlength=len(bins))
             result[:, i] = counts[1:]
@@ -1131,7 +1138,8 @@ class SpikeCalcsGeneric(object):
         # the permutation test for significance, only perform
         # on the non-masked data
         rng = np.random.default_rng()
-        method = stats.PermutationMethod(n_resamples=nShuffles, random_state=rng)
+        method = stats.PermutationMethod(
+            n_resamples=nShuffles, random_state=rng)
         method = kwargs.get("method", method)
         res = stats.pearsonr(
             sm_spk_rate.compressed(), speed_filt.compressed(), method=method
@@ -1215,11 +1223,13 @@ class SpikeCalcsGeneric(object):
         do_smooth = kwargs.get("do_smooth", True)
 
         if do_smooth:
-            smoothed_binned_spikes = convolve(mean_firing_rate, kernel, boundary="wrap")
+            smoothed_binned_spikes = convolve(
+                mean_firing_rate, kernel, boundary="wrap")
         else:
             smoothed_binned_spikes = mean_firing_rate
         nbins = np.floor(np.sum(np.abs(self.event_window)) / self.secs_per_bin)
-        bins = np.linspace(self.event_window[0], self.event_window[1], int(nbins))
+        bins = np.linspace(
+            self.event_window[0], self.event_window[1], int(nbins))
         # normalize all activity by activity in the time before
         # the laser onset
         idx = bins < 0
@@ -1248,7 +1258,8 @@ class SpikeCalcsGeneric(object):
         responds_to_stim = False
         mag = np.empty(0)
         Response = namedtuple(
-            "Response", ["responds", "normed_response_curve", "response_magnitude"]
+            "Response", ["responds", "normed_response_curve",
+                         "response_magnitude"]
         )
         this_response = Response(responds_to_stim, normd, mag)
         slices = np.ma.notmasked_contiguous(normd_masked)
@@ -1306,7 +1317,8 @@ class SpikeCalcsGeneric(object):
         from scipy.signal import periodogram
 
         fs = 1.0 / kwargs.get("binsize", 0.0001)
-        freqs, power = periodogram(ac.binned_data[0], fs=fs, return_onesided=True)
+        freqs, power = periodogram(
+            ac.binned_data[0], fs=fs, return_onesided=True)
         # Smooth the power over +/- 1Hz when fs=200
         b = signal.windows.boxcar(3)  # another filter type - blackman?
         h = signal.filtfilt(b, 3, power)
@@ -1399,6 +1411,35 @@ class SpikeCalcsGeneric(object):
         )
         return float((mtbp - mobp) / (mtbp + mobp))
 
+    # def get_phase_of_spiking(
+    #     self, lfp_data: np.ndarray, fs: float, **kws
+    # ) -> np.ndarray:
+    #     """
+    #     Calculates the phase at which the cluster emitted spikes
+    #
+    #     Parameters
+    #     ----------
+    #     lfp_data (np.ndarray) - the LFP signal
+    #
+    #     fs (float) - the sample rate of the LFP signal
+    #
+    #     Returns
+    #     -------
+    #     np.ndarray - the phase at which the cluster emitted spikes
+    #                  NB should lie between -pi and +pi
+    #
+    #     """
+    #     MIN_THETA = kws.get("min_theta", 6)
+    #     MAX_THETA = kws.get("max_theta", 12)
+    #
+    #     L = LFPOscillations(lfp_data, fs)
+    #
+    #     filt_sig, phase, _, _, _ = L.getFreqPhase(
+    #         lfp_data, [MIN_THETA, MAX_THETA], 2)
+    #     idx = (self.spike_times * fs).astype(int)
+    #
+    #     return phase[idx]
+
     def get_ifr_power_spectrum(self) -> tuple[np.ndarray, ...]:
         """
         Returns the power spectrum of the instantaneous firing rate of a cell
@@ -1411,11 +1452,13 @@ class SpikeCalcsGeneric(object):
             The frequency and power of the instantaneous firing rate
         """
         binned_spikes = np.bincount(
-            np.array(self.spike_times * self.pos_sample_rate, dtype=int).ravel(),
+            np.array(self.spike_times * self.pos_sample_rate,
+                     dtype=int).ravel(),
             minlength=int(self.pos_sample_rate * self.duration),
         )
         # possibly smooth the spike train...
-        freqs, power = signal.periodogram(binned_spikes, fs=self.pos_sample_rate)
+        freqs, power = signal.periodogram(
+            binned_spikes, fs=self.pos_sample_rate)
         freqs = freqs.ravel()
         power = power.ravel()
         return freqs, power
@@ -1443,8 +1486,10 @@ class SpikeCalcsGeneric(object):
         # Take the fft of the spike train autocorr (from -500 to +500ms)
         from scipy.signal import periodogram
 
-        freqs, power = periodogram(ac.binned_data[0], fs=200, return_onesided=True)
-        power_masked = np.ma.MaskedArray(power, np.logical_or(freqs < 6, freqs > 12))
+        freqs, power = periodogram(
+            ac.binned_data[0], fs=200, return_onesided=True)
+        power_masked = np.ma.MaskedArray(
+            power, np.logical_or(freqs < 6, freqs > 12))
         return freqs[np.argmax(power_masked)]
 
     def smooth_spike_train(self, npos, sigma=3.0, shuffle=None):
@@ -1526,7 +1571,8 @@ class SpikeCalcsGeneric(object):
         for i in range(n_channels):
             axes[i].plot(self.waveforms()[:n_waveforms, i, :].T, c="gray")
             # plot mean waveform on top
-            axes[i].plot(np.mean(self.waveforms()[:n_waveforms, i, :], axis=0), c="red")
+            axes[i].plot(np.mean(self.waveforms()[
+                         :n_waveforms, i, :], axis=0), c="red")
             axes[i].set_title(f"Channel {i}")
             axes[i].set_xlabel("Time (ms)")
             axes[i].set_ylabel("Amplitude (uV)")
@@ -1671,7 +1717,8 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
         if clusts is not None:
             idx = isin(cluster_vec, clusts)
             c_vec[idx] = cluster_vec[idx]
-        c_vec = [[np.floor(t * 255) for t in tcols[i]] for i in c_vec.astype(int)]
+        c_vec = [[np.floor(t * 255) for t in tcols[i]]
+                 for i in c_vec.astype(int)]
 
         self.scaling = np.full(4, 15)
 
@@ -1681,7 +1728,8 @@ class SpikeCalcsAxona(SpikeCalcsGeneric):
             fig = kwargs["fig"]
         else:
             fig = plt.figure(figsize=(8, 6))
-        grid = ImageGrid(fig, 111, nrows_ncols=(2, 3), axes_pad=0.1, aspect=False)
+        grid = ImageGrid(fig, 111, nrows_ncols=(
+            2, 3), axes_pad=0.1, aspect=False)
         for i, c in enumerate(cmb):
             if np.sum(amps[:, c[0]]) > 0 and np.sum(amps[:, c[1]]) > 0:
                 xy = np.array([amps[:, c[0]], amps[:, c[1]]]).T
@@ -1752,7 +1800,8 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
             self.TemplateModel = TemplateModel(
                 dir_path=os.path.join(cluster_data.fname_root),
                 sample_rate=3e4,
-                dat_path=os.path.join(cluster_data.fname_root, "continuous.dat"),
+                dat_path=os.path.join(
+                    cluster_data.fname_root, "continuous.dat"),
                 n_channels_dat=n_channels,
             )
         # get the waveforms for the given cluster on the best channel only
@@ -1798,20 +1847,24 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
         templates = np.load(os.path.join(pname, "templates.npy"))
         # Load channel_map and positions
         channel_map = np.load(os.path.join(pname, "channel_map.npy"))
-        channel_positions = np.load(os.path.join(pname, "channel_positions.npy"))
-        map_and_pos = np.array([np.squeeze(channel_map), channel_positions[:, 1]])
+        channel_positions = np.load(
+            os.path.join(pname, "channel_positions.npy"))
+        map_and_pos = np.array(
+            [np.squeeze(channel_map), channel_positions[:, 1]])
         # unwhiten all the templates
         tempsUnW = np.zeros(np.shape(templates))
         for i in range(np.shape(templates)[0]):
             tempsUnW[i, :, :] = np.squeeze(templates[i, :, :]) @ Winv
 
-        tempAmp = np.squeeze(np.max(tempsUnW, 1)) - np.squeeze(np.min(tempsUnW, 1))
+        tempAmp = np.squeeze(np.max(tempsUnW, 1)) - \
+            np.squeeze(np.min(tempsUnW, 1))
         tempAmpsUnscaled = np.max(tempAmp, 1)
         # need to zero-out the potentially-many low values on distant channels
         threshVals = tempAmpsUnscaled * 0.3
         tempAmp[tempAmp < threshVals[:, None]] = 0
         # Compute the depth as a centre of mass
-        templateDepths = np.sum(tempAmp * map_and_pos[1, :], -1) / np.sum(tempAmp, 1)
+        templateDepths = np.sum(
+            tempAmp * map_and_pos[1, :], -1) / np.sum(tempAmp, 1)
         maxChanIdx = np.argmin(
             np.abs((templateDepths[:, None] - map_and_pos[1, :].T)), 1
         )
@@ -1842,7 +1895,8 @@ class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
         st3 = rez_mat["rez"]["st3"]
         st_spike_times = st3[0, :]
         idx = np.searchsorted(st_spike_times, cluster_times)
-        template_idx, counts = np.unique(spike_templates[idx], return_counts=True)
+        template_idx, counts = np.unique(
+            spike_templates[idx], return_counts=True)
         ind = np.argmax(counts)
         return template_idx[ind]
 

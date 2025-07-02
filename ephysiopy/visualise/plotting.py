@@ -19,11 +19,11 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import seaborn as sns
 
 from ephysiopy.axona import tintcolours as tcols
-from ephysiopy.common.spikecalcs import xcorr, SpikeCalcsGeneric
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.utils import (
     clean_kwargs,
     BinnedData,
+    VariableToBin,
     rect,
 )
 from ephysiopy.common import fieldcalcs as fc
@@ -205,7 +205,8 @@ def colored_line(x, y, c, ax, **lc_kwargs):
         The generated line collection representing the colored line.
     """
     if "array" in lc_kwargs:
-        warnings.warn('The provided "array" keyword argument will be overridden')
+        warnings.warn(
+            'The provided "array" keyword argument will be overridden')
 
     # Default the capstyle to butt so that the line segments smoothly line up
     default_kwargs = {"capstyle": "butt"}
@@ -226,7 +227,8 @@ def colored_line(x, y, c, ax, **lc_kwargs):
     #   [(x2_start, y2_start), (x2_mid, y2_mid), (x2_end, y2_end)],
     #   ...
     # ]
-    coord_start = np.column_stack((x_midpts[:-1], y_midpts[:-1]))[:, np.newaxis, :]
+    coord_start = np.column_stack(
+        (x_midpts[:-1], y_midpts[:-1]))[:, np.newaxis, :]
     coord_mid = np.column_stack((x, y))[:, np.newaxis, :]
     coord_end = np.column_stack((x_midpts[1:], y_midpts[1:]))[:, np.newaxis, :]
     segments = np.concatenate((coord_start, coord_mid, coord_end), axis=1)
@@ -421,13 +423,18 @@ class FigureMaker(object):
             ax : plt.Axes, optional
                 The axes to plot on. If None, new axes are created.
             separate_plots : bool, optional
-                If True, each cluster will be plotted on a separate plot. Defaults to False.
+                If True, each cluster will be plotted on a separate plot.
+                Defaults to False.
 
         Returns
         -------
         plt.Axes
             The axes containing the rate map plot.
         """
+        if "var_type" in kwargs.keys():
+            if kwargs["var_type"] == VariableToBin.X:
+                return self.plot_linear_rate_map(cluster, channel, **kwargs)
+
         rmap = self.get_rate_map(cluster, channel, **kwargs)
 
         ax = kwargs.pop("ax", None)
@@ -458,6 +465,61 @@ class FigureMaker(object):
         ax = _plot_pcolormesh(rmap, ax, **kwargs)
         ax.set_aspect("equal")
         return fig
+
+    def plot_linear_rate_map(
+        self, cluster: int | list, channel: int | list, **kwargs
+    ) -> plt.Figure:
+        """
+        Plots the linear rate map for the specified cluster(s) and channel.
+
+        Parameters
+        ----------
+        cluster : int or list
+            The cluster(s) to get the linear rate map for.
+        channel : int or list
+            The channel number.
+        **kwargs : dict
+            Additional keyword arguments for the function.
+
+        Returns
+        -------
+        plt.Axes
+            The axes containing the linear rate map plot.
+        """
+        rmap = self.get_rate_map(cluster, channel, **kwargs)
+
+        def _plot_single_map(rmap: BinnedData, ax: plt.Axes, **kwargs) -> plt.Axes:
+            """
+            Plots a single rate map on the given axes.
+            """
+            kwargs = clean_kwargs(plt.plot, kwargs)
+            ax.plot(rmap.bin_edges[0][:-1], rmap.binned_data[0], **kwargs)
+            ax.set_xlabel("Position (cm)")
+            ax.set_ylabel("Rate (Hz)")
+            return ax
+
+        ax = kwargs.pop("ax", None)
+        separate_plots = kwargs.pop("separate_plots", False)
+
+        kwargs["equal_axes"] = kwargs.pop("equal_axes", True)
+
+        if len(rmap.binned_data) > 1 and separate_plots:
+            for imap in rmap:
+                fig = plt.figure()
+                ax = fig.add_subplot(111, **kwargs)
+                _plot_single_map(imap, ax, **kwargs)
+            return ax
+        elif len(rmap.binned_data) > 1 and not separate_plots:
+            return _plot_multiple_clusters(_plot_single_map, rmap, **kwargs)
+
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+        else:
+            fig = plt.gcf()
+            ax = plt.gca()
+
+        return _plot_single_map(rmap, ax, **kwargs)
 
     @saveFigure
     def plot_hd_map(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
@@ -493,9 +555,7 @@ class FigureMaker(object):
             add_guides = kwargs.pop("add_guides", False)
             add_mrv = kwargs.pop("add_mrv", False)
 
-            # TODO: there is a discrepancy here
-            ax.set_theta_zero_location("E")
-            ax.set_theta_direction(1)
+            ax.set_theta_zero_location("N")
             theta = np.deg2rad(rmap.bin_edges[0])
             r = rmap.binned_data[0]
             r = np.insert(r, -1, r[0])
@@ -523,8 +583,8 @@ class FigureMaker(object):
                     ],
                     "r",
                 )
-            # if "polar" in ax.name:
-            #     ax.set_thetagrids([0, 90, 180, 270])
+            if "polar" in ax.name:
+                ax.set_thetagrids([0, 90, 180, 270])
 
             return ax
 
@@ -756,7 +816,8 @@ class FigureMaker(object):
             measures = fc.grid_field_props(sac)
             Am = copy.deepcopy(sac)
             Am.binned_data[0][~measures["dist_to_centre"]] = np.nan
-            Am.binned_data[0] = np.ma.masked_invalid(np.atleast_2d(Am.binned_data[0]))
+            Am.binned_data[0] = np.ma.masked_invalid(
+                np.atleast_2d(Am.binned_data[0]))
             kwargs["cmap"] = jet_cmap
 
             cmap = copy.copy(jet_cmap)
@@ -835,7 +896,8 @@ class FigureMaker(object):
             ax = fig.add_subplot(111)
         kwargs = clean_kwargs(plt.plot, kwargs)
         ax_colour = "cornflowerblue"
-        ax.plot(rmap.bin_edges[0][:-1], rmap.binned_data[0], color=ax_colour, **kwargs)
+        ax.plot(rmap.bin_edges[0][:-1],
+                rmap.binned_data[0], color=ax_colour, **kwargs)
         ax.set_xlabel("Speed (cm/s)")
         ax.set_ylabel("Rate (Hz)")
         if add_speed_hist:
@@ -848,7 +910,8 @@ class FigureMaker(object):
                 1 / self.PosCalcs.sample_rate
             )
             speed_bincounts = np.bincount(
-                np.digitize(self.PosCalcs.speed, rmap.bin_edges[0], right=True),
+                np.digitize(self.PosCalcs.speed,
+                            rmap.bin_edges[0], right=True),
                 weights=pos_weights,
             )
             ax2.bar(
@@ -886,7 +949,8 @@ class FigureMaker(object):
             The axes containing the speed versus head direction plot.
         """
         rmap = self.get_speed_v_hd_map(cluster, channel, **kwargs)
-        im = np.ma.MaskedArray(rmap.binned_data[0], np.isnan(rmap.binned_data[0]))
+        im = np.ma.MaskedArray(
+            rmap.binned_data[0], np.isnan(rmap.binned_data[0]))
         # mask low rates...
         # im = np.ma.masked_where(im <= 1, im)
         # ... and where less than 0.5% of data is accounted for
@@ -924,16 +988,54 @@ class FigureMaker(object):
         channel : int
             The channel number.
         **kwargs : dict
-            Additional keyword arguments for the function.
+            Additional keyword arguments for the function, including:
+            binsize : int, optional
+                The size of the bins in ms.
+                Gets passed to SpikeCalcsGeneric.xcorr().
+                Defaults to 1.
 
         Returns
         -------
         plt.Axes
             The axes containing the autocorrelogram plot.
         """
+        ax = kwargs.pop("ax", None)
+        if "strip_axes" in kwargs.keys():
+            strip_axes = kwargs.pop("strip_axes")
+        else:
+            strip_axes = False
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+        if "binsize" in kwargs.keys():
+            binsize = kwargs["binsize"]
+        else:
+            binsize = 0.001
+        if "Trange" in kwargs.keys():
+            xrange = kwargs.pop("Trange")
+        else:
+            xrange = [-0.5, 0.5]
 
-        ts = self.get_spike_times(cluster, channel)
-        ax = self._getXCorrPlot(ts, **kwargs)
+        binned_data = self.get_acorr(cluster, channel, **kwargs)
+        c = binned_data.binned_data[0]
+        b = binned_data.bin_edges[0]
+        ax.bar(b[:-1], c, width=binsize, color="k", align="edge", zorder=3)
+        ax.set_xlim(xrange)
+        ax.set_xticks((xrange[0], 0, xrange[1]))
+        ax.set_xticklabels("")
+        ax.tick_params(
+            axis="both", which="both", left=False, right=False, bottom=False, top=False
+        )
+        ax.set_yticklabels("")
+        ax.xaxis.set_ticks_position("bottom")
+        if strip_axes:
+            return stripAxes(ax)
+        axtrans = transforms.blended_transform_factory(
+            ax.transData, ax.transAxes)
+        ax.vlines(0, ymin=0, ymax=1, colors="lightgrey",
+                  transform=axtrans, zorder=1)
+        return ax
+
         return ax
 
     @saveFigure
@@ -976,9 +1078,9 @@ class FigureMaker(object):
         else:
             xrange = [-0.5, 0.5]
 
-        a_times = self.get_spike_times(cluster_a, channel_a)
-        b_times = self.get_spike_times(cluster_b, channel_b)
-        xcorr_binned = xcorr(a_times, b_times, Trange=xrange, binsize=binsize)
+        xcorr_binned = self.get_xcorr(
+            cluster_a, channel_a, cluster_b, channel_b, Trange=xrange, binsize=binsize
+        )
         c = xcorr_binned.binned_data[0]
         b = xcorr_binned.bin_edges[0]
         ax.bar(b[:-1], c, width=binsize, color="k", align="edge", zorder=3)
@@ -992,8 +1094,10 @@ class FigureMaker(object):
         ax.xaxis.set_ticks_position("bottom")
         if strip_axes:
             return stripAxes(ax)
-        axtrans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
-        ax.vlines(0, ymin=0, ymax=1, colors="lightgrey", transform=axtrans, zorder=1)
+        axtrans = transforms.blended_transform_factory(
+            ax.transData, ax.transAxes)
+        ax.vlines(0, ymin=0, ymax=1, colors="lightgrey",
+                  transform=axtrans, zorder=1)
         return ax
 
     @saveFigure
@@ -1020,8 +1124,109 @@ class FigureMaker(object):
         plt.Axes
             The axes containing the raster plot.
         """
-        ts = self.get_spike_times(cluster, channel)
-        ax = self._getRasterPlot(ts, cluster=cluster, **kwargs)
+        dt = kwargs.get("dt", [-0.05, 0.1])
+        secs_per_bin = kwargs.get("secs_per_bin", 0.001)
+        strip_axes = kwargs.pop("strip_axes", False)
+        histColor = kwargs.pop(
+            "hist_colour", [1 / 255.0, 1 / 255.0, 1 / 255.0])
+        x, y = self.get_psth(cluster, channel, **kwargs)
+        ax = kwargs.get("ax", None)
+        if y:
+            if ax is None:
+                fig = plt.figure(figsize=(4.0, 7.0))
+                axScatter = fig.add_subplot(111)
+            else:
+                axScatter = ax
+            axScatter.scatter(x, y, marker=".", s=2,
+                              rasterized=False, color=histColor)
+            divider = make_axes_locatable(axScatter)
+            axHistx = divider.append_axes(
+                "top", 1.2, pad=0.2, sharex=axScatter, transform=axScatter.transAxes
+            )
+            scattTrans = transforms.blended_transform_factory(
+                axScatter.transData, axScatter.transAxes
+            )
+            stim_pwidth = self.ttl_data["stim_duration"]
+            if stim_pwidth is None:
+                raise ValueError("stim duration is None")
+
+            axScatter.add_patch(
+                Rectangle(
+                    (0, 0),
+                    width=stim_pwidth,
+                    height=1,
+                    transform=scattTrans,
+                    color=[0, 0, 1],
+                    alpha=0.3,
+                )
+            )
+            histTrans = transforms.blended_transform_factory(
+                axHistx.transData, axHistx.transAxes
+            )
+            axHistx.add_patch(
+                Rectangle(
+                    (0, 0),
+                    width=stim_pwidth,
+                    height=1,
+                    transform=histTrans,
+                    color=[0, 0, 1],
+                    alpha=0.3,
+                )
+            )
+            ylabel_fs = xlabel_fs = 9
+            labelpad = -8
+            axScatter.set_ylabel(
+                "Laser stimulation events", labelpad=labelpad - 10, fontsize=ylabel_fs
+            )
+            nStms = y[-1]
+            axScatter.set_ylim(0, nStms)
+            axScatter.set_yticks((0, nStms))
+            axScatter.set_yticklabels(
+                ("0", str(nStms + 1)), fontsize=ylabel_fs - 1)
+            axScatter.set_xlim(dt)
+            axScatter.set_xlabel("Time to laser onset(s)", fontsize=xlabel_fs)
+            axScatter.set_xticks((dt[0], 0, dt[1]))
+            axScatter.set_xticklabels(
+                (str(dt[0]), "0", str(dt[1])), fontsize=xlabel_fs - 1
+            )
+
+            h, be = np.histogram(
+                x,
+                bins=np.arange(dt[0], dt[1] + secs_per_bin, secs_per_bin),
+                range=dt,
+                density=False,
+            )
+            axHistx.bar(
+                be[:-1],
+                h,
+                width=secs_per_bin,
+                align="edge",
+                color=histColor,
+                edgecolor="none",
+                rasterized=True,
+            )
+            plt.setp(axHistx.get_xticklabels(), visible=False)
+            # Label only the min and max of the y-axis
+            # max is rounded to the nearest 10
+            maxRate = int(np.ceil(np.max(h) / 10.0) * 10)
+            axHistx.set_ylim(0, maxRate)
+            axHistx.set_yticks((0, maxRate))
+            axHistx.set_yticklabels(
+                ("0", str(maxRate)), fontsize=ylabel_fs - 1)
+            axHistx.set_xlim(dt)
+            axHistx.set_ylabel("Firing rate(Hz)",
+                               labelpad=labelpad, fontsize=ylabel_fs)
+            fig = plt.gcf()
+            fig.canvas.manager.set_window_title(f"Cluster {cluster}")
+            if strip_axes:
+                return stripAxes(axScatter)
+            return axHistx
+        else:
+            warnings.warn(
+                f"PSTH for cluster {cluster} is empty. The cell fired no spikes in the period under question"
+            )
+            return
+
         return ax
 
     @saveFigure
@@ -1068,7 +1273,8 @@ class FigureMaker(object):
         theta_filtered_eeg = self.EEGCalcs.butterFilter(low_theta, high_theta)
         hilbert_eeg = hilbert(theta_filtered_eeg)
         inst_freq = (
-            self.EEGCalcs.fs / (2 * np.pi) * np.diff(np.unwrap(np.angle(hilbert_eeg)))
+            self.EEGCalcs.fs / (2 * np.pi) *
+            np.diff(np.unwrap(np.angle(hilbert_eeg)))
         )
         inst_freq = np.insert(inst_freq, -1, inst_freq[-1])
         eeg_times = np.arange(0, len(self.EEGCalcs.sig)) / self.EEGCalcs.fs
@@ -1083,7 +1289,8 @@ class FigureMaker(object):
                 np.arange(low_speed, high_speed, 2),
             ),
         )
-        ax = plt.pcolormesh(edges[1], edges[0], h, cmap=jet_cmap, edgecolors="face")
+        ax = plt.pcolormesh(edges[1], edges[0], h,
+                            cmap=jet_cmap, edgecolors="face")
         return ax
 
     @saveFigure
@@ -1128,7 +1335,8 @@ class FigureMaker(object):
         ax.set_ylim(y_lims[0], y_lims[1] * 1.15)
         ax.set_thetagrids([])
         ax.set_rgrids([])
-        ax.set_xticks(np.arange(0, 2 * np.pi, np.pi / 2), ["0", "90", "180", "270"])
+        ax.set_xticks(np.arange(0, 2 * np.pi, np.pi / 2),
+                      ["0", "90", "180", "270"])
         return ax
 
     @saveFigure
@@ -1221,197 +1429,6 @@ class FigureMaker(object):
             return stripAxes(ax)
         return ax
 
-    def _getXCorrPlot(
-        self, spk_times: np.array, ax: matplotlib.axes = None, **kwargs
-    ) -> plt.Axes:
-        """
-        Returns an axis containing the autocorrelogram of the spike
-        times provided over the range +/-500ms.
-
-        Parameters
-        ----------
-        spk_times : np.array
-            Spike times in seconds.
-        ax : matplotlib.axes, optional
-            The axes to plot into. If None, new axes are created.
-        **kwargs : dict
-            Additional keyword arguments for the function, including:
-            binsize : int, optional
-                The size of the bins in ms. Gets passed to SpikeCalcsGeneric.xcorr().
-                Defaults to 1.
-
-        Returns
-        -------
-        plt.Axes
-            The axes with the plot.
-        """
-        if "strip_axes" in kwargs.keys():
-            strip_axes = kwargs.pop("strip_axes")
-        else:
-            strip_axes = False
-        if ax is None:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-        if "binsize" in kwargs.keys():
-            binsize = kwargs["binsize"]
-        else:
-            binsize = 0.001
-        if "Trange" in kwargs.keys():
-            xrange = kwargs.pop("Trange")
-        else:
-            xrange = [-0.5, 0.5]
-        ac = xcorr(spk_times, Trange=xrange, **kwargs)
-        c = ac.binned_data[0]
-        b = ac.bin_edges[0]
-        ax.bar(b[:-1], c, width=binsize, color="k", align="edge", zorder=3)
-        ax.set_xlim(xrange)
-        ax.set_xticks((xrange[0], 0, xrange[1]))
-        ax.set_xticklabels("")
-        ax.tick_params(
-            axis="both", which="both", left=False, right=False, bottom=False, top=False
-        )
-        ax.set_yticklabels("")
-        ax.xaxis.set_ticks_position("bottom")
-        if strip_axes:
-            return stripAxes(ax)
-        axtrans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
-        ax.vlines(0, ymin=0, ymax=1, colors="lightgrey", transform=axtrans, zorder=1)
-        return ax
-
-    def _getRasterPlot(
-        self,
-        spk_times: np.ndarray,
-        dt=(-0.05, 0.1),
-        ax: matplotlib.axes = None,
-        cluster=0,
-        secs_per_bin: int = 0.001,
-        **kwargs,
-    ) -> plt.Axes | None:
-        """
-        Plots a raster plot for a specified tetrode/ cluster.
-
-        Parameters
-        ----------
-        spk_times : np.ndarray
-            The spike times in seconds.
-        dt : tuple, optional
-            The window of time in ms to examine zeroed on the event of interest.
-            Defaults to (-0.05, 0.1).
-        ax : matplotlib.axes, optional
-            The axes to plot into. If not provided, a new figure is created.
-            Defaults to None.
-        cluster : int, optional
-            The cluster number. Defaults to 0.
-        secs_per_bin : int, optional
-            The number of seconds in each bin of the raster plot. Defaults to 0.001.
-        **kwargs : dict
-            Additional keyword arguments for the function.
-
-        Returns
-        -------
-        plt.Axes or None
-            The axes with the plot, or None if no spikes were fired in the period.
-        """
-        assert hasattr(self, "ttl_data")
-
-        strip_axes = kwargs.pop("strip_axes", False)
-        histColor = kwargs.pop("hist_colour", [1 / 255.0, 1 / 255.0, 1 / 255.0])
-        S = SpikeCalcsGeneric(spk_times, cluster=cluster)
-        S.event_ts = self.ttl_data["ttl_timestamps"]
-        S.event_window = np.array(dt)
-        x, y = S.psth()
-        if y:
-            if ax is None:
-                fig = plt.figure(figsize=(4.0, 7.0))
-                axScatter = fig.add_subplot(111)
-            else:
-                axScatter = ax
-            axScatter.scatter(x, y, marker=".", s=2, rasterized=False, color=histColor)
-            divider = make_axes_locatable(axScatter)
-            axHistx = divider.append_axes(
-                "top", 1.2, pad=0.2, sharex=axScatter, transform=axScatter.transAxes
-            )
-            scattTrans = transforms.blended_transform_factory(
-                axScatter.transData, axScatter.transAxes
-            )
-            stim_pwidth = self.ttl_data["stim_duration"]
-            if stim_pwidth is None:
-                raise ValueError("stim duration is None")
-
-            axScatter.add_patch(
-                Rectangle(
-                    (0, 0),
-                    width=stim_pwidth,
-                    height=1,
-                    transform=scattTrans,
-                    color=[0, 0, 1],
-                    alpha=0.3,
-                )
-            )
-            histTrans = transforms.blended_transform_factory(
-                axHistx.transData, axHistx.transAxes
-            )
-            axHistx.add_patch(
-                Rectangle(
-                    (0, 0),
-                    width=stim_pwidth,
-                    height=1,
-                    transform=histTrans,
-                    color=[0, 0, 1],
-                    alpha=0.3,
-                )
-            )
-            ylabel_fs = xlabel_fs = 9
-            labelpad = -8
-            axScatter.set_ylabel(
-                "Laser stimulation events", labelpad=labelpad - 10, fontsize=ylabel_fs
-            )
-            nStms = y[-1]
-            axScatter.set_ylim(0, nStms)
-            axScatter.set_yticks((0, nStms))
-            axScatter.set_yticklabels(("0", str(nStms + 1)), fontsize=ylabel_fs - 1)
-            axScatter.set_xlim(dt)
-            axScatter.set_xlabel("Time to laser onset(s)", fontsize=xlabel_fs)
-            axScatter.set_xticks((dt[0], 0, dt[1]))
-            axScatter.set_xticklabels(
-                (str(dt[0]), "0", str(dt[1])), fontsize=xlabel_fs - 1
-            )
-
-            h, be = np.histogram(
-                x,
-                bins=np.arange(dt[0], dt[1] + secs_per_bin, secs_per_bin),
-                range=dt,
-                density=False,
-            )
-            axHistx.bar(
-                be[:-1],
-                h,
-                width=secs_per_bin,
-                align="edge",
-                color=histColor,
-                edgecolor="none",
-                rasterized=True,
-            )
-            plt.setp(axHistx.get_xticklabels(), visible=False)
-            # Label only the min and max of the y-axis
-            # max is rounded to the nearest 10
-            maxRate = int(np.ceil(np.max(h) / 10.0) * 10)
-            axHistx.set_ylim(0, maxRate)
-            axHistx.set_yticks((0, maxRate))
-            axHistx.set_yticklabels(("0", str(maxRate)), fontsize=ylabel_fs - 1)
-            axHistx.set_xlim(dt)
-            axHistx.set_ylabel("Firing rate(Hz)", labelpad=labelpad, fontsize=ylabel_fs)
-            fig = plt.gcf()
-            fig.canvas.manager.set_window_title(f"Cluster {cluster}")
-            if strip_axes:
-                return stripAxes(axScatter)
-            return axHistx
-        else:
-            warnings.warn(
-                f"PSTH for cluster {cluster} is empty. The cell fired no spikes in the period under question"
-            )
-            return
-
     def plotSpectrogramByDepth(
         self,
         nchannels: int = 384,
@@ -1458,14 +1475,15 @@ class FigureMaker(object):
         lfp_file = os.path.join(self.path2LFPdata, "continuous.dat")
         status = os.stat(lfp_file)
         nsamples = int(status.st_size / 2 / nchannels)
-        mmap = np.memmap(lfp_file, np.int16, "r", 0, (nchannels, nsamples), order="F")
+        mmap = np.memmap(lfp_file, np.int16, "r", 0,
+                         (nchannels, nsamples), order="F")
         # Load the channel map NB assumes this is in the AP data
         # location and that kilosort was run there
         channel_map = np.squeeze(
             np.load(os.path.join(self.path2APdata, "channel_map.npy"))
         )
         lfp_sample_rate = 2500
-        data = np.array(mmap[channel_map, 0 : nseconds * lfp_sample_rate])
+        data = np.array(mmap[channel_map, 0: nseconds * lfp_sample_rate])
         from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 
         E = EEGCalcsGeneric(data[0, :], lfp_sample_rate)
@@ -1490,8 +1508,10 @@ class FigureMaker(object):
         spectoAx.set_xlabel("Frequency (Hz)")
         spectoAx.set_ylabel("Channel")
         divider = make_axes_locatable(spectoAx)
-        channel_spectoAx = divider.append_axes("top", 1.2, pad=0.1, sharex=spectoAx)
-        meanfreq_powerAx = divider.append_axes("right", 1.2, pad=0.1, sharey=spectoAx)
+        channel_spectoAx = divider.append_axes(
+            "top", 1.2, pad=0.1, sharex=spectoAx)
+        meanfreq_powerAx = divider.append_axes(
+            "right", 1.2, pad=0.1, sharey=spectoAx)
         plt.setp(
             channel_spectoAx.get_xticklabels() + meanfreq_powerAx.get_yticklabels(),
             visible=False,
@@ -1536,7 +1556,8 @@ class FigureMaker(object):
             freq_mask = np.logical_and(
                 E.freqs[0::50] > freqs[0], E.freqs[0::50] < freqs[1]
             )
-            mean_power = 10 * np.log10(np.mean(spec_data[:, freq_mask], 1) / mn_power)
+            mean_power = 10 * \
+                np.log10(np.mean(spec_data[:, freq_mask], 1) / mn_power)
             c = next(cols)
             meanfreq_powerAx.plot(
                 mean_power,

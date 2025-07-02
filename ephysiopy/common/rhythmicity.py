@@ -7,17 +7,15 @@ from matplotlib.patches import Rectangle
 import numpy as np
 from pathlib import Path, PurePath
 from typing import Callable
-from scipy.signal import ShortTimeFFT
-from scipy.signal.windows import gaussian
-from scipy.stats import linregress
-from ephysiopy.io.recording import OpenEphysBase
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.common.ephys_generic import EEGCalcsGeneric
-from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
+
+# from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 from ephysiopy.common.utils import window_rms, find_runs
 from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 from ephysiopy.visualise.plotting import FigureMaker, saveFigure
+from ephysiopy.io.recording import OpenEphysBase
 
 from phylib.io.model import TemplateModel
 from scipy import signal
@@ -111,8 +109,8 @@ class CosineDirectionalTuning(object):
         self.posCalcs = PosCalcsGeneric(
             x, y, 230, cm=True, jumpmax=100, tracker_params=tracker_params
         )
-        self.spikeCalcs = SpikeCalcsGeneric(spike_times, spk_clusters[0])
-        self.spikeCalcs.spk_clusters = spk_clusters
+        # self.spikeCalcs = SpikeCalcsGeneric(spike_times, spk_clusters[0])
+        # self.spikeCalcs.spk_clusters = spk_clusters
         self.posCalcs.postprocesspos(tracker_params)
         xy = self.posCalcs.xy
         hdir = self.posCalcs.dir
@@ -217,7 +215,8 @@ class CosineDirectionalTuning(object):
         if self.pos_samples_for_spike is None:
             self.getPosIndices()
         clust_pos_idx = self.pos_samples_for_spike[self.spk_clusters == clust]
-        clust_pos_idx[clust_pos_idx >= len(self.pos_times)] = len(self.pos_times) - 1
+        clust_pos_idx[clust_pos_idx >= len(
+            self.pos_times)] = len(self.pos_times) - 1
         return clust_pos_idx
 
     def getClusterSpikeTimes(self, cluster: int):
@@ -278,7 +277,8 @@ class CosineDirectionalTuning(object):
         min_len_in_samples = int(self.pos_sample_rate * self.min_runlength)
         min_len_runs_mask = grouped_runs[:, 1] >= min_len_in_samples
         ret = np.array(
-            [run_start_indices[min_len_runs_mask], grouped_runs[min_len_runs_mask, 1]]
+            [run_start_indices[min_len_runs_mask],
+                grouped_runs[min_len_runs_mask, 1]]
         ).T
         # ret contains run length as last column
         ret = np.insert(ret, 1, np.sum(ret, 1), 1)
@@ -318,7 +318,8 @@ class CosineDirectionalTuning(object):
         all_speed = np.array(self.speed)
         for start_idx, end_idx, dir_bin in run_list:
             this_runs_speed = all_speed[start_idx:end_idx]
-            this_runs_runs = self._rolling_window(this_runs_speed, minlength_in_samples)
+            this_runs_runs = self._rolling_window(
+                this_runs_speed, minlength_in_samples)
             run_mask = np.all(this_runs_runs > minspeed, 1)
             if np.any(run_mask):
                 print("got one")
@@ -434,7 +435,8 @@ class CosineDirectionalTuning(object):
         # split the single histogram into individual chunks
         splitIdx = np.nonzero(np.diff(posMask.astype(int)))[0] + 1
         splitMask = np.split(posMask, splitIdx)
-        splitSpkHist = np.split(spkTrHist, (splitIdx * acBinsPerPos).astype(int))
+        splitSpkHist = np.split(
+            spkTrHist, (splitIdx * acBinsPerPos).astype(int))
         histChunks = []
         for i in range(len(splitSpkHist)):
             if np.all(splitMask[i]):
@@ -443,19 +445,20 @@ class CosineDirectionalTuning(object):
                         histChunks.append(splitSpkHist[i])
         autoCorrGrid = np.zeros((int(acWindowSizeBins) + 1, len(histChunks)))
         chunkLens = []
-        from scipy import signal
 
         print(f"num chunks = {len(histChunks)}")
         for i in range(len(histChunks)):
             lenThisChunk = len(histChunks[i])
             chunkLens.append(lenThisChunk)
             tmp = np.zeros(lenThisChunk * 2)
-            tmp[lenThisChunk // 2 : lenThisChunk // 2 + lenThisChunk] = histChunks[i]
+            tmp[lenThisChunk // 2: lenThisChunk //
+                2 + lenThisChunk] = histChunks[i]
             tmp2 = signal.fftconvolve(
                 tmp, histChunks[i][::-1], mode="valid"
             )  # the autocorrelation
             autoCorrGrid[:, i] = (
-                tmp2[lenThisChunk // 2 : lenThisChunk // 2 + int(acWindowSizeBins) + 1]
+                tmp2[lenThisChunk // 2: lenThisChunk //
+                     2 + int(acWindowSizeBins) + 1]
                 / acBinsPerPos
             )
 
@@ -545,13 +548,12 @@ class CosineDirectionalTuning(object):
         # calculate freqs and crop spectrum to requested range
         freqs = nqLim * np.linspace(0, 1, fftHalfLen)
         freqs = freqs[freqs <= maxFreq].T
-        power = power[0 : len(freqs)]
+        power = power[0: len(freqs)]
 
         # smooth spectrum using gaussian kernel
         binsPerHz = (fftHalfLen - 1) / nqLim
         kernelLen = np.round(self.smthKernelWidth * binsPerHz)
         kernelSig = self.smthKernelSigma * binsPerHz
-        from scipy import signal
 
         k = signal.windows.gaussian(kernelLen, kernelSig) / (kernelLen / 2 / 2)
         power_sm = signal.fftconvolve(power, k[::-1], mode="same")
@@ -593,7 +595,8 @@ class CosineDirectionalTuning(object):
             ax.plot(freqs, power_sm, "k", lw=2)
             ax.axvline(self.thetaRange[0], c="b", ls="--")
             ax.axvline(self.thetaRange[1], c="b", ls="--")
-            _, stemlines, _ = ax.stem([freqAtBandMaxPower], [bandMaxPower], linefmt="r")
+            _, stemlines, _ = ax.stem([freqAtBandMaxPower], [
+                                      bandMaxPower], linefmt="r")
             # plt.setp(stemlines, 'linewidth', 2)
             ax.fill_between(
                 freqs,
@@ -661,7 +664,8 @@ class LFPOscillations(object):
             sig = self.sig
         band2filter = np.array(band2filter, dtype=float)
 
-        b, a = signal.butter(ford, band2filter / (self.fs / 2), btype="bandpass")
+        b, a = signal.butter(ford, band2filter /
+                             (self.fs / 2), btype="bandpass")
 
         filt_sig = signal.filtfilt(b, a, sig, padtype="odd")
         hilbert_sig = signal.hilbert(filt_sig)
@@ -909,7 +913,8 @@ class LFPOscillations(object):
             return [
                 fn(
                     inst_freq[
-                        np.logical_and(interpolated_speed > s1, interpolated_speed < s2)
+                        np.logical_and(interpolated_speed > s1,
+                                       interpolated_speed < s2)
                     ]
                 )
                 for s1, s2 in zip(spd_bins[:-1], spd_bins[1:])
@@ -917,7 +922,8 @@ class LFPOscillations(object):
 
         mean_freqs = __freq_calc__(np.mean)
         counts = [
-            np.count_nonzero(np.logical_and(pos_data.speed >= s1, pos_data.speed < s2))
+            np.count_nonzero(np.logical_and(
+                pos_data.speed >= s1, pos_data.speed < s2))
             for s1, s2 in zip(spd_bins[:-1], spd_bins[1:])
         ]
         std_freqs = __freq_calc__(np.std) / np.sqrt(counts)
@@ -930,7 +936,8 @@ class LFPOscillations(object):
             norm=matplotlib.colors.LogNorm(),
         )
         plt.colorbar()
-        plt.errorbar(x=spd_bins[1:] - 2, y=mean_freqs, yerr=std_freqs, fmt="r.")
+        plt.errorbar(x=spd_bins[1:] - 2, y=mean_freqs,
+                     yerr=std_freqs, fmt="r.")
         ax = plt.gca()
         ax.set_ylim((low_theta, high_theta))
         ax.set_ylabel("Frequency (Hz)")
@@ -938,7 +945,8 @@ class LFPOscillations(object):
         # mask the speed and lfp vectors so we can return these based
         # on the low/high bounds of speed & theta for doing correlations/
         # stats later
-        speed_masked = np.ma.masked_outside(interpolated_speed, low_speed, high_speed)
+        speed_masked = np.ma.masked_outside(
+            interpolated_speed, low_speed, high_speed)
         theta_masked = np.ma.masked_outside(inst_freq, low_theta, high_theta)
         # extract both masks, combine and re-apply
         mask = np.logical_or(speed_masked.mask, theta_masked.mask)
@@ -946,10 +954,11 @@ class LFPOscillations(object):
         theta_masked.mask = mask
         # do the linear regression to add to the plot
         # alternative argument here says we expect the correlation to be positive
-        res = linregress(
+        res = stats.linregress(
             speed_masked.compressed(), theta_masked.compressed(), alternative="greater"
         )
-        ax.plot(spd_bins[1:] - 2, res.intercept + res.slope * (spd_bins[1:] - 2), "r--")
+        ax.plot(spd_bins[1:] - 2, res.intercept +
+                res.slope * (spd_bins[1:] - 2), "r--")
         ax.set_title(
             f"r = {res.rvalue:.2f}, p = {res.pvalue:.2f}, intercept = {res.intercept:.2f}"
         )
@@ -982,7 +991,8 @@ class LFPOscillations(object):
         """
         low_theta = kwargs.pop("low_theta", 6)
         high_theta = kwargs.pop("high_theta", 12)
-        _, phase, _, _, _ = self.getFreqPhase(self.sig, [low_theta, high_theta])
+        _, phase, _, _, _ = self.getFreqPhase(
+            self.sig, [low_theta, high_theta])
         # get indices into the phase vector
         phase_idx = np.array(cluster_times * self.fs, dtype=int)
         # It's possible that there are indices higher than the length of
@@ -1046,7 +1056,8 @@ class LFPOscillations(object):
         cmap = matplotlib.colormaps["hsv"]
         fig, ax = plt.subplots()
         ax.plot(pos_data.xy[0], pos_data.xy[1], color="lightgrey", zorder=0)
-        ax.scatter(spike_xy[0], spike_xy[1], c=spike_phase, cmap=cmap, zorder=1)
+        ax.scatter(spike_xy[0], spike_xy[1],
+                   c=spike_phase, cmap=cmap, zorder=1)
         return ax
 
 
@@ -1188,7 +1199,8 @@ class Rippler(object):
                 if "Start Time" in line:
                     tokens = line.split(":")
                     start_time = int(tokens[-1])
-                    sample_rate = int(tokens[0].split("@")[-1].strip().split()[0])
+                    sample_rate = int(tokens[0].split(
+                        "@")[-1].strip().split()[0])
                     recording_start_time = start_time / float(sample_rate)
         return recording_start_time
 
@@ -1298,7 +1310,8 @@ class Rippler(object):
         _, ax1 = plt.subplots(figsize=(6.0, 4.0))  # enlarge plot a bit
         ax1.plot(normed_time, eeg_chunk)
 
-        trans = transforms.blended_transform_factory(ax1.transData, ax1.transAxes)
+        trans = transforms.blended_transform_factory(
+            ax1.transData, ax1.transAxes)
         ax1.vlines(
             [0, int(self.post_ttl * 1000)],
             ymin=0,
@@ -1356,7 +1369,8 @@ class Rippler(object):
         ]
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        axTrans = transforms.blended_transform_factory(ax.transData, ax.transData)
+        axTrans = transforms.blended_transform_factory(
+            ax.transData, ax.transData)
         ax.plot(eeg_chunk_time, eeg_chunk)
         ax.add_patch(
             Rectangle(
@@ -1388,8 +1402,10 @@ class Rippler(object):
     def plot_mean_spectrograms(self, **kwargs) -> plt.Figure:
         fig = plt.figure(figsize=(12.0, 4.0))
         ax, ax1 = fig.subplots(1, 2)
-        fig, im, spec = self.plot_mean_spectrogram(laser_on=False, ax=ax, **kwargs)
-        fig, im1, spec1 = self.plot_mean_spectrogram(laser_on=True, ax=ax1, **kwargs)
+        fig, im, spec = self.plot_mean_spectrogram(
+            laser_on=False, ax=ax, **kwargs)
+        fig, im1, spec1 = self.plot_mean_spectrogram(
+            laser_on=True, ax=ax1, **kwargs)
         self.laser_off_spectrogram = spec
         self.laser_on_spectrogram = spec1
         spec = np.mean(spec, 0)
@@ -1406,7 +1422,8 @@ class Rippler(object):
         cb_ax = fig.add_axes([0.91, 0.124, 0.01, 0.754])
         fig.colorbar(
             im1,
-            label="Power Spectral Density " + r"$20\,\log_{10}|S_x(t, f)|$ in dB",
+            label="Power Spectral Density " +
+            r"$20\,\log_{10}|S_x(t, f)|$ in dB",
             cax=cb_ax,
         )
 
@@ -1435,7 +1452,8 @@ class Rippler(object):
 
         if not laser_on:
             ttls = np.array(
-                [self.no_laser_on_ts, self.no_laser_on_ts + (self.ttl_duration)]
+                [self.no_laser_on_ts, self.no_laser_on_ts +
+                    (self.ttl_duration)]
             ).T
         # breakpoint()
         spectrograms = []
@@ -1473,7 +1491,8 @@ class Rippler(object):
             + rf"$\Delta f = {SFT.delta_f:g}\,$Hz)",
             xlim=(t_lo, t_hi),
         )
-        trans = transforms.blended_transform_factory(ax1.transData, ax1.transAxes)
+        trans = transforms.blended_transform_factory(
+            ax1.transData, ax1.transAxes)
         ax1.vlines(
             [
                 self.pre_ttl,
@@ -1545,8 +1564,11 @@ class Rippler(object):
         ]
         # breakpoint()
 
-        win = gaussian(self.gaussian_window, std=self.gaussian_std, sym=True)
-        SFT = ShortTimeFFT(win, hop=1, fs=self.fs, mfft=256, scale_to="psd")
+        win = signal.windows.gaussian(
+            self.gaussian_window, std=self.gaussian_std, sym=True
+        )
+        SFT = signal.ShortTimeFFT(
+            win, hop=1, fs=self.fs, mfft=256, scale_to="psd")
         Sx2 = SFT.spectrogram(eeg_chunk)
         N = len(eeg_chunk)
 
@@ -1564,7 +1586,8 @@ class Rippler(object):
                 + rf"$\Delta f = {SFT.delta_f:g}\,$Hz)",
                 xlim=(t_lo, t_hi),
             )
-            trans = transforms.blended_transform_factory(ax1.transData, ax1.transAxes)
+            trans = transforms.blended_transform_factory(
+                ax1.transData, ax1.transAxes)
             ax1.vlines(
                 [self.pre_ttl, self.pre_ttl + (start_time)],
                 ymin=0,
@@ -1583,7 +1606,8 @@ class Rippler(object):
             )
             fig1.colorbar(
                 im1,
-                label="Power Spectral Density " + r"$20\,\log_{10}|S_x(t, f)|$ in dB",
+                label="Power Spectral Density " +
+                r"$20\,\log_{10}|S_x(t, f)|$ in dB",
             )
             plt.show()
         return SFT, N, np.abs(Sx2)
@@ -1609,9 +1633,12 @@ class Rippler(object):
             freqs = np.linspace(
                 0, int(self.fs / 2), int(self.laser_off_spectrogram.shape[1])
             )
-            idx = np.logical_and(freqs >= self.low_band, freqs <= self.high_band)
-            mean_power_on = np.mean(self.laser_on_spectrogram[:, idx, :], axis=(0, 1))
-            mean_power_no = np.mean(self.laser_off_spectrogram[:, idx, :], axis=(0, 1))
+            idx = np.logical_and(freqs >= self.low_band,
+                                 freqs <= self.high_band)
+            mean_power_on = np.mean(
+                self.laser_on_spectrogram[:, idx, :], axis=(0, 1))
+            mean_power_no = np.mean(
+                self.laser_off_spectrogram[:, idx, :], axis=(0, 1))
             mean_power_on_time = np.linspace(
                 0 - self.pre_ttl, self.post_ttl, len(mean_power_on)
             )
@@ -1637,8 +1664,10 @@ class Rippler(object):
             ax = plt.gca()
             ax.set_xlabel("Time(s)")
             ax.set_ylabel("Power")
-            ax.set_title(f"Mean power between {self.low_band} - {self.high_band}Hz")
-            axTrans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
+            ax.set_title(
+                f"Mean power between {self.low_band} - {self.high_band}Hz")
+            axTrans = transforms.blended_transform_factory(
+                ax.transData, ax.transAxes)
             ax.add_patch(
                 Rectangle(
                     (0, 0),

@@ -1,4 +1,4 @@
-from ephysiopy.common.fieldcalcs import FieldProps
+from ephysiopy.common.fieldcalcs import FieldProps, filter_runs
 import matplotlib
 import matplotlib.cm
 import matplotlib.pyplot as plt
@@ -20,12 +20,12 @@ from ephysiopy.common.fieldcalcs import (
     partitionFields,
     infill_ratemap,
     LFPSegment,
-    FieldProps,
 )
 from scipy import ndimage, optimize, signal
 from scipy.stats import norm
 from collections import defaultdict
 import copy
+from dataclasses import dataclass
 
 
 @stripAxes
@@ -38,6 +38,37 @@ jet_cmap = matplotlib.colormaps["jet"]
 subaxis_title_fontsize = 10
 cbar_fontsize = 8
 cbar_tick_fontsize = 6
+
+
+# a dataclass for holding the results of the circular correlation
+@dataclass
+class CircStatsResults:
+    rho: float
+    p: float
+    rho_boot: float
+    p_shuffled: float
+    ci: float
+
+    def __post_init__(self):
+        if isinstance(self.ci, tuple):
+            self.ci_lower, self.ci_upper = self.ci
+        else:
+            self.ci_lower = self.ci_upper = self.ci
+
+        # ensure that p is a float
+        if isinstance(self.p, np.ndarray):
+            self.p = float(self.p)
+
+        # ensure that p_shuffled is a float
+        if isinstance(self.p_shuffled, np.ndarray):
+            self.p_shuffled = float(self.p_shuffled)
+
+    def __repr__(self):
+        return (
+            f"$\\rho$={self.rho:.3f}\np={self.p},\n"
+            f"p_shuf={self.p_shuffled:.3f}\n"
+            f"ci=({self.ci_lower:.3f}, {self.ci_upper:.3f})"
+        )
 
 
 def get_cycle_labels(
@@ -195,7 +226,8 @@ def ccc(t, p):
     F = np.sum(np.sin(2 * t))
     G = np.sum(np.cos(2 * p))
     H = np.sum(np.sin(2 * p))
-    rho = 4 * (A * B - C * D) / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
+    rho = 4 * (A * B - C * D) / \
+        np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
     return rho
 
 
@@ -233,7 +265,8 @@ def ccc_jack(t, p):
     G = np.sum(G) - G
     H = np.sin(2 * p)
     H = np.sum(H) - H
-    rho = 4 * (A * B - C * D) / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
+    rho = 4 * (A * B - C * D) / \
+        np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
     return rho
 
 
@@ -276,7 +309,8 @@ def plot_spikes_in_runs_per_field(
         assert len(spikes_in_time) == len(ttls_in_time)
     run_start_stop_idx = np.array([run_starts, run_ends]).T
     run_field_id = field_label[run_start_stop_idx[:, 0]]
-    runs_per_field = np.histogram(run_field_id, bins=range(1, max(run_field_id) + 2))[0]
+    runs_per_field = np.histogram(
+        run_field_id, bins=range(1, max(run_field_id) + 2))[0]
     max_run_len = np.max(run_start_stop_idx[:, 1] - run_start_stop_idx[:, 0])
     all_slices = np.array([slice(r[0], r[1]) for r in run_start_stop_idx])
     # create the figure window first then do the iteration through fields etc
@@ -400,8 +434,10 @@ def circCircCorrTLinear(theta, phi, regressor=1000, alpha=0.05, hyp=0, conf=True
         rho_boot = np.mean(rho_jack)
         rho_jack_std = np.std(rho_jack)
         ci = (
-            rho_boot - (1 / np.sqrt(n)) * rho_jack_std * norm.ppf(alpha / 2, (0, 1))[0],
-            rho_boot + (1 / np.sqrt(n)) * rho_jack_std * norm.ppf(alpha / 2, (0, 1))[0],
+            rho_boot - (1 / np.sqrt(n)) * rho_jack_std *
+            norm.ppf(alpha / 2, (0, 1))[0],
+            rho_boot + (1 / np.sqrt(n)) * rho_jack_std *
+            norm.ppf(alpha / 2, (0, 1))[0],
         )
     elif conf and regressor and n < 25 and n > 4:
         from sklearn.utils import resample
@@ -429,7 +465,7 @@ def circCircCorrTLinear(theta, phi, regressor=1000, alpha=0.05, hyp=0, conf=True
         rho_boot = np.nan
         ci = np.nan
 
-    return rho, p, rho_boot, p_shuff, ci
+    return CircStatsResults(rho, p, rho_boot, p_shuff, ci)
 
 
 def shuffledPVal(theta, phi, rho, regressor, hyp):
@@ -462,7 +498,8 @@ def shuffledPVal(theta, phi, rho, regressor, hyp):
     G = np.sum(np.cos(2 * phi))
     H = np.sum(np.sin(2 * phi))
 
-    rho_sim = 4 * (A * B - C * D) / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
+    rho_sim = 4 * (A * B - C * D) / \
+        np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
 
     if hyp == 1:
         p_shuff = np.sum(rho_sim >= rho) / float(regressor)
@@ -675,7 +712,8 @@ class phasePrecession2D(object):
         self.update_rate_map()
 
         spk_times_in_pos_samples = self.getSpikePosIndices(spike_ts)
-        spk_weights = np.bincount(spk_times_in_pos_samples, minlength=len(self.pos_ts))
+        spk_weights = np.bincount(
+            spk_times_in_pos_samples, minlength=len(self.pos_ts))
         self.spike_times_in_pos_samples = spk_times_in_pos_samples
         self.spk_weights = spk_weights
 
@@ -696,6 +734,90 @@ class phasePrecession2D(object):
     @property
     def spike_pos_idx(self):
         return (self.spike_ts * self.pos_sample_rate).astype(int)
+
+    def update_regressors_from_runs(self, field_props: list[FieldProps]) -> None:
+        """
+        Once the various metrics have been calculated for each run fill
+        out the regressor dict with the relevant values
+        """
+        if "pos_d_currentdir" in self.regressors.keys():
+            d_currentdir = np.ones(shape=self.PosData.npos) * np.nan
+            for f in field_props:
+                for r in f.runs:
+                    d_currentdir[r._slice] = r.current_direction
+
+            self.update_regressor_values("pos_d_currentdir", d_currentdir)
+
+        # calculate the cumulative distance travelled on each run
+        # only goes from 0-1
+        if "pos_d_cum" in self.regressors.keys():
+            d_cumulative = np.ones(shape=self.PosData.npos) * np.nan
+            for f in field_props:
+                for r in f.runs:
+                    d_cumulative[r._slice] = r.cumulative_distance
+
+            self.update_regressor_values("pos_d_cum", d_cumulative)
+
+        # calculate cumulative sum of the expected normalised firing rate
+        # only goes from 0-1
+        # NB I'm not sure why this is called expected rate as there is nothing
+        # about firing rate in this just the accumulation of rho
+        if "pos_exptdRate_cum" in self.regressors.keys():
+            exptd_rate_all = np.ones(shape=self.PosData.npos) * np.nan
+            rmap = field_props[0].binned_data.binned_data[0]
+            ye, xe = field_props[0].binned_data.bin_edges
+            xy = self.RateMap.Rat
+            xBins = np.digitize(xy[0], xe[:-1])
+            yBins = np.digitize(xy[1], ye[:-1])
+            rmap_infilled = infill_ratemap(rmap)
+            exptd_rate = rmap_infilled[yBins - 1, xBins - 1]
+            # setting the sample rate to 1 here will result in firing rate
+            # being returned and not expected spike count
+            for f in field_props:
+                for r in f.runs:
+                    exptd_rate_all[r._slice] = r.expected_spikes(exptd_rate, 1)
+
+            self.update_regressor_values("pos_exptdRate_cum", exptd_rate_all)
+
+        # direction projected onto the run mean direction is just the x coord
+        # good - remembering that xy_new is rho,phi
+        # this might be wrong - need to check i'm grabbing the right value
+        # from FieldProps... could be rho
+        if "pos_d_meanDir" in self.regressors.keys():
+            d_meandir = np.ones(shape=self.PosData.npos) * np.nan
+            for f in field_props:
+                for r in f.runs:
+                    d_meandir[r._slice] = r.pos_r
+
+            self.update_regressor_values("pos_d_meanDir", d_meandir)
+
+        # smooth binned spikes to get an instantaneous firing rate
+        # set up the smoothing kernel
+        # all up at 1.0
+        if "pos_instFR" in self.regressors.keys():
+            kernLenInBins = np.round(
+                self.ifr_kernel_len * self.bins_per_second)
+            kernSig = self.ifr_kernel_sigma * self.bins_per_second
+            regressor = signal.windows.gaussian(kernLenInBins, kernSig)
+            # apply the smoothing kernel over the binned observed spikes
+            ifr = signal.convolve(observed_spikes_in_time,
+                                  regressor, mode="same")
+            inst_firing_rate = np.zeros_like(ifr)
+            for field in field_props:
+                for i_slice in field.run_slices:
+                    inst_firing_rate[i_slice] = ifr[i_slice]
+            self.update_regressor_values("pos_instFR", inst_firing_rate)
+
+        # find time spent within run
+        # only goes from 0-1
+        if "pos_timeInRun" in self.regressors.keys():
+            time_in_run = np.ones(shape=self.PosData.npos) * np.nan
+            for f in field_props:
+                for r in f.runs:
+                    time_in_run[r._slice] = r.cumulative_time / \
+                        self.pos_sample_rate
+
+            self.update_regressor_values("pos_timeInRun", time_in_run)
 
     def update_regressors(self, reg_keys: list | None):
         """
@@ -739,7 +861,8 @@ class phasePrecession2D(object):
             "reg": float,
         }
         self.regressors = {}
-        self.regressors = defaultdict(lambda: stats_dict.copy(), self.regressors)
+        self.regressors = defaultdict(
+            lambda: stats_dict.copy(), self.regressors)
         [self.regressors[regressor] for regressor in reg_keys]
         # each of the regressors in regressor_keys is a key with a value
         # of stats_dict
@@ -833,8 +956,6 @@ class phasePrecession2D(object):
 
         # split into runs
         field_properties = self.getPosProps(labels)
-        # self.posdict = posD
-        # self.rundict = runD
 
         # get theta cycles, amplitudes, phase etc
         self.getThetaProps(field_properties)
@@ -890,26 +1011,14 @@ class phasePrecession2D(object):
         """
         spikeTS = self.spike_ts  # in seconds
         xy = self.RateMap.xy
-        xydir = self.RateMap.dir
-        # spd = self.RateMap.speed
-        spkPosInd = self.spike_pos_idx
         nPos = xy.shape[1]
-        spkPosInd[spkPosInd > nPos] = nPos - 1
-        xydir = np.squeeze(xydir)
 
         binned_data = self.RateMap.get_map(self.spk_weights)
-        ye, xe = binned_data.bin_edges
-        rmap = binned_data.binned_data[0]
         # The large number of bins combined with the super-smoothed ratemap
         # will lead to fields labelled with lots of small holes in. Fill those
         # gaps in here and calculate the perimeter of the fields based on that
         # labelled image
         labels, _ = ndimage.label(ndimage.binary_fill_holes(labels))
-
-        rmap_zeros = rmap.copy()
-        rmap_zeros[np.isnan(rmap)] = 0
-        xBins = np.digitize(xy[0], xe[:-1])
-        yBins = np.digitize(xy[1], ye[:-1])
 
         observed_spikes_in_time = np.bincount(
             (spikeTS * self.pos_sample_rate).astype(int), minlength=nPos
@@ -940,79 +1049,8 @@ class phasePrecession2D(object):
             )
             for f in field_props
         ]
-        if "pos_d_currentdir" in self.regressors.keys():
-            d_currentdir = np.ones(shape=self.PosData.npos) * np.nan
-            for f in field_props:
-                for r in f.runs:
-                    d_currentdir[r._slice] = r.current_direction
 
-            self.update_regressor_values("pos_d_currentdir", d_currentdir)
-
-        # calculate the cumulative distance travelled on each run
-        # only goes from 0-1
-        if "pos_d_cum" in self.regressors.keys():
-            d_cumulative = np.ones(shape=self.PosData.npos) * np.nan
-            for f in field_props:
-                for r in f.runs:
-                    d_cumulative[r._slice] = r.cumulative_distance
-
-            self.update_regressor_values("pos_d_cum", d_cumulative)
-
-        # calculate cumulative sum of the expected normalised firing rate
-        # only goes from 0-1
-        # NB I'm not sure why this is called expected rate as there is nothing
-        # about firing rate in this just the accumulation of rho
-        if "pos_exptdRate_cum" in self.regressors.keys():
-            exptd_rate_all = np.ones(shape=self.PosData.npos) * np.nan
-            rmap_infilled = infill_ratemap(rmap)
-            exptd_rate = rmap_infilled[yBins - 1, xBins - 1]
-            # setting the sample rate to 1 here will result in firing rate being returned
-            # not expected spike count
-            for f in field_props:
-                for r in f.runs:
-                    exptd_rate_all[r._slice] = r.expected_spikes(exptd_rate, 1)
-
-            self.update_regressor_values("pos_exptdRate_cum", exptd_rate_all)
-
-        # direction projected onto the run mean direction is just the x coord
-        # good - remembering that xy_new is rho,phi
-        # this might be wrong - need to check i'm grabbing the right value
-        # from FieldProps... could be rho
-        if "pos_d_meanDir" in self.regressors.keys():
-            d_meandir = np.ones(shape=self.PosData.npos) * np.nan
-            for f in field_props:
-                for r in f.runs:
-                    d_meandir[r._slice] = r.pos_r
-
-            self.update_regressor_values("pos_d_meanDir", d_meandir)
-
-        # smooth binned spikes to get an instantaneous firing rate
-        # set up the smoothing kernel
-        # all up at 1.0
-        if "pos_instFR" in self.regressors.keys():
-            kernLenInBins = np.round(self.ifr_kernel_len * self.bins_per_second)
-            kernSig = self.ifr_kernel_sigma * self.bins_per_second
-            regressor = signal.windows.gaussian(kernLenInBins, kernSig)
-            # apply the smoothing kernel over the binned observed spikes
-            ifr = signal.convolve(observed_spikes_in_time, regressor, mode="same")
-            inst_firing_rate = np.zeros_like(ifr)
-            for field in field_props:
-                for i_slice in field.run_slices:
-                    inst_firing_rate[i_slice] = ifr[i_slice]
-            self.update_regressor_values("pos_instFR", inst_firing_rate)
-
-        # find time spent within run
-        # only goes from 0-1
-        if "pos_timeInRun" in self.regressors.keys():
-            time_in_run = np.ones(shape=self.PosData.npos) * np.nan
-            for f in field_props:
-                for r in f.runs:
-                    time_in_run[r._slice] = r.cumulative_time / self.pos_sample_rate
-
-            self.update_regressor_values("pos_timeInRun", time_in_run)
-
-        # mnSpd = np.concatenate([f.runs_speed for f in field_props])
-        # centralPeripheral = np.concatenate([f.pos_xy[1] for f in field_props])
+        self.update_regressors_from_runs(field_props)
 
         return field_props
 
@@ -1033,12 +1071,13 @@ class phasePrecession2D(object):
         filteredEEG = self.filteredEEG
         # get indices of spikes into eeg
         spkEEGIdx = self.spike_eeg_idx
-        spkCount = np.bincount(spkEEGIdx, minlength=len(phase))
+        # spkCount = np.bincount(spkEEGIdx, minlength=len(phase))
         spkPhase = phase.copy()
         # unmask the valid entries
         spkPhase.mask[spkEEGIdx] = False
 
-        cycleLabel, phaseAdj = get_cycle_labels(spkPhase, self.allowed_min_spike_phase)
+        cycleLabel, phaseAdj = get_cycle_labels(
+            spkPhase, self.allowed_min_spike_phase)
 
         isNegFreq = np.diff(np.unwrap(phaseAdj)) < 0
         isNegFreq = np.append(isNegFreq, isNegFreq[-1])
@@ -1058,7 +1097,7 @@ class phasePrecession2D(object):
         ampAdj = np.ma.MaskedArray(filteredEEG, mask=np.invert(isBad))
         cycleLabel = np.ma.MaskedArray(cycleLabel, mask=np.invert(isBad))
         self.cycleLabel = cycleLabel
-        spkCount = np.ma.MaskedArray(spkCount, mask=np.invert(isBad))
+        # spkCount = np.ma.MaskedArray(spkCount, mask=np.invert(isBad))
         # Extract all the relevant values from the arrays above and
         # add to each run
         lfp_to_pos_ratio = self.lfp_fs / self.pos_sample_rate
@@ -1109,9 +1148,11 @@ class phasePrecession2D(object):
         spkPosIdx = self.spike_pos_idx
         spkEEGIdx = self.spike_eeg_idx
 
-        durations = flatten_list([[r.duration for r in f.runs] for f in field_props])
+        durations = flatten_list(
+            [[r.duration for r in f.runs] for f in field_props])
         durations = np.array(durations) / self.pos_sample_rate
-        spk_counts = flatten_list([[r.n_spikes for r in f.runs] for f in field_props])
+        spk_counts = flatten_list(
+            [[r.n_spikes for r in f.runs] for f in field_props])
         spk_counts = np.array(spk_counts)
         run_firing_rates = spk_counts / durations
 
@@ -1132,7 +1173,8 @@ class phasePrecession2D(object):
         firstInTheta = np.insert(firstInTheta, 0, True)
         # lastInTheta = firstInTheta[1::]
         numWithinRun = labelledCumSum(np.ones_like(spkRunLabel), spkRunLabel)
-        thetaBatchLabelInRun = labelledCumSum(firstInTheta.astype(float), spkRunLabel)
+        thetaBatchLabelInRun = labelledCumSum(
+            firstInTheta.astype(float), spkRunLabel)
 
         # NB this is NOT the firing rate in pos bins but rather spikes/second
         rateInPosBins = run_firing_rates
@@ -1197,7 +1239,8 @@ class phasePrecession2D(object):
             spkUsed[~spkDict["firstInTheta"]] = False
         elif "last" in whichSpk:
             if len(spkDict["lastInTheta"]) < len(spkDict["spkRunLabel"]):
-                spkDict["lastInTheta"] = np.insert(spkDict["lastInTheta"], -1, False)
+                spkDict["lastInTheta"] = np.insert(
+                    spkDict["lastInTheta"], -1, False)
             spkUsed[~spkDict["lastInTheta"]] = False
         spkPosIdxUsed = spkDict["spkPosIdx"].astype(int)
         # copy self.regressors and update with spk/ pos of interest
@@ -1231,7 +1274,8 @@ class phasePrecession2D(object):
                 np.exp(1j * phase[goodPhase]),
             )
             phase = np.angle(cycleComplexPhase)
-            spkCountPerCycle = np.bincount(cycleLabels[goodPhase], minlength=sz)
+            spkCountPerCycle = np.bincount(
+                cycleLabels[goodPhase], minlength=sz)
             for regressor in regressors.keys():
                 regressors[regressor]["values"] = (
                     np.bincount(
@@ -1263,7 +1307,8 @@ class phasePrecession2D(object):
                 reg = reg / mxx
                 # problem regressors = instFR, pos_d_cum
                 # breakpoint()
-                theta = np.mod(np.abs(regressors[regressor]["slope"]) * reg, 2 * np.pi)
+                theta = np.mod(
+                    np.abs(regressors[regressor]["slope"]) * reg, 2 * np.pi)
                 rho, p, rho_boot, p_shuff, ci = circCircCorrTLinear(
                     theta, pha, self.regressor, self.alpha, self.hyp, self.conf
                 )
@@ -1305,7 +1350,8 @@ class phasePrecession2D(object):
         intercept = self.regressors[regressor]["intercept"]
         mm = (0, -4 * np.pi, -2 * np.pi, 2 * np.pi, 4 * np.pi)
         for m in mm:
-            ax.plot((-1, 1), (-slope + intercept + m, slope + intercept + m), "r", lw=3)
+            ax.plot((-1, 1), (-slope + intercept + m,
+                    slope + intercept + m), "r", lw=3)
             ax.plot(vals, pha + m, "regressor.")
         ax.set_xlim(-1, 1)
         xtick_locs = np.linspace(-1, 1, 3)
@@ -1404,7 +1450,8 @@ def plot_field_props(field_props: list[FieldProps]):
     cmap = matplotlib.colormaps["Set1"].resampled(max_field_label)
     [
         [
-            ax.plot(r.xy[0], r.xy[1], color=cmap(f.label - 1), label=f.label - 1)
+            ax.plot(r.xy[0], r.xy[1], color=cmap(
+                f.label - 1), label=f.label - 1)
             for r in f.runs
         ]
         for f in field_props
@@ -1419,7 +1466,8 @@ def plot_field_props(field_props: list[FieldProps]):
         )
         for f in field_props
     ]
-    [ax.plot(f.xy_at_peak[0], f.xy_at_peak[1], "ko", ms=2) for f in field_props]
+    [ax.plot(f.xy_at_peak[0], f.xy_at_peak[1], "ko", ms=2)
+     for f in field_props]
     norm = matplotlib.colors.Normalize(1, max_field_label)
     tick_locs = np.linspace(1.5, max_field_label - 0.5, max_field_label)
     cbar = fig.colorbar(
@@ -1451,7 +1499,8 @@ def plot_field_props(field_props: list[FieldProps]):
     ]
     [
         a.add_artist(
-            matplotlib.patches.Circle((0, 0), 1, fc="none", ec="lightgrey", zorder=3),
+            matplotlib.patches.Circle(
+                (0, 0), 1, fc="none", ec="lightgrey", zorder=3),
         )
         for a, _ in zip(ax1, field_props)
     ]
@@ -1499,7 +1548,8 @@ def plot_field_props(field_props: list[FieldProps]):
         matplotlib.cm.ScalarMappable(cmap=angular_cmap, norm=degs_norm),
         ax=ax2,
     )
-    [ax2.plot(f.xy_at_peak[0], f.xy_at_peak[1], "ko", ms=2) for f in field_props]
+    [ax2.plot(f.xy_at_peak[0], f.xy_at_peak[1], "ko", ms=2)
+     for f in field_props]
     # PLOT 4
     # The smoothed ratemap - maybe make this the first sub plot
     ax3 = subfigs[1, 1].subplots(1, 1)
