@@ -101,7 +101,9 @@ def test_cross_corr_2D(basic_BinnedData, standard_Ratemap):
     A = basic_BinnedData
     B = basic_BinnedData
     B.binned_data[0] = np.rot90(np.rot90(B.binned_data[0]))
-    cc = standard_Ratemap.crossCorr2D(A, B)
+    A_nodwell = ~np.isfinite(A.binned_data[0])
+    B_nodwell = ~np.isfinite(B.binned_data[0])
+    cc = standard_Ratemap.crossCorr2D(A, B, A_nodwell, B_nodwell)
     assert isinstance(cc, BinnedData)
 
 

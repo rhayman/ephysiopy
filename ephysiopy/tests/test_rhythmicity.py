@@ -8,11 +8,11 @@ def test_cosine_init(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     T.load_pos_data()
     C = CosineDirectionalTuning(
-        T.TETRODE[1].spike_times,
+        T.TETRODE[3].spike_times,
         T.PosCalcs.xyTS,
-        T.TETRODE[1].cut,
+        T.TETRODE[3].cut,
         T.PosCalcs.xy[0, :],
-        T.PosCalcs.xy[1, :]
+        T.PosCalcs.xy[1, :],
     )
     C.getPosIndices()
     clust_pos_indices = C.getClusterPosIndices(1)
@@ -43,16 +43,16 @@ def test_the_rest_of_CDT(path_to_axona_data):
     T = AxonaTrial(path_to_axona_data)
     T.load_pos_data()
     C = CosineDirectionalTuning(
-        T.TETRODE[1].spike_times,
+        T.TETRODE[3].spike_times,
         T.PosCalcs.xyTS,
-        T.TETRODE[1].cut,
+        T.TETRODE[3].cut,
         T.PosCalcs.xy[0, :],
-        T.PosCalcs.xy[1, :]
+        T.PosCalcs.xy[1, :],
     )
     runs = C.getRunsOfMinLength()
     C.speedFilterRuns(runs)
-    spk_ts = T.TETRODE.get_spike_samples(1, 1)
-    spk_ts = spk_ts / T.TETRODE[1].timebase
+    spk_ts = T.TETRODE.get_spike_samples(3, 1)
+    spk_ts = spk_ts / T.TETRODE[3].timebase
     pos_mask = np.ones_like(spk_ts).astype(bool)
     C.intrinsic_freq_autoCorr(spk_ts, pos_mask)
 

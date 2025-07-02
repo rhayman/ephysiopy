@@ -3,7 +3,7 @@ import numpy as np
 from pathlib import Path
 import os
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
-from ephysiopy.common.utils import BinnedData, VariableToBin, MapType
+from ephysiopy.common.utils import BinnedData, VariableToBin, MapType, ClusterID
 
 
 @pytest.fixture
@@ -11,7 +11,7 @@ def basic_xy():
     """
     Returns a random 2D walk as x, y tuple
     """
-    path = Path(__file__).parents[0] / "data"
+    path = Path(__file__).parents[0] / Path("data")
     xy_test_data_path = Path(path, "random_walk_xy.npy")
     xy = np.load(xy_test_data_path)
     x = xy[0]
@@ -20,7 +20,7 @@ def basic_xy():
 
 
 def get_path_to_test_axona_data():
-    path = Path(__file__).parents[0] / "data"
+    path = Path(__file__).parents[0] / Path("data")
     axona_data_path = Path(path, "M851_140908t2rh.set")
     return os.path.join(axona_data_path)
 
@@ -32,14 +32,14 @@ def path_to_axona_data():
 
 @pytest.fixture
 def path_to_OE_settings():
-    path = Path(__file__).parents[0] / "data"
+    path = Path(__file__).parents[0] / Path("data") / Path("npx_settings_file")
     settings_path = Path(path)
     return os.path.join(settings_path)
 
 
 @pytest.fixture
 def path_to_OE_spikeSorter_settings():
-    path = Path(__file__).parents[0] / "data/spike_sorter_settings_file"
+    path = Path(__file__).parents[0] / Path("data/spike_sorter_settings_file")
     settings_path = Path(path)
     return os.path.join(settings_path)
 
@@ -78,16 +78,19 @@ def basic_spike_times_and_cluster_ids():
 
 @pytest.fixture
 def basic_ratemap():
-    x, y = np.ogrid[-np.pi : np.pi : 100j, -np.pi : np.pi : 100j]
+    x, y = np.ogrid[-np.pi: np.pi: 100j, -np.pi: np.pi: 100j]
     r = np.sin(np.exp((np.sin(x) ** 3 + np.cos(y) ** 2)))
     return r
 
 
 @pytest.fixture
 def basic_BinnedData():
-    x, y = np.ogrid[-np.pi : np.pi : 100j, -np.pi : np.pi : 100j]
+    x, y = np.ogrid[-np.pi: np.pi: 100j, -np.pi: np.pi: 100j]
     r = np.sin(np.exp((np.sin(x) ** 3 + np.cos(y) ** 2)))
-    return BinnedData(VariableToBin.XY, MapType.RATE, [r], [np.ravel(x), np.ravel(y)])
+    return BinnedData(
+        VariableToBin.XY, MapType.RATE, [r], [
+            np.ravel(x), np.ravel(y)], ClusterID(1, 1)
+    )
 
 
 @pytest.fixture

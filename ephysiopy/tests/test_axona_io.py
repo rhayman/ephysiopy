@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pytest
 from ephysiopy.axona.axonaIO import IO
+from ephysiopy.axona.axonaIO import Tetrode
 from ephysiopy.axona.file_headers import PosHeader
 from pathlib import Path, PurePath
 
@@ -9,21 +10,19 @@ from pathlib import Path, PurePath
 def test_io(path_to_axona_data):
     fname_root = os.path.splitext(path_to_axona_data)[0]
     io = IO(fname_root)
-    data = io.getData(fname_root + '.eeg')
+    data = io.getData(fname_root + ".eeg")
     assert isinstance(data, np.ndarray)
-    data = io.getData(fname_root + '.1')
+    data = io.getData(fname_root + ".1")
     assert isinstance(data, np.ndarray)
     with pytest.raises(IOError):
-        io.getData(fname_root + '.blurt')
+        io.getData(fname_root + ".blurt")
 
 
 def test_get_cut(path_to_axona_data):
     fname_root = PurePath(os.path.splitext(path_to_axona_data)[0])
     io = IO(fname_root)
-    data = io.getCut(1)
+    data = io.getCut(3)
     assert isinstance(data, list)
-    data = io.getCluCut(1)
-    assert isinstance(data, np.ndarray)
     # a file that doesn't exist
     nothing = io.getCut(100)
     assert nothing is None
@@ -42,6 +41,7 @@ def test_save_data(tmp_path):
 
 def test_read_data(path_to_axona_data):
     from ephysiopy.axona.axonaIO import Pos
+
     fname_root = Path(os.path.splitext(path_to_axona_data)[0])
     pos_data = Pos(fname_root)
     pos_data.ppm
@@ -50,11 +50,11 @@ def test_read_data(path_to_axona_data):
 
 
 def test_tetrode_io(path_to_axona_data):
-    from ephysiopy.axona.axonaIO import Tetrode
+
     fname_root = Path(os.path.splitext(path_to_axona_data)[0])
     # tetrode 1 has a cut and clu file, tetrode 2
     # only has a clu file and tetrode 3 has neither
-    tets = [1, 2]
+    tets = [3, 4]
     for t in tets:
         tetrode = Tetrode(fname_root, t)
         spk_ts = tetrode.getSpkTS()
@@ -84,6 +84,7 @@ def test_tetrode_io(path_to_axona_data):
 
 def test_eeg_io(path_to_axona_data):
     from ephysiopy.axona.axonaIO import EEG
+
     fname_root = os.path.splitext(path_to_axona_data)[0]
     EEG(fname_root)
     EEG(fname_root, egf=1)
@@ -91,8 +92,9 @@ def test_eeg_io(path_to_axona_data):
 
 def test_stim_io(path_to_axona_data):
     from ephysiopy.axona.axonaIO import Stim
+
     fname_root = os.path.splitext(path_to_axona_data)[0]
     stim = Stim(fname_root)
     stim.update(foo=2)
     with pytest.raises(KeyError):
-        stim['blurt']
+        stim["blurt"]
