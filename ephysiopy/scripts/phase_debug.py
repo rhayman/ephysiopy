@@ -45,6 +45,6 @@ field_properties = P.getPosProps(labels)
 
 P.getThetaProps()
 
-spkD = P.getSpikeProps(posD["runLabel"], runD["meanDir"], runD["runDurationInPosBins"])
+# spkD = P.getSpikeProps(posD["runLabel"], runD["meanDir"], runD["runDurationInPosBins"])
 
 plt.show()
