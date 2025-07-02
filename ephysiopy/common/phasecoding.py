@@ -800,6 +800,7 @@ class phasePrecession2D(object):
             kernSig = self.ifr_kernel_sigma * self.bins_per_second
             regressor = signal.windows.gaussian(kernLenInBins, kernSig)
             # apply the smoothing kernel over the binned observed spikes
+            observed_spikes_in_time = self.spike_times_in_pos_samples
             ifr = signal.convolve(observed_spikes_in_time,
                                   regressor, mode="same")
             inst_firing_rate = np.zeros_like(ifr)
