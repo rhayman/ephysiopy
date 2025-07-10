@@ -35,7 +35,7 @@ MAX_THETA = 10
 # defines start/ end of theta cycle
 MIN_ALLOWED_SPIKE_PHASE = np.pi
 # percentile power below which theta cycles are rejected
-MIN_POWER_THRESHOLD = 0
+MIN_POWER_THRESHOLD = 20  # percentile - total guess at the value
 POS_SAMPLE_RATE = 50
 # SOME FIELD THRESHOLDS
 FIELD_THRESHOLD_PERCENT = 50
@@ -194,12 +194,13 @@ def mask_short_runs(xy: np.ndarray, min_run_len=50) -> np.ndarray:
 
 
 def get_field_props_for_linear_track(
-    trial: AxonaTrial, cluster: int, channel: int, direction="e", **kwargs
+    trial: AxonaTrial, cluster: int, channel: int, direction=None, **kwargs
 ) -> list[FieldProps]:
     """
     Get the field properties for a linear track trial.
 
-    Filters the linear track data based on speed, direction, and position
+    Filters the linear track data based on speed, direction (east
+    or west; larger ranges than the usual 90degs are used), and position
     (masks the start and end 12cm of the track)
     """
     # parse kwargs
@@ -245,7 +246,7 @@ def get_field_props_for_linear_track(
 
     # partition the cells firing into distinct fields
     binned_data = trial.get_rate_map(
-        cluster, channel, var_type=VariableToBin.X, **kwargs
+        cluster, channel, var_type=VariableToBin.PHI, **kwargs
     )
     # get the field properties
     _, _, label_image, _ = partitionFields(
@@ -309,8 +310,7 @@ def merge_field_and_lfp(
     lfp_fs = trial.EEGCalcs.fs
     L = LFPOscillations(lfp_data, lfp_fs)
 
-    filt_sig, phase, _, _, _ = L.getFreqPhase(
-        lfp_data, [MIN_THETA, MAX_THETA], 2)
+    filt_sig, phase, _, _, _ = L.getFreqPhase(lfp_data, [MIN_THETA, MAX_THETA], 2)
 
     cluster = f_props[0].binned_data.cluster_id[0].Cluster
     channel = f_props[0].binned_data.cluster_id[0].Channel
@@ -346,8 +346,7 @@ def merge_field_and_lfp(
     )
     cycle_valid_bincount = np.bincount(cycle_label[~is_neg_freq])
     cycle_valid_mean_power = cycle_total_valid_power / cycle_valid_bincount
-    power_reject_thresh = np.percentile(
-        cycle_valid_mean_power, MIN_POWER_THRESHOLD)
+    power_reject_thresh = np.nanpercentile(cycle_valid_mean_power, MIN_POWER_THRESHOLD)
 
     cycle_has_bad_power = cycle_valid_mean_power < power_reject_thresh
 
@@ -368,6 +367,7 @@ def merge_field_and_lfp(
     is_bad = np.logical_or(is_in_bad_cycle, is_neg_freq)
 
     # apply is_bad to data...
+    filt_sig = np.ma.masked_array(filt_sig, mask=is_bad)
     phase_adj = np.ma.MaskedArray(phase_adj, mask=is_bad)
     amp_adj = np.ma.MaskedArray(filt_sig, mask=is_bad)
     cycle_label = np.ma.MaskedArray(cycle_label, mask=is_bad)
@@ -427,8 +427,7 @@ def get_phase_precession_per_field(f_props: list[FieldProps], **kwargs):
                 pos_idx = (r.lfp_segment.spike_times * POS_SAMPLE_RATE).astype(
                     int
                 ) - r.slice.start
-                normalised_position.extend(
-                    r.normalised_position[pos_idx[~mask]])
+                normalised_position.extend(r.normalised_position[pos_idx[~mask]])
         phase = np.array(flatten_list(phase))
         normalised_position = np.array(flatten_list(normalised_position))
         phase_pos[f.label]["phase"] = phase

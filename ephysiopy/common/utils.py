@@ -24,6 +24,7 @@ class VariableToBin(Enum):
     TIME = 7
     X = 8  # linear track
     Y = 9  # linear track
+    PHI = 10  # linear track sqrt(x^2 + y^2)
 
 
 class MapType(Enum):
@@ -76,8 +77,7 @@ class BinnedData:
 
     def __assert_equal_bin_edges__(self, other):
         assert np.all(
-            [np.all(sbe == obe)
-             for sbe, obe in zip(self.bin_edges, other.bin_edges)]
+            [np.all(sbe == obe) for sbe, obe in zip(self.bin_edges, other.bin_edges)]
         ), "Bin edges do not match"
 
     def __len__(self):
@@ -263,14 +263,12 @@ class BinnedData:
             self.__assert_equal_bin_edges__(other)
         if other is not None:
             result = np.reshape(
-                [corr_maps(a, b)
-                 for a in self.binned_data for b in other.binned_data],
+                [corr_maps(a, b) for a in self.binned_data for b in other.binned_data],
                 newshape=(len(self.binned_data), len(other.binned_data)),
             )
         else:
             result = np.reshape(
-                [corr_maps(a, b)
-                 for a in self.binned_data for b in self.binned_data],
+                [corr_maps(a, b) for a in self.binned_data for b in self.binned_data],
                 newshape=(len(self.binned_data), len(self.binned_data)),
             )
         if as_matrix:
@@ -352,6 +350,8 @@ def filter_data(data: np.ndarray, f: TrialFilter) -> np.ndarray:
     When calculating the filters, be sure to do the calculations on the
     'data' property of the masked arrays so you get access to the
     underlying data without the mask.
+
+    This function is used in io.recording to filter the data
     """
     if f.name == "dir":
         # modify values based if first is a str
@@ -378,6 +378,44 @@ def filter_data(data: np.ndarray, f: TrialFilter) -> np.ndarray:
             return np.logical_or(data >= f.start, data <= f.end)
     else:
         return np.logical_and(data >= f.start, data <= f.end)
+
+
+def filter_trial_by_time(
+    duration: int | float, how: str = "in_half"
+) -> tuple[list[TrialFilter], ...]:
+    """
+    Filters the data in trial by time
+
+    Parameters
+    ----------
+    duration - the duration of the trial in seconds
+
+    how (str) - how to split the trial.
+                Legal values: "in_half" or "odd_even"
+                "in_half" filters for first n seconds and last n second
+                "odd_even" filters for odd vs even minutes
+
+    Returns
+    -------
+    tuple of TrialFilter
+        A tuple of TrialFilter instances, one for each half or odd/even minutes
+    """
+    assert how in ["in_half", "odd_even"]
+
+    if "in_half" in how:
+        first_half = TrialFilter("time", 0, duration / 2.0)
+        last_half = TrialFilter("time", duration / 2.0, duration)
+
+        return [first_half], [last_half]
+    else:
+        r1 = np.arange(0, duration, 2)
+        r2 = np.arange(1, duration, 2)
+        evens = [(s, e) for s, e in zip(r1, r2)]
+        odds = [(s, e) for s, e in zip(r2, r1[1::])]
+        even_filters = [TrialFilter("time", s, e) for s, e in evens]
+        odd_filters = [TrialFilter("time", s, e) for s, e in odds]
+
+        return list(even_filters), list(odd_filters)
 
 
 def memmapBinaryFile(path2file: Path, n_channels=384, **kwargs) -> np.ndarray:

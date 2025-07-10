@@ -247,3 +247,40 @@ def add_fields_to_line_graph(f_props: list[FieldProps], ax=None) -> plt.Axes:
         ax.axvspan(xmin, xmax, alpha=0.3, label=f"{f.label}")
 
     return ax
+
+
+def plot_lfp_and_spikes_per_run(f_props: list[FieldProps]) -> plt.Axes:
+    """
+    Plot the LFP and spikes per run.
+
+    Parameters
+    ----------
+    f_props : list[FieldProps]
+        List of FieldProps containing field information.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+        The axes with the plot.
+    """
+    for f in f_props:
+        plt.figure()
+        nrows = np.ceil(len(f.runs) / 2).astype(int)
+        plt.subplot(nrows, 2, 1)
+        for i, r in enumerate(f.runs):
+            plt.subplot(nrows, 2, i + 1)
+            t = np.linspace(
+                r.lfp_segment.slice.start / r.lfp_segment.sample_rate,
+                r.lfp_segment.slice.stop / r.lfp_segment.sample_rate,
+                len(r.lfp_segment.phase),
+            )
+            plt.plot(t, r.lfp_segment.filtered_signal, label=f"Run {r.label}")
+            y = np.interp(r.lfp_segment.spike_times, t,
+                          r.lfp_segment.filtered_signal)
+            plt.plot(r.lfp_segment.spike_times, y, "ro")
+            ax = plt.gca()
+            ax.set_xticklabels("")
+            ax.set_yticklabels("")
+            ax.legend()
+
+    return ax
