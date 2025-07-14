@@ -29,9 +29,9 @@ from ephysiopy.common.utils import (
 from ephysiopy.common import fieldcalcs as fc
 
 """
-A decorator class that accepts arguments. This one allows us to save the returned
-matplotlib Axis object to a location and name specified by the user in the decorated
-function
+A decorator class that accepts arguments. This one allows us to save the
+returned matplotlib Axis object to a location and name specified by the
+user in the decorated function
 """
 
 
@@ -47,7 +47,8 @@ def saveFigure(func):
     Returns
     -------
     callable
-        The wrapped function that saves the plot if 'save_as' is provided in kwargs.
+        The wrapped function that saves the plot if 'save_as'
+        is provided in kwargs.
     """
 
     @functools.wraps(func)
@@ -55,7 +56,8 @@ def saveFigure(func):
         fig = func(*args, **kwargs)
         if fig is not None:
             if "save_as" in kwargs.keys():
-                plt.savefig(kwargs["save_as"])
+                if kwargs["save_as"] is not None:
+                    plt.savefig(kwargs["save_as"])
         return fig
 
     return wrapper
@@ -638,6 +640,7 @@ class FigureMaker(object):
 
         ax = kwargs.pop("ax", None)
         separate_plots = kwargs.pop("separate_plots", False)
+        save_as = kwargs.pop("save_as", None)
         # multiple clusters have been passed in so plot either in
         # one window  or one per cluster
         if cluster or channel is not None:
@@ -670,6 +673,7 @@ class FigureMaker(object):
         ax = self._plot_path(pos_idx, ax)
         spike_locations = self.PosCalcs.xy[:, pos_idx[0]]
         ax = _plot_patch_collection(spike_locations, ax, **kwargs)
+        kwargs["save_as"] = save_as
 
         return fig
 

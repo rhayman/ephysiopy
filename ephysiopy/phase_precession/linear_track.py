@@ -202,6 +202,20 @@ def get_field_props_for_linear_track(
     Filters the linear track data based on speed, direction (east
     or west; larger ranges than the usual 90degs are used), and position
     (masks the start and end 12cm of the track)
+
+    Paraemters
+    ----------
+    trial (AxonaTrial) - the trial
+    cluster (int) - the cluster id
+    channel (int) - the channel id
+
+    kwargs (dict) - additional parameters to pass to the
+                    get_rate_map() function and additionally apply
+                    filtering to the result of that (a BinnedData
+                    instance). Rationale is that sometimes we might
+                    want to limit the field extent according to
+                    different criteria, e.g. field size in bins,
+                    field rate threshold (mean, peak, etc.), etc.
     """
     # parse kwargs
     field_thresh_prc = kwargs.get("field_threshold_percent", 50)
@@ -248,6 +262,13 @@ def get_field_props_for_linear_track(
     binned_data = trial.get_rate_map(
         cluster, channel, var_type=VariableToBin.PHI, **kwargs
     )
+    breakpoint()
+
+    # we might want this to act inside the partitionFields function...
+    if kwargs.get("ratemap_func", None):
+        binned_data = kwargs["ratemap_func"](binned_data)
+
+    breakpoint()
     # get the field properties
     _, _, label_image, _ = partitionFields(
         binned_data,
