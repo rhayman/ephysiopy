@@ -1,4 +1,5 @@
 import numpy as np
+from astropy.stats.circstats import rayleightest
 
 
 def circ_r(alpha, w=None, d=0, axis=0):
@@ -50,9 +51,22 @@ def mean_resultant_vector(angles):
     C = np.sum(np.cos(angles)) * (1 / float(len(angles)))
     r = np.hypot(S, C)
     th = np.arctan2(S, C)
-    if C < 0:
-        th = np.pi + th
     return r, th
+
+
+def rayleigh_test(angles: np.ndarray) -> float:
+    """
+    Perform the Rayleigh test for uniformity of circular data.
+
+    Args:
+        angles (array_like): Vector of angular values in radians.
+
+    Returns:
+        Z (float): The Rayleigh test statistic.
+        p_value (float): The p-value for the test.
+    """
+    angles = np.asarray(angles)
+    return rayleightest(angles)
 
 
 def V_test(angles, test_direction):
@@ -177,7 +191,8 @@ def watsonsU2n(angles):
     Ci = (2 * np.arange(1, n + 1)) - 1
     sum_Ci_Vi_ov_n = np.sum(Ci * Vi / n)
     V_bar = (1 / float(n)) * sum_Vi
-    U2n = sum_sq_Vi - sum_Ci_Vi_ov_n + (n * (1 / float(3) - (V_bar - 0.5) ** 2))
+    U2n = sum_sq_Vi - sum_Ci_Vi_ov_n + \
+        (n * (1 / float(3) - (V_bar - 0.5) ** 2))
     test_vals = {
         "0.1": 0.152,
         "0.05": 0.187,

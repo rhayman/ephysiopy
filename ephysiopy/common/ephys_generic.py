@@ -375,6 +375,7 @@ class PosCalcsGeneric(object):
         self._xy = np.ma.MaskedArray(np.zeros(shape=[2, len(x)]))
         self._xyTS = None
         self._dir = np.ma.MaskedArray(np.zeros_like(x))
+        self._phi = np.ma.MaskedArray(np.zeros_like(x))
         self._speed = np.ma.MaskedArray(np.zeros_like(x))
         self._ppm = ppm
         self._convert2cm = convert2cm
@@ -451,6 +452,14 @@ class PosCalcsGeneric(object):
     @dir.setter
     def dir(self, value) -> None:
         self._dir: np.ma.MaskedArray = value
+
+    @property
+    def phi(self) -> np.ma.MaskedArray:
+        return self._phi
+
+    @phi.setter
+    def phi(self, value):
+        self._phi: np.ma.MaskedArray = value
 
     @property
     def ppm(self) -> float:
@@ -537,6 +546,7 @@ class PosCalcsGeneric(object):
         xy = self.smoothPos(xy)
         self.calcSpeed(xy)
         self.smooth_speed(self.speed)
+        self.calcPhi(xy)
         self._xy = xy
         self._dir = self.calcHeadDirection(xy)
 
@@ -558,9 +568,11 @@ class PosCalcsGeneric(object):
         # keep track of valid/ non-valid indices
         good = np.isfinite(xy[0].data)
         xy_f = xy.astype(float)
-        self.dir = np.mod(
-            np.arctan2(np.diff(xy_f[1]), np.diff(xy_f[0])) * (180 / np.pi), 360
-        )
+        # self.dir = np.mod(
+        #     np.arctan2(np.diff(xy_f[1]), np.diff(xy_f[0])) * (180 / np.pi), 360
+        # )
+        self.dir = np.rad2deg(np.arctan2(
+            np.diff(xy_f[1]), np.diff(xy_f[0]))) + 180
         self.dir = np.append(self.dir, self.dir[-1])
         self.dir[~good] = np.ma.masked
         return self.dir
@@ -626,7 +638,6 @@ class PosCalcsGeneric(object):
             idx = np.arange(0, len(xm))
             xi = griddata(idx[~xm.mask], xm[~xm.mask], idx, method="linear")
             yi = griddata(idx[~ym.mask], ym[~ym.mask], idx, method="linear")
-            print(f"Interpolated over {n_masked} bad values")
             return np.ma.MaskedArray([xi, yi])
         else:
             return xy
@@ -670,6 +681,21 @@ class PosCalcsGeneric(object):
             np.abs(np.ma.ediff1d(np.hypot(xy[0], xy[1]))))
         self.speed = np.append(speed, speed[-1])
         self.speed = self.speed * self.sample_rate
+
+    def calcPhi(self, xy: np.ma.MaskedArray):
+        """
+        Calculates phi, distance along a linear track
+
+        Parameters
+        ----------
+        xy : np.ma.MaskedArray
+            The xy positional data
+        """
+        xlims = (np.nanmin(xy[0].data), np.nanmax(xy[0].data))
+        ylims = (np.nanmin(xy[1].data), np.nanmax(xy[1].data))
+
+        # breakpoint()
+        self.phi = np.ma.hypot(xy[0] - xlims[0], xy[1] - ylims[0])
 
     def upsamplePos(self, xy: np.ma.MaskedArray, upsample_rate: int = 50):
         """

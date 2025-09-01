@@ -10,7 +10,7 @@ from typing import Callable
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 
-# from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
+from ephysiopy.common.statscalcs import mean_resultant_vector
 from ephysiopy.common.utils import window_rms, find_runs
 from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
@@ -21,6 +21,8 @@ from phylib.io.model import TemplateModel
 from scipy import signal
 from scipy import stats
 from scipy.special import i0
+
+import pywt
 
 
 class CosineDirectionalTuning(object):
@@ -676,6 +678,79 @@ class LFPOscillations(object):
         amplitude_filtered = signal.filtfilt(b, a, amplitude, padtype="odd")
         return filt_sig, phase, amplitude, amplitude_filtered, inst_freq
 
+    def get_oscillatory_epochs(
+        self,
+        out_window_size: float = 0.4,
+        GAMMA_BAND=(
+            20,
+            90,
+        ),
+        **kwargs,
+    ) -> np.ndarray:
+        """
+        Uses the continuous wavelet transform to find epochs
+        of high oscillatory power in the LFP
+
+        Parameters
+        ----------
+        out_window_size (float) - the window which is cut around
+                              the identified time points
+
+        Returns
+        -------
+
+        Notes
+        -----
+        Uses a similar method to jun et al., but expands the window
+        for candidate oscillatory windows in a better way
+
+        References
+        ----------
+        Jun et al., 2020, Neuron 107, 1095–1112
+        https://doi.org/10.1016/j.neuron.2020.06.023
+        """
+        wavelet = "cmor1.0-1.0"
+        scales = np.geomspace(1, 128, num=100)
+        cwtmatr, freqs = pywt.cwt(
+            self.sig, scales, wavelet, sampling_period=1 / 125.0, method="fft"
+        )
+        # cwtmatr is complex - amplitude is the real part,
+        # phase the imaginary part
+        # so power is the square of the abs
+        power = np.abs(cwtmatr) ** 2
+        # get the mean power in the gamma band
+        mean_gamma_power = np.mean(
+            power[(freqs >= GAMMA_BAND[0]) & (
+                freqs <= GAMMA_BAND[1]), :], axis=0
+        )
+        # Jun et al define periods of high oscillatory power as those
+        # over 2 SDs of the mean power
+        threshold = np.std(mean_gamma_power) * 2
+        high_power_mask = mean_gamma_power > np.mean(
+            mean_gamma_power) + threshold
+        # find the runs of True's in the high_power_mask
+        # these are epochs with high gamma power
+        vals, run_starts, run_lens = find_runs(high_power_mask.astype(int))
+        # calculate the maxima of the amplitude for each segment
+        # of the gamma band pass version of the LFP
+        _, _, _, amplitude_filtered, _ = self.getFreqPhase(list(GAMMA_BAND))
+        good_runs = np.nonzero(vals == 1)[0]
+
+        # for each of these epochs get a window of the raw LFP signal
+        # centred on the maximum gamma power
+        t = int(out_window_size / (1 / self.fs))
+        oscillatory_windows = np.zeros(shape=[len(good_runs), t])
+
+        for i, run_idx in enumerate(good_runs):
+            run_start = run_starts[run_idx]
+            s = slice(run_start, run_start + run_lens[run_idx])
+            run_max_idx = np.argmax(amplitude_filtered[s], 0) + run_start
+            oscillatory_windows[i, :] = self.sig[
+                run_max_idx - int(t / 2): run_max_idx + int(t / 2)
+            ]
+
+        return oscillatory_windows
+
     def modulationindex(
         self,
         sig=None,
@@ -964,6 +1039,37 @@ class LFPOscillations(object):
         )
         return speed_masked, theta_masked
 
+    def get_mean_resultant_vector(self, spike_times: np.ndarray, **kws) -> np.ndarray:
+        """
+        Calculates the mean phase at which the cluster emitted spikes
+        and the length of the mean resultant vector.
+
+        Parameters
+        ----------
+        lfp_data (np.ndarray) - the LFP signal
+
+        fs (float) - the sample rate of the LFP signal
+
+        Returns
+        -------
+        tuple (float, float) - the mean resultant vector length and mean
+                               mean resultant direction
+        Notes
+        -----
+        For similar approach see Boccara et al., 2010.
+        doi: 10.1038/nn.2602
+
+        """
+        MIN_THETA = kws.get("min_theta", 6)
+        MAX_THETA = kws.get("max_theta", 12)
+
+        filt_sig, phase, _, _, _ = self.getFreqPhase(
+            self.sig, [MIN_THETA, MAX_THETA], 2
+        )
+        idx = (spike_times * self.fs).astype(int)
+
+        return mean_resultant_vector(phase[idx])
+
     def get_theta_phase(self, cluster_times: np.ndarray, **kwargs):
         """
         Calculates the phase of theta at which a cluster emitted spikes
@@ -985,8 +1091,9 @@ class LFPOscillations(object):
         Returns
         -------
         tuple
-            A tuple containing the phase of theta at which the cluster emitted spikes,
-            the x values for the vonmises distribution, and the y values for the vonmises distribution.
+            A tuple containing the phase of theta at which the cluster
+            emitted spikes, the x values for the vonmises distribution,
+            and the y values for the vonmises distribution.
 
         """
         low_theta = kwargs.pop("low_theta", 6)
@@ -1065,6 +1172,9 @@ class Rippler(object):
     """
     Does some spectrographic analysis and plots of LFP data
     looking specifically at the ripple band
+
+    NB This is tied pretty specifically to an experiment that
+    uses TTL pulses to trigger some 'event' / 'events'...
 
     Until I modified the Ripple Detector plugin the duration of the TTL
     pulses was variable with a more or less bimodal distribution which
@@ -1400,7 +1510,12 @@ class Rippler(object):
 
     @saveFigure
     def plot_mean_spectrograms(self, **kwargs) -> plt.Figure:
-        fig = plt.figure(figsize=(12.0, 4.0))
+        """
+        Plots the spectrograms of the LFP signal for both laser on
+        and laser off conditions.
+        """
+        figsize = kwargs.pop("figsize", (12.0, 4.0))
+        fig = plt.figure(figsize=figsize)
         ax, ax1 = fig.subplots(1, 2)
         fig, im, spec = self.plot_mean_spectrogram(
             laser_on=False, ax=ax, **kwargs)
@@ -1426,8 +1541,6 @@ class Rippler(object):
             r"$20\,\log_{10}|S_x(t, f)|$ in dB",
             cax=cb_ax,
         )
-
-        plt.show()
         return fig
 
     def plot_mean_spectrogram(self, laser_on: bool = False, ax=None, **kwargs):

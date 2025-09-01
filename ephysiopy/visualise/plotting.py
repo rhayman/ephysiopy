@@ -8,6 +8,8 @@ import copy
 import matplotlib
 import matplotlib.pylab as plt
 import matplotlib.transforms as transforms
+from pycircstat2 import Circular
+from pycircstat2.utils import rotate_data
 import numpy as np
 from scipy.signal import hilbert
 from matplotlib.patches import Rectangle
@@ -25,6 +27,7 @@ from ephysiopy.common.utils import (
     BinnedData,
     VariableToBin,
     rect,
+    flatten_list,
 )
 from ephysiopy.common import fieldcalcs as fc
 
@@ -110,13 +113,9 @@ def addClusterChannelToAxes(func):
     Returns
     -------
     callable
-        The wrapped function that adds cluster and channel information to the axes.
+        The wrapped function that adds cluster and channel info to the axes.
     """
     argspec = getfullargspec(func)
-    try:
-        argindex = argspec.args.index("cluster")
-    except ValueError:
-        pass
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
@@ -125,14 +124,12 @@ def addClusterChannelToAxes(func):
             if "add_cluster" in kwargs.keys():
                 if kwargs["add_cluster"] is True:
                     if "cluster" in argspec.args:
-                        ax.text(
-                            0.5,
-                            1.2,
-                            str(args[argindex]),
-                            transform=ax.transAxes,
-                            fontsize=20,
-                            ha="center",
-                        )
+                        if len(args) == 3:
+                            T, clust, chan = args
+                        elif len(args) > 3:
+                            T, clust, chan, rest = args
+                        fig = ax.figure
+                        fig.suptitle(f"Cluster: {clust} - Channel: {chan}")
         return ax
 
     return wrapper
@@ -207,7 +204,8 @@ def colored_line(x, y, c, ax, **lc_kwargs):
         The generated line collection representing the colored line.
     """
     if "array" in lc_kwargs:
-        warnings.warn('The provided "array" keyword argument will be overridden')
+        warnings.warn(
+            'The provided "array" keyword argument will be overridden')
 
     # Default the capstyle to butt so that the line segments smoothly line up
     default_kwargs = {"capstyle": "butt"}
@@ -228,7 +226,8 @@ def colored_line(x, y, c, ax, **lc_kwargs):
     #   [(x2_start, y2_start), (x2_mid, y2_mid), (x2_end, y2_end)],
     #   ...
     # ]
-    coord_start = np.column_stack((x_midpts[:-1], y_midpts[:-1]))[:, np.newaxis, :]
+    coord_start = np.column_stack(
+        (x_midpts[:-1], y_midpts[:-1]))[:, np.newaxis, :]
     coord_mid = np.column_stack((x, y))[:, np.newaxis, :]
     coord_end = np.column_stack((x_midpts[1:], y_midpts[1:]))[:, np.newaxis, :]
     segments = np.concatenate((coord_start, coord_mid, coord_end), axis=1)
@@ -354,6 +353,7 @@ def _plot_patch_collection(xy: np.ndarray, ax: plt.Axes, **kwargs) -> plt.Axes:
     plt.Axes
         the axes into which the patches were plotted
     """
+    equal_axes = kwargs.pop("equal_axes", False)
     rect_size = kwargs.pop("ms", 1)
     col = kwargs.pop("c", tcols.colours[1])
     col = np.array(col)
@@ -373,6 +373,8 @@ def _plot_patch_collection(xy: np.ndarray, ax: plt.Axes, **kwargs) -> plt.Axes:
         for _xy, _col in zip(xy.T, col)
     ]
     ax.add_collection(PatchCollection(rects, match_original=True))
+    if equal_axes:
+        ax.set_aspect("equal")
     return ax
 
 
@@ -396,7 +398,7 @@ class FigureMaker(object):
             self.npos = self.PosCalcs.xy.shape[1]
 
     @stripAxes
-    def _plot_path(self, A: BinnedData, ax: plt.Axes, **kwargs) -> plt.Axes:
+    def _plot_path(self, A: BinnedData, ax: plt.Axes) -> plt.Axes:
         ax.plot(
             self.PosCalcs.xy[0, :],
             self.PosCalcs.xy[1, :],
@@ -434,9 +436,10 @@ class FigureMaker(object):
         if "var_type" in kwargs.keys():
             if (
                 kwargs["var_type"] == VariableToBin.X.value
-                or VariableToBin.Y.value
-                or VariableToBin.PHI.value
+                or kwargs["var_type"] == VariableToBin.Y.value
+                or kwargs["var_type"] == VariableToBin.PHI.value
             ):
+                breakpoint()
                 return self.plot_linear_rate_map(cluster, channel, **kwargs)
 
         rmap = self.get_rate_map(cluster, channel, **kwargs)
@@ -490,7 +493,7 @@ class FigureMaker(object):
         plt.Axes
             The axes containing the linear rate map plot.
         """
-        rmap = self.get_rate_map(cluster, channel, **kwargs)
+        rmap = self.get_linear_rate_map(cluster, channel, **kwargs)
 
         def _plot_single_map(rmap: BinnedData, ax: plt.Axes, **kwargs) -> plt.Axes:
             """
@@ -559,7 +562,7 @@ class FigureMaker(object):
             add_guides = kwargs.pop("add_guides", False)
             add_mrv = kwargs.pop("add_mrv", False)
 
-            ax.set_theta_zero_location("N")
+            ax.set_theta_zero_location("E")
             theta = np.deg2rad(rmap.bin_edges[0])
             r = rmap.binned_data[0]
             r = np.insert(r, -1, r[0])
@@ -651,9 +654,12 @@ class FigureMaker(object):
                 kwargs["equal_axes"] = kwargs.pop("equal_axes", True)
                 if separate_plots:
                     for idx in spike_locations:
-                        fig = plt.figure()
-                        ax = fig.add_subplot(111)
-                        ax = self._plot_path(idx, ax)
+                        if ax is None:
+                            fig = plt.figure()
+                            ax = fig.add_subplot(111)
+                        else:
+                            ax = self._plot_path(idx, ax)
+                            fig = plt.gcf()
                         _plot_patch_collection(idx, ax, **kwargs)
                     return fig
                 else:
@@ -822,7 +828,8 @@ class FigureMaker(object):
             measures = fc.grid_field_props(sac)
             Am = copy.deepcopy(sac)
             Am.binned_data[0][~measures["dist_to_centre"]] = np.nan
-            Am.binned_data[0] = np.ma.masked_invalid(np.atleast_2d(Am.binned_data[0]))
+            Am.binned_data[0] = np.ma.masked_invalid(
+                np.atleast_2d(Am.binned_data[0]))
             kwargs["cmap"] = jet_cmap
 
             cmap = copy.copy(jet_cmap)
@@ -901,7 +908,8 @@ class FigureMaker(object):
             ax = fig.add_subplot(111)
         kwargs = clean_kwargs(plt.plot, kwargs)
         ax_colour = "cornflowerblue"
-        ax.plot(rmap.bin_edges[0][:-1], rmap.binned_data[0], color=ax_colour, **kwargs)
+        ax.plot(rmap.bin_edges[0][:-1],
+                rmap.binned_data[0], color=ax_colour, **kwargs)
         ax.set_xlabel("Speed (cm/s)")
         ax.set_ylabel("Rate (Hz)")
         if add_speed_hist:
@@ -914,7 +922,8 @@ class FigureMaker(object):
                 1 / self.PosCalcs.sample_rate
             )
             speed_bincounts = np.bincount(
-                np.digitize(self.PosCalcs.speed, rmap.bin_edges[0], right=True),
+                np.digitize(self.PosCalcs.speed,
+                            rmap.bin_edges[0], right=True),
                 weights=pos_weights,
             )
             ax2.bar(
@@ -952,7 +961,8 @@ class FigureMaker(object):
             The axes containing the speed versus head direction plot.
         """
         rmap = self.get_speed_v_hd_map(cluster, channel, **kwargs)
-        im = np.ma.MaskedArray(rmap.binned_data[0], np.isnan(rmap.binned_data[0]))
+        im = np.ma.MaskedArray(
+            rmap.binned_data[0], np.isnan(rmap.binned_data[0]))
         # mask low rates...
         # im = np.ma.masked_where(im <= 1, im)
         # ... and where less than 0.5% of data is accounted for
@@ -1032,8 +1042,10 @@ class FigureMaker(object):
         ax.xaxis.set_ticks_position("bottom")
         if strip_axes:
             return stripAxes(ax)
-        axtrans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
-        ax.vlines(0, ymin=0, ymax=1, colors="lightgrey", transform=axtrans, zorder=1)
+        axtrans = transforms.blended_transform_factory(
+            ax.transData, ax.transAxes)
+        ax.vlines(0, ymin=0, ymax=1, colors="lightgrey",
+                  transform=axtrans, zorder=1)
         return ax
 
         return ax
@@ -1094,8 +1106,10 @@ class FigureMaker(object):
         ax.xaxis.set_ticks_position("bottom")
         if strip_axes:
             return stripAxes(ax)
-        axtrans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
-        ax.vlines(0, ymin=0, ymax=1, colors="lightgrey", transform=axtrans, zorder=1)
+        axtrans = transforms.blended_transform_factory(
+            ax.transData, ax.transAxes)
+        ax.vlines(0, ymin=0, ymax=1, colors="lightgrey",
+                  transform=axtrans, zorder=1)
         return ax
 
     @saveFigure
@@ -1125,7 +1139,8 @@ class FigureMaker(object):
         dt = kwargs.get("dt", [-0.05, 0.1])
         secs_per_bin = kwargs.get("secs_per_bin", 0.001)
         strip_axes = kwargs.pop("strip_axes", False)
-        histColor = kwargs.pop("hist_colour", [1 / 255.0, 1 / 255.0, 1 / 255.0])
+        histColor = kwargs.pop(
+            "hist_colour", [1 / 255.0, 1 / 255.0, 1 / 255.0])
         x, y = self.get_psth(cluster, channel, **kwargs)
         ax = kwargs.get("ax", None)
         if y:
@@ -1134,7 +1149,8 @@ class FigureMaker(object):
                 axScatter = fig.add_subplot(111)
             else:
                 axScatter = ax
-            axScatter.scatter(x, y, marker=".", s=2, rasterized=False, color=histColor)
+            axScatter.scatter(x, y, marker=".", s=2,
+                              rasterized=False, color=histColor)
             divider = make_axes_locatable(axScatter)
             axHistx = divider.append_axes(
                 "top", 1.2, pad=0.2, sharex=axScatter, transform=axScatter.transAxes
@@ -1177,7 +1193,8 @@ class FigureMaker(object):
             nStms = y[-1]
             axScatter.set_ylim(0, nStms)
             axScatter.set_yticks((0, nStms))
-            axScatter.set_yticklabels(("0", str(nStms + 1)), fontsize=ylabel_fs - 1)
+            axScatter.set_yticklabels(
+                ("0", str(nStms + 1)), fontsize=ylabel_fs - 1)
             axScatter.set_xlim(dt)
             axScatter.set_xlabel("Time to laser onset(s)", fontsize=xlabel_fs)
             axScatter.set_xticks((dt[0], 0, dt[1]))
@@ -1206,9 +1223,11 @@ class FigureMaker(object):
             maxRate = int(np.ceil(np.max(h) / 10.0) * 10)
             axHistx.set_ylim(0, maxRate)
             axHistx.set_yticks((0, maxRate))
-            axHistx.set_yticklabels(("0", str(maxRate)), fontsize=ylabel_fs - 1)
+            axHistx.set_yticklabels(
+                ("0", str(maxRate)), fontsize=ylabel_fs - 1)
             axHistx.set_xlim(dt)
-            axHistx.set_ylabel("Firing rate(Hz)", labelpad=labelpad, fontsize=ylabel_fs)
+            axHistx.set_ylabel("Firing rate(Hz)",
+                               labelpad=labelpad, fontsize=ylabel_fs)
             fig = plt.gcf()
             fig.canvas.manager.set_window_title(f"Cluster {cluster}")
             if strip_axes:
@@ -1266,7 +1285,8 @@ class FigureMaker(object):
         theta_filtered_eeg = self.EEGCalcs.butterFilter(low_theta, high_theta)
         hilbert_eeg = hilbert(theta_filtered_eeg)
         inst_freq = (
-            self.EEGCalcs.fs / (2 * np.pi) * np.diff(np.unwrap(np.angle(hilbert_eeg)))
+            self.EEGCalcs.fs / (2 * np.pi) *
+            np.diff(np.unwrap(np.angle(hilbert_eeg)))
         )
         inst_freq = np.insert(inst_freq, -1, inst_freq[-1])
         eeg_times = np.arange(0, len(self.EEGCalcs.sig)) / self.EEGCalcs.fs
@@ -1281,10 +1301,13 @@ class FigureMaker(object):
                 np.arange(low_speed, high_speed, 2),
             ),
         )
-        ax = plt.pcolormesh(edges[1], edges[0], h, cmap=jet_cmap, edgecolors="face")
+        hm = np.ma.masked_where(h == 0, h)
+        ax = plt.pcolormesh(edges[1], edges[0], hm,
+                            cmap=jet_cmap, edgecolors="face")
         return ax
 
-    @saveFigure
+    @addClusterChannelToAxes
+    # @saveFigure
     def plot_clusters_theta_phase(
         self, cluster: int, channel: int, **kwargs
     ) -> plt.Axes:
@@ -1316,24 +1339,87 @@ class FigureMaker(object):
             raise ValueError("Need a polar axis")
         L = LFPOscillations(self.EEGCalcs.sig, self.EEGCalcs.fs)
         ts = self.get_spike_times(cluster, channel)
-        phase, x, y = L.get_theta_phase(ts, **kwargs)
-        ax.hist(phase, density=True, bins=36)
-        ax.plot(x, y, linewidth=1, color="red", zorder=3)
-        # add lines around the edge of the polar plot to show spiking locations
-        y_lims = ax.get_ylim()
-        line_start = y_lims[1] / 1.01
-        ax.vlines(phase, ymin=line_start, ymax=y_lims[1] * 1.15, colors="k")
-        ax.set_ylim(y_lims[0], y_lims[1] * 1.15)
-        ax.set_thetagrids([])
-        ax.set_rgrids([])
-        ax.set_xticks(np.arange(0, 2 * np.pi, np.pi / 2), ["0", "90", "180", "270"])
+        phase, x, y = L.get_theta_phase(ts, **kwargs)  # phase in radians
+
+        phase += np.pi
+        phase = rotate_data(phase, np.pi)
+        data = Circular(phase, unit="radian")
+        data.plot(
+            ax=ax,
+            config={
+                "axis": False,
+                "spine": True,
+                "zero_location": "E",
+                "clockwise": 1,
+                "rose": {"bins": 36},
+                "mean": {"color": "r"},
+                "median": False,
+                "density": False,
+                "scatter": {"size": 20},
+                "radius": {"ticks": [0]},
+            },
+        )
+        ax = plt.gca()
+        ax.legend().remove()
+
         return ax
 
-    @saveFigure
-    @stripAxes
-    def _plotWaves(self, waves: np.ndarray, ax: matplotlib.axes, **kwargs) -> plt.Axes:
-        ax.plot(waves, c="k", **kwargs)
-        return ax
+    # @saveFigure
+    # @stripAxes
+    def plot_waveforms(self, cluster: int, channel: int, *kws) -> plt.Figure:
+        """
+        Plot the waveforms for the selected cluster on the channel (tetrode)
+
+        Parameters
+        ----------
+        cluster (int) - the cluster
+
+        channel (int) - the channel(s) / tetrode
+
+        Returns
+        -------
+        plt.Axes - the axes holding the plot
+        """
+        # waves should be n_spikes x n_channels x n_samples
+        # units are volts so x 1e6 to get microvolts
+        waves = self.get_waveforms(cluster, channel) * 1e6
+        n_spikes, n_channels, n_samples = waves.shape
+        time = np.linspace(0, 1, n_samples)
+
+        fig, axs = plt.subplots(2, 2, sharey=True)
+        axs = flatten_list(axs)
+        max_wave = np.max(waves)
+        min_wave = np.min(waves)
+
+        mean_waves = np.mean(waves, 0)
+        std_waves = np.std(waves, 0) * 3
+
+        col = [0.8627, 0.8627, 0.8627]
+
+        for i, ax in enumerate(axs):
+            ax.plot(
+                time,
+                mean_waves[i] + std_waves[i],
+                linestyle="-",
+                color=col,
+                linewidth=1,
+            )
+            ax.plot(
+                time,
+                mean_waves[i] - std_waves[i],
+                linestyle="-",
+                color=col,
+                linewidth=1,
+            )
+            ax.plot(time, mean_waves[i], c="r", linewidth=2)
+            plt.setp(ax.get_xticklabels(), visible=False)
+            plt.setp(ax.get_yticklabels(), visible=False)
+            ax.axes.get_xaxis().set_visible(False)
+            ax.axes.get_yaxis().set_visible(False)
+
+        ax.set_ylim(min_wave, max_wave)
+
+        return fig
 
     def _getPowerSpectrumPlot(
         self,
@@ -1465,14 +1551,15 @@ class FigureMaker(object):
         lfp_file = os.path.join(self.path2LFPdata, "continuous.dat")
         status = os.stat(lfp_file)
         nsamples = int(status.st_size / 2 / nchannels)
-        mmap = np.memmap(lfp_file, np.int16, "r", 0, (nchannels, nsamples), order="F")
+        mmap = np.memmap(lfp_file, np.int16, "r", 0,
+                         (nchannels, nsamples), order="F")
         # Load the channel map NB assumes this is in the AP data
         # location and that kilosort was run there
         channel_map = np.squeeze(
             np.load(os.path.join(self.path2APdata, "channel_map.npy"))
         )
         lfp_sample_rate = 2500
-        data = np.array(mmap[channel_map, 0 : nseconds * lfp_sample_rate])
+        data = np.array(mmap[channel_map, 0: nseconds * lfp_sample_rate])
         from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 
         E = EEGCalcsGeneric(data[0, :], lfp_sample_rate)
@@ -1497,8 +1584,10 @@ class FigureMaker(object):
         spectoAx.set_xlabel("Frequency (Hz)")
         spectoAx.set_ylabel("Channel")
         divider = make_axes_locatable(spectoAx)
-        channel_spectoAx = divider.append_axes("top", 1.2, pad=0.1, sharex=spectoAx)
-        meanfreq_powerAx = divider.append_axes("right", 1.2, pad=0.1, sharey=spectoAx)
+        channel_spectoAx = divider.append_axes(
+            "top", 1.2, pad=0.1, sharex=spectoAx)
+        meanfreq_powerAx = divider.append_axes(
+            "right", 1.2, pad=0.1, sharey=spectoAx)
         plt.setp(
             channel_spectoAx.get_xticklabels() + meanfreq_powerAx.get_yticklabels(),
             visible=False,
@@ -1543,7 +1632,8 @@ class FigureMaker(object):
             freq_mask = np.logical_and(
                 E.freqs[0::50] > freqs[0], E.freqs[0::50] < freqs[1]
             )
-            mean_power = 10 * np.log10(np.mean(spec_data[:, freq_mask], 1) / mn_power)
+            mean_power = 10 * \
+                np.log10(np.mean(spec_data[:, freq_mask], 1) / mn_power)
             c = next(cols)
             meanfreq_powerAx.plot(
                 mean_power,

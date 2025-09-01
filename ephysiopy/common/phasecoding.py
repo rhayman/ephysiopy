@@ -456,9 +456,9 @@ def circCircCorrTLinear(theta, phi, regressor=1000, alpha=0.05, hyp=0, conf=True
         rho_boot = np.nanmean(boot_samples)
         # confidence intervals
         p = ((1.0 - alpha) / 2.0) * 100
-        lower = np.nanmax(0.0, np.nanpercentile(boot_samples, p))
+        lower = np.nanmax([0.0, np.nanpercentile(boot_samples, p)])
         p = (alpha + ((1.0 - alpha) / 2.0)) * 100
-        upper = np.nanmin(1.0, np.nanpercentile(boot_samples, p))
+        upper = np.nanmin([1.0, np.nanpercentile(boot_samples, p)])
 
         ci = (lower, upper)
     else:

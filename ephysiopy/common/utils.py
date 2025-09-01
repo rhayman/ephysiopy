@@ -47,19 +47,22 @@ ClusterID = namedtuple("ClusterID", ["Cluster", "Channel"])
 @dataclass
 class BinnedData:
     """
-    A dataclass to store binned data. The binned data is stored in a list of numpy
-    arrays. The bin edges are stored in a list of numpy arrays. The variable to bin
-    is stored as an instance of the VariableToBin enum. The map type is stored as an
-    instance of the MapType enum. The binned data and bin edges are initialized as
+    A dataclass to store binned data. The binned data is stored in a list of
+    numpy arrays. The bin edges are stored in a list of numpy arrays. The
+    variable to bin is stored as an instance of the VariableToBin enum.
+    The map type is stored as an instance of the MapType enum.
+    The binned data and bin edges are initialized as
     empty lists. bin_units is how to conver the binned data
-    to "real" units e.g. for XY it might be how to convert to cms, for time to seconds
-    etc. You multiply the binned data by that number to get the real values. Note that
-    this might not make sense/ be obvious for some binning (i.e. SPEED_DIR)
+    to "real" units e.g. for XY it might be how to convert to cms,
+    for time to seconds etc. You multiply the binned data by that
+    number to get the real values. Note that this might not make sense
+    / be obvious for some binning (i.e. SPEED_DIR)
 
     The BinnedData class is the output of the main binning function in the
-    ephysiopy.common.binning.RateMap class. It is used to store the binned data as a
-    convenience mostly for easily iterating over the binned data and using the bin_edges
-    to plot the data. As such, it is used as a convenience for plotting as the bin edges
+    ephysiopy.common.binning.RateMap class. It is used to store the binned data
+    as a convenience mostly for easily iterating over the binned data and
+    using the bin_edges to plot the data.
+    As such, it is used as a convenience for plotting as the bin edges
     are used when calling pcolormesh in the plotting functions.
     """
 
@@ -77,7 +80,7 @@ class BinnedData:
 
     def __assert_equal_bin_edges__(self, other):
         assert np.all(
-            [np.all(sbe == obe) for sbe, obe in zip(self.bin_edges, other.bin_edges)]
+            [np.all(s == o) for s, o in zip(self.bin_edges, other.bin_edges)]
         ), "Bin edges do not match"
 
     def __len__(self):
@@ -85,9 +88,9 @@ class BinnedData:
 
     def __getitem__(self, i):
         """
-        Returns a specified index of the binned_data as a BinnedData instance. The data
-        in binned_data is a deep copy of the original so can be modified without
-        affecting the original.
+        Returns a specified index of the binned_data as a BinnedData instance.
+        The data in binned_data is a deep copy of the original so can be
+        modified without affecting the original.
 
         Parameters
         ----------
@@ -105,10 +108,8 @@ class BinnedData:
     def __truediv__(self, other):
         """
         Divides the binned data by the binned data of
-        another BinnedData instance i.e. spike data / pos data to get a rate map. I've
-        added a check to this for instances where the length of the binned data in the
-        numerator (i.e. binned spike arrays) is greater than the length of the denominator
-        (i.e.the binned position array).
+        another BinnedData instance i.e. spike data / pos data to get
+        a rate map.
 
         Parameters
         ----------
@@ -201,7 +202,8 @@ class BinnedData:
         Returns
         -------
         BinnedData
-            A new BinnedData instance with the binned data for the specified cluster id
+            A new BinnedData instance with the binned data for
+            the specified cluster id
 
         """
         if id in self.cluster_id:
@@ -323,7 +325,8 @@ class TrialFilter:
             "speed",
             "xrange",
             "yrange",
-        ], "name must be one of 'time', 'dir', 'speed', 'xrange', 'yrange'"
+            "phi",
+        ], "name must be one of 'time', 'dir', 'speed', 'xrange', 'yrange', 'phi'"
         self.name = name
         self.start = start
         self.end = end
@@ -738,7 +741,7 @@ def blur_image(
     -----
     This essentially does the smoothing in-place
     """
-    stddev = kwargs.pop("stddev", 5)
+    stddev = kwargs.pop("stddev", 3)
     boundary = kwargs.pop("boundary", "extend")
     n = int(n)
     if n % 2 == 0:
@@ -763,7 +766,9 @@ def blur_image(
             g = cnv.Gaussian2DKernel(stddev, x_size=n, y_size=ny)
     g = np.array(g)
     for i, m in enumerate(im.binned_data):
-        im.binned_data[i] = cnv.convolve(m, g, boundary=boundary)
+        im.binned_data[i] = cnv.convolve(
+            m, g, boundary=boundary, normalize_kernel=True, preserve_nan=True
+        )
     return im
 
 

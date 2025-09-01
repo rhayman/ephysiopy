@@ -16,6 +16,7 @@ from ephysiopy.common.ephys_generic import (
     PosCalcsGeneric,
 )
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
+from ephysiopy.common.fieldcalcs import skaggs_info
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.utils import VariableToBin, MapType, BinnedData, filter_data
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
@@ -76,6 +77,8 @@ def make_cluster_ids(cluster: int | list, channel: int | list) -> list:
     # add the cluster and channel id to the rate map
     # I assume this will be in the same order as they are added...
     ids = []
+    if cluster is None:
+        return [None, None]
     if isinstance(channel, int) and isinstance(cluster, list):
         channel = [channel for c in cluster]
     if isinstance(cluster, int):
@@ -431,6 +434,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
                 mask = filter_data(self.PosCalcs.xy[0, :], i_filter)
             elif "yrange" in i_filter.name:
                 mask = filter_data(self.PosCalcs.xy[1, :], i_filter)
+            elif "phi" in i_filter.name:
+                mask = filter_data(self.PosCalcs.phi, i_filter)
             else:
                 raise KeyError("Unrecognised key")
             self.mask_array = np.logical_or(self.mask_array, mask)
@@ -684,8 +689,29 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         BinnedData
             the binned data
         """
-        var_type = kwargs.get("var_type", VariableToBin.XY)
-        return self._get_map(cluster, channel, var_type, **kwargs)
+        var_type = kwargs.pop("var_type", VariableToBin.XY)
+        return self._get_map(cluster, channel, var2bin=var_type, **kwargs)
+
+    def get_linear_rate_map(self, cluster: int | list, channel: int | list, **kwargs):
+        """
+        Gets the linear rate map for the specified cluster(s) and channel.
+
+        Parameters
+        ----------
+        cluster : int, list
+            The cluster(s) to get the speed vs rate for.
+        channel : int, list
+            The channel(s) number.
+        **kwargs
+            Additional keyword arguments passed to _get_map
+
+        Returns
+        -------
+        BinnedData
+            the binned data
+        """
+        var_type = kwargs.pop("var_type", VariableToBin.PHI)
+        return self.get_rate_map(cluster, channel, var_type=var_type, **kwargs)
 
     def get_hd_map(
         self, cluster: int | list, channel: int | list, **kwargs
@@ -908,6 +934,40 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         S.event_window = np.array(dt)
         return S.psth()
 
+    def get_spatial_info_score(
+        self, cluster: int | list, channel: int | list, **kwargs
+    ) -> list[float]:
+        """
+        Computes the spatial information score
+
+        Parameters
+        ----------
+        cluster : int or list
+            The cluster(s).
+        channel : int or list
+            The channel(s).
+        **kwargs : dict, optional
+            Additional keyword arguments passed to the binning function.
+
+        Returns
+        -------
+        float
+            The spatial information score
+
+        """
+        pos_map = self.get_rate_map(
+            cluster, channel, map_type=MapType.POS, smoothing=False, **kwargs
+        )
+        r_map = self.get_rate_map(
+            cluster, channel, map_type=MapType.ADAPTIVE, smoothing=False, **kwargs
+        )
+        result = []
+        for rm in r_map:
+            result.append(skaggs_info(
+                rm.binned_data[0], pos_map.binned_data[0]))
+
+        return result
+
 
 class AxonaTrial(TrialInterface):
     def __init__(self, pname: Path, **kwargs) -> None:
@@ -994,17 +1054,44 @@ class AxonaTrial(TrialInterface):
         return False
 
     def get_available_clusters_channels(self, remove0=True) -> dict:
+        """
+        Slightly laborious and low-level way of getting the cut
+        data but it's faster than accessing the TETRODE's as that
+        will load the waveforms as well as everything else
+        """
         clust_chans = {}
-        for k in self.TETRODE.valid_keys:
-            if isinstance(k, int):  # only other key is 'volts'
-                try:
-                    clusters = self.TETRODE[k].clusters.tolist()
+        pattern = re.compile(
+            str(self.pname.name).replace(".set", ".[0-9]\.cut"))
+        cuts = sorted(
+            [Path(f)
+             for f in os.listdir(self.pname.parent) if pattern.match(f)]
+        )
+
+        def load_cut(fname: Path):
+            a = []
+            with open(fname, "r") as f:
+                data = f.read()
+                f.close()
+            tmp = data.split("spikes: ")
+            tmp1 = tmp[1].split("\n")
+            cut = tmp1[1:]
+            for line in cut:
+                m = line.split()
+                for i in m:
+                    a.append(int(i))
+            return np.array(a)
+
+        if cuts:
+            for cut in cuts:
+                cut_path = self.pname.parent / cut
+                if cut_path.exists():
+                    clusters = np.unique(load_cut(cut_path)).tolist()
                     if remove0:
                         clusters.remove(0)
                     if clusters:
-                        clust_chans[k] = clusters
-                except AttributeError:
-                    pass
+                        tetrode_num = int(cut_path.stem.rsplit("_")[-1])
+                        clust_chans[tetrode_num] = clusters
+
         return clust_chans
 
     def load_settings(self, *args, **kwargs):
@@ -1081,7 +1168,7 @@ class AxonaTrial(TrialInterface):
 
     def apply_filter(self, *trial_filter: TrialFilter) -> np.ndarray:
         mask = super().apply_filter(*trial_filter)
-        for tetrode in self.TETRODE.keys():
+        for tetrode in self.TETRODE.valid_keys:
             if self.TETRODE[tetrode] is not None:
                 self.TETRODE[tetrode].apply_mask(
                     mask, sample_rate=self.PosCalcs.sample_rate
@@ -1449,6 +1536,9 @@ class OpenEphysBase(TrialInterface):
             warnings.warn(
                 "No AUX data found in structure.oebin file, so not loaded")
         return False
+
+    def get_waveforms(self, cluster: int | list, channel: int | list, *args, **kwargs):
+        pass
 
     def apply_filter(self, *trial_filter: TrialFilter) -> np.ndarray:
         mask = super().apply_filter(*trial_filter)

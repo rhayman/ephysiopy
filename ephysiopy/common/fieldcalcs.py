@@ -27,6 +27,7 @@ from skimage.measure._regionprops import (
     _require_intensity_image,
 )
 from skimage.measure._regionprops import PROPS as _PROPS
+from astropy.convolution import Gaussian1DKernel as gk1d
 from astropy.convolution import Gaussian2DKernel as gk2d
 from astropy.convolution import interpolate_replace_nans
 import copy
@@ -1454,7 +1455,10 @@ def infill_ratemap(rmap: np.ndarray) -> np.ndarray:
     mask = ndi.binary_fill_holes(outline)
     rmap = np.ma.MaskedArray(rmap, np.invert(mask))
     rmap[np.invert(mask)] = 0
-    k = gk2d(x_stddev=1)
+    if rmap.ndim == 1:
+        k = gk1d(stddev=1)
+    elif rmap.ndim == 2:
+        k = gk2d(x_stddev=1)
     output = interpolate_replace_nans(rmap, k)
     output[np.invert(mask)] = np.nan
     return output

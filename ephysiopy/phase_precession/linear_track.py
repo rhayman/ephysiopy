@@ -43,7 +43,7 @@ FIELD_RATE_THRESHOLD = 0.5
 MIN_FIELD_SIZE_IN_BINS = 3
 MIN_SPIKES_PER_RUN = 3
 # SOME RUN THRESHOLDS
-MIN_RUN_LENGTH = 50
+MIN_RUN_LENGTH = 50  # samples? if so, then 1 sec for Axona
 EXCLUDE_SPEEDS = (0, 0.5)  # cm/s
 # CONSTANTS FOR THE REGRESSION
 N_PERMUTATIONS = 1000
@@ -55,6 +55,9 @@ ALPHA = 0.05
 HYPOTHESIS = 0
 # Calculate confidence intervals via jackknife (True) or bootstrap (False)
 CONF = True
+
+# TODO: Check the spatial variable being used for linearising
+# should be PHI not X
 
 
 def run_phase_analysis(
@@ -97,6 +100,16 @@ def run_phase_analysis(
 
     phase_pos = get_phase_precession_per_field(f_props)
 
+    # check that we have phase and position data for each field
+    # if not pop it out of the phase_pos dict and then check we
+    # have at least one field left
+    for field in list(phase_pos.keys()):
+        if len(phase_pos[field]["phase"]) == 0:
+            print(f"Field {field} has no phase or position data, removing.")
+            phase_pos.pop(field)
+
+    # breakpoint()
+
     for i, field in enumerate(phase_pos.keys()):
 
         fp = f_props[i]
@@ -105,7 +118,7 @@ def run_phase_analysis(
         xmid = (xmin + xmax) / 2
         # annotate the ratemap plot with the field id
         axs[0].annotate(
-            str(fp.label),
+            str(field),
             xy=(xmid, 1.1),
             xycoords=("data", "axes fraction"),
             xytext=(xmid, 1.1),
@@ -131,7 +144,7 @@ def run_phase_analysis(
             phase_pos[field]["normalised_position"],
             slope,
             intercept,
-            ax=axs[i + 1],
+            ax=axs[field],
         )
         a.text(1.01, 0.5, corr_result, transform=a.transAxes, fontsize=8)
 
@@ -194,7 +207,12 @@ def mask_short_runs(xy: np.ndarray, min_run_len=50) -> np.ndarray:
 
 
 def get_field_props_for_linear_track(
-    trial: AxonaTrial, cluster: int, channel: int, direction=None, **kwargs
+    trial: AxonaTrial,
+    cluster: int,
+    channel: int,
+    direction=None,
+    var_type=VariableToBin.PHI,
+    **kwargs,
 ) -> list[FieldProps]:
     """
     Get the field properties for a linear track trial.
@@ -231,11 +249,16 @@ def get_field_props_for_linear_track(
     trial.PosCalcs.ppm = ppm  # triggers postprocesspos()
 
     speed_filter = TrialFilter("speed", EXCLUDE_SPEEDS[0], EXCLUDE_SPEEDS[1])
-    min_x = np.nanmin(trial.PosCalcs.xy[0].data)
-    max_x = np.nanmax(trial.PosCalcs.xy[0].data)
-    x_filt0 = TrialFilter("xrange", min_x, min_x + 12)
-    x_filt1 = TrialFilter("xrange", max_x - 12, max_x)
-
+    if var_type.value == VariableToBin.PHI.value:
+        min_pos = np.nanmin(trial.PosCalcs.phi.data)
+        max_pos = np.nanmax(trial.PosCalcs.phi.data)
+        pos_filt0 = TrialFilter("xrange", min_pos, min_pos + 12)
+        pos_filt1 = TrialFilter("xrange", max_pos - 12, max_pos)
+    if var_type.value == VariableToBin.X.value:
+        min_pos = np.nanmin(trial.PosCalcs.xy[0].data)
+        max_pos = np.nanmax(trial.PosCalcs.xy[0].data)
+        pos_filt0 = TrialFilter("xrange", min_pos, min_pos + 12)
+        pos_filt1 = TrialFilter("xrange", max_pos - 12, max_pos)
     if direction:
         # broaden the directional filters to 180 degrees
         # as runs are getting broken up
@@ -250,25 +273,23 @@ def get_field_props_for_linear_track(
 
         n = TrialFilter("dir", "n")
         s = TrialFilter("dir", "s")
-        trial.apply_filter(x_filt0, x_filt1, speed_filter, dir_filter0, n, s)
+        trial.apply_filter(pos_filt0, pos_filt1,
+                           speed_filter, dir_filter0, n, s)
     else:
         trial.apply_filter(
-            x_filt0,
-            x_filt1,
+            pos_filt0,
+            pos_filt1,
             speed_filter,
         )
 
     # partition the cells firing into distinct fields
     binned_data = trial.get_rate_map(
-        cluster, channel, var_type=VariableToBin.PHI, **kwargs
-    )
-    breakpoint()
+        cluster, channel, var_type=var_type, **kwargs)
 
     # we might want this to act inside the partitionFields function...
     if kwargs.get("ratemap_func", None):
         binned_data = kwargs["ratemap_func"](binned_data)
 
-    breakpoint()
     # get the field properties
     _, _, label_image, _ = partitionFields(
         binned_data,
@@ -331,7 +352,8 @@ def merge_field_and_lfp(
     lfp_fs = trial.EEGCalcs.fs
     L = LFPOscillations(lfp_data, lfp_fs)
 
-    filt_sig, phase, _, _, _ = L.getFreqPhase(lfp_data, [MIN_THETA, MAX_THETA], 2)
+    filt_sig, phase, _, _, _ = L.getFreqPhase(
+        lfp_data, [MIN_THETA, MAX_THETA], 2)
 
     cluster = f_props[0].binned_data.cluster_id[0].Cluster
     channel = f_props[0].binned_data.cluster_id[0].Channel
@@ -367,7 +389,8 @@ def merge_field_and_lfp(
     )
     cycle_valid_bincount = np.bincount(cycle_label[~is_neg_freq])
     cycle_valid_mean_power = cycle_total_valid_power / cycle_valid_bincount
-    power_reject_thresh = np.nanpercentile(cycle_valid_mean_power, MIN_POWER_THRESHOLD)
+    power_reject_thresh = np.nanpercentile(
+        cycle_valid_mean_power, MIN_POWER_THRESHOLD)
 
     cycle_has_bad_power = cycle_valid_mean_power < power_reject_thresh
 
@@ -448,7 +471,8 @@ def get_phase_precession_per_field(f_props: list[FieldProps], **kwargs):
                 pos_idx = (r.lfp_segment.spike_times * POS_SAMPLE_RATE).astype(
                     int
                 ) - r.slice.start
-                normalised_position.extend(r.normalised_position[pos_idx[~mask]])
+                normalised_position.extend(
+                    r.normalised_position[pos_idx[~mask]])
         phase = np.array(flatten_list(phase))
         normalised_position = np.array(flatten_list(normalised_position))
         phase_pos[f.label]["phase"] = phase

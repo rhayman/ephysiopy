@@ -21,7 +21,11 @@ from ephysiopy.common.utils import (
     MapType,
     TrialFilter,
 )
+
+# from ephysiopy.common.rhythmicity import LFPOscillations
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
+
+# from ephysiopy.common.statscalcs import mean_resultant_vector
 
 
 def get_param(waveforms, param="Amp", t=200, fet=1) -> np.ndarray:
@@ -1410,35 +1414,6 @@ class SpikeCalcsGeneric(object):
             ]
         )
         return float((mtbp - mobp) / (mtbp + mobp))
-
-    # def get_phase_of_spiking(
-    #     self, lfp_data: np.ndarray, fs: float, **kws
-    # ) -> np.ndarray:
-    #     """
-    #     Calculates the phase at which the cluster emitted spikes
-    #
-    #     Parameters
-    #     ----------
-    #     lfp_data (np.ndarray) - the LFP signal
-    #
-    #     fs (float) - the sample rate of the LFP signal
-    #
-    #     Returns
-    #     -------
-    #     np.ndarray - the phase at which the cluster emitted spikes
-    #                  NB should lie between -pi and +pi
-    #
-    #     """
-    #     MIN_THETA = kws.get("min_theta", 6)
-    #     MAX_THETA = kws.get("max_theta", 12)
-    #
-    #     L = LFPOscillations(lfp_data, fs)
-    #
-    #     filt_sig, phase, _, _, _ = L.getFreqPhase(
-    #         lfp_data, [MIN_THETA, MAX_THETA], 2)
-    #     idx = (self.spike_times * fs).astype(int)
-    #
-    #     return phase[idx]
 
     def get_ifr_power_spectrum(self) -> tuple[np.ndarray, ...]:
         """
