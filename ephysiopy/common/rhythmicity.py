@@ -733,7 +733,9 @@ class LFPOscillations(object):
         vals, run_starts, run_lens = find_runs(high_power_mask.astype(int))
         # calculate the maxima of the amplitude for each segment
         # of the gamma band pass version of the LFP
-        _, _, _, amplitude_filtered, _ = self.getFreqPhase(list(GAMMA_BAND))
+        _, _, _, amplitude_filtered, _ = self.getFreqPhase(
+            self.sig, band2filter=list(GAMMA_BAND)
+        )
         good_runs = np.nonzero(vals == 1)[0]
 
         # for each of these epochs get a window of the raw LFP signal

@@ -11,5 +11,6 @@ numpy
 scipy
 matplotlib
 tqdm
+pycircstat2
 pytest
 pytest-mpl
