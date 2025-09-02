@@ -681,7 +681,7 @@ class LFPOscillations(object):
     def get_oscillatory_epochs(
         self,
         out_window_size: float = 0.4,
-        GAMMA_BAND=(
+        FREQ_BAND=(
             20,
             90,
         ),
@@ -720,8 +720,7 @@ class LFPOscillations(object):
         power = np.abs(cwtmatr) ** 2
         # get the mean power in the gamma band
         mean_gamma_power = np.mean(
-            power[(freqs >= GAMMA_BAND[0]) & (
-                freqs <= GAMMA_BAND[1]), :], axis=0
+            power[(freqs >= FREQ_BAND[0]) & (freqs <= FREQ_BAND[1]), :], axis=0
         )
         # Jun et al define periods of high oscillatory power as those
         # over 2 SDs of the mean power
@@ -734,7 +733,7 @@ class LFPOscillations(object):
         # calculate the maxima of the amplitude for each segment
         # of the gamma band pass version of the LFP
         _, _, _, amplitude_filtered, _ = self.getFreqPhase(
-            self.sig, band2filter=list(GAMMA_BAND)
+            self.sig, band2filter=list(FREQ_BAND)
         )
         good_runs = np.nonzero(vals == 1)[0]
 

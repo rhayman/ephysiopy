@@ -12,5 +12,6 @@ scipy
 matplotlib
 tqdm
 pycircstat2
+PyWavelets
 pytest
 pytest-mpl
