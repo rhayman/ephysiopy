@@ -226,7 +226,9 @@ class RateMap(object):
         by
         """
         if self._pos_weights is None:
-            self._pos_weights = np.ma.MaskedArray(np.ones(self.PosCalcs.npos))
+            self._pos_weights = np.ma.MaskedArray(
+                np.ones(self.PosCalcs.npos), mask=np.zeros(self.PosCalcs.npos)
+            )
         return self._pos_weights
 
     @pos_weights.setter

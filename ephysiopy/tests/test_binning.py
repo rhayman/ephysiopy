@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 from ephysiopy.common.binning import RateMap, VariableToBin, MapType
 from ephysiopy.common.utils import BinnedData
+
 from ephysiopy.tests.conftest import *
 
 

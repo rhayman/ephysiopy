@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.common.utils import BinnedData, VariableToBin, MapType, ClusterID
+from ephysiopy.io.recording import AxonaTrial
 
 
 @pytest.fixture
@@ -28,6 +29,13 @@ def get_path_to_test_axona_data():
 @pytest.fixture
 def path_to_axona_data():
     return get_path_to_test_axona_data()
+
+
+@pytest.fixture
+def get_basic_trial() -> AxonaTrial:
+    axona_data_path = path_to_axona_data()
+    trial = AxonaTrial(axona_data_path)
+    return trial
 
 
 @pytest.fixture

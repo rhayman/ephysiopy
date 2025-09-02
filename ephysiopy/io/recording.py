@@ -662,6 +662,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             spk_weights = np.array(weights)
 
         kwargs["var_type"] = var2bin
+        breakpoint()
         rmap = self.RateMap.get_map(spk_weights, **kwargs)
         # add the cluster and channel id to the rate map
         # I assume this will be in the same order as they are added...
