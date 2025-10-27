@@ -291,6 +291,45 @@ class BinnedData:
             return result[idx]
 
 
+def cluster_intersection(A: BinnedData, B: BinnedData):
+    """
+    Gets the intersection of clusters between two instances
+    of BinnedData.
+
+    Parameters
+    ----------
+    A, B : BinnedData
+        The two instances
+
+    Returns
+    -------
+    A, B : BinnedData
+        The modified instances with only the overlapping clusters
+        present in both
+    """
+    A_ids = [str(c.Cluster) + "_" + str(c.Channel) for c in A.cluster_id]
+    B_ids = [str(c.Cluster) + "_" + str(c.Channel) for c in B.cluster_id]
+
+    common_ids = list(set(A_ids).intersection(B_ids))
+    # sort numerically
+    common_ids = sorted(common_ids, key=int)
+
+    A_out = BinnedData(A.variable, A.map_type, [], A.bin_edges, [])
+    B_out = BinnedData(B.variable, B.map_type, [], B.bin_edges, [])
+
+    for id in common_ids:
+        if id in A_ids:
+            idx = A_ids.index(id)
+            A_out.binned_data.append(A.binned_data[idx])
+            A_out.cluster_id.append(A.cluster_id[idx])
+        if id in B_ids:
+            idx = B_ids.index(id)
+            B_out.binned_data.append(B.binned_data[idx])
+            B_out.cluster_id.append(B.cluster_id[idx])
+
+    return A_out, B_out
+
+
 @dataclass(eq=True)
 class TrialFilter:
     """

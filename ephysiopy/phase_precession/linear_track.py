@@ -12,13 +12,13 @@ from ephysiopy.common.utils import (
     TrialFilter,
 )
 from ephysiopy.io.recording import AxonaTrial
-from ephysiopy.common.fieldcalcs import (
+from ephysiopy.common.fieldproperties import (
     FieldProps,
     LFPSegment,
     RunProps,
-    partitionFields,
     fieldprops,
 )
+from ephysiopy.common.fieldcalcs import partitionFields, filter_runs
 from ephysiopy.common.rhythmicity import LFPOscillations
 from ephysiopy.common.phasecoding import (
     get_phase_of_min_spiking,
@@ -56,24 +56,37 @@ HYPOTHESIS = 0
 # Calculate confidence intervals via jackknife (True) or bootstrap (False)
 CONF = True
 
-# TODO: Check the spatial variable being used for linearising
-# should be PHI not X
 
-
-def run_phase_analysis(
+def fieldprops_phase_precession(
     trial: AxonaTrial, cluster: int, channel: int, **kwargs
-) -> list[FieldProps]:
+) -> dict:
     """
     Run the phase analysis on a linear track trial.
-    Returns the field properties with LFP data added.
+
+    Parameters
+    ----------
+    trial (AxonaTrial) - the trial
+    cluster (int) - the cluster id
+    channel (int) - the channel id
+    kwargs (dict) - additional parameters to pass to the
+
+    Returns
+    -------
+    dict - a dictionary with the field id as the key and the correlation
+           results for that field as the value
+
     """
     run_direction = kwargs.get("run_direction", "e")
     # get the field properties for the linear track
     f_props = get_field_props_for_linear_track(
         trial, cluster, channel, direction=run_direction, **kwargs
     )
+    if not f_props:
+        return None, None, None, None
 
     # merge the LFP data with the field properties
+    # each field in f_props will now have an LFPSegment instance
+    # attached to it
     f_props = merge_field_and_lfp(f_props, trial, **kwargs)
 
     # A given field might be missing all runs now...
@@ -85,20 +98,50 @@ def run_phase_analysis(
     # add the normalised run position to each run
     f_props = add_normalised_run_position(f_props_new)
 
-    # create a figure window for the plots now we now how many fields we have
+    # check for how many fields we have...
     n_fields = len(f_props)
     if n_fields == 0:
         print("No fields found in this trial.")
-        return f_props
-    fig, axs = plt.subplots(
-        n_fields + 1, 1, figsize=(10, 3 * (n_fields + 1)), layout="constrained"
-    )
-    axs = flatten_list(axs)
-    # plot the rate map
-    ax = add_fields_to_line_graph(f_props, ax=axs[0])
-    ax.set_xlabel("")
+        return f_props, None, None, None
 
     phase_pos = get_phase_precession_per_field(f_props)
+    return phase_pos, f_props, run_direction, n_fields
+
+
+def run_phase_analysis(trial: AxonaTrial, cluster: int, channel: int, **kwargs) -> dict:
+    """
+    Run the phase analysis on a linear track trial.
+
+    Parameters
+    ----------
+    trial (AxonaTrial) - the trial
+    cluster (int) - the cluster id
+    channel (int) - the channel id
+    kwargs (dict) - additional parameters to pass to the
+
+    Returns
+    -------
+    dict - a dictionary with the field id as the key and the correlation
+           results for that field as the value
+
+    """
+    phase_pos, f_props, run_direction, n_fields = fieldprops_phase_precession(
+        trial, cluster, channel, **kwargs
+    )
+    if phase_pos is None:
+        return None
+
+    plot = kwargs.get("plot", False)
+    if plot:
+        fig, axs = plt.subplots(
+            n_fields + 1, 1, figsize=(10, 3 * (n_fields + 1)), layout="constrained"
+        )
+        axs = flatten_list(axs)
+        # plot the rate map
+        ax = add_fields_to_line_graph(f_props, ax=axs[0])
+        ax.set_xlabel("")
+        # string to show run direction
+        run_direction = "eastwards" if run_direction == "e" else "westwards"
 
     # check that we have phase and position data for each field
     # if not pop it out of the phase_pos dict and then check we
@@ -108,27 +151,14 @@ def run_phase_analysis(
             print(f"Field {field} has no phase or position data, removing.")
             phase_pos.pop(field)
 
-    # breakpoint()
+    field_corr_results = {}
 
     for i, field in enumerate(phase_pos.keys()):
-
-        fp = f_props[i]
-        xmin = fp.binned_data.bin_edges[0][fp.slice[0].start]
-        xmax = fp.binned_data.bin_edges[0][fp.slice[0].stop]
-        xmid = (xmin + xmax) / 2
-        # annotate the ratemap plot with the field id
-        axs[0].annotate(
-            str(field),
-            xy=(xmid, 1.1),
-            xycoords=("data", "axes fraction"),
-            xytext=(xmid, 1.1),
-            color="black",
-            fontsize=12,
-        )
-
         regressor = phase_pos[field]["normalised_position"]
         phase = phase_pos[field]["phase"]
 
+        if np.all(np.isnan(regressor)):
+            return None
         slope, intercept = circRegress(regressor, phase)
         mnx = np.mean(regressor)
         regressor -= mnx
@@ -138,21 +168,46 @@ def run_phase_analysis(
         corr_result = circCircCorrTLinear(
             theta, phase, N_PERMUTATIONS, ALPHA, HYPOTHESIS, CONF
         )
-
-        a = plot_phase_precession(
-            phase_pos[field]["phase"],
-            phase_pos[field]["normalised_position"],
-            slope,
-            intercept,
-            ax=axs[field],
+        field_corr_results[field] = dict.fromkeys(
+            ["correlation", "slope", "intercept", "nspikes"]
         )
-        a.text(1.01, 0.5, corr_result, transform=a.transAxes, fontsize=8)
+        field_corr_results[field]["correlation"] = corr_result
+        field_corr_results[field]["slope"] = slope
+        field_corr_results[field]["intercept"] = intercept
+        field_corr_results[field]["nspikes"] = len(phase)
 
-    if kwargs.get("save_name", None):
-        plt.savefig(kwargs.get("save_name"))
-        plt.close("all")
+        if plot:
+            fp = f_props[i]
+            xmin = fp.binned_data.bin_edges[0][fp.slice[0].start]
+            xmax = fp.binned_data.bin_edges[0][fp.slice[0].stop]
+            xmid = (xmin + xmax) / 2
+            # annotate the ratemap plot with the field id
+            axs[0].annotate(
+                str(field),
+                xy=(xmid, 1.1),
+                xycoords=("data", "axes fraction"),
+                xytext=(xmid, 1.1),
+                color="black",
+                fontsize=12,
+            )
+            axs[0].text(
+                1.01, 0.5, run_direction, transform=axs[0].transAxes, fontsize=8
+            )
 
-    return f_props
+            a = plot_phase_precession(
+                phase_pos[field]["phase"],
+                phase_pos[field]["normalised_position"],
+                slope,
+                intercept,
+                ax=axs[field],
+            )
+            a.text(1.01, 0.5, corr_result, transform=a.transAxes, fontsize=8)
+
+            if kwargs.get("save_name", None):
+                plt.savefig(kwargs.get("save_name"))
+                plt.close("all")
+
+    return field_corr_results
 
 
 def get_run_direction(run: RunProps):
@@ -238,16 +293,12 @@ def get_field_props_for_linear_track(
     # parse kwargs
     field_thresh_prc = kwargs.get("field_threshold_percent", 50)
     field_rate_thresh = kwargs.get("field_rate_threshold", 0.5)
-    min_run_len = kwargs.get("min_run_length", 50)
+    min_run_len = kwargs.get("min_run_length", 5)
     min_field_sz_bins = kwargs.get("min_field_size_in_bins", 3)
-    min_num_spikes = kwargs.get("min_num_spikes", 0)
+    min_num_spikes = kwargs.get("min_num_spikes", 1)
 
-    # load pos from scratch to make sure we're using the
-    # correct ppm
-    ppm = int(trial.settings["tracker_pixels_per_metre"])
-
-    trial.PosCalcs.ppm = ppm  # triggers postprocesspos()
-
+    # filter the data for speed, direction and position
+    # position filter is there to remove the start and end of the track
     speed_filter = TrialFilter("speed", EXCLUDE_SPEEDS[0], EXCLUDE_SPEEDS[1])
     if var_type.value == VariableToBin.PHI.value:
         min_pos = np.nanmin(trial.PosCalcs.phi.data)
@@ -283,9 +334,12 @@ def get_field_props_for_linear_track(
         )
 
     # partition the cells firing into distinct fields
-    binned_data = trial.get_rate_map(
-        cluster, channel, var_type=var_type, **kwargs)
+    binned_data = trial.get_linear_rate_map(
+        cluster, channel, var_type=var_type, **kwargs
+    )
 
+    # optionally apply a function to the binned data before
+    # the field partitioning - e.g. smoothing or normalisation -
     # we might want this to act inside the partitionFields function...
     if kwargs.get("ratemap_func", None):
         binned_data = kwargs["ratemap_func"](binned_data)
@@ -296,25 +350,39 @@ def get_field_props_for_linear_track(
         field_threshold_percent=field_thresh_prc,
         field_rate_threshold=field_rate_thresh,
     )
+    # nothing may have been detected...
+    if label_image is None:
+        return []
 
     # Filter out small fields from the image partition here...
     label_image = remove_small_objects(label_image, min_field_sz_bins)
-    # and relabel the label image sequentially
+    # ... and relabel the label image
     label_image, _, _ = relabel_sequential(label_image)
 
-    pos_data = trial.PosCalcs.xy[0]
-    spikes_in_position = trial.get_spike_times_binned_into_position(
-        cluster, channel
-    ).astype(int)
+    # get spikes binned into position
+    spikes_in_position = trial.get_binned_spike_times(
+        cluster, channel).astype(int)
 
+    # get the "properties" for each field without filtering the runs yet
     field_props = fieldprops(
         label_image,
         binned_data,
-        pos_data,
+        trial.PosCalcs.xy[0],
         spikes_in_position,
-        min_run_length=min_run_len,
+        # min_run_length=min_run_len,
     )
 
+    # now filter the runs for short durations, min spikes
+    # and min speed
+    field_props = filter_runs(
+        field_props,
+        min_duration=min_run_len,
+        min_spikes=min_num_spikes,
+        min_speed=EXCLUDE_SPEEDS[0],
+    )
+
+    # TODO:Check if this is necessary given the filter
+    # step above
     # remove the runs that have no spikes in them
     for f in field_props:
         runs = []
@@ -323,7 +391,9 @@ def get_field_props_for_linear_track(
                 runs.append(run)
         f.runs = runs
 
-    # remove fields that don'thave enough spikes
+    # TODO:Check if this is necessary given the filter
+    # step above
+    # remove fields that don't have enough spikes
     field_props = [
         f for f in field_props if f.n_spikes >= min_num_spikes and len(f.runs) > 0
     ]
@@ -352,9 +422,9 @@ def merge_field_and_lfp(
     lfp_fs = trial.EEGCalcs.fs
     L = LFPOscillations(lfp_data, lfp_fs)
 
-    filt_sig, phase, _, _, _ = L.getFreqPhase(
-        lfp_data, [MIN_THETA, MAX_THETA], 2)
-
+    FP = L.getFreqPhase(lfp_data, [MIN_THETA, MAX_THETA], 2)
+    filt_sig = FP.filt_sig
+    phase = FP.phase
     cluster = f_props[0].binned_data.cluster_id[0].Cluster
     channel = f_props[0].binned_data.cluster_id[0].Channel
     spike_times = trial.get_spike_times(cluster, channel)
@@ -416,6 +486,8 @@ def merge_field_and_lfp(
     amp_adj = np.ma.MaskedArray(filt_sig, mask=is_bad)
     cycle_label = np.ma.MaskedArray(cycle_label, mask=is_bad)
 
+    # get spikes binned into lfp samples
+    spike_lfp_idx = trial.get_binned_spike_times(cluster, channel, "lfp")
     # Now extract the relevant sections of these masked arrays and
     # add them to the relevant run...
     lfp_to_pos_ratio = lfp_fs / POS_SAMPLE_RATE
@@ -438,6 +510,7 @@ def merge_field_and_lfp(
                 r.label,
                 lfp_slice,
                 spk_ts,
+                spike_lfp_idx[lfp_slice],
                 lfp_data[lfp_slice],
                 filt_sig[lfp_slice],
                 phase_adj[lfp_slice],
@@ -450,32 +523,43 @@ def merge_field_and_lfp(
     return f_props
 
 
-def get_phase_precession_per_field(f_props: list[FieldProps], **kwargs):
+def get_phase_precession_per_field(f_props: list[FieldProps], **kwargs) -> dict:
     """
-    Get the phase and normalized (-1 -> +1) position of spikes in a field.
+    Get the phase and normalized (-1 -> +1) position of spikes for each field
+    in the list of FieldProps
+
+    Returns
+    -------
+    nested dict
+        First level keys are field label, second level are
+        normalised_position and phase
     """
 
     phase_pos = {}
 
-    for f in f_props:
+    for field in f_props:
         phase = []
         normalised_position = []
-        phase_pos[f.label] = {}
-        for r in f.runs:
-            idx = (r.lfp_segment.spike_times * r.lfp_segment.sample_rate).astype(
-                int
-            ) - r.lfp_segment.slice.start
-            mask = r.lfp_segment.phase[idx].mask
+        phase_pos[field.label] = {}
+        for irun in field.runs:
+            sample_rate = irun.lfp_segment.sample_rate
+            idx = (
+                irun.lfp_segment.spike_times
+                - irun.lfp_segment.slice.start / sample_rate
+            ) * sample_rate
+            idx = np.floor(idx).astype(int)
+            mask = irun.lfp_segment.phase[idx].mask
             if np.count_nonzero(np.invert(mask)) > MIN_SPIKES_PER_RUN:
-                phase.extend(r.lfp_segment.phase[idx][~mask])
-                pos_idx = (r.lfp_segment.spike_times * POS_SAMPLE_RATE).astype(
-                    int
-                ) - r.slice.start
+                phase.extend(irun.lfp_segment.phase[idx][~mask])
+                pos_idx = (
+                    irun.lfp_segment.spike_times - irun.slice.start / POS_SAMPLE_RATE
+                ) * POS_SAMPLE_RATE
+                pos_idx = np.floor(pos_idx).astype(int)
                 normalised_position.extend(
-                    r.normalised_position[pos_idx[~mask]])
+                    irun.normalised_position[pos_idx[~mask]])
         phase = np.array(flatten_list(phase))
         normalised_position = np.array(flatten_list(normalised_position))
-        phase_pos[f.label]["phase"] = phase
-        phase_pos[f.label]["normalised_position"] = normalised_position
+        phase_pos[field.label]["phase"] = phase
+        phase_pos[field.label]["normalised_position"] = normalised_position
 
     return phase_pos

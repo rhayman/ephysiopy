@@ -742,7 +742,7 @@ class TrackMe(OEPlugin):
             A 2D numpy array with the TrackMe data.
         """
         print("Loading TrackMe data...")
-        mmap = memmapBinaryFile(path2data / Path("data_array.npy"), self.channel_count)
+        mmap = memmapBinaryFile(path2data / Path("continuous.dat"), self.channel_count)
         return np.array(mmap[0:2, :]).T
 
     def load_times(self, path2data: Path) -> np.ndarray:

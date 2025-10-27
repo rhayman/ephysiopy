@@ -17,12 +17,28 @@ from ephysiopy.openephys2py.KiloSort import KiloSortSession
 from ephysiopy.visualise.plotting import FigureMaker, saveFigure
 from ephysiopy.io.recording import OpenEphysBase
 
-from phylib.io.model import TemplateModel
 from scipy import signal
 from scipy import stats
 from scipy.special import i0
 
 import pywt
+from dataclasses import dataclass
+
+"""
+Dataclass for collecting the results of frequency/ phase
+analysis of LFP
+
+See LFPOscillations.getFreqPhase()
+"""
+
+
+@dataclass
+class FreqPhase:
+    filt_sig: np.ndarray
+    phase: np.ndarray
+    amplitude: np.ndarray
+    amplitude_filtered: np.ndarray
+    inst_freq: np.ndarray
 
 
 class CosineDirectionalTuning(object):
@@ -217,8 +233,7 @@ class CosineDirectionalTuning(object):
         if self.pos_samples_for_spike is None:
             self.getPosIndices()
         clust_pos_idx = self.pos_samples_for_spike[self.spk_clusters == clust]
-        clust_pos_idx[clust_pos_idx >= len(
-            self.pos_times)] = len(self.pos_times) - 1
+        clust_pos_idx[clust_pos_idx >= len(self.pos_times)] = len(self.pos_times) - 1
         return clust_pos_idx
 
     def getClusterSpikeTimes(self, cluster: int):
@@ -279,8 +294,7 @@ class CosineDirectionalTuning(object):
         min_len_in_samples = int(self.pos_sample_rate * self.min_runlength)
         min_len_runs_mask = grouped_runs[:, 1] >= min_len_in_samples
         ret = np.array(
-            [run_start_indices[min_len_runs_mask],
-                grouped_runs[min_len_runs_mask, 1]]
+            [run_start_indices[min_len_runs_mask], grouped_runs[min_len_runs_mask, 1]]
         ).T
         # ret contains run length as last column
         ret = np.insert(ret, 1, np.sum(ret, 1), 1)
@@ -320,8 +334,7 @@ class CosineDirectionalTuning(object):
         all_speed = np.array(self.speed)
         for start_idx, end_idx, dir_bin in run_list:
             this_runs_speed = all_speed[start_idx:end_idx]
-            this_runs_runs = self._rolling_window(
-                this_runs_speed, minlength_in_samples)
+            this_runs_runs = self._rolling_window(this_runs_speed, minlength_in_samples)
             run_mask = np.all(this_runs_runs > minspeed, 1)
             if np.any(run_mask):
                 print("got one")
@@ -437,8 +450,7 @@ class CosineDirectionalTuning(object):
         # split the single histogram into individual chunks
         splitIdx = np.nonzero(np.diff(posMask.astype(int)))[0] + 1
         splitMask = np.split(posMask, splitIdx)
-        splitSpkHist = np.split(
-            spkTrHist, (splitIdx * acBinsPerPos).astype(int))
+        splitSpkHist = np.split(spkTrHist, (splitIdx * acBinsPerPos).astype(int))
         histChunks = []
         for i in range(len(splitSpkHist)):
             if np.all(splitMask[i]):
@@ -453,14 +465,12 @@ class CosineDirectionalTuning(object):
             lenThisChunk = len(histChunks[i])
             chunkLens.append(lenThisChunk)
             tmp = np.zeros(lenThisChunk * 2)
-            tmp[lenThisChunk // 2: lenThisChunk //
-                2 + lenThisChunk] = histChunks[i]
+            tmp[lenThisChunk // 2 : lenThisChunk // 2 + lenThisChunk] = histChunks[i]
             tmp2 = signal.fftconvolve(
                 tmp, histChunks[i][::-1], mode="valid"
             )  # the autocorrelation
             autoCorrGrid[:, i] = (
-                tmp2[lenThisChunk // 2: lenThisChunk //
-                     2 + int(acWindowSizeBins) + 1]
+                tmp2[lenThisChunk // 2 : lenThisChunk // 2 + int(acWindowSizeBins) + 1]
                 / acBinsPerPos
             )
 
@@ -550,7 +560,7 @@ class CosineDirectionalTuning(object):
         # calculate freqs and crop spectrum to requested range
         freqs = nqLim * np.linspace(0, 1, fftHalfLen)
         freqs = freqs[freqs <= maxFreq].T
-        power = power[0: len(freqs)]
+        power = power[0 : len(freqs)]
 
         # smooth spectrum using gaussian kernel
         binsPerHz = (fftHalfLen - 1) / nqLim
@@ -597,8 +607,7 @@ class CosineDirectionalTuning(object):
             ax.plot(freqs, power_sm, "k", lw=2)
             ax.axvline(self.thetaRange[0], c="b", ls="--")
             ax.axvline(self.thetaRange[1], c="b", ls="--")
-            _, stemlines, _ = ax.stem([freqAtBandMaxPower], [
-                                      bandMaxPower], linefmt="r")
+            _, stemlines, _ = ax.stem([freqAtBandMaxPower], [bandMaxPower], linefmt="r")
             # plt.setp(stemlines, 'linewidth', 2)
             ax.fill_between(
                 freqs,
@@ -641,7 +650,7 @@ class LFPOscillations(object):
         self.sig = sig
         self.fs = fs
 
-    def getFreqPhase(self, sig, band2filter: list, ford=3) -> tuple:
+    def getFreqPhase(self, sig, band2filter: list, ford=3) -> FreqPhase:
         """
         Uses the Hilbert transform to calculate the instantaneous phase and
         amplitude of the time series in sig.
@@ -666,8 +675,7 @@ class LFPOscillations(object):
             sig = self.sig
         band2filter = np.array(band2filter, dtype=float)
 
-        b, a = signal.butter(ford, band2filter /
-                             (self.fs / 2), btype="bandpass")
+        b, a = signal.butter(ford, band2filter / (self.fs / 2), btype="bandpass")
 
         filt_sig = signal.filtfilt(b, a, sig, padtype="odd")
         hilbert_sig = signal.hilbert(filt_sig)
@@ -676,7 +684,65 @@ class LFPOscillations(object):
         inst_freq = self.fs / (2 * np.pi) * np.diff(np.unwrap(phase))
         inst_freq = np.insert(inst_freq, -1, inst_freq[-1])
         amplitude_filtered = signal.filtfilt(b, a, amplitude, padtype="odd")
-        return filt_sig, phase, amplitude, amplitude_filtered, inst_freq
+        F = FreqPhase(filt_sig, phase, amplitude, amplitude_filtered, inst_freq)
+        return F
+
+    def plot_cwt(
+        self,
+        sig: np.ndarray,
+        Pos: PosCalcsGeneric,
+        start: float,
+        stop: float,
+        FREQ_BAND=(20, 90),
+        **kwargs,
+    ):
+        """
+        Plots the continuous wavelet transform of the signal
+
+        Parameters
+        ----------
+        sig : np.ndarray
+            The signal to be analysed.
+        Pos : PosCalcsGeneric
+            The position object containing speed and time information.
+        start : float
+            The start time for the plot (in seconds).
+        stop : float
+            The stop time for the plot (in seconds).
+        FREQ_BAND : tuple, optional
+            The frequency band to be highlighted (default is (20, 90)).
+        """
+        wavelet = "cmor1.0-1.0"
+        scales = np.geomspace(2, 140, num=100)
+        _sig = sig[int(start * self.fs) : int(stop * self.fs)]
+        cwtmatr, freqs = pywt.cwt(
+            _sig, scales, wavelet, sampling_period=1 / self.fs, method="fft"
+        )
+        power = np.abs(cwtmatr[:-1, :-1]) ** 2
+        t = np.linspace(start, stop, len(_sig))
+        fig, ax = plt.subplots(3, 1, sharex=True)
+        ax[0].pcolormesh(
+            t,
+            freqs,
+            power,
+            # norm=matplotlib.colors.PowerNorm(),
+            vmax=np.percentile(power, 99),
+            vmin=0,
+            cmap="jet",
+        )
+        ax[0].set_yscale("log")
+        # fig.colorbar(im, ax=ax[0], label="Power")
+        ax[1].plot(t, _sig, "k")
+        ax[1].set_ylabel("LFP (a.u.)")
+        # plot speed
+        s = slice(int(start * Pos.sample_rate), int(stop * Pos.sample_rate))
+        speed = Pos.speed[s]
+        t = np.linspace(start, stop, len(speed))
+        ax[2].plot(t, speed, "k")
+        ax[2].set_xlabel("Time (s)")
+        ax[2].set_ylabel("Speed (cm/s)")
+        plt.tight_layout()
+        return fig, ax
 
     def get_oscillatory_epochs(
         self,
@@ -710,9 +776,9 @@ class LFPOscillations(object):
         https://doi.org/10.1016/j.neuron.2020.06.023
         """
         wavelet = "cmor1.0-1.0"
-        scales = np.geomspace(1, 128, num=100)
+        scales = np.geomspace(2, 140, num=100)
         cwtmatr, freqs = pywt.cwt(
-            self.sig, scales, wavelet, sampling_period=1 / 125.0, method="fft"
+            self.sig, scales, wavelet, sampling_period=1 / self.fs, method="fft"
         )
         # cwtmatr is complex - amplitude is the real part,
         # phase the imaginary part
@@ -725,8 +791,7 @@ class LFPOscillations(object):
         # Jun et al define periods of high oscillatory power as those
         # over 2 SDs of the mean power
         threshold = np.std(mean_gamma_power) * 2
-        high_power_mask = mean_gamma_power > np.mean(
-            mean_gamma_power) + threshold
+        high_power_mask = mean_gamma_power > np.mean(mean_gamma_power) + threshold
         # find the runs of True's in the high_power_mask
         # these are epochs with high gamma power
         vals, run_starts, run_lens = find_runs(high_power_mask.astype(int))
@@ -740,14 +805,14 @@ class LFPOscillations(object):
         # for each of these epochs get a window of the raw LFP signal
         # centred on the maximum gamma power
         t = int(out_window_size / (1 / self.fs))
-        oscillatory_windows = np.zeros(shape=[len(good_runs), t])
+        oscillatory_windows = {}
 
         for i, run_idx in enumerate(good_runs):
             run_start = run_starts[run_idx]
             s = slice(run_start, run_start + run_lens[run_idx])
             run_max_idx = np.argmax(amplitude_filtered[s], 0) + run_start
-            oscillatory_windows[i, :] = self.sig[
-                run_max_idx - int(t / 2): run_max_idx + int(t / 2)
+            oscillatory_windows[s.start / self.fs] = self.sig[
+                run_max_idx - int(t / 2) : run_max_idx + int(t / 2)
             ]
 
         return oscillatory_windows
@@ -935,7 +1000,8 @@ class LFPOscillations(object):
         self, pos_data: PosCalcsGeneric, lfp_data: EEGCalcsGeneric, **kwargs
     ) -> tuple[np.ma.MaskedArray, ...]:
         """
-        Returns metrics to do with the theta frequency/power and running speed/acceleration.
+        Returns metrics to do with the theta frequency/power and
+        running speed/acceleration.
 
         Parameters
         ----------
@@ -989,8 +1055,7 @@ class LFPOscillations(object):
             return [
                 fn(
                     inst_freq[
-                        np.logical_and(interpolated_speed > s1,
-                                       interpolated_speed < s2)
+                        np.logical_and(interpolated_speed > s1, interpolated_speed < s2)
                     ]
                 )
                 for s1, s2 in zip(spd_bins[:-1], spd_bins[1:])
@@ -998,8 +1063,7 @@ class LFPOscillations(object):
 
         mean_freqs = __freq_calc__(np.mean)
         counts = [
-            np.count_nonzero(np.logical_and(
-                pos_data.speed >= s1, pos_data.speed < s2))
+            np.count_nonzero(np.logical_and(pos_data.speed >= s1, pos_data.speed < s2))
             for s1, s2 in zip(spd_bins[:-1], spd_bins[1:])
         ]
         std_freqs = __freq_calc__(np.std) / np.sqrt(counts)
@@ -1012,8 +1076,7 @@ class LFPOscillations(object):
             norm=matplotlib.colors.LogNorm(),
         )
         plt.colorbar()
-        plt.errorbar(x=spd_bins[1:] - 2, y=mean_freqs,
-                     yerr=std_freqs, fmt="r.")
+        plt.errorbar(x=spd_bins[1:] - 2, y=mean_freqs, yerr=std_freqs, fmt="r.")
         ax = plt.gca()
         ax.set_ylim((low_theta, high_theta))
         ax.set_ylabel("Frequency (Hz)")
@@ -1021,8 +1084,7 @@ class LFPOscillations(object):
         # mask the speed and lfp vectors so we can return these based
         # on the low/high bounds of speed & theta for doing correlations/
         # stats later
-        speed_masked = np.ma.masked_outside(
-            interpolated_speed, low_speed, high_speed)
+        speed_masked = np.ma.masked_outside(interpolated_speed, low_speed, high_speed)
         theta_masked = np.ma.masked_outside(inst_freq, low_theta, high_theta)
         # extract both masks, combine and re-apply
         mask = np.logical_or(speed_masked.mask, theta_masked.mask)
@@ -1033,8 +1095,7 @@ class LFPOscillations(object):
         res = stats.linregress(
             speed_masked.compressed(), theta_masked.compressed(), alternative="greater"
         )
-        ax.plot(spd_bins[1:] - 2, res.intercept +
-                res.slope * (spd_bins[1:] - 2), "r--")
+        ax.plot(spd_bins[1:] - 2, res.intercept + res.slope * (spd_bins[1:] - 2), "r--")
         ax.set_title(
             f"r = {res.rvalue:.2f}, p = {res.pvalue:.2f}, intercept = {res.intercept:.2f}"
         )
@@ -1099,8 +1160,7 @@ class LFPOscillations(object):
         """
         low_theta = kwargs.pop("low_theta", 6)
         high_theta = kwargs.pop("high_theta", 12)
-        _, phase, _, _, _ = self.getFreqPhase(
-            self.sig, [low_theta, high_theta])
+        _, phase, _, _, _ = self.getFreqPhase(self.sig, [low_theta, high_theta])
         # get indices into the phase vector
         phase_idx = np.array(cluster_times * self.fs, dtype=int)
         # It's possible that there are indices higher than the length of
@@ -1117,8 +1177,8 @@ class LFPOscillations(object):
         self,
         cluster: int,
         pos_data: PosCalcsGeneric,
-        phy_data: TemplateModel,
         lfp_data: EEGCalcsGeneric,
+        cluster_times: np.ndarray,
     ) -> plt.Axes:
         """
         Produces a plot of the phase of theta at which each spike was
@@ -1143,9 +1203,6 @@ class LFPOscillations(object):
             The matplotlib axes object with the plot.
         """
         _, phase, _, _, _ = self.getFreqPhase(lfp_data.sig, [6, 12])
-        cluster_times = phy_data.spike_times[
-            phy_data.spike_clusters == cluster
-        ]  # in seconds
         # get indices into the phase vector
         phase_idx = np.array(cluster_times * self.fs, dtype=int)
         # It's possible that there are indices higher than the length of
@@ -1164,8 +1221,7 @@ class LFPOscillations(object):
         cmap = matplotlib.colormaps["hsv"]
         fig, ax = plt.subplots()
         ax.plot(pos_data.xy[0], pos_data.xy[1], color="lightgrey", zorder=0)
-        ax.scatter(spike_xy[0], spike_xy[1],
-                   c=spike_phase, cmap=cmap, zorder=1)
+        ax.scatter(spike_xy[0], spike_xy[1], c=spike_phase, cmap=cmap, zorder=1)
         return ax
 
 
@@ -1310,8 +1366,7 @@ class Rippler(object):
                 if "Start Time" in line:
                     tokens = line.split(":")
                     start_time = int(tokens[-1])
-                    sample_rate = int(tokens[0].split(
-                        "@")[-1].strip().split()[0])
+                    sample_rate = int(tokens[0].split("@")[-1].strip().split()[0])
                     recording_start_time = start_time / float(sample_rate)
         return recording_start_time
 
@@ -1421,8 +1476,7 @@ class Rippler(object):
         _, ax1 = plt.subplots(figsize=(6.0, 4.0))  # enlarge plot a bit
         ax1.plot(normed_time, eeg_chunk)
 
-        trans = transforms.blended_transform_factory(
-            ax1.transData, ax1.transAxes)
+        trans = transforms.blended_transform_factory(ax1.transData, ax1.transAxes)
         ax1.vlines(
             [0, int(self.post_ttl * 1000)],
             ymin=0,
@@ -1480,8 +1534,7 @@ class Rippler(object):
         ]
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        axTrans = transforms.blended_transform_factory(
-            ax.transData, ax.transData)
+        axTrans = transforms.blended_transform_factory(ax.transData, ax.transData)
         ax.plot(eeg_chunk_time, eeg_chunk)
         ax.add_patch(
             Rectangle(
@@ -1518,10 +1571,8 @@ class Rippler(object):
         figsize = kwargs.pop("figsize", (12.0, 4.0))
         fig = plt.figure(figsize=figsize)
         ax, ax1 = fig.subplots(1, 2)
-        fig, im, spec = self.plot_mean_spectrogram(
-            laser_on=False, ax=ax, **kwargs)
-        fig, im1, spec1 = self.plot_mean_spectrogram(
-            laser_on=True, ax=ax1, **kwargs)
+        fig, im, spec = self.plot_mean_spectrogram(laser_on=False, ax=ax, **kwargs)
+        fig, im1, spec1 = self.plot_mean_spectrogram(laser_on=True, ax=ax1, **kwargs)
         self.laser_off_spectrogram = spec
         self.laser_on_spectrogram = spec1
         spec = np.mean(spec, 0)
@@ -1538,8 +1589,7 @@ class Rippler(object):
         cb_ax = fig.add_axes([0.91, 0.124, 0.01, 0.754])
         fig.colorbar(
             im1,
-            label="Power Spectral Density " +
-            r"$20\,\log_{10}|S_x(t, f)|$ in dB",
+            label="Power Spectral Density " + r"$20\,\log_{10}|S_x(t, f)|$ in dB",
             cax=cb_ax,
         )
         return fig
@@ -1566,8 +1616,7 @@ class Rippler(object):
 
         if not laser_on:
             ttls = np.array(
-                [self.no_laser_on_ts, self.no_laser_on_ts +
-                    (self.ttl_duration)]
+                [self.no_laser_on_ts, self.no_laser_on_ts + (self.ttl_duration)]
             ).T
         # breakpoint()
         spectrograms = []
@@ -1605,8 +1654,7 @@ class Rippler(object):
             + rf"$\Delta f = {SFT.delta_f:g}\,$Hz)",
             xlim=(t_lo, t_hi),
         )
-        trans = transforms.blended_transform_factory(
-            ax1.transData, ax1.transAxes)
+        trans = transforms.blended_transform_factory(ax1.transData, ax1.transAxes)
         ax1.vlines(
             [
                 self.pre_ttl,
@@ -1681,8 +1729,7 @@ class Rippler(object):
         win = signal.windows.gaussian(
             self.gaussian_window, std=self.gaussian_std, sym=True
         )
-        SFT = signal.ShortTimeFFT(
-            win, hop=1, fs=self.fs, mfft=256, scale_to="psd")
+        SFT = signal.ShortTimeFFT(win, hop=1, fs=self.fs, mfft=256, scale_to="psd")
         Sx2 = SFT.spectrogram(eeg_chunk)
         N = len(eeg_chunk)
 
@@ -1700,8 +1747,7 @@ class Rippler(object):
                 + rf"$\Delta f = {SFT.delta_f:g}\,$Hz)",
                 xlim=(t_lo, t_hi),
             )
-            trans = transforms.blended_transform_factory(
-                ax1.transData, ax1.transAxes)
+            trans = transforms.blended_transform_factory(ax1.transData, ax1.transAxes)
             ax1.vlines(
                 [self.pre_ttl, self.pre_ttl + (start_time)],
                 ymin=0,
@@ -1720,8 +1766,7 @@ class Rippler(object):
             )
             fig1.colorbar(
                 im1,
-                label="Power Spectral Density " +
-                r"$20\,\log_{10}|S_x(t, f)|$ in dB",
+                label="Power Spectral Density " + r"$20\,\log_{10}|S_x(t, f)|$ in dB",
             )
             plt.show()
         return SFT, N, np.abs(Sx2)
@@ -1747,12 +1792,9 @@ class Rippler(object):
             freqs = np.linspace(
                 0, int(self.fs / 2), int(self.laser_off_spectrogram.shape[1])
             )
-            idx = np.logical_and(freqs >= self.low_band,
-                                 freqs <= self.high_band)
-            mean_power_on = np.mean(
-                self.laser_on_spectrogram[:, idx, :], axis=(0, 1))
-            mean_power_no = np.mean(
-                self.laser_off_spectrogram[:, idx, :], axis=(0, 1))
+            idx = np.logical_and(freqs >= self.low_band, freqs <= self.high_band)
+            mean_power_on = np.mean(self.laser_on_spectrogram[:, idx, :], axis=(0, 1))
+            mean_power_no = np.mean(self.laser_off_spectrogram[:, idx, :], axis=(0, 1))
             mean_power_on_time = np.linspace(
                 0 - self.pre_ttl, self.post_ttl, len(mean_power_on)
             )
@@ -1778,10 +1820,8 @@ class Rippler(object):
             ax = plt.gca()
             ax.set_xlabel("Time(s)")
             ax.set_ylabel("Power")
-            ax.set_title(
-                f"Mean power between {self.low_band} - {self.high_band}Hz")
-            axTrans = transforms.blended_transform_factory(
-                ax.transData, ax.transAxes)
+            ax.set_title(f"Mean power between {self.low_band} - {self.high_band}Hz")
+            axTrans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
             ax.add_patch(
                 Rectangle(
                     (0, 0),

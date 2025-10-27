@@ -7,6 +7,7 @@ from pathlib import Path, PurePath
 
 import h5py
 import numpy as np
+from scipy import signal
 from phylib.io.model import TemplateModel
 
 from ephysiopy.axona.axonaIO import IO, Pos
@@ -469,8 +470,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     def get_available_clusters_channels(self) -> dict:
         raise NotImplementedError
 
-    def get_spike_times_binned_into_position(
-        self, cluster: int | list, channel: int | list
+    def get_binned_spike_times(
+        self, cluster: int | list, channel: int | list, bin_into: str = "pos"
     ) -> np.ndarray:
         """
         Parameters
@@ -489,14 +490,18 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         if not isinstance(ts, list):
             ts = [ts]
         n_clusters = 1
-        if isinstance(n_clusters, list):
+        if isinstance(cluster, list):
             n_clusters = len(cluster)
-        n_pos = self.PosCalcs.npos
+        if bin_into == "pos":
+            n_pos = self.PosCalcs.npos
+            sample_rate = self.PosCalcs.sample_rate
+        if bin_into == "lfp":
+            n_pos = self.EEGCalcs.sig.shape[0]
+            sample_rate = self.EEGCalcs.fs
         binned = np.zeros((n_clusters, n_pos))
         for i, t in enumerate(ts):
             spk_binned = np.bincount(
-                (t * self.PosCalcs.sample_rate).astype(int), minlength=n_pos
-            )
+                (t * sample_rate).astype(int), minlength=n_pos)
             if len(spk_binned) > n_pos:
                 spk_binned = spk_binned[:n_pos]
             binned[i, :] = spk_binned
@@ -662,7 +667,6 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             spk_weights = np.array(weights)
 
         kwargs["var_type"] = var2bin
-        breakpoint()
         rmap = self.RateMap.get_map(spk_weights, **kwargs)
         # add the cluster and channel id to the rate map
         # I assume this will be in the same order as they are added...
@@ -1039,6 +1043,23 @@ class AxonaTrial(TrialInterface):
         from ephysiopy.axona.axonaIO import EEG
 
         if not self.concatenated:
+            if "target_sample_rate" in kwargs.keys():
+                lfp = EEG(self.pname, egf=1)
+                if lfp is None:  # drop down to eeg (250Hz)
+                    lfp = EEG(self.pname)
+
+                target_sample_rate = kwargs.get("target_sample_rate", 250)
+                denom = np.gcd(int(target_sample_rate), int(lfp.sample_rate))
+                data = lfp.sig
+                sig = signal.resample_poly(
+                    data.astype(float),
+                    target_sample_rate / denom,
+                    lfp.sample_rate / denom,
+                    0,
+                )
+                self.EEGCalcs = EEGCalcsGeneric(sig, target_sample_rate)
+                return
+
             if "egf" in args:
                 lfp = EEG(self.pname, egf=1)
             else:
@@ -1262,7 +1283,6 @@ class OpenEphysBase(TrialInterface):
             return times
 
     def load_lfp(self, *args, **kwargs):
-        from scipy import signal
 
         if self.path2LFPdata is not None:
             lfp = memmapBinaryFile(
@@ -1453,11 +1473,13 @@ class OpenEphysBase(TrialInterface):
         if "StimControl_id" in kwargs.keys():
             stim_id = kwargs["StimControl_id"]
             if stim_id in self.settings.processors.keys():
+                # returned in ms from the plugin so convert to seconds...
                 duration = getattr(
                     self.settings.processors[stim_id], "Duration")
+                duration = float(duration) / 1000.0  # in seconds
             else:
                 return False
-            self.ttl_data["stim_duration"] = int(duration)
+            self.ttl_data["stim_duration"] = duration
         if "TTL_channel_number" in kwargs.keys():
             chan = kwargs["TTL_channel_number"]
             high_ttl = ttl_ts[states == chan]

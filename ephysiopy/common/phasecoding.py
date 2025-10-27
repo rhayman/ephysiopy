@@ -3,34 +3,26 @@ import matplotlib
 import matplotlib.cm
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
-from matplotlib.collections import RegularPolyCollection
 import numpy as np
-from ephysiopy.common.binning import RateMap
-from ephysiopy.common.ephys_generic import PosCalcsGeneric
 from ephysiopy.common.rhythmicity import LFPOscillations
-from ephysiopy.common.utils import bwperim
 from ephysiopy.common.utils import (
     flatten_list,
-    labelledCumSum,
     fixAngle,
+    find_runs,
+    repeat_ind,
 )
-from ephysiopy.visualise.plotting import stripAxes
+from ephysiopy.common.fieldproperties import LFPSegment, fieldprops
 from ephysiopy.common.fieldcalcs import (
-    fieldprops,
     partitionFields,
     infill_ratemap,
-    LFPSegment,
 )
+from ephysiopy.io.recording import AxonaTrial
 from scipy import ndimage, optimize, signal
 from scipy.stats import norm
 from collections import defaultdict
-import copy
 from dataclasses import dataclass
-
-
-@stripAxes
-def _stripAx(ax):
-    return ax
+import pywt
+import pycwt
 
 
 jet_cmap = matplotlib.colormaps["jet"]
@@ -41,13 +33,14 @@ cbar_tick_fontsize = 6
 
 
 # a dataclass for holding the results of the circular correlation
+# TODO: add default np.nan or None values to each member variable
 @dataclass
 class CircStatsResults:
-    rho: float
-    p: float
-    rho_boot: float
-    p_shuffled: float
-    ci: float
+    rho: float = np.nan
+    p: float = np.nan
+    rho_boot: float = np.nan
+    p_shuffled: float = np.nan
+    ci: float = np.nan
 
     def __post_init__(self):
         if isinstance(self.ci, tuple):
@@ -150,8 +143,6 @@ def get_bad_cycles(
 
     Parameters
     ----------
-    phase : np.ndarray
-        The phases at which the spikes were fired.
     filtered_eeg : np.ndarray
         The filtered EEG signal
     negative_freqs : np.ndarray
@@ -226,8 +217,7 @@ def ccc(t, p):
     F = np.sum(np.sin(2 * t))
     G = np.sum(np.cos(2 * p))
     H = np.sum(np.sin(2 * p))
-    rho = 4 * (A * B - C * D) / \
-        np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
+    rho = 4 * (A * B - C * D) / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
     return rho
 
 
@@ -265,8 +255,7 @@ def ccc_jack(t, p):
     G = np.sum(G) - G
     H = np.sin(2 * p)
     H = np.sum(H) - H
-    rho = 4 * (A * B - C * D) / \
-        np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
+    rho = 4 * (A * B - C * D) / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
     return rho
 
 
@@ -309,8 +298,7 @@ def plot_spikes_in_runs_per_field(
         assert len(spikes_in_time) == len(ttls_in_time)
     run_start_stop_idx = np.array([run_starts, run_ends]).T
     run_field_id = field_label[run_start_stop_idx[:, 0]]
-    runs_per_field = np.histogram(
-        run_field_id, bins=range(1, max(run_field_id) + 2))[0]
+    runs_per_field = np.histogram(run_field_id, bins=range(1, max(run_field_id) + 2))[0]
     max_run_len = np.max(run_start_stop_idx[:, 1] - run_start_stop_idx[:, 0])
     all_slices = np.array([slice(r[0], r[1]) for r in run_start_stop_idx])
     # create the figure window first then do the iteration through fields etc
@@ -434,10 +422,8 @@ def circCircCorrTLinear(theta, phi, regressor=1000, alpha=0.05, hyp=0, conf=True
         rho_boot = np.mean(rho_jack)
         rho_jack_std = np.std(rho_jack)
         ci = (
-            rho_boot - (1 / np.sqrt(n)) * rho_jack_std *
-            norm.ppf(alpha / 2, (0, 1))[0],
-            rho_boot + (1 / np.sqrt(n)) * rho_jack_std *
-            norm.ppf(alpha / 2, (0, 1))[0],
+            rho_boot - (1 / np.sqrt(n)) * rho_jack_std * norm.ppf(alpha / 2, (0, 1))[0],
+            rho_boot + (1 / np.sqrt(n)) * rho_jack_std * norm.ppf(alpha / 2, (0, 1))[0],
         )
     elif conf and regressor and n < 25 and n > 4:
         from sklearn.utils import resample
@@ -498,8 +484,7 @@ def shuffledPVal(theta, phi, rho, regressor, hyp):
     G = np.sum(np.cos(2 * phi))
     H = np.sum(np.sin(2 * phi))
 
-    rho_sim = 4 * (A * B - C * D) / \
-        np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
+    rho_sim = 4 * (A * B - C * D) / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
 
     if hyp == 1:
         p_shuff = np.sum(rho_sim >= rho) / float(regressor)
@@ -513,6 +498,9 @@ def shuffledPVal(theta, phi, rho, regressor, hyp):
     return p_shuff
 
 
+# TODO: Rarely the minimisation function fails due to
+# some unbounded condition ValueError - I think this is
+# due to bad input - e.g. x is all nan or something similar
 def circRegress(x, t):
     """
     Finds approximation to circular-linear regression for phase precession.
@@ -543,7 +531,10 @@ def circRegress(x, t):
     def _cost(m, x, t):
         return -np.abs(np.sum(np.exp(1j * (t - m * x)))) / len(t - m * x)
 
-    slope = optimize.fminbound(_cost, -1 * max_slope, max_slope, args=(xn, tn))
+    try:
+        slope = optimize.fminbound(_cost, -1 * max_slope, max_slope, args=(xn, tn))
+    except ValueError:
+        return np.nan, np.nan
     intercept = np.arctan2(
         np.sum(np.sin(tn - slope * xn)), np.sum(np.cos(tn - slope * xn))
     )
@@ -623,16 +614,12 @@ class phasePrecession2D(object):
 
     Parameters
     ----------
-    lfp_sig : np.ndarray
-        The LFP signal
-    lfp_fs : int
-        The sampling frequency of the LFP signal
-    xy : np.ndarray
-        The position data as 2 x num_position_samples
-    spike_ts : np.ndarray
-        The times in samples at which the cell fired
-    pos_ts : np.ndarray
-        The times in samples at which position was captured
+    T : AxonaTrial (or OpenEphysBase eventually)
+        The trial object holding position, LFP, spiking and ratemap stuff
+    cluster : int
+        the cluster to examine
+    channel : int
+        The channel the cluster was recorded on
     pp_config : dict
         Contains parameters for running the analysis.
         See phase_precession_config dict in ephysiopy.common.eegcalcs
@@ -675,49 +662,63 @@ class phasePrecession2D(object):
 
     def __init__(
         self,
-        lfp_sig: np.ndarray,
-        lfp_fs: int,
-        xy: np.ndarray,
-        spike_ts: np.ndarray,
-        pos_ts: np.ndarray,
+        T: AxonaTrial,
+        cluster: int,
+        channel: int,
         pp_config: dict = phase_precession_config,
         regressors=None,
     ):
-        # Set up the parameters
-        # this sets a bunch of member attributes from the pp_config dict
-        self.orig_xy = xy
+        if not T.PosCalcs:
+            T.load_pos_data()
+        if not T.EEGCalcs:
+            T.load_lfp()
+        if not T.RateMap:
+            T.initialise()
+
+        self.trial = T
+        self.cluster = cluster
+        self.channel = channel
+
+        # ---------- Set up the parameters ----------
+        # this adds, as attributes, the parameters defined in the
+        # pp_config dictionary
         self.update_config(pp_config)
-        self._pos_ts = pos_ts
 
-        self.regressors = 1000
+        # Positional params...
+        self.orig_xy = T.PosCalcs.xy
+        self._pos_ts = T.PosCalcs.xyTS
+
+        # ratemap params...
+        self.trial.RateMap.smooth_sz = self.field_smoothing_kernel_len
+
+        # regressors...
+        self.nshuffles = 1000
         self.update_regressors(regressors)
-
         self.alpha = 0.05
         self.hyp = 0
         self.conf = True
 
-        # Process the EEG data a bit...
-        self.eeg = lfp_sig
-        L = LFPOscillations(lfp_sig, lfp_fs)
+        # LFP params...
+        self.eeg = T.EEGCalcs.sig
+        self.lfp_fs = T.EEGCalcs.fs
+        L = LFPOscillations(self.eeg, self.lfp_fs)
         self.min_theta = pp_config["min_theta"]
         self.max_theta = pp_config["max_theta"]
-        filt_sig, phase, _, _, _ = L.getFreqPhase(
-            lfp_sig, [self.min_theta, self.max_theta], 2
-        )
-        self.filteredEEG = filt_sig
-        self.phase = phase
+        FP = L.getFreqPhase(self.eeg, [self.min_theta, self.max_theta], 2)
+        self.filteredEEG = FP.filt_sig
+        self.phase = FP.phase
         self.phaseAdj = np.ma.MaskedArray
 
-        self.update_position(self.ppm, cm=self.convert_xy_2_cm)
-        self.update_rate_map()
-
-        spk_times_in_pos_samples = self.getSpikePosIndices(spike_ts)
+        # Some spiking params...
+        spk_times_in_pos_samples = T.get_binned_spike_times(cluster, channel)
+        spk_times_in_pos_samples = np.ravel(spk_times_in_pos_samples).astype(int)
         spk_weights = np.bincount(
-            spk_times_in_pos_samples, minlength=len(self.pos_ts))
+            spk_times_in_pos_samples, minlength=len(T.PosCalcs.xyTS)
+        )
         self.spike_times_in_pos_samples = spk_times_in_pos_samples
         self.spk_weights = spk_weights
 
-        self.spike_ts = spike_ts
+        self.spike_ts = T.get_spike_times(cluster, channel)
 
     @property
     def pos_ts(self):
@@ -741,17 +742,21 @@ class phasePrecession2D(object):
         out the regressor dict with the relevant values
         """
         if "pos_d_currentdir" in self.regressors.keys():
-            d_currentdir = np.ones(shape=self.PosData.npos) * np.nan
-            for f in field_props:
-                for r in f.runs:
-                    d_currentdir[r._slice] = r.current_direction
+            d_currentdir = np.ones(shape=self.trial.PosCalcs.npos) * np.nan
+            for field in field_props:
+                for irun in field.runs:
+                    try:
+                        d_currentdir[irun._slice] = irun.current_direction
+                    except TypeError:
+                        print(f"field label: {field.label} - run label: {irun.label}")
+                        breakpoint()
 
             self.update_regressor_values("pos_d_currentdir", d_currentdir)
 
         # calculate the cumulative distance travelled on each run
         # only goes from 0-1
         if "pos_d_cum" in self.regressors.keys():
-            d_cumulative = np.ones(shape=self.PosData.npos) * np.nan
+            d_cumulative = np.ones(shape=self.trial.PosCalcs.npos) * np.nan
             for f in field_props:
                 for r in f.runs:
                     d_cumulative[r._slice] = r.cumulative_distance
@@ -760,13 +765,12 @@ class phasePrecession2D(object):
 
         # calculate cumulative sum of the expected normalised firing rate
         # only goes from 0-1
-        # NB I'm not sure why this is called expected rate as there is nothing
-        # about firing rate in this just the accumulation of rho
         if "pos_exptdRate_cum" in self.regressors.keys():
-            exptd_rate_all = np.ones(shape=self.PosData.npos) * np.nan
+            exptd_rate_all = np.ones(shape=self.trial.PosCalcs.npos) * np.nan
+            # breakpoint()
             rmap = field_props[0].binned_data.binned_data[0]
             ye, xe = field_props[0].binned_data.bin_edges
-            xy = self.RateMap.Rat
+            xy = self.trial.PosCalcs.xy
             xBins = np.digitize(xy[0], xe[:-1])
             yBins = np.digitize(xy[1], ye[:-1])
             rmap_infilled = infill_ratemap(rmap)
@@ -784,25 +788,24 @@ class phasePrecession2D(object):
         # this might be wrong - need to check i'm grabbing the right value
         # from FieldProps... could be rho
         if "pos_d_meanDir" in self.regressors.keys():
-            d_meandir = np.ones(shape=self.PosData.npos) * np.nan
+            d_meandir = np.ones(shape=self.trial.PosCalcs.npos) * np.nan
             for f in field_props:
-                for r in f.runs:
-                    d_meandir[r._slice] = r.pos_r
+                for irun in f.runs:
+                    d_meandir[irun._slice] = irun.pos_r
 
+            breakpoint()
             self.update_regressor_values("pos_d_meanDir", d_meandir)
 
         # smooth binned spikes to get an instantaneous firing rate
         # set up the smoothing kernel
         # all up at 1.0
         if "pos_instFR" in self.regressors.keys():
-            kernLenInBins = np.round(
-                self.ifr_kernel_len * self.bins_per_second)
+            kernLenInBins = np.round(self.ifr_kernel_len * self.bins_per_second)
             kernSig = self.ifr_kernel_sigma * self.bins_per_second
             regressor = signal.windows.gaussian(kernLenInBins, kernSig)
             # apply the smoothing kernel over the binned observed spikes
             observed_spikes_in_time = self.spike_times_in_pos_samples
-            ifr = signal.convolve(observed_spikes_in_time,
-                                  regressor, mode="same")
+            ifr = signal.convolve(observed_spikes_in_time, regressor, mode="same")
             inst_firing_rate = np.zeros_like(ifr)
             for field in field_props:
                 for i_slice in field.run_slices:
@@ -812,11 +815,10 @@ class phasePrecession2D(object):
         # find time spent within run
         # only goes from 0-1
         if "pos_timeInRun" in self.regressors.keys():
-            time_in_run = np.ones(shape=self.PosData.npos) * np.nan
+            time_in_run = np.ones(shape=self.trial.PosCalcs.npos) * np.nan
             for f in field_props:
                 for r in f.runs:
-                    time_in_run[r._slice] = r.cumulative_time / \
-                        self.pos_sample_rate
+                    time_in_run[r._slice] = r.cumulative_time / self.pos_sample_rate
 
             self.update_regressor_values("pos_timeInRun", time_in_run)
 
@@ -862,8 +864,7 @@ class phasePrecession2D(object):
             "reg": float,
         }
         self.regressors = {}
-        self.regressors = defaultdict(
-            lambda: stats_dict.copy(), self.regressors)
+        self.regressors = defaultdict(lambda: stats_dict.copy(), self.regressors)
         [self.regressors[regressor] for regressor in reg_keys]
         # each of the regressors in regressor_keys is a key with a value
         # of stats_dict
@@ -874,7 +875,6 @@ class phasePrecession2D(object):
 
     def update_regressor_mask(self, key: str, indices):
         """Mask entries in the 'values' and 'pha' arrays of the relevant regressor"""
-        breakpoint()
         self.regressors[key]["values"].mask[indices] = False
 
     def get_regressors(self):
@@ -889,39 +889,6 @@ class phasePrecession2D(object):
             setattr(self, attribute, pp_config[attribute])
             for attribute in pp_config.keys()
         ]
-
-    def update_position(self, ppm: float, cm: bool):
-        """
-        Update the position data based on ppm and cm values
-        """
-        P = PosCalcsGeneric(
-            self.orig_xy[0, :],
-            self.orig_xy[1, :],
-            ppm=ppm,
-            convert2cm=cm,
-        )
-        P.postprocesspos(tracker_params={"AxonaBadValue": 1023})
-        # ... do the ratemap creation here once
-        self.PosData = P
-
-    def update_rate_map(self):
-        """
-        Create the ratemap from the position data
-        """
-        R = RateMap(self.PosData, xyInCms=self.convert_xy_2_cm)
-        R.binsize = self.bins_per_cm
-        R.smooth_sz = self.field_smoothing_kernel_len
-        R.ppm = self.ppm
-        self.RateMap = R  # this will be used a fair bit below
-
-    def getSpikePosIndices(self, spk_times: np.ndarray):
-        """
-        Get the indices of the spikes in the position data
-        """
-        pos_times = getattr(self, "pos_ts")
-        idx = np.searchsorted(pos_times, spk_times)
-        idx[idx == len(pos_times)] = idx[idx == len(pos_times)] - 1
-        return idx
 
     def performRegression(self, **kwargs):
         """
@@ -947,36 +914,34 @@ class phasePrecession2D(object):
         do_plot = kwargs.get("plot", False)
 
         # Partition fields - comes from ephysiopy.common.fieldca
-        binned_data = self.RateMap.get_map(self.spk_weights)
+        binned_data = self.trial.get_rate_map(self.cluster, self.channel)
         _, _, labels, _ = partitionFields(
             binned_data,
             self.field_threshold_percent,
             self.field_threshold,
             self.area_threshold,
         )
+        # breakpoint()
 
         # split into runs
         field_properties = self.getPosProps(labels)
 
         # get theta cycles, amplitudes, phase etc
-        self.getThetaProps(field_properties)
+        field_properties = self.getThetaProps(field_properties)
         # TODO: next: getSpikeProps(field_properties)
         # the fields that are set within getSpikeProps() I think can be added
         # to the individual runs within the FieldProps instance
         # spkCount is just spikes binned wrt eeg timebase
         #
-
-        # get the indices of spikes for various metrics such as
-        # theta cycle, run etc
-        spkD = self.getSpikeProps(field_properties)
-        # self.spkdict = spkD
         # at this point the 'values' and 'pha' arrays in the regressors dict are all
         # npos elements long and are masked arrays. keep as masked arrays and just modify the
         # masks instead of truncating the data
         # Do the regressions
-        self._ppRegress(spkD)
+        self.ppPerField(field_properties)
 
         # Plot the results if asked
+        # TODO: make one figure per regressor with subplots for each field
+        # see linear_track.py
         if do_plot:
             n_regressors = len(self.get_regressors())
             n_rows = np.ceil(n_regressors / 2).astype(int)
@@ -991,6 +956,86 @@ class phasePrecession2D(object):
                 ax = [ax]
             for ra in zip(self.get_regressors(), ax):
                 self.plotRegressor(ra[0], ra[1])
+
+    def get_phase_reg_per_field(self, field_props: list[FieldProps]) -> dict:
+        """
+        Extracts the phase and all regressors for all runs through each
+        field separately
+
+        Parameters
+        ----------
+        field_props : list
+            A list of FieldProps instances
+
+        Returns
+        -------
+        dict
+            two-level dictionary holding regression results per field
+            first level keys are field number
+            second level are the regressors (current_dir etc)
+            items in the second dict are the regression results
+        """
+
+        # helper function to extract the relevant values from
+        # a variable list (e.g. cumulative distance) at the times
+        # when spikes were observed
+        def get_spiking_var(var: np.ndarray, observed_spikes: np.ndarray) -> np.ndarray:
+            var = np.array(flatten_list(var))
+            observed_spikes = np.array(flatten_list(observed_spikes))
+            return flatten_list(np.take(var, repeat_ind(observed_spikes)))
+
+        results = dict.fromkeys([f.label for f in field_props])
+        for field in field_props:
+            results[field.label] = {}
+            results[field.label]["phase"] = np.array(
+                flatten_list(
+                    [run.lfp_data.get_spiking_var().ravel() for run in field.runs]
+                )
+            )
+            for regressor in self.get_regressors():
+                match regressor:
+                    case "pos_timeInRun":
+                        vals = np.array(
+                            get_spiking_var(run.cumulative_time, run.observed_spikes)
+                            for run in field.runs
+                        )
+                    case "spk_numWithinRun":
+                        vals = np.array(
+                            flatten_list([run.spike_num_in_run for run in field.runs])
+                        )
+                    # case "spk_thetaBatchLabelInRun":
+                    #     vals = np.array(
+                    #         flatten_list(
+                    #             [run.spike_theta_batch_labels for run in field.runs]
+                    #         )
+                    #     )
+                    case "pos_d_currentdir":
+                        vals = np.array(
+                            get_spiking_var(
+                                field.current_direction, field.observed_spikes
+                            )
+                        )
+                    case "pos_d_cum":
+                        vals = np.array(
+                            get_spiking_var(
+                                run.cumulative_distance, run.observed_spikes
+                            )
+                            for run in field.runs
+                        )
+                    case "pos_exptdRate_cum":
+                        vals = np.array(
+                            flatten_list([run.expected_spikes for run in field.runs])
+                        )
+                    case "pos_instFR":
+                        vals = np.array(
+                            flatten_list(
+                                [run.instantaneous_firing_rate for run in field.runs]
+                            )
+                        )
+
+                results[field.label][regressor] = vals
+        return results
+        # self._ppRegress(phase, vals)
 
     def getPosProps(
         self,
@@ -1010,30 +1055,24 @@ class phasePrecession2D(object):
         list of FieldProps
             A list of FieldProps instances (see ephysiopy.common.fieldcalcs.FieldProps)
         """
-        spikeTS = self.spike_ts  # in seconds
-        xy = self.RateMap.xy
-        nPos = xy.shape[1]
+        xy = self.trial.PosCalcs.xy
 
-        binned_data = self.RateMap.get_map(self.spk_weights)
+        binned_data = self.trial.get_rate_map(self.cluster, self.channel)
         # The large number of bins combined with the super-smoothed ratemap
         # will lead to fields labelled with lots of small holes in. Fill those
         # gaps in here and calculate the perimeter of the fields based on that
         # labelled image
         labels, _ = ndimage.label(ndimage.binary_fill_holes(labels))
 
-        observed_spikes_in_time = np.bincount(
-            (spikeTS * self.pos_sample_rate).astype(int), minlength=nPos
-        )
-
         field_props = fieldprops(
             labels,
             binned_data,
+            self.trial.get_spike_times(self.cluster, self.channel),
             xy,
-            observed_spikes_in_time,
-            sample_rate=self.pos_sample_rate,
+            sample_rate=self.trial.PosCalcs.sample_rate,
         )
         print(
-            f"Filtering runs for min duration {self.minimum_allowed_run_duration}, speed {self.minimum_allowed_run_speed} and min spikes {self.min_spikes}"
+            f"Filtering runs for min duration {self.minimum_allowed_run_duration}, mean speed {self.minimum_allowed_run_speed} and min spikes {self.min_spikes}"
         )
         field_props = filter_runs(
             field_props,
@@ -1051,8 +1090,6 @@ class phasePrecession2D(object):
             for f in field_props
         ]
 
-        self.update_regressors_from_runs(field_props)
-
         return field_props
 
     def getThetaProps(self, field_props: list[FieldProps]):
@@ -1066,25 +1103,25 @@ class phasePrecession2D(object):
         field_props : list[FieldProps]
             A list of FieldProps instances
 
+        Returns
+        -------
+        list of FieldProps
+            The amended list with LFP data added to each run for each field
+
         """
-        spikeTS = self.spike_ts
         phase = np.ma.MaskedArray(self.phase, mask=True)
-        filteredEEG = self.filteredEEG
         # get indices of spikes into eeg
         spkEEGIdx = self.spike_eeg_idx
-        # spkCount = np.bincount(spkEEGIdx, minlength=len(phase))
         spkPhase = phase.copy()
         # unmask the valid entries
         spkPhase.mask[spkEEGIdx] = False
 
-        cycleLabel, phaseAdj = get_cycle_labels(
-            spkPhase, self.allowed_min_spike_phase)
-
+        cycleLabel, phaseAdj = get_cycle_labels(spkPhase, self.allowed_min_spike_phase)
         isNegFreq = np.diff(np.unwrap(phaseAdj)) < 0
         isNegFreq = np.append(isNegFreq, isNegFreq[-1])
 
         isBad = get_bad_cycles(
-            filteredEEG,
+            self.filteredEEG,
             isNegFreq,
             cycleLabel,
             self.min_power_percent_threshold,
@@ -1092,125 +1129,40 @@ class phasePrecession2D(object):
             self.max_theta,
             self.lfp_fs,
         )
-        # TODO: above phaseAdj is being created as a Masked array with all mask values as True...
-        phaseAdj = np.ma.MaskedArray(phaseAdj, mask=np.invert(isBad))
-        self.phaseAdj = phaseAdj
-        ampAdj = np.ma.MaskedArray(filteredEEG, mask=np.invert(isBad))
+        self.bad_cycles = isBad
         cycleLabel = np.ma.MaskedArray(cycleLabel, mask=np.invert(isBad))
         self.cycleLabel = cycleLabel
-        # spkCount = np.ma.MaskedArray(spkCount, mask=np.invert(isBad))
-        # Extract all the relevant values from the arrays above and
-        # add to each run
-        lfp_to_pos_ratio = self.lfp_fs / self.pos_sample_rate
+        lfp_to_pos_ratio = int(self.lfp_fs / self.pos_sample_rate)
+        spike_times = self.trial.get_spike_times(self.cluster, self.channel)
+
         for field in field_props:
             for run in field.runs:
                 lfp_slice = slice(
-                    int(run._slice.start * lfp_to_pos_ratio),
-                    int(run._slice.stop * lfp_to_pos_ratio),
+                    run.slice.start * lfp_to_pos_ratio,
+                    run.slice.stop * lfp_to_pos_ratio,
                 )
-                spike_times = spikeTS[
-                    np.logical_and(
-                        spikeTS >= lfp_slice.start / self.lfp_fs,
-                        spikeTS <= lfp_slice.stop / self.lfp_fs,
-                    )
-                ]
                 lfp_segment = LFPSegment(
+                    run,
                     field.label,
                     run.label,
                     lfp_slice,
-                    spike_times,
-                    self.eeg[lfp_slice],
-                    self.filteredEEG[lfp_slice],
-                    phaseAdj[lfp_slice],
-                    ampAdj[lfp_slice],
-                    self.lfp_fs,
-                    [self.min_theta, self.max_theta],
+                    spike_times=spike_times,
+                    mask=np.invert(isBad)[lfp_slice],
+                    signal=self.eeg[lfp_slice],
+                    filtered_signal=self.filteredEEG[lfp_slice],
+                    phase=phaseAdj[lfp_slice],
+                    cycle_label=cycleLabel[lfp_slice],
+                    sample_rate=self.lfp_fs,
                 )
+                # lfp_segment.mask(np.invert(isBad)[lfp_slice])
                 run.lfp_data = lfp_segment
 
-    def getSpikeProps(self, field_props: list):
-        """
-        Extracts the relevant spike properties from the field_props
-
-        Parameters
-        ----------
-        field_props : list
-            A list of FieldProps instances
-
-        Returns
-        -------
-        dict
-            A dictionary containing the spike properties
-        """
-        # TODO: the regressor values here need updating so they are the same length
-        # as the number of positions and masked in the correct places to maintain
-        # consistency with the regressors added in the getPosProps method
-        spikeTS = self.spike_ts
-        spkPosIdx = self.spike_pos_idx
-        spkEEGIdx = self.spike_eeg_idx
-
-        durations = flatten_list(
-            [[r.duration for r in f.runs] for f in field_props])
-        durations = np.array(durations) / self.pos_sample_rate
-        spk_counts = flatten_list(
-            [[r.n_spikes for r in f.runs] for f in field_props])
-        spk_counts = np.array(spk_counts)
-        run_firing_rates = spk_counts / durations
-
-        runLabel = np.zeros(shape=self.PosData.npos, dtype=int)
-        for field in field_props:
-            for run in field.runs:
-                runLabel[run._slice] = run.label
-
-        spkRunLabel = runLabel[spkPosIdx]
-        # NB: Unlike the old way of doing this the run labels won't be
-        # in ascending order as the runs are extracted from the fields themselves
-        # which are basically labelled using skimage.measure.label (see partitionFields)
-
-        cycleLabel = self.cycleLabel
-        thetaCycleLabel = cycleLabel[spkEEGIdx]
-
-        firstInTheta = thetaCycleLabel[-1:] != thetaCycleLabel[1::]
-        firstInTheta = np.insert(firstInTheta, 0, True)
-        # lastInTheta = firstInTheta[1::]
-        numWithinRun = labelledCumSum(np.ones_like(spkRunLabel), spkRunLabel)
-        thetaBatchLabelInRun = labelledCumSum(
-            firstInTheta.astype(float), spkRunLabel)
-
-        # NB this is NOT the firing rate in pos bins but rather spikes/second
-        rateInPosBins = run_firing_rates
-        # update the regressor dict from __init__ with relevant values
-        # all up at 1.0
-        if "spk_numWithinRun" in self.regressors.keys():
-            self.update_regressor_values("spk_numWithinRun", numWithinRun)
-        # all up at 1.0
-        if "spk_thetaBatchLabelInRun" in self.regressors.keys():
-            self.update_regressor_values(
-                "spk_thetaBatchLabelInRun", thetaBatchLabelInRun
-            )
-        spkKeys = (
-            "spikeTS",
-            "spkPosIdx",
-            "spkEEGIdx",
-            "spkRunLabel",
-            "thetaCycleLabel",
-            "firstInTheta",
-            # "lastInTheta",
-            "numWithinRun",
-            "thetaBatchLabelInRun",
-            "spk_counts",
-            "run_firing_rates",
-        )
-        spkDict = dict.fromkeys(spkKeys, np.nan)
-        for thiskey in spkDict.keys():
-            spkDict[thiskey] = locals()[thiskey]
-        print(f"Total spikes available for this cluster: {len(spikeTS)}")
-        print(f"Total spikes used for analysis: {np.sum(spk_counts)}")
-        return spkDict
+        return field_props
 
     def _ppRegress(self, spkDict, whichSpk="first"):
         """
-        Perform the regression analysis on the spike data
+        Perform the regression analysis on the spike data for each field
+        in the list of FieldProps
 
         Parameters
         ----------
@@ -1240,8 +1192,7 @@ class phasePrecession2D(object):
             spkUsed[~spkDict["firstInTheta"]] = False
         elif "last" in whichSpk:
             if len(spkDict["lastInTheta"]) < len(spkDict["spkRunLabel"]):
-                spkDict["lastInTheta"] = np.insert(
-                    spkDict["lastInTheta"], -1, False)
+                spkDict["lastInTheta"] = np.insert(spkDict["lastInTheta"], -1, False)
             spkUsed[~spkDict["lastInTheta"]] = False
         spkPosIdxUsed = spkDict["spkPosIdx"].astype(int)
         # copy self.regressors and update with spk/ pos of interest
@@ -1275,8 +1226,7 @@ class phasePrecession2D(object):
                 np.exp(1j * phase[goodPhase]),
             )
             phase = np.angle(cycleComplexPhase)
-            spkCountPerCycle = np.bincount(
-                cycleLabels[goodPhase], minlength=sz)
+            spkCountPerCycle = np.bincount(cycleLabels[goodPhase], minlength=sz)
             for regressor in regressors.keys():
                 regressors[regressor]["values"] = (
                     np.bincount(
@@ -1287,6 +1237,9 @@ class phasePrecession2D(object):
                     / spkCountPerCycle
                 )
 
+        # a lot of the logic for determining "good phase" and a "good regeressor"
+        # has been taken care of in the various methods that build and modify the
+        # list of FieldProps (called field_props throughout this class)
         goodPhase = ~np.isnan(phase)
         for regressor in regressors.keys():
             print(f"Doing regression: {regressor}")
@@ -1308,17 +1261,16 @@ class phasePrecession2D(object):
                 reg = reg / mxx
                 # problem regressors = instFR, pos_d_cum
                 # breakpoint()
-                theta = np.mod(
-                    np.abs(regressors[regressor]["slope"]) * reg, 2 * np.pi)
-                rho, p, rho_boot, p_shuff, ci = circCircCorrTLinear(
-                    theta, pha, self.regressor, self.alpha, self.hyp, self.conf
+                theta = np.mod(np.abs(regressors[regressor]["slope"]) * reg, 2 * np.pi)
+                results = circCircCorrTLinear(
+                    theta, pha, self.nshuffles, self.alpha, self.hyp, self.conf
                 )
                 regressors[regressor]["reg"] = reg
-                regressors[regressor]["cor"] = rho
-                regressors[regressor]["p"] = p
-                regressors[regressor]["cor_boot"] = rho_boot
-                regressors[regressor]["p_shuffled"] = p_shuff
-                regressors[regressor]["ci"] = ci
+                regressors[regressor]["cor"] = results.rho
+                regressors[regressor]["p"] = results.p
+                regressors[regressor]["cor_boot"] = results.rho_boot
+                regressors[regressor]["p_shuffled"] = results.p_shuffled
+                regressors[regressor]["ci"] = results.ci
 
         self.reg_phase = phase
         return regressors
@@ -1351,9 +1303,8 @@ class phasePrecession2D(object):
         intercept = self.regressors[regressor]["intercept"]
         mm = (0, -4 * np.pi, -2 * np.pi, 2 * np.pi, 4 * np.pi)
         for m in mm:
-            ax.plot((-1, 1), (-slope + intercept + m,
-                    slope + intercept + m), "r", lw=3)
-            ax.plot(vals, pha + m, "regressor.")
+            ax.plot((-1, 1), (-slope + intercept + m, slope + intercept + m), "r", lw=3)
+            ax.plot(vals, pha + m, "k.")
         ax.set_xlim(-1, 1)
         xtick_locs = np.linspace(-1, 1, 3)
         ax.set_xticks(xtick_locs, list(map(str, xtick_locs)))
@@ -1419,176 +1370,196 @@ class phasePrecession2D(object):
     #     return self.phase[ts_idx]
 
 
-def plot_field_props(field_props: list[FieldProps]):
+# ----------- WHOLE LFP ANALYSIS -----------
+# these methods look at the whole LFP i.e are
+# not limited to looking at spiking and its
+# relation to the LFP
+
+
+def theta_filter_lfp(lfp: np.ndarray, fs: float, **kwargs):
     """
-    Plots the fields in the list of FieldProps
-
-    Parameters
-    ----------
-    list of FieldProps
+    Processes an LFP signal for theta cycles, filtering
+    out bad cycles (low power, too long/ short etc) and
+    applying labels to each cycle etc
     """
-    fig = plt.figure()
-    subfigs = fig.subfigures(
-        2,
-        2,
-    )
-    ax = subfigs[0, 0].subplots(1, 1)
-    # ax = fig.add_subplot(221)
-    fig.canvas.manager.set_window_title("Field partitioning and runs")
-    outline = np.isfinite(field_props[0]._intensity_image)
-    outline = ndimage.binary_fill_holes(outline)
-    outline = np.ma.masked_where(np.invert(outline), outline)
-    outline_perim = bwperim(outline)
-    outline_idx = np.nonzero(outline_perim)
-    bin_edges = field_props[0].binned_data.bin_edges
-    outline_xy = bin_edges[1][outline_idx[1]], bin_edges[0][outline_idx[0]]
-    ax.plot(outline_xy[0], outline_xy[1], "k.", ms=1)
-    # PLOT 1
-    cmap_arena = matplotlib.colormaps["tab20c_r"].resampled(1)
-    ax.pcolormesh(bin_edges[1], bin_edges[0], outline_perim, cmap=cmap_arena)
-    # Runs through fields in global x-y coordinates
-    max_field_label = np.max([f.label for f in field_props])
-    cmap = matplotlib.colormaps["Set1"].resampled(max_field_label)
-    [
-        [
-            ax.plot(r.xy[0], r.xy[1], color=cmap(
-                f.label - 1), label=f.label - 1)
-            for r in f.runs
-        ]
-        for f in field_props
-    ]
-    # plot the perimeters of the field(s)
-    [
-        ax.plot(
-            f.global_perimeter_coords[0],
-            f.global_perimeter_coords[1],
-            "k.",
-            ms=1,
-        )
-        for f in field_props
-    ]
-    [ax.plot(f.xy_at_peak[0], f.xy_at_peak[1], "ko", ms=2)
-     for f in field_props]
-    norm = matplotlib.colors.Normalize(1, max_field_label)
-    tick_locs = np.linspace(1.5, max_field_label - 0.5, max_field_label)
-    cbar = fig.colorbar(
-        matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm),
-        ax=ax,
-        ticks=tick_locs,
-    )
-    cbar.set_ticklabels(list(map(str, [f.label for f in field_props])))
-    # ratemaps are plotted with origin in top left so invert y axis
-    ax.invert_yaxis()
-    ax.set_aspect("equal")
-    _stripAx(ax)
-    # PLOT 2
-    # Runs on the unit circle on a per field basis as it's too confusing to
-    # look at all of them on a single unit circle
-    n_rows = 2
-    n_cols = np.ceil(len(field_props) / n_rows).astype(int)
+    # get/ set some args
+    min_power_percent_threshold = kwargs.pop("min_power_percent_threshold", 0)
+    min_theta = kwargs.pop("min_theta", 6)
+    max_theta = kwargs.pop("max_theta", 12)
 
-    ax1 = np.ravel(subfigs[0, 1].subplots(n_rows, n_cols))
-    [
-        ax1[f.label - 1].plot(
-            f.pos_xy[0],
-            f.pos_xy[1],
-            color=cmap(f.label - 1),
-            lw=0.5,
-            zorder=1,
-        )
-        for f in field_props
-    ]
-    [
-        a.add_artist(
-            matplotlib.patches.Circle(
-                (0, 0), 1, fc="none", ec="lightgrey", zorder=3),
-        )
-        for a, _ in zip(ax1, field_props)
-    ]
-    [a.set_xlim(-1, 1) for a in ax1]
-    [a.set_ylim(-1, 1) for a in ax1]
-    [a.set_title(f.label) for a, f in zip(ax1, field_props)]
-    [a.set_aspect("equal") for a in ax1]
-    [_stripAx(a) for a in ax1]
+    L = LFPOscillations(lfp, fs)
+    freq_phase = L.getFreqPhase(lfp, (6, 12))
+    phase = freq_phase.phase
 
-    # PLOT 3
-    # The runs through the fields coloured by the distance of each xy coordinate in
-    # the field to the peak and the angle of each point on the perimeter to the peak
-    dist_cmap = matplotlib.colormaps["jet_r"]
-    angular_cmap = matplotlib.colormaps["hsv"]
-    im = np.zeros_like(field_props[0]._intensity_image).astype(int) * np.nan
-    for f in field_props:
-        sub_im = f.image * np.nan
-        idx = np.nonzero(f.bw_perim)
-        # the angles made by the perimeter to the field peak
-        sub_im[idx[0], idx[1]] = f.perimeter_angle_from_peak
-        im[f.slice] = sub_im
-    ax2 = subfigs[1, 0].subplots(1, 1)
-    # distances as collections of Rectangles
-    distances = np.concatenate(
-        [f.xy_dist_to_peak / f.xy_dist_to_peak.max() for f in field_props]
-    )
-    face_colours = dist_cmap(distances)
-    offsets = np.concatenate([f.xy.T for f in field_props])
-    rects = RegularPolyCollection(
-        numsides=4,
-        rotation=0,
-        facecolors=face_colours,
-        edgecolors=face_colours,
-        offsets=offsets,
-        offset_transform=ax2.transData,
-    )
-    ax2.add_collection(rects)
-    ax2.pcolormesh(bin_edges[1], bin_edges[0], im, cmap=angular_cmap)
-    _stripAx(ax2)
+    is_neg_freq = np.diff(np.unwrap(phase)) < 0
+    is_neg_freq = np.append(is_neg_freq, is_neg_freq[-1])
+    # get start of theta cycles as points where diff > pi
+    phase_df = np.diff(phase)
+    cycle_starts = phase_df[1::] < -np.pi
+    cycle_starts = np.append(cycle_starts, True)
+    cycle_starts = np.insert(cycle_starts, 0, True)
+    cycle_starts[is_neg_freq] = False
+    cycle_label = np.cumsum(cycle_starts)
 
-    ax2.invert_yaxis()
-    ax2.set_aspect("equal")
-    degs_norm = matplotlib.colors.Normalize(0, 360)
-    cbar = fig.colorbar(
-        matplotlib.cm.ScalarMappable(cmap=angular_cmap, norm=degs_norm),
-        ax=ax2,
+    # get the "bad" theta cycles and use this to mask
+    # the lfp data
+    is_bad = get_bad_cycles(
+        freq_phase.filt_sig,
+        is_neg_freq,
+        cycle_label,
+        min_power_percent_threshold,
+        min_theta,
+        max_theta,
+        fs,
     )
-    [ax2.plot(f.xy_at_peak[0], f.xy_at_peak[1], "ko", ms=2)
-     for f in field_props]
-    # PLOT 4
-    # The smoothed ratemap - maybe make this the first sub plot
-    ax3 = subfigs[1, 1].subplots(1, 1)
-    # smooth the ratemap a bunch
-    rmap_to_plot = copy.copy(field_props[0]._intensity_image)
-    rmap_to_plot = infill_ratemap(rmap_to_plot)
-    ax3.pcolormesh(bin_edges[1], bin_edges[0], rmap_to_plot)
-    ax3.invert_yaxis()
-    ax3.set_aspect("equal")
-    _stripAx(ax3)
+    phase = np.ma.MaskedArray(phase, mask=is_bad)
+    cycle_label = np.ma.MaskedArray(cycle_label, mask=is_bad)
+    lfp = np.ma.MaskedArray(freq_phase.filt_sig, mask=is_bad)
+    return phase, cycle_label, lfp
 
 
-def plot_lfp_segment(field: FieldProps, lfp_sample_rate: int = 250):
+def get_cross_wavelet(
+    theta_phase: np.ndarray,
+    theta_lfp: np.ndarray,
+    gamma_lfp: np.ndarray,
+    fs: float,
+    **kwargs,
+):
     """
-    Plot the lfp segments for a series of runs through a field including
-    the spikes emitted by the cell.
+    Get the cross wavelet transform between the theta and gamma LFP signals
     """
-    assert hasattr(field.runs[0], "lfp_data")
+    # get some args
+    min_lfp_chunk_secs = kwargs.pop("min_lfp_chunk_secs", 0.1)
+    min_lfp_len = int(min_lfp_chunk_secs / (1 / fs))
 
-    n_rows = 3
-    n_cols = np.ceil(len(field.runs) / n_rows).astype(int)
-    fig = plt.figure()
-    subfigs = fig.subfigures(
-        1,
-        1,
+    # get the indices of the minimum phases
+    min_phase_idx = signal.argrelmin(theta_phase)[0]
+
+    _s = [
+        slice(min_phase_idx[i - 1], min_phase_idx[i])
+        for i in range(1, len(min_phase_idx))
+    ]
+    slices = [ss for ss in _s if (ss.stop - ss.start > min_lfp_len)]
+
+    all_spectrograms = np.zeros(shape=(len(slices), 100, 360)) * np.nan
+
+    for i, i_slice in enumerate(slices):
+        i_phase = theta_phase[i_slice]
+        breakpoint()
+        xwt = pycwt.xwt(
+            theta_lfp[i_slice],
+            gamma_lfp[i_slice],
+            1 / fs,
+            dj=1 / 6,
+            s0=20 * (1 / fs),
+            # J=-1,
+        )
+        power = np.abs(xwt[0]) ** 2
+
+        # i_phase ranges from -pi to +pi
+        # change to degrees and 0 to 360
+        i_phase = np.degrees(i_phase)
+        i_phase = np.remainder(i_phase + 180, 360).astype(int)
+        i_spectrogram = np.zeros(shape=(np.shape, 360)) * np.nan
+        i_spectrogram[:, i_phase] = power
+        all_spectrograms[i, :, :] = i_spectrogram
+
+    return all_spectrograms, xwt[-2]
+
+
+def get_theta_cycle_spectogram(
+    phase: np.ndarray,
+    cycle_label: np.ndarray,
+    filt_lfp: np.ndarray,
+    lfp: np.ndarray,
+    fs: float,
+    **kwargs,
+):
+    """
+    Get a spectrogram of the theta cycles in the LFP
+    """
+    # get some args
+    min_lfp_chunk_secs = kwargs.pop("min_lfp_chunk_secs", 0.1)
+    min_lfp_len = int(min_lfp_chunk_secs / (1 / fs))
+
+    # get the indices of the minimum phases
+    min_phase_idx = signal.argrelmin(phase)[0]
+
+    _s = [
+        slice(min_phase_idx[i - 1], min_phase_idx[i])
+        for i in range(1, len(min_phase_idx))
+    ]
+    slices = [ss for ss in _s if (ss.stop - ss.start > min_lfp_len)]
+
+    all_spectrograms = np.zeros(shape=(len(slices), 100, 360)) * np.nan
+
+    wavelet = "cmor1.0-1.0"
+    scales = np.geomspace(2, 140, num=100)
+
+    for i, i_slice in enumerate(slices):
+        i_phase = phase[i_slice]
+        cwtmatr, freqs = pywt.cwt(
+            lfp[i_slice], scales, wavelet, sampling_period=1 / fs, method="fft"
+        )
+        power = np.abs(cwtmatr) ** 2
+
+        # i_phase ranges from -pi to +pi
+        # change to degrees and 0 to 360
+        i_phase = np.degrees(i_phase)
+        i_phase = np.remainder(i_phase + 180, 360).astype(int)
+        i_spectrogram = np.zeros(shape=(len(scales), 360)) * np.nan
+        i_spectrogram[:, i_phase] = power
+        all_spectrograms[i, :, :] = i_spectrogram
+
+    return all_spectrograms, freqs
+
+
+def detect_oscillation_episodes(lfp: np.ndarray, fs: float):
+    scales = np.geomspace(2, 140, num=100)
+    cwtmatr, freqs = pywt.cwt(
+        lfp, scales, wavelet="cmor1.0-1.0", sampling_period=1 / fs
     )
+    power = np.abs(cwtmatr) ** 2
 
-    ax = np.ravel(subfigs.subplots(n_rows, n_cols))
-    for i_run, run in enumerate(field.runs):
-        sig = run.lfp_data.filtered_signal
-        t = np.linspace(
-            run.lfp_data.slice.start / lfp_sample_rate,
-            run.lfp_data.slice.stop / lfp_sample_rate,
-            len(sig),
-        )
-        ax[i_run].plot(t, sig)
-        spike_phase_pos = np.interp(
-            run.lfp_data.spike_times, t, run.lfp_data.filtered_signal
-        )
-        ax[i_run].plot(run.lfp_data.spike_times, spike_phase_pos, "ro")
-    plt.show()
+    freq_band = (20, 40)
+    freq_idx = np.where(np.logical_and(freqs >= freq_band[0], freqs <= freq_band[1]))[0]
+    mean_power = np.mean(power[freq_idx, :], axis=0)
+    power_threshold = np.percentile(mean_power, 97.72)
+
+    is_high_power = mean_power >= power_threshold
+
+    values, starts, lengths = find_runs(is_high_power)
+
+    # cut 160ms windows around the centres of the high power episodes
+    half_win = int(0.08 * fs)
+    episode_slices = []
+    for v, s, l in zip(values, starts, lengths):
+        if v:
+            c = s + l // 2
+            episode_slices.append(
+                slice(max(0, c - half_win), min(len(lfp), c + half_win))
+            )
+
+    # make sure each episode is separated by at least 100ms
+    min_separation = int(0.1 * fs)
+    filtered_slices = []
+    if len(episode_slices) > 0:
+        filtered_slices.append(episode_slices[0])
+        for es in episode_slices[1:]:
+            if es.start - filtered_slices[-1].stop >= min_separation:
+                filtered_slices.append(es)
+
+    # get the indices of the max amplitude within each episode
+    peak_indices = []
+    for es in filtered_slices:
+        ep = lfp[es]
+        peak_idx = np.argmax(np.abs(ep))
+        peak_indices.append(es.start + peak_idx)
+
+    # extract 400ms windows around each peak
+    half_win = int(0.2 * fs)
+    final_slices = []
+    for pi in peak_indices:
+        final_slices.append(slice(max(0, pi - half_win), min(len(lfp), pi + half_win)))
+
+    return final_slices, freqs

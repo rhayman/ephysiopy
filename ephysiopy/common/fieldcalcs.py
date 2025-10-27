@@ -1,1409 +1,40 @@
 import numpy as np
-from scipy import signal
+import copy
+import warnings
+import skimage
+from skimage.segmentation import watershed
 from scipy import ndimage as ndi
 from scipy import spatial
 from scipy import stats
-import warnings
-from skimage.segmentation import watershed
-from ephysiopy.common.utils import (
-    blur_image,
-    BinnedData,
-    MapType,
-    VariableToBin,
-    bwperim,
-    circ_abs,
-    labelContigNonZeroRuns,
-    getLabelStarts,
-    getLabelEnds,
-    pol2cart,
-    cart2pol,
-    repeat_ind,
-    min_max_norm,
-)
-import skimage
-from skimage.measure._regionprops import (
-    RegionProperties,
-    _infer_number_of_required_args,
-    _require_intensity_image,
-)
-from skimage.measure._regionprops import PROPS as _PROPS
+import scipy.signal as signal
 from astropy.convolution import Gaussian1DKernel as gk1d
 from astropy.convolution import Gaussian2DKernel as gk2d
 from astropy.convolution import interpolate_replace_nans
-import copy
-
-"""
-An adaptation of code from skimage.measure.regionprops for receptive field
-analysis. THe fieldprops function inherits from regionprops but
-additionally takes the xy coordinates in its constructor so
-that we can extract measures to do with angles and distances etc
-of each coordinate to the field peak or field perimeter for example.
-
-As with regionprops, you can also add functions via the 'extra_properties'
-argument; with regionprops you specify functions that operate on either one 
-or two arguments (the intensity image and / or the mask) - here you can do
-this and also specify the xy_coordinates as a third argument.
-
-Finally, some of the regionprops functions have been over-ridden so that
-the nan versions of them (e.g. nanmax, nanmin etc) are called instead as
-ratemaps/ receptive fields often contain nans.
-"""
-# add some custom properties to the FieldProps class...
-PROPS = _PROPS
-PROPS["Max_index"] = "max_index"
-PROPS["XY_relative_to_peak"] = "xy_relative_to_peak"
-PROPS["XY_angle_to_peak"] = "xy_angle_to_peak"
-PROPS["xy_dist_to_peak"] = "xy_dist_to_peak"
-PROPS["bw_perim"] = "bw_perim"
-PROPS["perimeter_angle_from_peak"] = "perimeter_angle_from_peak"
-PROPS["perimeter_dist_from_peak"] = "perimeter_dist_from_peak"
-PROPS["r_unsmoothed"] = "r_unsmoothed"
-PROPS["r_and_phi_to_x_and_y"] = "r_and_phi_to_x_and_y"
-# PROPS["phase"] = "phase"
-PROP_VALS = set(PROPS.values())
+from ephysiopy.common.fieldproperties import FieldProps, RunProps
+from ephysiopy.common.utils import BinnedData, MapType, blur_image
 
 
-class LFPSegment(object):
+# Some functions to extract and filter runs from field properties
+
+
+def get_all_phase(field_props: list[FieldProps]) -> np.ndarray:
     """
-    A custom class for dealing with segments of an LFP signal and how
-    they relate to specific runs through a receptive field
-    (see RunProps and FieldProps below)
-
-    Attributes
-    ----------
-    field_label : int
-        The field id
-    run_label : int
-        The run id
-    slice : slice
-        slice into the LFP data for a segment
-    spike_times : np.ndarray
-        the times in seconds spikes occurred for a segment
-    signal : np.ndarray
-        raw signal for a segment
-    filtered_signal : np.ndarray
-        bandpass filtered signal for a segment
-    phase : np.ndarray
-        phase data for a segment
-    amplitude : np.ndarray
-        amplitude for a segment
-    sample_rate : float, int
-        sample rate for the LFP segment
-    filter_band : tuple[int,int]
-        the bandpass filter values
-
-    """
-
-    def __init__(
-        self,
-        field_label: int,
-        run_label: int,
-        slice: slice,
-        spike_times: np.ndarray,
-        signal: np.ndarray,
-        filtered_signal: np.ndarray,
-        phase: np.ndarray,
-        amplitude: np.ndarray,
-        sample_rate: float | int,
-        filter_band: tuple,
-    ):
-        """
-        Parameters
-        ----------
-        field_label : int
-            the field id to which this LFP segment belongs
-        run_label : int
-            the run id through the field to which this LFP segment belongs
-        slice : slice
-            the slice corresponding the pos sample I think
-        spike_times : np.ndarray
-            the times at which the spikes were emitted (seonds)
-        signal, filtered_signal, phase, amplitude : np.ndarray
-            the raw, filtered, phase and amplitude of the LFP for a given segment
-        sample_rate : int, float
-            the sample rate for the LFP signal
-        filter_band : tuple
-            the bandpass filter values applied to the raw signal to give filtered_signal
-
-        """
-        self.field_label = field_label
-        self.run_label = run_label  # integer identity that should match with a run
-        self.slice = slice  # an index into the main LFP data
-        self.spike_times = spike_times
-        self.signal = signal
-        self.filtered_signal = filtered_signal
-        self.phase = phase
-        self.amplitude = amplitude
-        self.sample_rate = sample_rate
-        self.filter_band = filter_band
-
-
-class RunProps(object):
-    """
-    A custom class for holding information about runs through a receptive field
-
-    Each run needs to have some information about the field to which it belongs
-    so the constructor takes in the peak x-y coordinate of the field and its index
-    as well as the coordinates of the perimeter of the field
-
-    Attributes
-    ----------
-    label : int
-        the run id
-    slice : slice
-        the slice of the position data for a run
-    xy: np.ndarray
-        the x-y coordinates for a run (global coordinates)
-    speed : np.ndarray
-        the speed at each xy coordinate
-    peak_xy : tuple[float, float]
-        the fields max rate xy location
-    max_index : int
-        the index into the arrays of the field max
-    perimeter_coords : np.ndarray
-        xy coordinates of the field perimeter
-    hdir : np.ndarray
-        the heading direction
-    min_speed : float
-        the minimum speed
-    cumulative_time : np.ndarray
-        the cumulative time spent on a run
-    duration: int
-        the total duration of a run
-    n_spikes : int
-        the total number of spikes emitted on a run
-    run_start : int
-        the position index of the run start
-    run_stop : int
-        the position index of the run stop
-    mean_direction : float
-        the mean direction of a run
-    current_direction : np.ndarray
-        the current direction of a run
-    cumulative_distance : np.ndarray
-        the cumulative distance covered in a run
-    spike_position_index : np.ndarray
-        the index into the position data of the spikes on a run
-    observed_spikes : np.ndarray
-        the observed spikes on a run (binned by position samples)
-    xy_angle_to_peak : np.ndarray
-        the xy angle to the peak (radians)
-    xy_dist_to_peak : np.ndarray
-        the distance to the field max
-    xy_dist_to_peak_normed : np.ndarray
-        normalised distance to field max
-    pos_xy : np.ndarray
-        cartesian xy coordinates but normalised on a unit circle
-    pos_phi : np.ndarray
-        the angular distance between a runs main direction and the
-        direction to the peak for each position sample
-    rho : np.ndarray
-        the polar radial distance (1 = field edge)
-    phi : np.ndarray
-        the polar angle (radians)
-    r_and_phi_to_x_and_y : np.ndarray
-        converts rho and phi to x and y coordinates (range = -1 -> +1)
-    tortuosity : np.ndarray
-        the tortuosity for a run (closer to 1 = a straighter run)
-    xy_is_smoothed : bool
-        whether the xy data has been smoothed
-    """
-
-    def __init__(
-        self,
-        label,
-        slice,
-        xy_coords,
-        spike_count,
-        speed,
-        peak_xy,
-        max_index,
-        perimeter_coords,
-    ):
-        """
-        Parameters
-        ----------
-        label : int
-            the field label the run belongs to
-        slice : slice
-            the slice into the position array that holds all the position data
-        xy_coords : np.ndarray
-            the xy data for this run (global coordinates)
-        spike_count : np.ndarray
-            the spike count for each position sample in this run
-        speed : np.ndarray
-            the speed for this run
-        peak_xy : np.ndarray
-            the peak location of the field for the this run
-        max_index : np.ndarray
-            the index (r,c) of the maximum of the firing field containing this run
-        perimeter_coords : np.ndarray
-            the xy coordinates of the perimeter of the field containing this run
-        """
-        assert xy_coords.shape[1] == len(spike_count)
-        self.label = label
-        self._xy_coords = xy_coords
-        self._slice = slice
-        self._spike_count = spike_count
-        self._speed = speed
-        self._peak_xy = peak_xy
-        self._max_index = max_index
-        self._perimeter_coords = perimeter_coords
-        self.xy_is_smoothed = False
-
-    def __str__(self):
-        return f"id: {self.label}: {np.sum(self._spike_count)} spikes"
-
-    @property
-    def xy(self):
-        return self._xy_coords
-
-    @xy.setter
-    def xy(self, val):
-        self._xy_coords = val
-
-    @property
-    def slice(self):
-        return self._slice
-
-    @slice.setter
-    def slice(self, val):
-        if not isinstance(val, slice):
-            raise TypeError("slice must be a slice object")
-        self._slice = val
-
-    @property
-    def hdir(self):
-        d = np.arctan2(np.diff(self.xy[1]), np.diff(self.xy[0]))
-        d = np.append(d, d[-1])
-        return np.rad2deg(d)
-
-    @property
-    def speed(self):
-        return self._speed
-
-    @property
-    def min_speed(self):
-        return np.nanmin(self._speed)
-
-    def __len__(self):
-        return self.slice.stop - self.slice.start
-
-    @property
-    def cumulative_time(self) -> np.ndarray:
-        return np.arange(len(self))
-
-    @property
-    def duration(self):
-        return self.slice.stop - self.slice.start
-
-    @property
-    def n_spikes(self):
-        return np.nansum(self._spike_count).astype(int)
-
-    @property
-    def run_start(self):
-        return self.slice.start
-
-    @property
-    def run_stop(self):
-        return self.slice.stop
-
-    @property
-    def mean_direction(self):
-        return stats.circmean(np.deg2rad(self.hdir))
-
-    @property
-    def current_direction(self):
-        return self.rho * np.cos(np.deg2rad(self.hdir) - self.phi)
-
-    @property
-    def cumulative_distance(self):
-        d = np.sqrt(np.abs(np.diff(np.power(self.rho, 2))))
-        d = np.insert(d, 0, 0)
-        return np.cumsum(d)
-
-    @property
-    def spike_position_index(self):
-        return np.take(
-            range(self.slice.start, self.slice.stop), repeat_ind(self._spike_count)
-        )
-
-    @property
-    def observed_spikes(self):
-        return self._spike_count
-
-    def expected_spikes(
-        self, expected_rate_at_pos: np.ndarray, sample_rate: int = 50
-    ) -> np.ndarray:
-        """
-        Calculates the expected number of spikes along this run given the
-        whole ratemap.
-
-        Parameters
-        ----------
-        expected_rate_at_pos : np.ndarray
-            the rate seen at each xy position of the whole trial
-
-        Returns
-        -------
-        expected_rate : np.ndarray
-            the expected rate at each xy position of this run
-        """
-        return expected_rate_at_pos[0, self.slice] / sample_rate
-
-    def overdispersion(self, spike_train: np.ndarray, sample_rate: int = 50) -> float:
-        """
-        The overdispersion map for this run
-
-        Parameters
-        ----------
-        spike_train : np.mdarray
-            the spike train (spikes binned up by position) for the whole trial.
-            Same length as the trial n_samples
-        sample_rate : int
-        """
-        obs_spikes = np.sum(self._spike_count)
-        expt_spikes = np.nansum(self.expected_spikes(spike_train, sample_rate))
-        Z = np.nan
-        if obs_spikes >= expt_spikes:
-            Z = (obs_spikes - expt_spikes - 0.5) / np.sqrt(expt_spikes)
-        else:
-            Z = (obs_spikes - expt_spikes + 0.5) / np.sqrt(expt_spikes)
-        return Z
-
-    def smooth_xy(self, k: float, spatial_lp_cut: int, sample_rate: int):
-        """
-        Smooth in x and y in preparation for converting the smoothed cartesian
-        coordinates to polar ones
-
-        Parameters
-        ----------
-        k : float
-            smoothing constant for the instantaneous firing rate
-        spatial_lp_cut : int
-            spatial lowpass cut off
-        sample_rate : int
-            position sample rate in Hz
-        """
-        f_len = np.floor((self.run_stop - self.run_start) * k) + 1
-        h = signal.firwin(
-            int(f_len),
-            fs=sample_rate,
-            cutoff=spatial_lp_cut / sample_rate * 2,
-            window="blackman",
-        )
-        padlen = 2 * len(h)
-        if padlen == self.xy.shape[1]:
-            padlen = padlen - 1
-        self.xy = signal.filtfilt(h, [1], self.xy, padlen=padlen, axis=1)
-        self.xy_is_smoothed = True
-
-    @property
-    def xy_angle_to_peak(self):
-        xy_to_peak = (self.xy.T - self._peak_xy).T
-        return np.arctan2(xy_to_peak[1], xy_to_peak[0])
-
-    @property
-    def xy_dist_to_peak(self):
-        xy_to_peak = (self.xy.T - self._peak_xy).T
-        return np.hypot(xy_to_peak[0], xy_to_peak[1])
-
-    @property
-    def xy_dist_to_peak_normed(self):
-        x_y = self.r_and_phi_to_x_and_y
-        return np.hypot(x_y[0], x_y[1])
-
-    def perimeter_minus_field_max(self):
-        mi = self._max_index
-        perimeter_coords = self._perimeter_coords
-        return (
-            perimeter_coords[0] - mi[0],
-            perimeter_coords[1] - mi[1],
-        )
-
-    def perimeter_angle_from_peak(self):
-        perimeter_minus_field_max = self.perimeter_minus_field_max()
-        return np.arctan2(perimeter_minus_field_max[0], perimeter_minus_field_max[1])
-
-    @property
-    def pos_xy(self):
-        pos_x, pos_y = pol2cart(self.pos_r, self.pos_phi)
-        return np.vstack([pos_x, pos_y])
-
-    @property
-    def pos_r(self):
-        angle_df = circ_abs(
-            self.perimeter_angle_from_peak()[:, np.newaxis]
-            - self.xy_angle_to_peak[np.newaxis, :]
-        )
-        perimeter_idx = np.argmin(angle_df, 0)
-        tmp = (
-            self._perimeter_coords[1][perimeter_idx] - self._max_index[1],
-            self._perimeter_coords[0][perimeter_idx] - self._max_index[0],
-        )
-
-        perimeter_dist_to_peak = np.hypot(tmp[0], tmp[1])
-        r = self.xy_dist_to_peak / perimeter_dist_to_peak
-        capped_vals = r >= 1
-        r[capped_vals] = 1
-        return r
-
-    # calculate the angular distance between the runs main direction and the
-    # pos's direction to the peak centre
-    @property
-    def pos_phi(self):
-        return self.xy_angle_to_peak - self.mean_direction
-
-    @property
-    def rho(self):
-        rho, _ = cart2pol(self.pos_xy[0], self.pos_xy[1])
-        return rho
-
-    @property
-    def phi(self):
-        _, phi = cart2pol(self.pos_xy[0], self.pos_xy[1])
-        return phi
-
-    @property
-    def r_and_phi_to_x_and_y(self):
-        return np.vstack(pol2cart(self.rho, self.phi))
-
-    """
-    Define a measure of tortuosity to see how direct the run was
-    from field entry to exit. It's jsut the ratio of the distance between
-    a straight line joining the entry-exit points and the actual distance
-    of the run
-    """
-
-    @property
-    def tortuosity(self):
-        direct_line_distance = np.hypot(
-            self.xy[0, 0] - self.xy[0, -1], self.xy[1, 0] - self.xy[1, -1]
-        )
-        xy_df = np.diff(self.xy)
-        traversed_distance = np.sum(np.hypot(xy_df[0], xy_df[1]))
-        return direct_line_distance / traversed_distance
-
-    @property
-    def phase(self) -> np.ndarray:
-        """
-        The phases of the LFP signal for this run
-
-        Returns
-        -------
-        np.ndarray
-            the phase of the LFP signal for this run
-        """
-        if self.lfp_segment is not None:
-            # reshape the phase to take the circmean
-            n_pos = int(self.slice.stop - self.slice.start)
-            n_lfp = int(self.lfp_segment.phase.shape[0])
-            ratio = int(n_lfp / n_pos)
-            phase_r = np.reshape(self.lfp_segment.phase, (ratio, n_pos))
-            # take the circular mean of the phase
-            return stats.circmean(phase_r, axis=0)
-
-
-class FieldProps(RegionProperties):
-    """
-    Describes various properties of a receptive field.
-
-    Attributes
-    ----------
-    slice : tuple of slice
-        The slice of the field in the binned data (x slice, y slice)
-    label : int
-        The label of the field
-    image_intensity : np.ndarray
-        The intensity image of the field (in Hz)
-    runs : list of RunProps
-        The runs through the field
-    run_slices : list of slice
-        The slices of the runs through the field (slices are position indices)
-    run_labels : np.ndarray
-        The labels of the runs
-    max_index : np.ndarray
-        The index of the maximum intensity in the field
-    num_runs : int
-        The number of runs through the field
-    cumulative_time : list of np.ndarray
-        The cumulative time spent on the field for each run through the field
-    cumulative_distance: list of np.ndarray
-        The cumulative time spent on the field for each run through the field
-    runs_speed : list of np.ndarray
-        The speed of each run through the field
-    runs_observed_spikes : np.ndarray
-        The observed spikes for each run through the field
-    spike_position_index : np.ndarray
-        The index of the spikes in the position data
-    xy_at_peak : np.ndarray
-        The x-y coordinate of the field max
-    xy : np.ndarray
-        The x-y coordinates of the field for all runs
-    xy_relative_to_peak : np.ndarray
-        The x-y coordinates of the field zeroed with respect to the peak
-    xy_angle_to_peak : np.ndarray
-        The angle each x-y coordinate makes to the field peak
-    xy_dist_to_peak : np.ndarray
-        The distance of each x-y coordinate to the field peak
-    bw_perim : np.ndarray
-        The perimeter of the field as an array of bool
-    perimeter_coords : tuple
-        The x-y coordinates of the field perimeter
-    global_perimeter_coords : np.ndarray
-        The global x-y coordinates of the field perimeter
-    perimeter_minus_field_max : np.ndarray
-        The x-y coordinates of the field perimeter minus the field max
-    perimeter_angle_from_peak : np.ndarray
-        The angle each point on the perimeter makes to the field peak
-    perimeter_dist_from_peak : np.ndarray
-        The distance of each point on the perimeter to the field peak
-    bin_coords : np.ndarray
-        The x-y coordinates of the field in the binned data
-    phi : np.ndarray
-        The angular distance between the mean direction of each run and
-        each position samples direction to the field centre
-    rho : np.ndarray
-        The distance of each position sample to the field max (1 is furthest)
-    pos_xy : np.ndarray
-        The cartesian x-y coordinates of each position sample
-    pos_phi : np.ndarray
-        The angular distance between the mean direction of each run and
-        each position samples direction to the field centre
-    pos_r : np.ndarray
-        The ratio of the distance from the field peak to the position sample
-        and the distance from the field peak to the point on the perimeter that is most
-        colinear with the position sample
-    r_and_phi_to_x_and_y : np.ndarray
-        Converts rho and phi to x and y coordinates
-    r_per_run : np.ndarray
-        The polar radial distance for each run
-    current_direction : np.ndarray
-        The direction projected onto the mean run direction
-    cumulative_distance : list of np.ndarray
-        The cumulative distance for each run
-    projected_direction : np.ndarray
-        The direction projected onto the mean run direction
-    intensity_max : float
-        The maximum intensity of the field (i.e. field peak rate)
-    intensity_mean : float
-        The mean intensity of the field
-    intensity_min : float
-        The minimum intensity of the field
-    intensity_std : float
-        The standard deviation of the field intensity
-
-
-    """
-
-    def __init__(
-        self,
-        slice,
-        label,
-        label_image,
-        binned_data,
-        cache,
-        *,
-        extra_properties,
-        spacing,
-        offset,
-        index=0,
-    ):
-        intensity_image = binned_data.binned_data[index]
-        super().__init__(
-            slice,
-            label,
-            label_image,
-            intensity_image,
-            cache_active=cache,
-            spacing=spacing,
-            extra_properties=extra_properties,
-            offset=offset,
-        )
-        self.binned_data = binned_data
-        self._runs = []
-
-    @property
-    def runs(self):
-        return self._runs
-
-    @property
-    def run_slices(self):
-        return [r._slice for r in self._runs]
-
-    @runs.setter
-    def runs(self, r):
-        self._runs = r
-        print(f"Field {self.label} has {len(r)} potential runs")
-
-    @property
-    def run_labels(self):
-        return np.array([r.label for r in self.runs])
-
-    # The maximum index of the intensity image for the region
-    @property
-    def max_index(self) -> np.ndarray:
-        return np.array(
-            np.unravel_index(
-                np.nanargmax(self.image_intensity, axis=None),
-                self.image_intensity.shape,
-            )
-        )
-
-    @property
-    def num_runs(self) -> int:
-        return len(self.runs)
-
-    @property
-    def n_spikes(self) -> int:
-        """
-        The total number of spikes emitted on all runs through the field
-        """
-        return np.sum([r.n_spikes for r in self.runs])
-
-    @property
-    def cumulative_time(self) -> list:
-        return [r.cumulative_time for r in self.runs]
-
-    @property
-    def runs_speed(self) -> list:
-        return [r._speed for r in self.runs]
-
-    @property
-    def runs_observed_spikes(self) -> np.ndarray:
-        return [r.observed_spikes for r in self.runs]
-
-    @property
-    def runs_normalized_position(self) -> list:
-        """
-        Only makes sense to run this on linear track data unless
-        we want to pass the unit circle distance or something...
-
-        Get the normalized position for each run through the field.
-
-        Normalized position is the position of the run relative to the
-        start of the field (0) to the end of the field (1).
-        """
-        if (
-            self.binned_data.variable.value == VariableToBin.X.value
-            or self.binned_data.variable.value == VariableToBin.Y.value
-            or self.binned_data.variable.value == VariableToBin.PHI.value
-        ):
-
-            w = np.diff(self.binned_data.bin_edges[0])[0]
-            pos_min = self.binned_data.bin_edges[0][self.slice[0].start]
-            pos_max = self.binned_data.bin_edges[0][self.slice[0].stop - 1] + w
-            return [min_max_norm(r.xy[0], pos_min, pos_max) for r in self.runs]
-
-    @property
-    def phase(self) -> list:
-        """
-        The phases of the LFP signal for all runs through this field
-        """
-        phases = [r.phase for r in self.runs if r.phase is not None]
-        if len(phases) == 0:
-            return None
-        return phases
-
-    @property
-    def spike_position_index(self):
-        return np.concatenate([r.spike_position_index for r in self.runs])
-
-    # The x-y coordinate at the field peak
-    @property
-    def xy_at_peak(self) -> np.ndarray:
-        mi = self.max_index
-        if len(self.slice) == 1:
-            # If the field is 1D then we only have one coordinate
-            x_max = self.binned_data.bin_edges[0][mi[0] + self.slice[0].start]
-            return np.array([x_max])
-        # If the field is 2D then we have two coordinates
-        if len(self.slice) != 2:
-            x_max = self.binned_data.bin_edges[1][mi[1] + self.slice[1].start]
-            y_max = self.binned_data.bin_edges[0][mi[0] + self.slice[0].start]
-            return np.array([x_max, y_max])
-
-    @property
-    def xy(self) -> np.ndarray:
-        return np.concatenate([r.xy.T for r in self.runs]).T
-
-    # The x-y coordinates zeroed with respect to the peak
-    @property
-    def xy_relative_to_peak(self) -> np.ndarray:
-        return (self.xy.T - self.xy_at_peak).T
-
-    # The angle each x-y coordinate makes to the field peak
-    @property
-    def xy_angle_to_peak(self) -> np.ndarray:
-        xy_to_peak = self.xy_relative_to_peak
-        return np.arctan2(xy_to_peak[1], xy_to_peak[0])
-
-    # The distance of each x-y coordinate to the field peak
-    @property
-    def xy_dist_to_peak(self) -> np.ndarray:
-        xy_to_peak = self.xy_relative_to_peak
-        return np.hypot(xy_to_peak[0], xy_to_peak[1])
-
-    # The perimeter of the masked region as an array of bool
-    @property
-    def bw_perim(self) -> np.ndarray:
-        if self.image.ndim == 1:
-            return self.image
-        return bwperim(self.image)
-
-    @property
-    def perimeter_coords(self) -> tuple:
-        return np.nonzero(self.bw_perim)
-
-    @property
-    def global_perimeter_coords(self) -> np.ndarray:
-        perim_xy = self.perimeter_coords
-        if len(self.binned_data.bin_edges) == 1:
-            # If the field is 1D then we only have one coordinate
-            x = self.binned_data.bin_edges[0][perim_xy[0] + self.slice[0].start]
-            return np.array([x])
-        else:
-            x = self.binned_data.bin_edges[1][perim_xy[1] + self.slice[1].start]
-            y = self.binned_data.bin_edges[0][perim_xy[0] + self.slice[0].start]
-            return np.array([x, y])
-
-    @property
-    def perimeter_minus_field_max(self) -> np.ndarray:
-        mi = self.max_index
-        perimeter_coords = self.perimeter_coords
-        if len(self.slice) == 1:
-            # If the field is 1D then we only have one coordinate
-            return np.array([perimeter_coords[0] - mi[0]])
-        else:
-            return np.array([perimeter_coords[0] - mi[0], perimeter_coords[1] - mi[1]])
-
-    # The angle each point on the perimeter makes to the field peak
-    @property
-    def perimeter_angle_from_peak(self) -> np.ndarray:
-        perimeter_minus_field_max = self.perimeter_minus_field_max
-        return np.arctan2(perimeter_minus_field_max[0], perimeter_minus_field_max[1])
-
-    # The distance of each point on the perimeter to the field peak
-    @property
-    def perimeter_dist_from_peak(self) -> np.ndarray:
-        perimeter_minus_field_max = self.perimeter_minus_field_max()
-        return np.hypot(perimeter_minus_field_max[0], perimeter_minus_field_max[1])
-
-    @property
-    def bin_coords(self) -> np.ndarray:
-        bin_edges = self.binned_data.bin_edges
-        if len(bin_edges) == 2:
-            return np.array(
-                [bin_edges[1][self.coords[:, 1]], bin_edges[0][self.coords[:, 0]]]
-            )
-        elif len(bin_edges) == 1:
-            return np.array([bin_edges[0][self.coords[:, 0]]])
-
-    @property
-    def phi(self) -> np.ndarray:
-        """
-        Calculate the angular distance between the mean direction of each run and
-        each position samples direction to the field centre
-        """
-        return np.concatenate([r.phi for r in self.runs]).T
-
-    @property
-    def rho(self) -> np.ndarray:
-        return np.concatenate([r.rho for r in self.runs])
-
-    @property
-    def pos_xy(self) -> np.ndarray:
-        return np.concatenate([r.pos_xy.T for r in self.runs]).T
-
-    @property
-    def pos_phi(self) -> np.ndarray:
-        """
-        Calculate the angular distance between the mean direction of each run and
-        each position samples direction to the field centre
-        """
-        return np.concatenate([r.pos_phi for r in self.runs]).T
-
-    @property
-    def pos_r(self) -> np.ndarray:
-        """
-        Calculate the ratio of the distance from the field peak to the position sample
-        and the distance from the field peak to the point on the perimeter that is most
-        colinear with the position sample
-
-        NB The values just before being returned can be >= 1 so these are capped to 1
-        """
-        return np.concatenate([r.pos_r for r in self.runs])
-
-    @property
-    def r_and_phi_to_x_and_y(self) -> np.ndarray:
-        return np.vstack(pol2cart(self.pos_r, self.pos_phi))
-
-    @property
-    def r_per_run(self) -> np.ndarray:
-        perimeter_coords = self.perimeter_coords
-        return np.concatenate(
-            [
-                run.r(
-                    self.xy_at_peak,
-                    self.perimeter_angle_from_peak,
-                    perimeter_coords,
-                    self.max_index,
-                )
-                for run in self.runs
-            ]
-        )
-
-    @property
-    def current_direction(self) -> list:
-        return [r.current_direction for r in self.runs]
-
-    @property
-    def cumulative_distance(self) -> list:
-        return [r.cumulative_distance for r in self.runs]
-
-    @property
-    def projected_direction(self) -> np.ndarray:
-        """
-        direction projected onto the mean run direction is just the x-coord
-        when cartesian x and y is converted to from polar rho and phi
-        """
-        return np.concatenate([r.pos_xy[0] for r in self.runs])
-
-    # Over-ride the next intensity_* functions so they use the
-    # nan versions
-    @property
-    def intensity_max(self) -> float:
-        vals = self.image_intensity[self.image]
-        return np.nanmax(vals, axis=0).astype(np.float64, copy=False)
-
-    @property
-    def intensity_mean(self) -> float:
-        return np.nanmean(self.image_intensity[self.image], axis=0)
-
-    @property
-    def intensity_min(self) -> float:
-        vals = self.image_intensity[self.image]
-        return np.nanmin(vals, axis=0).astype(np.float64, copy=False)
-
-    @property
-    def intensity_std(self) -> float:
-        vals = self.image_intensity[self.image]
-        return np.nanstd(vals, axis=0)
-
-    def __getattr__(self, attr):
-        if self._intensity_image is None and attr in _require_intensity_image:
-            raise AttributeError(
-                f"Attribute '{attr}' unavailable when `intensity_image` "
-                f"has not been specified."
-            )
-        if attr in self._extra_properties:
-            func = self._extra_properties[attr]
-            n_args = _infer_number_of_required_args(func)
-            # determine whether func requires intensity image
-            if n_args == 2:
-                if self._intensity_image is not None:
-                    if self._multichannel:
-                        multichannel_list = [
-                            func(self.image, self.image_intensity[..., i])
-                            for i in range(self.image_intensity.shape[-1])
-                        ]
-                        return np.stack(multichannel_list, axis=-1)
-                    else:
-                        return func(self.image, self.image_intensity)
-                else:
-                    raise AttributeError(
-                        f"intensity image required to calculate {attr}"
-                    )
-            elif n_args == 3:
-                if self._intensity_image is not None:
-                    return func(
-                        self.image,
-                        self.image_intensity,
-                        self.xy_coords,
-                    )
-                else:
-                    raise AttributeError(
-                        f"intensity image required to calculate {attr}"
-                    )
-            elif n_args == 1:
-                return func(self.image)
-            else:
-                raise AttributeError(
-                    f"Custom regionprop function's number of arguments must "
-                    f"be 1, 2 or 3 but {attr} takes {n_args} arguments."
-                )
-        elif attr in PROPS and attr.lower() == attr:
-            if (
-                self._intensity_image is None
-                and PROPS[attr] in _require_intensity_image
-            ):
-                raise AttributeError(
-                    f"Attribute '{attr}' unavailable when `intensity_image` "
-                    f"has not been specified."
-                )
-            # retrieve deprecated property (excluding old CamelCase ones)
-            return getattr(self, PROPS[attr])
-        else:
-            raise AttributeError(f"'{type(self)}' object has no attribute '{attr}'")
-
-    def __str__(self):
-        """
-        Override the string representation printed to the console
-        """
-        return f"Field {self.label} has {len(self.runs)} runs"
-
-    def smooth_runs(self, k: float, spatial_lp_cut: int, sample_rate: int):
-        """
-        Smooth in x and y in preparation for converting the smoothed cartesian
-        coordinates to polar ones
-
-        Parameters
-        ----------
-        k : float
-            smoothing constant for the instantaneous firing rate
-        spatial_lp_cut : int
-            spatial lowpass cut off
-        sample_rate : int
-            position sample rate in Hz
-        """
-        [r.smooth_xy(k, spatial_lp_cut, sample_rate) for r in self.runs]
-
-    def runs_expected_spikes(
-        self, expected_rate_at_pos: np.ndarray, sample_rate: int = 50
-    ) -> np.ndarray:
-        """
-        Calculate the expected number of spikes along each run given the
-        whole ratemap.
-
-        Parameters
-        ----------
-        expected_rate_at_pos : np.ndarray
-            the rate seen at each xy position of the whole trial
-        sample_rate : int
-            the sample rate of the position data
-
-        Returns
-        -------
-        np.ndarray
-            the expected rate at each xy position for each run
-        """
-        return np.concatenate(
-            [r.expected_spikes(expected_rate_at_pos, sample_rate) for r in self.runs]
-        )
-
-    def overdispersion(
-        self, spike_train: np.ndarray, sample_rate: int = 50
-    ) -> np.ndarray:
-        """
-        Calculate the overdispersion for each run through the field
-
-        Parameters
-        ----------
-        spike_train : np.ndarray
-            the spike train (spikes binned up by position) for the whole trial. Same
-            length as the trial n_samples
-        sample_rate : int
-            the sample rate of the position data
-
-        Returns
-        -------
-        np.ndarray
-            the overdispersion for each run through the field
-        """
-        return np.array([r.overdispersion(spike_train, sample_rate) for r in self.runs])
-
-
-def fieldprops(
-    label_image,
-    binned_data,
-    xy,
-    spikes_per_pos,
-    cache=True,
-    *,
-    extra_properties=None,
-    spacing=None,
-    offset=None,
-    **kwargs,
-):
-    r"""Measure properties of labeled image regions.
+    Get all the phases from the field properties
 
     Parameters
     ----------
-    label_image : (M, N[, P]) ndarray
-        Labeled input image. Labels with value 0 are ignored.
-
-        .. versionchanged:: 0.14.1
-            Previously, ``label_image`` was processed by ``numpy.squeeze`` and
-            so any number of singleton dimensions was allowed. This resulted in
-            inconsistent handling of images with singleton dimensions. To
-            recover the old behaviour, use
-            ``regionprops(np.squeeze(label_image), ...)``.
-    xy : (2 x n_samples) np.ndarray
-        The x-y coordinates for all runs through the field corresponding to
-        a particular label
-    binned_data : BinnedData instance from ephysiopy.common.utils
-    spikes_per_pos : np.ndarray
-        The number of spikes emitted at each position sample, length = n_samples
-    cache : bool, optional
-        Determine whether to cache calculated properties. The computation is
-        much faster for cached properties, whereas the memory consumption
-        increases.
-    extra_properties : Iterable of callables
-        Add extra property computation functions that are not included with
-        skimage. The name of the property is derived from the function name,
-        the dtype is inferred by calling the function on a small sample.
-        If the name of an extra property clashes with the name of an existing
-        property the extra property will not be visible and a UserWarning is
-        issued. A property computation function must take a region mask as its
-        first argument. If the property requires an intensity image, it must
-        accept the intensity image as the second argument.
-    spacing: tuple of float, shape (ndim,)
-        The pixel spacing along each axis of the image.
-    offset : array-like of int, shape `(label_image.ndim,)`, optional
-        Coordinates of the origin ("top-left" corner) of the label image.
-        Normally this is ([0, ]0, 0), but it might be different if one wants
-        to obtain regionprops of subvolumes within a larger volume.
+    field_props : list of FieldProps
+        The field properties to search through
 
     Returns
     -------
-    properties : list of RegionProperties
-        Each item describes one labeled region, and can be accessed using the
-        attributes listed below.
-
-    Notes
-    -----
-    The following properties can be accessed as attributes or keys:
-
-    **area** : float
-        Area of the region i.e. number of pixels of the region scaled by pixel-area.
-    **area_bbox** : float
-        Area of the bounding box i.e. number of pixels of bounding box scaled by pixel-area.
-    **area_convex** : float
-        Area of the convex hull image, which is the smallest convex
-        polygon that encloses the region.
-    **area_filled** : float
-        Area of the region with all the holes filled in.
-    **axis_major_length** : float
-        The length of the major axis of the ellipse that has the same
-        normalized second central moments as the region.
-    **axis_minor_length** : float
-        The length of the minor axis of the ellipse that has the same
-        normalized second central moments as the region.
-    **bbox** : tuple
-        Bounding box ``(min_row, min_col, max_row, max_col)``.
-        Pixels belonging to the bounding box are in the half-open interval
-        ``[min_row; max_row)`` and ``[min_col; max_col)``.
-    **centroid** : array
-        Centroid coordinate tuple ``(row, col)``.
-    **centroid_local** : array
-        Centroid coordinate tuple ``(row, col)``, relative to region bounding
-        box.
-    **centroid_weighted** : array
-        Centroid coordinate tuple ``(row, col)`` weighted with intensity
-        image.
-    **centroid_weighted_local** : array
-        Centroid coordinate tuple ``(row, col)``, relative to region bounding
-        box, weighted with intensity image.
-    **coords_scaled** : (K, 2) ndarray
-        Coordinate list ``(row, col)`` of the region scaled by ``spacing``.
-    **coords** : (K, 2) ndarray
-        Coordinate list ``(row, col)`` of the region.
-    **eccentricity** : float
-        Eccentricity of the ellipse that has the same second-moments as the
-        region. The eccentricity is the ratio of the focal distance
-        (distance between focal points) over the major axis length.
-        The value is in the interval [0, 1).
-        When it is 0, the ellipse becomes a circle.
-    **equivalent_diameter_area** : float
-        The diameter of a circle with the same area as the region.
-    **euler_number** : int
-        Euler characteristic of the set of non-zero pixels.
-        Computed as number of connected components subtracted by number of
-        holes (input.ndim connectivity). In 3D, number of connected
-        components plus number of holes subtracted by number of tunnels.
-    **extent** : float
-        Ratio of pixels in the region to pixels in the total bounding box.
-        Computed as ``area / (rows * cols)``
-    **feret_diameter_max** : float
-        Maximum Feret's diameter computed as the longest distance between
-        points around a region's convex hull contour as determined by
-        ``find_contours``. [5]_
-    **image** : (H, J) ndarray
-        Sliced binary region image which has the same size as bounding box.
-    **image_convex** : (H, J) ndarray
-        Binary convex hull image which has the same size as bounding box.
-    **image_filled** : (H, J) ndarray
-        Binary region image with filled holes which has the same size as
-        bounding box.
-    **image_intensity** : ndarray
-        Image inside region bounding box.
-    **inertia_tensor** : ndarray
-        Inertia tensor of the region for the rotation around its mass.
-    **inertia_tensor_eigvals** : tuple
-        The eigenvalues of the inertia tensor in decreasing order.
-    **intensity_max** : float
-        Value with the greatest intensity in the region.
-    **intensity_mean** : float
-        Value with the mean intensity in the region.
-    **intensity_min** : float
-        Value with the least intensity in the region.
-    **intensity_std** : float
-        Standard deviation of the intensity in the region.
-    **label** : int
-        The label in the labeled input image.
-    **moments** : (3, 3) ndarray
-        Spatial moments up to 3rd order::
-
-            m_ij = sum{ array(row, col) * row^i * col^j }
-
-        where the sum is over the `row`, `col` coordinates of the region.
-    **moments_central** : (3, 3) ndarray
-        Central moments (translation invariant) up to 3rd order::
-
-            mu_ij = sum{ array(row, col) * (row - row_c)^i * (col - col_c)^j }
-
-        where the sum is over the `row`, `col` coordinates of the region,
-        and `row_c` and `col_c` are the coordinates of the region's centroid.
-    **moments_hu** : tuple
-        Hu moments (translation, scale and rotation invariant).
-    **moments_normalized** : (3, 3) ndarray
-        Normalized moments (translation and scale invariant) up to 3rd order::
-
-            nu_ij = mu_ij / m_00^[(i+j)/2 + 1]
-
-        where `m_00` is the zeroth spatial moment.
-    **moments_weighted** : (3, 3) ndarray
-        Spatial moments of intensity image up to 3rd order::
-
-            wm_ij = sum{ array(row, col) * row^i * col^j }
-
-        where the sum is over the `row`, `col` coordinates of the region.
-    **moments_weighted_central** : (3, 3) ndarray
-        Central moments (translation invariant) of intensity image up to
-        3rd order::
-
-            wmu_ij = sum{ array(row, col) * (row - row_c)^i * (col - col_c)^j }
-
-        where the sum is over the `row`, `col` coordinates of the region,
-        and `row_c` and `col_c` are the coordinates of the region's weighted
-        centroid.
-    **moments_weighted_hu** : tuple
-        Hu moments (translation, scale and rotation invariant) of intensity
-        image.
-    **moments_weighted_normalized** : (3, 3) ndarray
-        Normalized moments (translation and scale invariant) of intensity
-        image up to 3rd order::
-
-            wnu_ij = wmu_ij / wm_00^[(i+j)/2 + 1]
-
-        where ``wm_00`` is the zeroth spatial moment (intensity-weighted area).
-    **num_pixels** : int
-        Number of foreground pixels.
-    **orientation** : float
-        Angle between the 0th axis (rows) and the major
-        axis of the ellipse that has the same second moments as the region,
-        ranging from `-pi/2` to `pi/2` counter-clockwise.
-    **perimeter** : float
-        Perimeter of object which approximates the contour as a line
-        through the centers of border pixels using a 4-connectivity.
-    **perimeter_crofton** : float
-        Perimeter of object approximated by the Crofton formula in 4
-        directions.
-    **slice** : tuple of slices
-        A slice to extract the object from the source image.
-    **solidity** : float
-        Ratio of pixels in the region to pixels of the convex hull image.
-
-    Each region also supports iteration, so that you can do::
-
-      for prop in region:
-          print(prop, region[prop])
-
-    See Also
-    --------
-    label
-
-    References
-    ----------
-    .. [1] Wilhelm Burger, Mark Burge. Principles of Digital Image Processing:
-           Core Algorithms. Springer-Verlag, London, 2009.
-    .. [2] B. Jähne. Digital Image Processing. Springer-Verlag,
-           Berlin-Heidelberg, 6. edition, 2005.
-    .. [3] T. H. Reiss. Recognizing Planar Objects Using Invariant Image
-           Features, from Lecture notes in computer science, p. 676. Springer,
-           Berlin, 1993.
-    .. [4] https://en.wikipedia.org/wiki/Image_moment
-    .. [5] W. Pabst, E. Gregorová. Characterization of particles and particle
-           systems, pp. 27-28. ICT Prague, 2007.
-           https://old.vscht.cz/sil/keramika/Characterization_of_particles/CPPS%20_English%20version_.pdf
-
-    Examples
-    --------
-    >>> from skimage import data, util
-    >>> from skimage.measure import label, regionprops
-    >>> img = util.img_as_ubyte(data.coins()) > 110
-    >>> label_img = label(img, connectivity=img.ndim)
-    >>> props = regionprops(label_img)
-    >>> # centroid of first labeled object
-    >>> props[0].centroid
-    (22.72987986048314, 81.91228523446583)
-    >>> # centroid of first labeled object
-    >>> props[0]['centroid']
-    (22.72987986048314, 81.91228523446583)
-
-    Add custom measurements by passing functions as ``extra_properties``
-
-    >>> from skimage import data, util
-    >>> from skimage.measure import label, regionprops
-    >>> import numpy as np
-    >>> img = util.img_as_ubyte(data.coins()) > 110
-    >>> label_img = label(img, connectivity=img.ndim)
-    >>> def pixelcount(regionmask):
-    ...     return np.sum(regionmask)
-    >>> props = regionprops(label_img, extra_properties=(pixelcount,))
-    >>> props[0].pixelcount
-    7741
-    >>> props[1]['pixelcount']
-    42
-
+    np.ndarray
+        An array of all the phases from all runs in all fields
     """
-    assert label_image.shape == binned_data.binned_data[0].shape
-    # could have linear track type data where xy is 1-D so
-    # make it at least 2d for ease of processing
-    if xy.ndim == 1:
-        xy = np.expand_dims(xy, axis=0)
-
-    spikes_per_pos = np.ravel(spikes_per_pos)
-    assert len(spikes_per_pos) == xy.shape[1]
-
-    if label_image.ndim not in (1, 2, 3):
-        raise TypeError("Only 1-D, 2-D and 3-D images supported.")
-
-    if not np.issubdtype(label_image.dtype, np.integer):
-        if np.issubdtype(label_image.dtype, bool):
-            raise TypeError(
-                "Non-integer image types are ambiguous: "
-                "use skimage.measure.label to label the connected "
-                "components of label_image, "
-                "or label_image.astype(np.uint8) to interpret "
-                "the True values as a single label."
-            )
-        else:
-            raise TypeError("Non-integer label_image types are ambiguous")
-
-    if offset is None:
-        offset_arr = np.zeros((label_image.ndim,), dtype=int)
-    else:
-        offset_arr = np.asarray(offset)
-        if offset_arr.ndim != 1 or offset_arr.size != label_image.ndim:
-            raise ValueError(
-                "Offset should be an array-like of integers "
-                "of shape (label_image.ndim,); "
-                f"{offset} was provided."
-            )
-
-    pos_sample_rate = kwargs.get("pos_sample_rate", 50)
-
-    if len(binned_data.bin_edges) == 1:
-        be = binned_data.bin_edges[0]
-        x_bins = np.digitize(xy[0], be[:-1])
-        xy_field_label = label_image[x_bins - 1]
-
-    elif len(binned_data.bin_edges) == 2:
-        ye, xe = binned_data.bin_edges
-        x_bins = np.digitize(xy[0], xe[:-1])
-        y_bins = np.digitize(xy[1], ye[:-1])
-        xy_field_label = label_image[y_bins - 1, x_bins - 1]
-    # deal with pos values that are masked and set to 0
-    # if the mask ndim == 0 then no mask has been applied
-    if xy.mask.ndim == 1:
-        xy_field_label[xy.mask[0, :] == True] = 0
-
-    labelled_runs = labelContigNonZeroRuns(xy_field_label)
-    run_starts = getLabelStarts(labelled_runs)
-    run_stops = getLabelEnds(labelled_runs)
-
-    # filter out short runs here
-    short_runs = np.where((run_stops - run_starts) < kwargs.get("min_run_length", 2))[0]
-
-    short_run_starts = run_starts[short_runs]
-    short_run_stops = run_stops[short_runs]
-    for r in zip(short_run_starts, short_run_stops):
-        labelled_runs[slice(r[0], r[1] + 1)] = 0
-
-    # need to recalculate the xy_field_label after filtering
-    # for short runs and relabelling
-    xy_field_label[labelled_runs == 0] = 0
-
-    # calculate the speed for possibly filtering runs later
-    speed = None
-    if xy is not None:
-        if len(xy) == 1:
-            speed = np.ma.MaskedArray(np.abs(np.ma.ediff1d(xy[0]) * pos_sample_rate))
-        else:
-            speed = np.ma.MaskedArray(
-                np.abs(np.ma.ediff1d(np.hypot(xy[0], xy[1])) * pos_sample_rate)
-            )
-
-        speed = np.append(speed, speed[-1])
-
-    regions = []
-
-    run_id = 0
-
-    objects = ndi.find_objects(label_image)
-
-    for i, sl in enumerate(objects):
-        if sl is None:
-            continue
-
-        label = i + 1
-
-        # get the runs through this field
-        run_index = np.unique(labelled_runs[xy_field_label == label])
-        run_slices = [
-            slice(run_starts[ri - 1], run_stops[ri - 1] + 1) for ri in run_index
-        ]
-        props = FieldProps(
-            sl,
-            label,
-            label_image,
-            binned_data,
-            cache=cache,
-            spacing=spacing,
-            extra_properties=extra_properties,
-            offset=offset_arr,
-        )
-        # extract a few metrics for instantiating the RunProps objects...
-        peak_xy = props.xy_at_peak
-        max_index = props.max_index
-        perimeter_coords = props.perimeter_coords
-        runs = []
-        for rs in run_slices:
-            # make sure the run isn't completely masked
-            if not np.all(xy[:, rs]):
-                continue
-
-            # breakpoint()
-            r = RunProps(
-                run_id,
-                rs,
-                xy[:, rs],
-                spikes_per_pos[rs],
-                speed[rs],
-                peak_xy,
-                max_index,
-                perimeter_coords,
-            )
-            run_id += 1
-            runs.append(r)
-        # ... and add the list of runs to the FieldProps instance
-        props.runs = runs
-
-        regions.append(props)
-
-    return regions
+    phases = []
+    for field in field_props:
+        phases.extend(field.compressed_phase)
+    return np.array(phases)
 
 
 def get_run(field_props: list[FieldProps], run_num: int) -> RunProps:
@@ -1427,41 +58,6 @@ def get_run(field_props: list[FieldProps], run_num: int) -> RunProps:
             if run.label == run_num:
                 return run
     raise ValueError(f"Run {run_num} not found in field properties.")
-
-
-def infill_ratemap(rmap: np.ndarray) -> np.ndarray:
-    """
-    The ratemaps used in the phasePrecession2D class are a) super smoothed and
-    b) very large i.e. the bins per cm is low. This
-    results in firing fields that have lots of holes (nans) in them. We want to
-    smooth over these holes so we can construct measures such as the expected
-    rate in a given bin whilst also preserving whatever 'geometry' of the
-    environment exists in the ratemap as a result of where position has been
-    sampled. That is, if non-sampled positions are designated with nans, then we
-    want to smooth over those that in theory could have been sampled and keep
-    those that never could have been.
-
-    Parameters
-    ----------
-    rmap : np.ndarray
-        The ratemap to be filled
-
-    Returns
-    -------
-    np.ndarray
-        The filled ratemap
-    """
-    outline = np.isfinite(rmap)
-    mask = ndi.binary_fill_holes(outline)
-    rmap = np.ma.MaskedArray(rmap, np.invert(mask))
-    rmap[np.invert(mask)] = 0
-    if rmap.ndim == 1:
-        k = gk1d(stddev=1)
-    elif rmap.ndim == 2:
-        k = gk2d(x_stddev=1)
-    output = interpolate_replace_nans(rmap, k)
-    output[np.invert(mask)] = np.nan
-    return output
 
 
 def filter_runs(
@@ -1498,7 +94,7 @@ def filter_runs(
             for run in field.runs
             if (
                 run.duration >= min_duration
-                and run.min_speed >= min_speed
+                and np.mean(run.speed) >= min_speed
                 and run.n_spikes >= min_spikes
             )
         ]
@@ -1506,7 +102,48 @@ def filter_runs(
             field.runs = runs_to_keep
         else:
             field_props.pop(idx)
+    # mask those sections of a run less than min_speed
+    for field in field_props:
+        for irun in field.runs:
+            ii = irun.speed < min_speed
+            irun.mask = ii
+
     return field_props
+
+
+def infill_ratemap(rmap: np.ndarray) -> np.ndarray:
+    """
+    The ratemaps used in the phasePrecession2D class are a) super smoothed and
+    b) very large i.e. the bins per cm is low. This
+    results in firing fields that have lots of holes (nans) in them. We want to
+    smooth over these holes so we can construct measures such as the expected
+    rate in a given bin whilst also preserving whatever 'geometry' of the
+    environment exists in the ratemap as a result of where position has been
+    sampled. That is, if non-sampled positions are designated with nans, we
+    want to smooth over those that in theory could have been sampled and keep
+    those that never could have been.
+
+    Parameters
+    ----------
+    rmap : np.ndarray
+        The ratemap to be filled
+
+    Returns
+    -------
+    np.ndarray
+        The filled ratemap
+    """
+    outline = np.isfinite(rmap)
+    mask = ndi.binary_fill_holes(outline)
+    rmap = np.ma.MaskedArray(rmap, np.invert(mask))
+    rmap[np.invert(mask)] = 0
+    if rmap.ndim == 1:
+        k = gk1d(stddev=1)
+    elif rmap.ndim == 2:
+        k = gk2d(x_stddev=1)
+    output = interpolate_replace_nans(rmap, k)
+    output[np.invert(mask)] = np.nan
+    return output
 
 
 def reduce_labels(A: np.ndarray, labels: np.ndarray, reduce_by: float = 50) -> list:
@@ -1547,30 +184,30 @@ def partitionFields(
 ) -> tuple[np.ndarray, ...]:
     """
     Partitions spikes into fields by finding the watersheds around the
-    peaks of a super-smoothed ratemap
+        peaks of a super-smoothed ratemap
 
-    Parameters
-    ----------
-    binned_data : BinnedData
-        an instance of ephysiopy.common.utils.BinnedData
-    field_threshold_percent : int
-        removes pixels in a field that fall below this percent of the maximum firing rate in the field
-    field_rate_threshold : float
-        anything below this firing rate in Hz threshold is set to 0
-    area_threshold : float
-        defines the minimum field size as a proportion of the
-        environment size. Default of 0.01 says a field has to be at
-        least 1% of the size of the environment i.e.
-        binned_area_width * binned_area_height to be counted as a field
+        Parameters
+        ----------
+        binned_data : BinnedData
+            an instance of ephysiopy.common.utils.BinnedData
+        field_threshold_percent : int
+            removes pixels in a field that fall below this percent of the maximum firing rate in the field
+        field_rate_threshold : float
+            anything below this firing rate in Hz threshold is set to 0
+        area_threshold : float
+            defines the minimum field size as a proportion of the
+            environment size. Default of 0.01 says a field has to be at
+            least 1% of the size of the environment i.e.
+            binned_area_width * binned_area_height to be counted as a field
 
-    Returns
-    -------
-    tuple of np.ndarray
-        peaksXY - The xy coordinates of the peak rates in
-        each field
-        peaksRate - The peak rates in peaksXY
-        labels - An array of the labels corresponding to each field (starting  1)
-        rmap - The ratemap of the tetrode / cluster
+        Returns
+        -------
+        tuple of np.ndarray
+            peaksXY - The xy coordinates of the peak rates in
+            each field
+            peaksRate - The peak rates in peaksXY
+            labels - An array of the labels corresponding to each field (starting  1)
+            rmap - The ratemap of the tetrode / cluster
     """
     # start image processing:
     # Usually the binned_data has a large number of bins which potentially
@@ -1586,6 +223,12 @@ def partitionFields(
     rmap_to_label[np.isnan(rmap_filled)] = 0
     good_idx = rmap_to_label > field_rate_threshold
     bad_idx = rmap_to_label <= field_rate_threshold
+    # check here to see if everything evaluates to a True
+    # in bad_idx - likely that this is a very low rate ratemap
+    # or something simimlar that will be hard to generate
+    # labels for. Return a bunch of Nones if so...
+    if np.all(bad_idx):
+        return None, None, None, None
     rmap_to_label[good_idx] = 1
     rmap_to_label[bad_idx] = 0
     labels = skimage.measure.label(rmap_to_label, background=0)
@@ -3098,3 +1741,56 @@ def get_thigmotaxis_score(xy: np.ndarray, shape: str = "circle") -> float:
         y_mask = (xy[1] > np.nanmin(xy[1]) + y_gap) & (xy[1] < np.nanmax(xy[1]) - y_gap)
         inner_mask = np.logical_and(x_mask, y_mask, out=inner_mask)
     return (np.count_nonzero(inner_mask) - np.count_nonzero(~inner_mask)) / n_pos
+
+
+def fast_overdispersion(
+    rmap: BinnedData, xy: np.ndarray, spikes: np.ndarray, **kws
+) -> float:
+    """
+    Calculates the overdispersion of a spatial ratemap
+
+    Parameters
+    ----------
+    rmap : BinnedData
+        The spatial ratemap
+    xy : np.ndarray
+        The xy data
+    spikes : np.ndarray
+        The spike times binned into in samples. Length
+        will be equal to duration in seconds * sample_rate
+    **kws
+        sample_rate : int, default=50
+            The sample rate of the position data
+        window : int, default=5
+            The window in seconds over which to calculate the overdispersion
+
+    Returns
+    -------
+    float
+        The overdispersion of the spatial ratemap
+    """
+    spikes = np.ravel(spikes)
+    sample_rate = kws.get("sample_rate", 50)
+    window = kws.get("window", 5)  # seconds
+    window_samples = window * sample_rate
+    n_windows = int(np.floor(len(spikes) / window_samples))
+    if n_windows < 2:
+        raise ValueError("Not enough data to calculate overdispersion")
+    ratemap = rmap.binned_data[0]
+    # get the bins in the ratemap that correspond to the position data
+    xbins = np.digitize(xy[0], rmap.bin_edges[1][:-1])
+    ybins = np.digitize(xy[1], rmap.bin_edges[0][:-1])
+
+    # now loop over the windows and calculate the overdispersion
+    Z2 = np.zeros(n_windows) * np.nan
+    for w in range(n_windows):
+        start_idx = w * window_samples
+        end_idx = start_idx + window_samples
+        xi = xbins[start_idx:end_idx] - 1
+        yi = ybins[start_idx:end_idx] - 1
+        exptd_rate = ratemap[yi, xi]
+        exptd_spikes = np.sum(exptd_rate / sample_rate)
+        observed_spikes = np.sum(spikes[start_idx:end_idx])
+        Z2[w] = (observed_spikes - exptd_spikes) / np.sqrt(exptd_spikes)
+
+    return np.nanmean(Z2)

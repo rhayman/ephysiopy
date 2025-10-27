@@ -298,7 +298,8 @@ class RateMap(object):
         Parameters
         ----------
         binsize : int | tuple
-            Optional. The number of cms per bin for XY OR degrees for DIR OR cm/s for SPEED. Defaults to 3.
+            Optional. The number of cms per bin for XY OR degrees for
+            DIR OR cm/s for SPEED. Defaults to 3.
 
         Returns
         -------
@@ -334,7 +335,10 @@ class RateMap(object):
             self.binedges = np.linspace(0, phi_max, nbins)
 
         elif self.var2Bin.value == VariableToBin.XY.value:
-            x_lims, y_lims = self._getXYLimits()
+            x_lims = self.x_lims
+            y_lims = self.y_lims
+            if x_lims is None or y_lims is None:
+                x_lims, y_lims = self._getXYLimits()
             nxbins = int(np.ceil((x_lims[1] - x_lims[0]) / binsize))
             nybins = int(np.ceil((y_lims[1] - y_lims[0]) / binsize))
             _x = np.linspace(x_lims[0], x_lims[1], nxbins)
