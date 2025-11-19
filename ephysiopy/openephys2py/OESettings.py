@@ -19,10 +19,14 @@ import numpy as np
 from ephysiopy.common.utils import memmapBinaryFile
 
 """
-Some conversion classes used in the dataclasses below. When the attributes for the
-dataclasses are added (via recursion in the addValues2Class and recurseNode functions at
-the end of this file) they are added as strings. If we know that they should be ints or 
-floats or whatever we can do that conversion by using descriptor-typed fields. See 
+Some conversion classes used in the dataclasses below.
+When the attributes for the
+dataclasses are added (via recursion in the addValues2Class and
+recurseNode functions at
+the end of this file) they are added as strings.
+If we know that they should be ints or
+floats or whatever we can do that conversion by using
+descriptor-typed fields. See:
 
 https://docs.python.org/3/library/dataclasses.html#descriptor-typed-fields
 
@@ -200,11 +204,14 @@ class Channel:
     gain : float
         The gain value, converted from a string.
     param : bool
-        A boolean parameter, converted from a string ("1" for True, otherwise False).
+        A boolean parameter, converted from a string
+        ("1" for True, otherwise False).
     record : bool
-        A boolean indicating if the channel is recorded, converted from a string ("1" for True, otherwise False).
+        A boolean indicating if the channel is recorded,
+        converted from a string ("1" for True, otherwise False).
     audio : bool
-        A boolean indicating if the channel is audio, converted from a string ("1" for True, otherwise False).
+        A boolean indicating if the channel is audio,
+        converted from a string ("1" for True, otherwise False).
     lowcut : float
         The low cut frequency, converted from a string.
     highcut : float
@@ -742,7 +749,8 @@ class TrackMe(OEPlugin):
             A 2D numpy array with the TrackMe data.
         """
         print("Loading TrackMe data...")
-        mmap = memmapBinaryFile(path2data / Path("continuous.dat"), self.channel_count)
+        mmap = memmapBinaryFile(
+            path2data / Path("continuous.dat"), self.channel_count)
         return np.array(mmap[0:2, :]).T
 
     def load_times(self, path2data: Path) -> np.ndarray:
@@ -776,7 +784,8 @@ class TrackMe(OEPlugin):
         np.ndarray
             A numpy array containing the frame count data.
         """
-        data = memmapBinaryFile(path2data / Path("data_array.npy"), self.channel_count)
+        data = memmapBinaryFile(
+            path2data / Path("data_array.npy"), self.channel_count)
         # framecount data is always last column in continuous.dat file
         return np.array(data[-1, :]).T
 
@@ -787,7 +796,8 @@ class TrackMe(OEPlugin):
         Parameters
         ----------
         path2data : Path
-            The path to the directory containing the timestamps and states files.
+            The path to the directory containing the timestamps
+            and states files.
 
         Returns
         -------
@@ -818,7 +828,7 @@ class StimControl(OEPlugin):
         Output setting for the StimControl, default is 0.
     Start : IntConversion
         Start setting for the StimControl, default is 0.
-    Stop : IntConversion
+    Stop: IntConversion
         Stop setting for the StimControl, default is 0.
     Trigger : IntConversion
         Trigger setting for the StimControl, default is 0.
@@ -914,7 +924,8 @@ class RippleDetector(OEPlugin):
     mov_out : IntConversion
         Movement output setting for the Ripple Detector, default is -1.
     mov_std : FloatConversion
-        Movement standard deviation setting for the Ripple Detector, default is -1.
+        Movement standard deviation setting for the Ripple Detector,
+        default is -1.
     min_time_st : FloatConversion
         Minimum time setting for the Ripple Detector, default is -1.
     min_time_mov : FloatConversion
@@ -958,7 +969,8 @@ class RippleDetector(OEPlugin):
         dict
             A dictionary containing the TTL timestamps and other related data.
         """
-        timestamps = np.load(path2TTL / Path("timestamps.npy")) - trial_start_time
+        timestamps = np.load(
+            path2TTL / Path("timestamps.npy")) - trial_start_time
         states = np.load(path2TTL / Path("states.npy"))
         out = dict()
         out_ttl = self.Ripple_Out
@@ -1142,12 +1154,14 @@ class AbstractProcessorFactory:
 
 class ProcessorFactory:
     """
-    Factory class for creating various processor objects based on the processor name.
+    Factory class for creating various processor objects
+    based on the processor name.
 
     Attributes
     ----------
     factory : AbstractProcessorFactory
-        An instance of AbstractProcessorFactory used to create processor objects.
+        An instance of AbstractProcessorFactory used to create
+        processor objects.
 
     Methods
     -------
@@ -1242,7 +1256,8 @@ def addValues2Class(node: ET.Element, cls: dataclass):
 
 class OEStructure(object):
     """
-    Loads up the structure.oebin file for Open Ephys flat binary format recordings.
+    Loads up the structure.oebin file for Open Ephys flat
+    binary format recordings.
 
     Parameters
     ----------
@@ -1418,7 +1433,8 @@ class Settings(object):
         object
             The requested processor object or an empty OEPlugin instance.
         """
-        processor = [self.processors[k] for k in self.processors.keys() if key in k]
+        processor = [self.processors[k]
+                     for k in self.processors.keys() if key in k]
         if processor:
             if len(processor) == 1:
                 return processor[0]

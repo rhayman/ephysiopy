@@ -4,7 +4,7 @@ from ephysiopy.common.phasecoding import (
     phase_precession_config,
     phasePrecession2D,
 )
-from ephysiopy.common.fieldcalcs import partitionFields
+from ephysiopy.common.fieldcalcs import fancy_partition
 from ephysiopy.io.recording import AxonaTrial
 
 T = AxonaTrial(
@@ -34,7 +34,7 @@ P = phasePrecession2D(
     pp_config,
 )
 binned_data = P.RateMap.get_map(P.spk_weights)
-_, _, labels, _ = partitionFields(
+_, _, labels, _ = fancy_partition(
     binned_data,
     P.field_threshold_percent,
     P.field_threshold,

@@ -11,7 +11,7 @@ from astropy.convolution import Gaussian1DKernel as gk1d
 from astropy.convolution import Gaussian2DKernel as gk2d
 from astropy.convolution import interpolate_replace_nans
 from ephysiopy.common.fieldproperties import FieldProps, RunProps
-from ephysiopy.common.utils import BinnedData, MapType, blur_image
+from ephysiopy.common.utils import BinnedData, MapType, blur_image, VariableToBin
 
 
 # Some functions to extract and filter runs from field properties
@@ -62,9 +62,10 @@ def get_run(field_props: list[FieldProps], run_num: int) -> RunProps:
 
 def filter_runs(
     field_props: list[FieldProps],
-    min_speed: float | int,
-    min_duration: float | int,
-    min_spikes: int = 0,
+    attributes,
+    ops,
+    vals,
+    **kwargs,
 ) -> list[FieldProps]:
     """
     Filter out runs that are too short, too slow or have too few spikes
@@ -72,13 +73,13 @@ def filter_runs(
     Parameters
     ----------
     field_props : list of FieldProps
-    min_speed : float, int
-        the minimum speed for a run in cm/s
-    min_duration : int, float
-        the minimum duration for a run in samples
-    min_spikes : int, default=0
-        the minimum number of spikes for a run
-
+    attributes : list of str
+        attributes of RunProps to filter on
+    ops : list of str
+        operations to use for filtering. Supported operations are
+        np.less and np.greater
+    vals : list of float
+        values to filter on
     Returns
     -------
     list of FieldProps
@@ -86,27 +87,55 @@ def filter_runs(
     Notes
     -----
     this modifies the input list
-    """
 
-    for idx, field in enumerate(field_props):
-        runs_to_keep = [
-            run
-            for run in field.runs
-            if (
-                run.duration >= min_duration
-                and np.mean(run.speed) >= min_speed
-                and run.n_spikes >= min_spikes
-            )
-        ]
-        if len(runs_to_keep) > 0:
-            field.runs = runs_to_keep
-        else:
-            field_props.pop(idx)
-    # mask those sections of a run less than min_speed
+    Example
+    -------
+    >> field_props = filter_runs(field_props, ['n_spikes'], [np.greater], [5])
+
+    field_props now only contains runs with more than 5 spikes
+    """
+    assert [hasattr(RunProps, attr) for attr in attributes]
+
     for field in field_props:
-        for irun in field.runs:
-            ii = irun.speed < min_speed
-            irun.mask = ii
+        for attr, op, val in zip(attributes, ops, vals):
+            # parse the op string...
+            s = str(op).split("'")[1]
+            print(f"Filtering runs for {attr} {s} than {val}...")
+
+            field.runs = list(
+                filter(lambda run: op(getattr(run, attr), val), field.runs)
+            )
+
+    return field_props
+
+
+def filter_for_speed(
+    field_props: list[FieldProps], min_speed: float
+) -> list[FieldProps]:
+    """
+    Mask for low speeds across the list of fields / runs
+
+    Parameters
+    ----------
+    field_props : list of FieldProps
+        The field properties to filter
+    min_speed : float
+        The minimum speed to keep a run
+
+    Returns
+    -------
+    list of FieldProps
+        The filtered field properties
+    """
+    print(f"Masking data with speeds less than {min_speed} cm/s...")
+
+    for field in field_props:
+        for run in field.runs:
+            orig_mask = run.mask
+            # note logical inversion as we want to mask for speeds below
+            # the min speed
+            speed_mask = run.speed <= min_speed
+            run.mask = np.logical_or(speed_mask, orig_mask)
 
     return field_props
 
@@ -146,37 +175,72 @@ def infill_ratemap(rmap: np.ndarray) -> np.ndarray:
     return output
 
 
-def reduce_labels(A: np.ndarray, labels: np.ndarray, reduce_by: float = 50) -> list:
+def simple_partition(
+    binned_data: BinnedData, rate_threshold_prc: int = 200, **kwargs
+) -> tuple[np.ndarray]:
     """
-    Reduce the labelled data in A by restricting the values to reduce_by % of
-    the maximum in each local labeled section of A - kind of a quantitative local watershed
+    Simple partitioning of fields based on mean firing rate. Only
+    returns a single field (the highest firing rate field) per
+    binned_data instance
+
+    The default is to limit to fields that have a mean firing rate
+    greater than twice the mean firing rate of the entire
+    ratemap
 
     Parameters
     ----------
-    A : np.ndarray
-        The data to be reduced
-    labels : np.ndarray
-        The labels to be used to partition the data
-    reduce_by : float
-        The percentage of the maximum value in each label to reduce by
+    binned_data : BinnedData
+        an instance of ephysiopy.common.utils.BinnedData
+    rate_threshold_prc : int
+        removes pixels in a field that fall below this percent of
+        the mean firing rate
 
     Returns
     -------
-    list of np.ndarray
-        The reduced data
+    tuple of np.ndarray
+        peaksXY - The xy coordinates of the peak rates in
+        the highest firing field
+        peaksRate - The peak rates in peaksXY
+        labels - An array of the labels corresponding to the highest firing field
+        rmap_filled - The filled ratemap of the tetrode / cluster
+
+    Notes
+    -----
+    This is a simple method to partition fields that only returns
+    a single field - the one with the highest mean firing rate.
     """
-    assert A.shape == labels.shape
-    out = []
-    for label in np.unique(labels):
-        m = np.ma.MaskedArray(A, np.invert(labels == label))
-        m = np.ma.masked_where(
-            A[labels == label] < np.nanmax(A[labels == label]) * reduce_by / 100, A
-        )
-        out.append(m)
-    return out
+    rmap = np.atleast_2d(binned_data.binned_data[0])
+    mean_rate = np.nanmean(rmap)
+    rate_threshold = mean_rate * (rate_threshold_prc / 100)
+    above_thresh = rmap >= rate_threshold
+    labels, n_fields = ndi.label(above_thresh)
+    labels = np.atleast_2d(labels)
+    if n_fields == 0:
+        return None, None, None, None
+    field_props = skimage.measure.regionprops(labels, intensity_image=rmap)
+    # get the field with the highest mean firing rate
+    mean_rates = [fp.mean_intensity for fp in field_props]
+    max_field_idx = np.argmax(mean_rates)
+    max_field = field_props[max_field_idx]
+    # create output arrays
+    peaksXY = np.array(
+        [[max_field.weighted_centroid[1]], [max_field.weighted_centroid[0]]]
+    )
+    peaksRate = np.array([max_field.max_intensity])
+    output_labels = np.zeros_like(labels)
+    output_labels[max_field.coords[:, 0], max_field.coords[:, 1]] = 1
+    rmap_filled = infill_ratemap(rmap)
+
+    if binned_data.binned_data[0].ndim == 1:
+        peaksXY = np.ravel(peaksXY)
+        peaksRate = np.ravel(peaksRate)
+        output_labels = np.ravel(output_labels)
+        rmap_filled = np.ravel(rmap_filled)
+
+    return peaksXY, peaksRate, output_labels, rmap_filled
 
 
-def partitionFields(
+def fancy_partition(
     binned_data: BinnedData,
     field_threshold_percent: int = 50,
     field_rate_threshold: float = 0.5,
@@ -271,7 +335,8 @@ def partitionFields(
 
     # breakpoint()
     labels[np.unravel_index(indices=indices, shape=labels.shape)] = 0
-    min_field_size = np.ceil(np.prod(labels.shape) * area_threshold).astype(int)
+    min_field_size = np.ceil(np.prod(labels.shape) *
+                             area_threshold).astype(int)
     # breakpoint()
     labels = skimage.morphology.remove_small_objects(
         labels, min_size=min_field_size, connectivity=2
@@ -454,7 +519,7 @@ def limit_to_one(A, prc=50, min_dist=5):
     Ac[np.isnan(A)] = 0
     # smooth Ac more to remove local irregularities
     n = ny = 5
-    x, y = np.mgrid[-n : n + 1, -ny : ny + 1]
+    x, y = np.mgrid[-n: n + 1, -ny: ny + 1]
     g = np.exp(-(x**2 / float(n) + y**2 / float(ny)))
     g = g / g.sum()
     Ac = signal.convolve(Ac, g, mode="same")
@@ -473,7 +538,8 @@ def limit_to_one(A, prc=50, min_dist=5):
     nFields = np.max(field_labels)
     sub_field_mask = np.zeros((nFields, Ac.shape[0], Ac.shape[1]))
     labelled_sub_field_mask = np.zeros_like(sub_field_mask)
-    sub_field_props = skimage.measure.regionprops(field_labels, intensity_image=Ac)
+    sub_field_props = skimage.measure.regionprops(
+        field_labels, intensity_image=Ac)
     sub_field_centroids = []
     sub_field_size = []
 
@@ -492,7 +558,8 @@ def limit_to_one(A, prc=50, min_dist=5):
     normd_dists = sub_field_centroids - middle
     field_dists_from_middle = np.hypot(normd_dists[:, 0], normd_dists[:, 1])
     central_field_idx = np.argmin(field_dists_from_middle)
-    central_field = np.squeeze(labelled_sub_field_mask[central_field_idx, :, :])
+    central_field = np.squeeze(
+        labelled_sub_field_mask[central_field_idx, :, :])
     # collapse the labelled mask down to an 2d array
     labelled_sub_field_mask = np.sum(labelled_sub_field_mask, 0)
     # clear the border
@@ -504,109 +571,6 @@ def limit_to_one(A, prc=50, min_dist=5):
     else:
         central_field_props = sub_field_props[central_field_idx]
     return central_field_props, central_field, central_field_idx
-
-
-def global_threshold(A, prc=50, min_dist=5) -> int:
-    """
-    Globally thresholds a ratemap and counts number of fields found
-
-    Parameters
-    ----------
-    A : np.ndarray
-        The ratemap
-    prc : int
-        The percentage of the peak rate to threshold the ratemap at
-    min_dist : int
-        The minimum distance between peaks
-
-    Returns
-    -------
-    int
-        The number of fields found in the ratemap
-    """
-    Ac = A.copy()
-    Ac[np.isnan(A)] = 0
-    n = ny = 5
-    x, y = np.mgrid[-n : n + 1, -ny : ny + 1]
-    g = np.exp(-(x**2 / float(n) + y**2 / float(ny)))
-    g = g / g.sum()
-    Ac = signal.convolve(Ac, g, mode="same")
-    maxRate = np.nanmax(np.ravel(Ac))
-    Ac[Ac < maxRate * (prc / float(100))] = 0
-    Ac_r = skimage.exposure.rescale_intensity(
-        Ac, in_range="image", out_range=(0, 1000)
-    ).astype(np.int32)
-    peak_idx = skimage.feature.peak_local_max(
-        Ac_r, min_distance=min_dist, exclude_border=False
-    )
-    peak_mask = np.zeros_like(Ac, dtype=bool)
-    peak_mask[tuple(peak_idx.T)] = True
-    peak_labels = skimage.measure.label(peak_mask, connectivity=2)
-    field_labels = watershed(image=Ac * -1, markers=peak_labels)
-    nFields = np.max(field_labels)
-    return nFields
-
-
-def local_threshold(A, prc=50, min_dist=5) -> np.ndarray:
-    """
-    Locally thresholds a ratemap to take only the surrounding prc amount
-    around any local peak
-
-    Parameters
-    ----------
-    A : np.ndarray
-        The ratemap
-    prc : int
-        The percentage of the peak rate to threshold the ratemap at
-    min_dist : int
-        The minimum distance between peaks
-
-    Returns
-    -------
-    np.ndarray
-        The thresholded ratemap
-
-    """
-    Ac = A.copy()
-    nanidx = np.isnan(Ac)
-    Ac[nanidx] = 0
-    # smooth Ac more to remove local irregularities
-    n = ny = 5
-    x, y = np.mgrid[-n : n + 1, -ny : ny + 1]
-    g = np.exp(-(x**2 / float(n) + y**2 / float(ny)))
-    g = g / g.sum()
-    Ac = signal.convolve(Ac, g, mode="same")
-    # rescale the image going in to peak_local_max and cast to
-    # integer dtype as there is an invert operation internally
-    # that only works in int or bool dtypes
-    Ac_r = skimage.exposure.rescale_intensity(
-        Ac, in_range="image", out_range=(0, 1000)
-    ).astype(np.int32)
-    peak_idx = skimage.feature.peak_local_max(
-        Ac_r, min_distance=min_dist, exclude_border=False
-    )
-    peak_mask = np.zeros_like(Ac, dtype=bool)
-    peak_mask[tuple(peak_idx.T)] = True
-    peak_labels = skimage.measure.label(peak_mask, connectivity=2)
-    field_labels = watershed(image=Ac * -1, markers=peak_labels)
-    nFields = np.max(field_labels)
-    sub_field_mask = np.zeros((nFields, Ac.shape[0], Ac.shape[1]))
-    sub_field_props = skimage.measure.regionprops(field_labels, intensity_image=Ac)
-    sub_field_centroids = []
-    sub_field_size = []
-
-    for sub_field in sub_field_props:
-        tmp = np.zeros(Ac.shape).astype(bool)
-        tmp[sub_field.coords[:, 0], sub_field.coords[:, 1]] = True
-        tmp2 = Ac > sub_field.max_intensity * (prc / float(100))
-        sub_field_mask[sub_field.label - 1, :, :] = np.logical_and(tmp2, tmp)
-        sub_field_centroids.append(sub_field.centroid)
-        sub_field_size.append(sub_field.area)  # in bins
-    sub_field_mask = np.sum(sub_field_mask, 0)
-    A_out = np.zeros_like(A)
-    A_out[sub_field_mask.astype(bool)] = A[sub_field_mask.astype(bool)]
-    A_out[nanidx] = np.nan
-    return A_out
 
 
 def border_score(
@@ -669,7 +633,7 @@ def border_score(
     number should be small. This is achieved by first doing a bunch of
     morphological operations to isolate individual fields in the
     ratemap (similar to the code used in phasePrecession.py - see
-    the partitionFields method therein). These partitioned fields are then
+    the fancy_partition method therein). These partitioned fields are then
     thinned out (using skimage's skeletonize) to a single pixel
     wide field which will lie more or less in the middle of the
     (highly smoothed) sub-field. It is the variance in distance from the
@@ -690,7 +654,7 @@ def border_score(
         radius = np.max(np.array(np.shape(A))) / 2.0
         dist_mask = skimage.morphology.disk(radius)
         if np.shape(dist_mask) > np.shape(A):
-            dist_mask = dist_mask[1 : A_rows + 1, 1 : A_cols + 1]
+            dist_mask = dist_mask[1: A_rows + 1, 1: A_cols + 1]
         tmp = np.zeros([A_rows + 2, A_cols + 2])
         tmp[1:-1, 1:-1] = dist_mask
         dists = ndi.distance_transform_bf(tmp)
@@ -726,7 +690,8 @@ def border_score(
     labels, nFields = ndi.label(A_thresh)
     # remove small objects
     min_size = int(minArea / binSize) - 1
-    skimage.morphology.remove_small_objects(labels, min_size=min_size, connectivity=2)
+    skimage.morphology.remove_small_objects(
+        labels, min_size=min_size, connectivity=2)
     labels = skimage.segmentation.relabel_sequential(labels)[0]
     nFields = np.nanmax(labels)
     if nFields == 0:
@@ -785,7 +750,8 @@ def border_score(
         Dm = Dm / radius
     elif "square" in shape:
         Dm = Dm / (np.nanmax(np.shape(A)) / 2.0)
-    borderScore = (fractionOfPixelsOnBorder - Dm) / (fractionOfPixelsOnBorder + Dm)
+    borderScore = (fractionOfPixelsOnBorder - Dm) / \
+        (fractionOfPixelsOnBorder + Dm)
     return np.nanmax(borderScore)
 
 
@@ -873,7 +839,7 @@ def field_props(
     Ac[np.isnan(A)] = 0
     # smooth Ac more to remove local irregularities
     n = ny = 5
-    x, y = np.mgrid[-n : n + 1, -ny : ny + 1]
+    x, y = np.mgrid[-n: n + 1, -ny: ny + 1]
     g = np.exp(-(x**2 / float(n) + y**2 / float(ny)))
     g = g / g.sum()
     Ac = signal.convolve(Ac, g, mode="same")
@@ -883,12 +849,14 @@ def field_props(
     nFields = np.max(field_labels)
     if neighbours > nFields:
         print(
-            "neighbours value of {0} > the {1} peaks found".format(neighbours, nFields)
+            "neighbours value of {0} > the {1} peaks found".format(
+                neighbours, nFields)
         )
         print("Reducing neighbours to number of peaks found")
         neighbours = nFields
     sub_field_mask = np.zeros((nFields, Ac.shape[0], Ac.shape[1]))
-    sub_field_props = skimage.measure.regionprops(field_labels, intensity_image=Ac)
+    sub_field_props = skimage.measure.regionprops(
+        field_labels, intensity_image=Ac)
     sub_field_centroids = []
     sub_field_size = []
 
@@ -902,7 +870,8 @@ def field_props(
     sub_field_mask = np.sum(sub_field_mask, 0)
     contours = skimage.measure.find_contours(sub_field_mask, 0.5)
     # find the nearest neighbors to the peaks of each sub-field
-    nbrs = NearestNeighbors(n_neighbors=neighbours, algorithm="ball_tree").fit(peak_idx)
+    nbrs = NearestNeighbors(n_neighbors=neighbours,
+                            algorithm="ball_tree").fit(peak_idx)
     distances, _ = nbrs.kneighbors(peak_idx)
     mean_field_distance = np.mean(distances[:, 1:neighbours])
 
@@ -969,7 +938,8 @@ def field_props(
         print(f"Mean firing rate: {np.nanmean(A)} Hz")
         print(f"Number of fields: {nFields}")
         print(f"Mean field size: {np.mean(sub_field_size)} cm")
-        print(f"Mean inter-peak distance between fields: {mean_field_distance} cm")
+        print(
+            f"Mean inter-peak distance between fields: {mean_field_distance} cm")
     return props
 
 
@@ -1306,7 +1276,7 @@ def grid_field_props(A: BinnedData, maxima="centroid", allProps=True, **kwargs):
     min_distance = np.ceil(np.min(A_sz / 2) / 8.0).astype(int)
     min_distance = kwargs.get("min_distance", min_distance)
 
-    _, _, field_labels, _ = partitionFields(
+    _, _, field_labels, _ = fancy_partition(
         A, field_threshold_percent=10, field_rate_threshold=0.001
     )
     # peak_idx, field_labels = _get_field_labels(A_tmp, neighbours=7, **kwargs)
@@ -1330,7 +1300,8 @@ def grid_field_props(A: BinnedData, maxima="centroid", allProps=True, **kwargs):
 
     # Get some statistics about the labeled regions
     lbl_range = np.arange(0, nLbls)
-    peak_coords = ndi.maximum_position(A.binned_data[0], half_peak_labels, lbl_range)
+    peak_coords = ndi.maximum_position(
+        A.binned_data[0], half_peak_labels, lbl_range)
     peak_coords = np.array(peak_coords)
     # Now convert the peak_coords to the image centre coordinate system
     x_peaks, y_peaks = peak_coords.T
@@ -1341,7 +1312,8 @@ def grid_field_props(A: BinnedData, maxima="centroid", allProps=True, **kwargs):
     peak_dist_to_centre = np.hypot(peak_coords[:, 0], peak_coords[:, 1])
     closest_peak_idx = np.argsort(peak_dist_to_centre)
     central_peak_label = closest_peak_idx[0]
-    closest_peak_idx = closest_peak_idx[1 : np.min((7, len(closest_peak_idx) - 1))]
+    closest_peak_idx = closest_peak_idx[1: np.min(
+        (7, len(closest_peak_idx) - 1))]
     # closest_peak_idx should now the indices of the labeled 6 peaks
     # surrounding the central peak at the image centre
     scale = np.median(peak_dist_to_centre[closest_peak_idx])
@@ -1379,7 +1351,8 @@ def grid_field_props(A: BinnedData, maxima="centroid", allProps=True, **kwargs):
     else:
         step = 30
     try:
-        gridscore, rotationCorrVals, rotationArr = gridness(sac_middle, step=step)
+        gridscore, rotationCorrVals, rotationArr = gridness(
+            sac_middle, step=step)
     except Exception:
         gridscore, rotationCorrVals, rotationArr = np.nan, np.nan, np.nan
 
@@ -1533,13 +1506,15 @@ def gridness(image, step=30) -> tuple:
             allNans = np.logical_or(origNanIdx, rotatedNanIdx)
             # get the correlation between the original and rotated images
             rotationalCorrVals[angle] = stats.pearsonr(
-                autoCorrMiddleRescaled.ravel()[~allNans], rotatedA.ravel()[~allNans]
+                autoCorrMiddleRescaled.ravel()[~allNans], rotatedA.ravel()[
+                    ~allNans]
             )[0]
             rotationArr[idx] = rotationalCorrVals[angle]
     except Exception:
         return gridscore, rotationalCorrVals, rotationArr
     gridscore = np.min((rotationalCorrVals[60], rotationalCorrVals[120])) - np.max(
-        (rotationalCorrVals[150], rotationalCorrVals[30], rotationalCorrVals[90])
+        (rotationalCorrVals[150],
+         rotationalCorrVals[30], rotationalCorrVals[90])
     )
     return gridscore, rotationalCorrVals, rotationArr
 
@@ -1730,15 +1705,18 @@ def get_thigmotaxis_score(xy: np.ndarray, shape: str = "circle") -> float:
     if shape == "circle":
         outer_radius = np.nanmax(np.hypot(xy[0], xy[1]))
         inner_radius = outer_radius / np.sqrt(2)
-        inner_mask = np.less(np.hypot(xy[0], xy[1]), inner_radius, out=inner_mask)
+        inner_mask = np.less(
+            np.hypot(xy[0], xy[1]), inner_radius, out=inner_mask)
     elif shape == "square":
         width, height = np.nanmax(xy, -1) - np.nanmin(xy, -1)
         inner_width = width / np.sqrt(2)
         inner_height = height / np.sqrt(2)
         x_gap = (width - inner_width) / 2
         y_gap = (height - inner_height) / 2
-        x_mask = (xy[0] > np.nanmin(xy[0]) + x_gap) & (xy[0] < np.nanmax(xy[0]) - x_gap)
-        y_mask = (xy[1] > np.nanmin(xy[1]) + y_gap) & (xy[1] < np.nanmax(xy[1]) - y_gap)
+        x_mask = (xy[0] > np.nanmin(xy[0]) + x_gap) & (xy[0]
+                                                       < np.nanmax(xy[0]) - x_gap)
+        y_mask = (xy[1] > np.nanmin(xy[1]) + y_gap) & (xy[1]
+                                                       < np.nanmax(xy[1]) - y_gap)
         inner_mask = np.logical_and(x_mask, y_mask, out=inner_mask)
     return (np.count_nonzero(inner_mask) - np.count_nonzero(~inner_mask)) / n_pos
 
@@ -1778,8 +1756,11 @@ def fast_overdispersion(
         raise ValueError("Not enough data to calculate overdispersion")
     ratemap = rmap.binned_data[0]
     # get the bins in the ratemap that correspond to the position data
-    xbins = np.digitize(xy[0], rmap.bin_edges[1][:-1])
-    ybins = np.digitize(xy[1], rmap.bin_edges[0][:-1])
+    if rmap.variable.value == VariableToBin.X.value:
+        xbins = np.digitize(xy[0], rmap.bin_edges[0][:-1])
+    if rmap.variable.value == VariableToBin.XY.value:
+        xbins = np.digitize(xy[0], rmap.bin_edges[1][:-1])
+        ybins = np.digitize(xy[1], rmap.bin_edges[0][:-1])
 
     # now loop over the windows and calculate the overdispersion
     Z2 = np.zeros(n_windows) * np.nan
@@ -1787,10 +1768,13 @@ def fast_overdispersion(
         start_idx = w * window_samples
         end_idx = start_idx + window_samples
         xi = xbins[start_idx:end_idx] - 1
-        yi = ybins[start_idx:end_idx] - 1
-        exptd_rate = ratemap[yi, xi]
+        if rmap.variable.value == VariableToBin.X.value:
+            exptd_rate = ratemap[xi]
+        if rmap.variable.value == VariableToBin.XY.value:
+            yi = ybins[start_idx:end_idx] - 1
+            exptd_rate = ratemap[yi, xi]
         exptd_spikes = np.sum(exptd_rate / sample_rate)
         observed_spikes = np.sum(spikes[start_idx:end_idx])
         Z2[w] = (observed_spikes - exptd_spikes) / np.sqrt(exptd_spikes)
 
-    return np.nanmean(Z2)
+    return np.nanvar(Z2), Z2

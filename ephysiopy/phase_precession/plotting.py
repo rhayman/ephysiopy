@@ -1,21 +1,26 @@
 # TODO: these plotting fncs needed finishing
+import warnings
 import copy
 import matplotlib
 import numpy as np
 from scipy import ndimage
 from ephysiopy.common.utils import flatten_list, BinnedData, repeat_ind
 from ephysiopy.common.utils import bwperim
-from ephysiopy.visualise.plotting import stripAxes
+from ephysiopy.visualise.plotting import stripAxes, _add_colour_wheel
 from ephysiopy.visualise.plotting import colored_line
 from ephysiopy.io.recording import AxonaTrial
 from ephysiopy.common.fieldcalcs import (
     FieldProps,
     RunProps,
     infill_ratemap,
+    filter_runs,
 )
+from ephysiopy.common.fieldproperties import fieldprops
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.collections import RegularPolyCollection
+import matplotlib.colors as colours
+import matplotlib.patches as mpatches
 
 
 @stripAxes
@@ -64,6 +69,58 @@ def plot_phase_precession(
     return ax
 
 
+def plot_runs_and_precession(
+    trial: AxonaTrial, cluster: int, channel: int, field_props: list[FieldProps]
+):
+    """
+    Plot runs versus time where the colour of the line indicates
+    directional heading. The field limits are also plotted and spikes are
+    overlaid on the runs. Boxes delineate the runs that have been identified
+    in field_props. Also plots phase precession for each field.
+    """
+    # warn if the trial has not been masked/ filtered
+    if trial.filter is None:
+        warnings.warn(
+            "Trial has not been filtered. "
+            "Consider applying a position filter before plotting runs."
+        )
+
+    # need to clearly pull out the runs along the linear track
+    # so use fieldprops to do this using a unitary label image
+    # as input and some other params that the input
+    # field_props would have been generated with
+    label_image = np.ones_like(field_props[0]._intensity_image, dtype=int)
+    # smooth xy quite a bit as we just want runs going smoothly
+    # from one end of the track to the other
+    xy = trial.PosCalcs.smoothPos(trial.PosCalcs.xy, window_len=31)
+
+    fp = fieldprops(
+        label_image,
+        xy=xy[0],
+        binned_data=field_props[0].binned_data,
+        spike_times=trial.get_spike_times(cluster, channel),
+        method="clump_runs",
+    )
+    # filter out the short duration runs
+    fp = filter_runs(fp, ["min_speed", "duration"], [
+                     np.greater, np.greater], [0, 0.1])
+    # filter for distance traversed
+
+    fig = plt.figure(constrained_layout=True)
+
+    time = np.arange(0, trial.PosCalcs.duration,
+                     1 / trial.PosCalcs.sample_rate)
+    run_labels = np.zeros_like(time)
+    for i, f in enumerate(fp):
+        for r in f.runs:
+            run_labels[r.slice] = i
+
+    [plt.plot(r.xy[0], time[r.slice], color="lightgrey", zorder=0)
+     for r in fp[0].runs]
+
+    plt.show()
+
+
 def plot_field_and_runs(trial: AxonaTrial, field_props: list[FieldProps]):
     """
     Plot runs versus time where the colour of the line indicates
@@ -73,99 +130,84 @@ def plot_field_and_runs(trial: AxonaTrial, field_props: list[FieldProps]):
     """
 
     fig, ax = plt.subplots(layout="constrained")
-    cluster = field_props[0].binned_data.cluster_id[0].Cluster
-    channel = field_props[0].binned_data.cluster_id[0].Channel
-
-    spk_in_pos = trial.get_binned_spike_times(cluster, channel)
     time = np.arange(0, trial.PosCalcs.duration,
                      1 / trial.PosCalcs.sample_rate)
 
-    lc = colored_line(
-        time,
+    ax.set_ylim(0, time[-1])
+    ax.set_xlim(0, np.nanmax(trial.PosCalcs.xy[0].data))
+    ax.set_xticklabels([])
+
+    # plot all the position data as a light grey line in the background
+    ax.plot(
         trial.PosCalcs.xy[0],
-        trial.PosCalcs.dir,
-        ax,
-        cmap="hsv",
-        zorder=1,
+        time,
+        color="lightgrey",
+        zorder=0,
     )
-    fig.colorbar(lc, orientation="horizontal", label="Direction (degrees)")
-    ax.set_xlim(0, time[-1])
-    ax.set_ylim(0, np.nanmax(trial.PosCalcs.xy[0].data))
-    ax.set_yticklabels([])
+
+    xy = field_props[0].runs[0].xy
+    tail = (0.55, 0.025) if xy[0, -1] - xy[0, 0] < 0 else (0.45, 0.025)
+    head = (0.45, 0.025) if xy[0, -1] - xy[0, 0] < 0 else (0.55, 0.025)
+
+    arrow = mpatches.FancyArrowPatch(
+        tail, head, mutation_scale=100, color="black")
+    ax.add_patch(arrow)
+
+    _add_colour_wheel(ax, fig, bbox=(0.05, 0.6, 0.15, 0.15))
+
+    be = field_props[0].binned_data.bin_edges[0]
 
     for f in field_props:
         # add the field limits as a shaded area
         slice = f.slice[0]
-        be = f.binned_data.bin_edges[0]
-        ax.axhspan(be[slice.start], be[slice.stop], alpha=0.3)
-        for r in f.runs:
-            # draw a rectangle that bounds the run in x and time
-            ymin = np.nanmin(r.xy[0])
-            ymax = np.nanmax(r.xy[0])
-            height = ymax - ymin
-            xmin = time[r.run_start]
-            xmax = time[r.run_stop]
-            width = xmax - xmin
-            rect = Rectangle(
-                (xmin, ymin),
-                width,
-                height,
-                alpha=0.8,
-                color="red",
-            )
-            ax.add_patch(rect)
+        ax.axvspan(be[slice.start], be[slice.stop], alpha=0.3)
+        for irun in f.runs:
             # annotate the run with its run number
-            ax.annotate(str(r.label), xy=(xmax, ymax))
+            run_time = np.arange(
+                irun.slice.start, irun.slice.stop) / irun.sample_rate
+            # draw the run as a black line
+            ax.plot(irun.xy[0], run_time, color="black", zorder=1)
 
-    idx = np.nonzero(spk_in_pos)[1]
-    ax.scatter(time[idx], trial.PosCalcs.xy[0][idx], c="k", s=10, zorder=2)
-    ax_histx = ax.inset_axes([1.05, 0, 0.15, 1], sharey=ax)
-    add_hist_to_y_axes(
-        ax_histx, trial.PosCalcs.xy[0][idx], field_props[0].binned_data.bin_edges[0]
+            # colour spike positions by phase of firing
+            x = irun.spiking_var("xy")
+            t = irun.spiking_var("time")
+            spike_phase = np.ravel(irun.lfp.spiking_var("phase"))
+            norm = colours.Normalize(-np.pi, np.pi, False)
+            ax.scatter(
+                x,
+                t,
+                c=spike_phase,
+                cmap="hsv",
+                norm=norm,
+                s=10,
+                zorder=2,
+            )
+            xmax = np.nanmax(irun.xy[0])
+            ymax = time[irun.run_stop - 1]
+            ax.annotate(str(irun.label), xy=(xmax, ymax))
+    # fig.colorbar(lc, orientation="horizontal", label="Direction (degrees)")
+
+    divider = make_axes_locatable(ax)
+    axHistx = divider.append_axes(
+        "top", 1.2, pad=0.2, sharex=ax, transform=ax.transAxes
     )
-    ax_histx1 = ax.inset_axes([-0.2, 0, 0.15, 1], sharey=ax)
-    add_hist_to_y_axes(
-        ax_histx1,
-        trial.PosCalcs.xy[0][idx],
-        field_props[0].binned_data.bin_edges[0],
-        flip=True,
+    h = field_props[0].binned_data.binned_data[0]
+    axHistx.bar(
+        be[:-1],
+        h,
+        width=np.diff(be),
+        align="edge",
+        color="lightgrey",
+        rasterized=True,
     )
+
+    plt.setp(axHistx.get_xticklabels(), visible=False)
+    # Label only the min and max of the y-axis
+    # max is rounded to the nearest 10
+    maxRate = int(np.ceil(np.max(h) / 10.0) * 10)
+    axHistx.set_ylim(0, maxRate)
+    axHistx.set_yticks((0, maxRate))
     plt.show()
-
-
-def add_hist_to_y_axes(
-    ax_histx,
-    data: np.ndarray,
-    bin_edges: np.ndarray,
-    **kwargs,
-):
-    """
-    Add a histogram to the y axes.
-
-    Parameters
-    ----------
-    ax : matplotlib.axes.Axes
-        The axes to add the histogram to.
-    data : np.ndarray
-        The data to plot in the histogram.
-    bins : int, optional
-        Number of bins for the histogram, by default 50.
-    **kwargs : dict
-        Additional keyword arguments for the histogram.
-    """
-    # no labels
-    ax_histx.tick_params(axis="y", labelleft=False, labelright=False)
-    ax_histx.tick_params(axis="x", labeltop=False, labelbottom=False)
-    if kwargs.pop("flip", False):
-        ax_histx.hist(
-            data,
-            bins=bin_edges,
-            weights=-np.ones_like(data),
-            orientation="horizontal",
-            **kwargs,
-        )
-    else:
-        ax_histx.hist(data, bins=bin_edges, orientation="horizontal", **kwargs)
 
 
 def plot_phase_v_position(
@@ -494,7 +536,6 @@ def plot_lfp_run(
     that you can see the diffferences between this and the actual spike
     times etc (if you can be arsed to plot them)
     """
-    from ephysiopy.visualise.plotting import colored_line
 
     assert hasattr(run, "lfp_data")
 
@@ -518,3 +559,23 @@ def plot_lfp_run(
     spike_times = np.take(t, inds)
     ax.plot(spike_times, spike_amp, "ro")
     plt.show()
+
+
+def add_colorwheel_to_fig(ax):
+    """
+    Add a colorwheel to the given axis.
+
+    """
+    assert ax.name == "polar"
+    ax._direction = 2 * np.pi
+    norm = matplotlib.colors.Normalize(0, 2 * np.pi)
+    steps = 2056
+    cmap = matplotlib.colormaps["hsv"]
+    cmap.N = steps
+    cb = matplotlib.colorbar.ColorbarBase(
+        ax, cmap=cmap, norm=norm, orientation="horizontal"
+    )
+    cb.outline.set_visible(False)
+    ax.set_axis_off()
+    ax.set_rlim([-1, 1])
+    return ax

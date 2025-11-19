@@ -492,20 +492,26 @@ def xcorr(
     """
     if x2 is None:
         x2 = x1.copy()
+
     if isinstance(Trange, list):
         Trange = np.array(Trange)
+
     y = []
     irange = x2[:, np.newaxis] + Trange[np.newaxis, :]
     dts = np.searchsorted(x1, irange)
+
     for i, t in enumerate(dts):
         y.extend((x1[t[0]: t[1]] - x2[i]))
     y = np.array(y, dtype=float)
+
     counts, bins = np.histogram(
         y[y != 0], bins=int(np.ptp(Trange) / binsize) + 1, range=(Trange[0], Trange[1])
     )
+
     if normed:
         counts = counts / len(x1)
     ids = kwargs.pop("cluster_id", [])
+
     return BinnedData(
         variable=VariableToBin.TIME,
         map_type=MapType.SPK,

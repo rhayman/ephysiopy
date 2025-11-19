@@ -94,7 +94,6 @@ def mask_array_with_dynamic_mask(func):
         elif hasattr(self, "mask") and isinstance(self.mask, np.ndarray):
             mask = np.broadcast_to(self.mask, result.shape)
         else:
-            breakpoint()
             raise AttributeError(
                 "The class must have a 'get_mask' method or 'mask' attribute."
             )
@@ -151,14 +150,14 @@ class SpikeTimes(object):
         if isinstance(obj, LFPSegment):
             lfp_times = spike_times(obj)
             run_times = spike_times(obj.parent)
-        if isinstance(obj, RunProps):
+            return ma.intersect1d(lfp_times, run_times).compressed()
+        elif isinstance(obj, RunProps):
             run_times = spike_times(obj)
             if hasattr(obj, "lfp") and obj.lfp is not None:
                 lfp_times = spike_times(obj.lfp)
             else:
                 lfp_times = run_times
-        times = ma.intersect1d(lfp_times, run_times)
-        return times
+            return ma.intersect1d(lfp_times, run_times).compressed()
 
     def __set__(self, obj, value):
         setattr(obj, self.private_name, value)
@@ -173,13 +172,13 @@ class SpikingProperty(object):
     etc)
     """
 
-    times = SpikeTimes()
+    spike_times = SpikeTimes()
 
     def __init__(self, parent, times: np.ndarray, mask: np.ndarray = None):
         self._all_spike_times = times
         self._mask = mask
         self.parent = weakref.ref(parent)()
-        self.spike_times = times
+        self.spike_times = spike_times
 
     def __len__(self):
         return self.slice.stop - self.slice.start
@@ -348,6 +347,11 @@ class LFPSegment(SpikingProperty, object):
             raise AttributeError(f"{var} is not an attribute of LFPSegment")
 
     def mean_spiking_var(self, var="phase"):
+        """
+        Get the mean value of a variable at the posiition of
+        the spikes for all runs through this field when multiple spikes
+        occur in a single theta cycle
+        """
         labels = ma.compressed(self.spiking_var("cycle_label"))
         if len(labels) == 1:
             # return the value directly
@@ -355,15 +359,16 @@ class LFPSegment(SpikingProperty, object):
         elif len(labels) > 1:
             _, _, lens = find_runs(labels)
             idx = repeat_ind(lens)
-            out = np.zeros_like(np.unique(labels), dtype=complex)
-            spk_var = self.spiking_var(var)
+            spk_var = ma.compressed(self.spiking_var(var))
             if var == "phase":
+                out = np.zeros_like(np.unique(labels), dtype=complex)
                 np.add.at(out.ravel(), idx, np.exp(1j * spk_var).ravel())
                 out = np.angle(out)
             else:
+                out = np.zeros_like(np.unique(labels), dtype=float)
                 np.add.at(out.ravel(), idx, spk_var.ravel())
                 out /= lens
-            return out
+            return np.atleast_2d(out)
 
 
 class RunProps(SpikingProperty, object):
@@ -396,8 +401,8 @@ class RunProps(SpikingProperty, object):
         the minimum speed
     cumulative_time : np.ndarray
         the cumulative time spent on a run
-    duration: int
-        the total duration of a run
+    duration: float
+        the total duration of a run in seconds
     n_spikes : int
         the total number of spikes emitted on a run
     run_start : int
@@ -521,7 +526,12 @@ class RunProps(SpikingProperty, object):
     @mask_array_with_dynamic_mask
     def hdir(self) -> ma.MaskedArray:
         if self._hdir is None:
-            tmp = np.arctan2(np.diff(self.xy[1]), np.diff(self.xy[0]))
+            if self.ndim == 1:
+                tmp = np.arctan2(
+                    np.diff(self.xy[0]), np.diff(np.zeros_like(self.xy[0]))
+                )
+            elif self.ndim == 2:
+                tmp = np.arctan2(np.diff(self.xy[1]), np.diff(self.xy[0]))
             self._hdir = np.insert(tmp, -1, tmp[-1])
         return self._hdir
 
@@ -539,13 +549,21 @@ class RunProps(SpikingProperty, object):
         return np.nanmin(self._speed)
 
     @property
+    def time(self):
+        return np.linspace(
+            self.slice.start / self.sample_rate,
+            self.slice.stop / self.sample_rate,
+            len(self),
+        )
+
+    @property
     @mask_array_with_dynamic_mask
     def cumulative_time(self) -> ma.MaskedArray:
         return np.arange(len(self))
 
     @property
-    def duration(self) -> int:
-        return self.slice.stop - self.slice.start
+    def duration(self) -> float:
+        return (self.slice.stop - self.slice.start) / self.sample_rate
 
     @property
     def run_start(self) -> int:
@@ -559,6 +577,7 @@ class RunProps(SpikingProperty, object):
     def mean_direction(self) -> float:
         return stats.circmean(self.hdir)
 
+    # TODO: might be fucked for 1D
     @property
     @mask_array_with_dynamic_mask
     def current_direction(self) -> ma.MaskedArray:
@@ -578,8 +597,12 @@ class RunProps(SpikingProperty, object):
         return np.cumsum(d)
 
     @property
+    def total_distance(self) -> float:
+        return self.cumulative_distance[-1]
+
+    @property
     def spike_num_in_run(self):
-        return np.arange(1, self.n_spikes + 1)
+        return np.arange(self.n_spikes)
 
     def expected_spikes(
         self, expected_rate_at_pos: np.ndarray, sample_rate: int = 50
@@ -598,7 +621,7 @@ class RunProps(SpikingProperty, object):
         expected_rate : np.ndarray
             the expected rate at each xy position of this run
         """
-        return expected_rate_at_pos[self.slice] / sample_rate
+        return expected_rate_at_pos[..., self.slice] / sample_rate
 
     def overdispersion(self, spike_train: np.ndarray, fs: int = 50) -> float:
         """
@@ -636,16 +659,16 @@ class RunProps(SpikingProperty, object):
             position sample rate in Hz
         """
         f_len = np.floor((self.run_stop - self.run_start) * k) + 1
-        h = signal.firwin(
+        filt = signal.firwin(
             int(f_len),
             fs=sample_rate,
             cutoff=spatial_lp / sample_rate * 2,
             window="blackman",
         )
-        padlen = 2 * len(h)
+        padlen = 2 * len(filt)
         if padlen == self.xy.shape[1]:
             padlen = padlen - 1
-        self.xy = signal.filtfilt(h, [1], self.xy, padlen=padlen, axis=1)
+        self.xy = signal.filtfilt(filt, [1], self.xy, padlen=padlen, axis=1)
         self.xy_is_smoothed = True
 
     @property
@@ -668,6 +691,9 @@ class RunProps(SpikingProperty, object):
     @property
     @mask_array_with_dynamic_mask
     def xy_dist_to_peak_normed(self) -> ma.MaskedArray:
+        """
+        Values lie between 0 and 1
+        """
         x_y = self.r_and_phi_to_x_and_y
         return np.hypot(x_y[0], x_y[1])
 
@@ -697,6 +723,9 @@ class RunProps(SpikingProperty, object):
     @property
     @mask_array_with_dynamic_mask
     def pos_r(self) -> ma.MaskedArray:
+        """
+        Values lie between 0 and 1
+        """
         angle_df = circ_abs(
             self.perimeter_angle_from_peak()[:, None] - self.xy_angle_to_peak
         )
@@ -722,11 +751,17 @@ class RunProps(SpikingProperty, object):
     @property
     @mask_array_with_dynamic_mask
     def pos_phi(self) -> ma.MaskedArray:
+        """
+        Values lie between 0 and 2pi
+        """
         return self.xy_angle_to_peak - self.mean_direction
 
     @property
     @mask_array_with_dynamic_mask
     def rho(self) -> ma.MaskedArray:
+        """
+        Values lie between 0 and 1
+        """
         rho, _ = cart2pol(self.pos_xy[0], self.pos_xy[1])
         rho[rho > 1] = 1
         return rho
@@ -734,6 +769,9 @@ class RunProps(SpikingProperty, object):
     @property
     @mask_array_with_dynamic_mask
     def phi(self) -> ma.MaskedArray:
+        """
+        Values lie between 0 and 2pi
+        """
         _, phi = cart2pol(self.pos_xy[0], self.pos_xy[1])
         return phi
 
@@ -742,6 +780,21 @@ class RunProps(SpikingProperty, object):
     def r_and_phi_to_x_and_y(self) -> ma.MaskedArray:
         return np.vstack(pol2cart(self.rho, self.phi))
 
+    @property
+    def normed_x(self) -> np.ndarray:
+        """
+        Normalise the x data to lie between -1 and 1
+        with respect to the field limits
+        of the parent field
+        """
+        be = self.parent.binned_data.bin_edges[0]
+        sl = self.parent.slice[0]
+        xmin = be[sl.start]
+        xmax = be[sl.stop]
+        fp = np.linspace(-1, 1, 1000)
+        xp = np.linspace(xmin, xmax, 1000)
+        return np.interp(self.xy[0], xp, fp)
+
     """
     Define a measure of tortuosity to see how direct the run was
     from field entry to exit. It's jsut the ratio of the distance between
@@ -749,6 +802,7 @@ class RunProps(SpikingProperty, object):
     of the run
     """
 
+    # TODO: Won't work with 1D data
     @property
     @mask_array_with_dynamic_mask
     def tortuosity(self) -> ma.MaskedArray:
@@ -772,8 +826,9 @@ class RunProps(SpikingProperty, object):
 
     def mean_spiking_var(self, var="current_direction"):
         """
-        Get the mean value of a variable over theta cycles
-        at the posiition of the spikes for this run
+        Get the mean value of a variable at the posiition of
+        the spikes for all runs through this field when multiple spikes
+        occur in a single theta cycle
         """
         if not hasattr(self, "lfp") or self.lfp is None:
             raise AttributeError("RunProps must have an lfp attribute")
@@ -783,17 +838,17 @@ class RunProps(SpikingProperty, object):
 
             if len(labels) == 1:
                 # return the value directly
-                return self.spiking_var(var)
+                return np.atleast_2d(self.spiking_var(var))
 
             elif len(labels) > 1:
                 _, _, lens = find_runs(labels)
                 idx = repeat_ind(lens)
-                spike_var = self.spiking_var(var)
+                spike_var = ma.compress_cols(np.atleast_2d(self.spiking_var(var)))
                 ndim = np.shape(spike_var)[0]
                 M = np.zeros(shape=[ndim, len(np.unique(labels))], dtype=float)
                 [np.add.at(M[i, :], idx, spike_var[i, :]) for i in range(ndim)]
                 M /= lens
-                return M
+                return np.atleast_2d(M)
 
         else:
             raise AttributeError(f"{var} is not an attribute of RunProps")
@@ -918,6 +973,9 @@ class FieldProps(RegionProperties):
         self.binned_data = binned_data
         self._runs = []
 
+    def __str__(self):
+        return f"field: {self.label}: {self.num_runs} runs"
+
     @property
     def runs(self):
         return self._runs
@@ -1027,10 +1085,14 @@ class FieldProps(RegionProperties):
 
     @property
     def spike_phase(self):
-        phases = [r.spike_phase for r in self.runs if r.lfp is not None]
+        phases = [r.lfp.spiking_var().T for r in self.runs if r.lfp is not None]
         if len(phases) == 0:
             return None
-        return np.concatenate(phases)
+        return np.concatenate(phases).T
+
+    @property
+    def mean_spike_phase(self):
+        return np.concatenate([r.lfp.mean_spiking_var().ravel() for r in self.runs])
 
     # The x-y coordinate at the field peak
     @property
@@ -1180,12 +1242,14 @@ class FieldProps(RegionProperties):
         )
 
     @property
+    @flatten_output
     def current_direction(self) -> list:
         return [r.current_direction.T for r in self.runs]
 
     @property
+    @flatten_output
     def cumulative_distance(self) -> list:
-        return [r.cumulative_distance for r in self.runs]
+        return [r.cumulative_distance.T for r in self.runs]
 
     @property
     def projected_direction(self) -> np.ndarray:
@@ -1212,13 +1276,14 @@ class FieldProps(RegionProperties):
             for all runs through this field
         """
         return np.concatenate(
-            [r.get_pos_spike_var(var).T for r in self.runs if hasattr(r, var)]
+            [r.spiking_var(var).T for r in self.runs if hasattr(r, var)]
         ).T
 
-    def mean_spiking_var(self, var="phase"):
+    def mean_spiking_var(self, var="current_direction"):
         """
         Get the mean value of a variable at the posiition of
-        the spikes for all runs through this field
+        the spikes for all runs through this field when multiple spikes
+        occur in a single theta cycle
 
         Parameters
         ----------
@@ -1231,7 +1296,14 @@ class FieldProps(RegionProperties):
             the mean value of the variable at the position of spikes
             for all runs through this field
         """
-        return np.concatenate([r.mean_spiking_var(var).T for r in self.runs]).T
+        if hasattr(self.runs[0], var):
+            return np.concatenate([r.mean_spiking_var(var).T for r in self.runs]).T
+
+        elif hasattr(self.runs[0], "lfp"):
+            if hasattr(self.runs[0].lfp, var):
+                return np.concatenate(
+                    [r.lfp.mean_spiking_var(var).T for r in self.runs if r.n_spikes > 0]
+                ).T
 
     # Over-ride the next intensity_* functions so they use the
     # nan versions
@@ -1393,6 +1465,7 @@ def fieldprops(
     binned_data,
     spike_times,
     xy,
+    method="field",
     cache=True,
     *,
     extra_properties=None,
@@ -1419,9 +1492,19 @@ def fieldprops(
     binned_data : BinnedData instance from ephysiopy.common.utils
     spike_times : np.ndarray
         The spike times for the neuron being analysed
-    spikes_per_pos : np.ndarray
-        The number of spikes emitted at each position sample, length=n_samples
-    cache : bool, optional
+    method: {'field', 'clump_runs'}, optional
+        Method used to calculate region properties:
+
+        - 'field': Standard method using discrete pixel counts based
+            on a segmentation of the rate map into labeled regions (fields).
+            This method
+            is faster, but can be inaccurate for small regions and will not
+            work well for positional data that has been masked for direction of
+            running say (ie linear track)
+        - 'clump_runs': Exact method which accounts for filtered data better by
+            looking for contiguous areas of the positional data that are NOT
+            masked (uses np.ma.clump_unmasked)
+        cache : bool, optional
         Determine whether to cache calculated properties. The computation is
         much faster for cached properties, whereas the memory consumption
         increases.
@@ -1673,16 +1756,6 @@ def fieldprops(
             raise TypeError("Non-integer label_image types are ambiguous")
 
     offset_arr = None
-    # if offset is None:
-    #     offset_arr = np.zeros((label_image.ndim,), dtype=int)
-    # else:
-    #     offset_arr = np.asarray(offset)
-    #     if offset_arr.ndim != 1 or offset_arr.size != label_image.ndim:
-    #         raise ValueError(
-    #             "Offset should be an array-like of integers "
-    #             "of shape (label_image.ndim,); "
-    #             f"{offset} was provided."
-    #         )
 
     if len(binned_data.bin_edges) == 1:
         be = binned_data.bin_edges[0]
@@ -1696,15 +1769,38 @@ def fieldprops(
         xy_field_label = label_image[y_bins - 1, x_bins - 1]
     # deal with pos values that are masked and set to 0
     # if the mask ndim == 0 then no mask has been applied
-    if xy.mask.ndim == 1:
-        xy_field_label[xy.mask] = 0
+    # if xy.mask.ndim == 1:
+    #     xy_field_label[xy.mask] = 0
 
-    labelled_runs = labelContigNonZeroRuns(xy_field_label)
-    run_starts = getLabelStarts(labelled_runs)
-    run_stops = getLabelEnds(labelled_runs)
-
-    # filter out short runs here?
     min_run = kwargs.get("min_run_length", 2)
+
+    if method == "field":
+
+        labelled_runs = labelContigNonZeroRuns(xy_field_label)
+        run_starts = getLabelStarts(labelled_runs)
+        run_stops = getLabelEnds(labelled_runs)
+        all_run_slices = [
+            slice(run_starts[i], run_stops[i] + 1)
+            for i in range(len(run_starts))
+            if (run_stops[i] + 1 - run_starts[i]) >= min_run
+        ]
+
+    elif method == "clump_runs":
+        # still need xy_field_label to get which field each
+        # run belongs to
+        if xy.ndim == 1:
+            clumps = ma.clump_unmasked(xy)
+        else:
+            clumps = ma.clump_unmasked(xy[0])
+
+        all_run_slices = [
+            slice(c.start, c.stop) for c in clumps if (c.stop - c.start) >= min_run
+        ]
+    # remove runs that aren't in any field
+    run_slices = [rs for rs in all_run_slices if np.any(xy_field_label[rs] != 0)]
+    # TODO: try getting run starts and stops via np.ma.clump_unmasked
+    # Need to add a method argument to this function that determines
+    # whether to use ma.clump_unmasked or the old "field"-based method
 
     pos_sample_rate = kwargs.get("pos_sample_rate", 50)
 
@@ -1712,16 +1808,18 @@ def fieldprops(
     speed = None
     if xy is not None:
         if xy.ndim == 1:  # linear track data
-            speed = ma.MaskedArray(np.abs(ma.ediff1d(xy) * pos_sample_rate))
+            speed = ma.MaskedArray(np.abs(ma.ediff1d(xy, to_begin=0)) * pos_sample_rate)
         else:
             speed = ma.MaskedArray(
-                np.abs(ma.ediff1d(np.hypot(xy[0], xy[1])) * pos_sample_rate)
+                np.abs(ma.ediff1d(np.hypot(xy[0], xy[1]), to_begin=0)) * pos_sample_rate
             )
 
-        speed = np.append(speed, speed[-1])
-
+        # speed = ma.append(speed, speed[-1])
     # make a mask array initially all False
-    mask = np.zeros(xy.shape[1], dtype=bool)
+    if xy.ndim == 1:
+        mask = np.zeros(xy.shape[0], dtype=bool)
+    else:
+        mask = np.zeros(xy.shape[1], dtype=bool)
 
     regions = []
 
@@ -1735,14 +1833,6 @@ def fieldprops(
 
         label = i + 1
 
-        # get the runs through this field
-        # filtering out short runs
-        run_index = np.unique(labelled_runs[xy_field_label == label]) - 1
-        run_slices = [
-            slice(run_starts[ri], run_stops[ri] + 1)
-            for ri in run_index
-            if ((run_stops[ri] + 1) - run_starts[ri]) >= min_run
-        ]
         props = FieldProps(
             sl,
             label,
@@ -1753,13 +1843,33 @@ def fieldprops(
             extra_properties=extra_properties,
             offset=offset_arr,
         )
+        # perimeter_coords = props.perimeter_coords
+        # get the runs through this field
+        sub_slices = []
+        for i_slice in run_slices:
+            if label in xy_field_label[i_slice]:
+                idx = xy_field_label[i_slice] == label
+                # find sub runs through this run that are contiguous
+                # note that there may be more than one run through
+                # the field in this slice
+                run_vals, run_starts, run_lens = find_runs(idx)
+                # find those sub runs corresponding to True values
+                true_idx = np.nonzero(run_vals)[0]
+                for v in true_idx:
+                    sub_slice = slice(
+                        i_slice.start + run_starts[v],
+                        i_slice.start + run_starts[v] + run_lens[v],
+                    )
+                    if sub_slice.stop - sub_slice.start >= min_run:
+                        sub_slices.append(sub_slice)
+
         # extract a few metrics for instantiating the RunProps objects...
         peak_xy = props.xy_at_peak
         max_index = props.max_index
-        # perimeter_coords = props.perimeter_coords
         perimeter_coords = props.global_perimeter_coords
+
         runs = []
-        for rs in run_slices:
+        for rs in sub_slices:
             # make sure the run isn't completely masked
             if not np.all(xy[..., rs]):
                 continue
@@ -1779,6 +1889,7 @@ def fieldprops(
             run_id += 1
             runs.append(r)
         # ... and add the list of runs to the FieldProps instance
+        # this will print out the number of potential runs to the console
         props.runs = runs
 
         regions.append(props)

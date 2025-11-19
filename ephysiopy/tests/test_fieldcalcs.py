@@ -13,15 +13,6 @@ def test_limit_to_one(basic_ratemap):
     fieldcalcs.limit_to_one(basic_ratemap)
 
 
-def test_global_threshold(basic_ratemap):
-    fieldcalcs.global_threshold(basic_ratemap)
-
-
-def test_local_threshold(basic_ratemap):
-    A = fieldcalcs.local_threshold(basic_ratemap)
-    assert isinstance(A, np.ndarray)
-
-
 def test_get_border_score(basic_ratemap):
     fieldcalcs.border_score(basic_ratemap)
     fieldcalcs.border_score(basic_ratemap, shape="circle")

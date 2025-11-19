@@ -1,4 +1,3 @@
-from ephysiopy.common.fieldcalcs import FieldProps, filter_runs
 import matplotlib
 import matplotlib.cm
 import matplotlib.pyplot as plt
@@ -10,16 +9,20 @@ from ephysiopy.common.utils import (
     fixAngle,
     find_runs,
     repeat_ind,
+    VariableToBin,
+    BinnedData,
 )
 from ephysiopy.common.fieldproperties import LFPSegment, fieldprops
 from ephysiopy.common.fieldcalcs import (
-    partitionFields,
-    infill_ratemap,
+    FieldProps,
+    filter_for_speed,
+    filter_runs,
+    simple_partition,
+    fancy_partition,
 )
 from ephysiopy.io.recording import AxonaTrial
 from scipy import ndimage, optimize, signal
 from scipy.stats import norm
-from collections import defaultdict
 from dataclasses import dataclass
 import pywt
 import pycwt
@@ -41,6 +44,8 @@ class CircStatsResults:
     rho_boot: float = np.nan
     p_shuffled: float = np.nan
     ci: float = np.nan
+    slope = np.nan
+    intercept = np.nan
 
     def __post_init__(self):
         if isinstance(self.ci, tuple):
@@ -60,8 +65,18 @@ class CircStatsResults:
         return (
             f"$\\rho$={self.rho:.3f}\np={self.p},\n"
             f"p_shuf={self.p_shuffled:.3f}\n"
-            f"ci=({self.ci_lower:.3f}, {self.ci_upper:.3f})"
+            f"ci=({self.ci_lower:.3f}, {self.ci_upper:.3f})\n"
+            f"slope={self.slope:.3f}\n"
+            f"intercept={self.intercept:.3f}\n"
         )
+
+
+@dataclass(frozen=True)
+class RegressionResults:
+    name: str
+    phase: np.ndarray
+    regressor: np.ndarray
+    stats: CircStatsResults
 
 
 def get_cycle_labels(
@@ -192,6 +207,14 @@ def get_bad_cycles(
     return is_bad
 
 
+def get_mean_spiking_var(field_props: list[FieldProps], var: str) -> np.array:
+    """
+    Extracts the a variable from the list of FieldProps taking the
+    mean where multiple spikes occur in a single theta cycle
+    """
+    return np.concatenate([f.mean_spiking_var(var).T for f in field_props]).T
+
+
 def ccc(t, p):
     """
     Calculates correlation between two random circular variables
@@ -217,7 +240,8 @@ def ccc(t, p):
     F = np.sum(np.sin(2 * t))
     G = np.sum(np.cos(2 * p))
     H = np.sum(np.sin(2 * p))
-    rho = 4 * (A * B - C * D) / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
+    rho = 4 * (A * B - C * D) / \
+        np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
     return rho
 
 
@@ -255,7 +279,8 @@ def ccc_jack(t, p):
     G = np.sum(G) - G
     H = np.sin(2 * p)
     H = np.sum(H) - H
-    rho = 4 * (A * B - C * D) / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
+    rho = 4 * (A * B - C * D) / \
+        np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
     return rho
 
 
@@ -298,7 +323,8 @@ def plot_spikes_in_runs_per_field(
         assert len(spikes_in_time) == len(ttls_in_time)
     run_start_stop_idx = np.array([run_starts, run_ends]).T
     run_field_id = field_label[run_start_stop_idx[:, 0]]
-    runs_per_field = np.histogram(run_field_id, bins=range(1, max(run_field_id) + 2))[0]
+    runs_per_field = np.histogram(
+        run_field_id, bins=range(1, max(run_field_id) + 2))[0]
     max_run_len = np.max(run_start_stop_idx[:, 1] - run_start_stop_idx[:, 0])
     all_slices = np.array([slice(r[0], r[1]) for r in run_start_stop_idx])
     # create the figure window first then do the iteration through fields etc
@@ -422,8 +448,10 @@ def circCircCorrTLinear(theta, phi, regressor=1000, alpha=0.05, hyp=0, conf=True
         rho_boot = np.mean(rho_jack)
         rho_jack_std = np.std(rho_jack)
         ci = (
-            rho_boot - (1 / np.sqrt(n)) * rho_jack_std * norm.ppf(alpha / 2, (0, 1))[0],
-            rho_boot + (1 / np.sqrt(n)) * rho_jack_std * norm.ppf(alpha / 2, (0, 1))[0],
+            rho_boot - (1 / np.sqrt(n)) * rho_jack_std *
+            norm.ppf(alpha / 2, (0, 1))[0],
+            rho_boot + (1 / np.sqrt(n)) * rho_jack_std *
+            norm.ppf(alpha / 2, (0, 1))[0],
         )
     elif conf and regressor and n < 25 and n > 4:
         from sklearn.utils import resample
@@ -484,7 +512,8 @@ def shuffledPVal(theta, phi, rho, regressor, hyp):
     G = np.sum(np.cos(2 * phi))
     H = np.sum(np.sin(2 * phi))
 
-    rho_sim = 4 * (A * B - C * D) / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
+    rho_sim = 4 * (A * B - C * D) / \
+        np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
 
     if hyp == 1:
         p_shuff = np.sum(rho_sim >= rho) / float(regressor)
@@ -532,7 +561,8 @@ def circRegress(x, t):
         return -np.abs(np.sum(np.exp(1j * (t - m * x)))) / len(t - m * x)
 
     try:
-        slope = optimize.fminbound(_cost, -1 * max_slope, max_slope, args=(xn, tn))
+        slope = optimize.fminbound(
+            _cost, -1 * max_slope, max_slope, args=(xn, tn))
     except ValueError:
         return np.nan, np.nan
     intercept = np.arctan2(
@@ -551,8 +581,8 @@ phase_precession_config = {
     "lfp_sample_rate": 250,
     "cms_per_bin": 1,  # bin size gets calculated in Ratemap
     "ppm": 445,
-    "field_smoothing_kernel_len": 31,
-    "field_smoothing_kernel_sigma": 13,
+    "field_smoothing_kernel_len": 7,
+    "field_smoothing_kernel_sigma": 5,
     # minimum firing rate - values below this are discarded (turned to 0)
     "field_threshold": 0.5,
     # field threshold percent - fed into fieldcalcs.local_threshold as prc
@@ -574,7 +604,7 @@ phase_precession_config = {
     "speed_smoothing_window_len": 15,
     # cm/s - original value = 2.5; lowered for mice
     "minimum_allowed_run_speed": 0.5,
-    "minimum_allowed_run_duration": 2,  # in seconds
+    "minimum_allowed_run_duration": 1,  # in seconds
     "min_spikes": 1,  # min allowed spikes per run
     # instantaneous firing rate (ifr) smoothing constant
     "ifr_smoothing_constant": 1.0 / 3,
@@ -587,6 +617,8 @@ phase_precession_config = {
 """
 A list of the regressors that can be used in the phase precession analysis
 """
+# TODO: update these names to match those of the properties of FieldProps,
+# RunProps and LFPOscillations
 all_regressors = [
     "spk_numWithinRun",
     "pos_exptdRate_cum",
@@ -630,8 +662,6 @@ class phasePrecession2D(object):
     ----------
     orig_xy : np.ndarray
         The original position data
-    pos_ts : np.ndarray
-        The position timestamps
     spike_ts : np.ndarray
         The spike timestamps
     regressors : dict
@@ -667,6 +697,7 @@ class phasePrecession2D(object):
         channel: int,
         pp_config: dict = phase_precession_config,
         regressors=None,
+        **kwargs,
     ):
         if not T.PosCalcs:
             T.load_pos_data()
@@ -678,22 +709,20 @@ class phasePrecession2D(object):
         self.trial = T
         self.cluster = cluster
         self.channel = channel
+        self._regressors = regressors
+        self._binning_var = kwargs.get("var2bin", VariableToBin.XY)
 
         # ---------- Set up the parameters ----------
         # this adds, as attributes, the parameters defined in the
         # pp_config dictionary
         self.update_config(pp_config)
-
-        # Positional params...
-        self.orig_xy = T.PosCalcs.xy
-        self._pos_ts = T.PosCalcs.xyTS
+        self.update_config(kwargs)
 
         # ratemap params...
         self.trial.RateMap.smooth_sz = self.field_smoothing_kernel_len
 
-        # regressors...
+        # values for the regression
         self.nshuffles = 1000
-        self.update_regressors(regressors)
         self.alpha = 0.05
         self.hyp = 0
         self.conf = True
@@ -711,7 +740,8 @@ class phasePrecession2D(object):
 
         # Some spiking params...
         spk_times_in_pos_samples = T.get_binned_spike_times(cluster, channel)
-        spk_times_in_pos_samples = np.ravel(spk_times_in_pos_samples).astype(int)
+        spk_times_in_pos_samples = np.ravel(
+            spk_times_in_pos_samples).astype(int)
         spk_weights = np.bincount(
             spk_times_in_pos_samples, minlength=len(T.PosCalcs.xyTS)
         )
@@ -721,176 +751,34 @@ class phasePrecession2D(object):
         self.spike_ts = T.get_spike_times(cluster, channel)
 
     @property
-    def pos_ts(self):
-        return self._pos_ts
+    def binning_var(self):
+        return self._binning_var
 
-    @pos_ts.setter
-    def pos_ts(self, value):
-        self._pos_ts = value
+    @binning_var.setter
+    def binning_var(self, val):
+        self._binning_var = val
+
+    @property
+    def regressors(self):
+        return self._regressors
+
+    @regressors.setter
+    def regressors(self, val):
+        self._regressors = val
 
     @property
     def spike_eeg_idx(self):
         return (self.spike_ts * self.lfp_fs).astype(int)
-
-    @property
-    def spike_pos_idx(self):
-        return (self.spike_ts * self.pos_sample_rate).astype(int)
-
-    def update_regressors_from_runs(self, field_props: list[FieldProps]) -> None:
-        """
-        Once the various metrics have been calculated for each run fill
-        out the regressor dict with the relevant values
-        """
-        if "pos_d_currentdir" in self.regressors.keys():
-            d_currentdir = np.ones(shape=self.trial.PosCalcs.npos) * np.nan
-            for field in field_props:
-                for irun in field.runs:
-                    try:
-                        d_currentdir[irun._slice] = irun.current_direction
-                    except TypeError:
-                        print(f"field label: {field.label} - run label: {irun.label}")
-                        breakpoint()
-
-            self.update_regressor_values("pos_d_currentdir", d_currentdir)
-
-        # calculate the cumulative distance travelled on each run
-        # only goes from 0-1
-        if "pos_d_cum" in self.regressors.keys():
-            d_cumulative = np.ones(shape=self.trial.PosCalcs.npos) * np.nan
-            for f in field_props:
-                for r in f.runs:
-                    d_cumulative[r._slice] = r.cumulative_distance
-
-            self.update_regressor_values("pos_d_cum", d_cumulative)
-
-        # calculate cumulative sum of the expected normalised firing rate
-        # only goes from 0-1
-        if "pos_exptdRate_cum" in self.regressors.keys():
-            exptd_rate_all = np.ones(shape=self.trial.PosCalcs.npos) * np.nan
-            # breakpoint()
-            rmap = field_props[0].binned_data.binned_data[0]
-            ye, xe = field_props[0].binned_data.bin_edges
-            xy = self.trial.PosCalcs.xy
-            xBins = np.digitize(xy[0], xe[:-1])
-            yBins = np.digitize(xy[1], ye[:-1])
-            rmap_infilled = infill_ratemap(rmap)
-            exptd_rate = rmap_infilled[yBins - 1, xBins - 1]
-            # setting the sample rate to 1 here will result in firing rate
-            # being returned and not expected spike count
-            for f in field_props:
-                for r in f.runs:
-                    exptd_rate_all[r._slice] = r.expected_spikes(exptd_rate, 1)
-
-            self.update_regressor_values("pos_exptdRate_cum", exptd_rate_all)
-
-        # direction projected onto the run mean direction is just the x coord
-        # good - remembering that xy_new is rho,phi
-        # this might be wrong - need to check i'm grabbing the right value
-        # from FieldProps... could be rho
-        if "pos_d_meanDir" in self.regressors.keys():
-            d_meandir = np.ones(shape=self.trial.PosCalcs.npos) * np.nan
-            for f in field_props:
-                for irun in f.runs:
-                    d_meandir[irun._slice] = irun.pos_r
-
-            breakpoint()
-            self.update_regressor_values("pos_d_meanDir", d_meandir)
-
-        # smooth binned spikes to get an instantaneous firing rate
-        # set up the smoothing kernel
-        # all up at 1.0
-        if "pos_instFR" in self.regressors.keys():
-            kernLenInBins = np.round(self.ifr_kernel_len * self.bins_per_second)
-            kernSig = self.ifr_kernel_sigma * self.bins_per_second
-            regressor = signal.windows.gaussian(kernLenInBins, kernSig)
-            # apply the smoothing kernel over the binned observed spikes
-            observed_spikes_in_time = self.spike_times_in_pos_samples
-            ifr = signal.convolve(observed_spikes_in_time, regressor, mode="same")
-            inst_firing_rate = np.zeros_like(ifr)
-            for field in field_props:
-                for i_slice in field.run_slices:
-                    inst_firing_rate[i_slice] = ifr[i_slice]
-            self.update_regressor_values("pos_instFR", inst_firing_rate)
-
-        # find time spent within run
-        # only goes from 0-1
-        if "pos_timeInRun" in self.regressors.keys():
-            time_in_run = np.ones(shape=self.trial.PosCalcs.npos) * np.nan
-            for f in field_props:
-                for r in f.runs:
-                    time_in_run[r._slice] = r.cumulative_time / self.pos_sample_rate
-
-            self.update_regressor_values("pos_timeInRun", time_in_run)
-
-    def update_regressors(self, reg_keys: list | None):
-        """
-        Create a dict to hold the stats values for
-        each regressor
-        Default regressors are:
-            "spk_numWithinRun",
-            "pos_exptdRate_cum",
-            "pos_instFR",
-            "pos_timeInRun",
-            "pos_d_cum",
-            "pos_d_meanDir",
-            "pos_d_currentdir",
-            "spk_thetaBatchLabelInRun"
-
-        NB: The regressors have differing sizes of 'values' depending on the
-        type of the regressor:
-        spk_* - integer values of the spike number within a run or the theta batch
-                in a run, so has a length equal to the number of spikes collected
-        pos_* - a bincount of some type so equal to the number of position samples
-                collected
-        eeg_* - only one at present, the instantaneous firing rate binned into the
-                number of eeg samples so equal to that in length
-        """
-        if reg_keys is None:
-            reg_keys = all_regressors
-        assert all([regressor in all_regressors for regressor in reg_keys])
-
-        # Create a dict to hold the stats values for
-        # each regressor
-        stats_dict = {
-            "values": np.ma.MaskedArray,
-            "pha": np.ma.MaskedArray,
-            "slope": float,
-            "intercept": float,
-            "cor": float,
-            "p": float,
-            "cor_boot": float,
-            "p_shuffled": float,
-            "ci": float,
-            "reg": float,
-        }
-        self.regressors = {}
-        self.regressors = defaultdict(lambda: stats_dict.copy(), self.regressors)
-        [self.regressors[regressor] for regressor in reg_keys]
-        # each of the regressors in regressor_keys is a key with a value
-        # of stats_dict
-
-    def update_regressor_values(self, key: str, values):
-        """Check whether values is a masked array and if not make it one"""
-        self.regressors[key]["values"] = values
-
-    def update_regressor_mask(self, key: str, indices):
-        """Mask entries in the 'values' and 'pha' arrays of the relevant regressor"""
-        self.regressors[key]["values"].mask[indices] = False
-
-    def get_regressors(self):
-        return self.regressors.keys()
-
-    def get_regressor(self, key):
-        return self.regressors[key]
 
     def update_config(self, pp_config):
         """Update the relevant pp_config values"""
         [
             setattr(self, attribute, pp_config[attribute])
             for attribute in pp_config.keys()
+            if attribute in pp_config
         ]
 
-    def performRegression(self, **kwargs):
+    def do_regression(self, **kwargs):
         """
         Wrapper function for doing the actual regression which has multiple
         stages.
@@ -901,185 +789,144 @@ class phasePrecession2D(object):
 
         **kwargs
             do_plot : bool
-            whether to plot the results of field partitions, the regression(s)
+                whether to plot the results of field partitions, the regression(s)
+            ax : matplotlib.mat
+                The axes to plot into
 
-        See Also
-        --------
-        ephysiopy.common.eegcalcs.phasePrecession.partitionFields()
-        ephysiopy.common.eegcalcs.phasePrecession.getPosProps()
-        ephysiopy.common.eegcalcs.phasePrecession.getThetaProps()
-        ephysiopy.common.eegcalcs.phasePrecession.getSpikeProps()
-        ephysiopy.common.eegcalcs.phasePrecession._ppRegress()
         """
         do_plot = kwargs.get("plot", False)
+        ax = kwargs.get("ax", None)
 
-        # Partition fields - comes from ephysiopy.common.fieldca
-        binned_data = self.trial.get_rate_map(self.cluster, self.channel)
-        _, _, labels, _ = partitionFields(
-            binned_data,
-            self.field_threshold_percent,
-            self.field_threshold,
-            self.area_threshold,
-        )
-        # breakpoint()
+        if "binned_data" in kwargs.keys():
+            binned_data = kwargs.get("binned_data")
+        else:
+            if self.binning_var.value == VariableToBin.XY.value:
+                binned_data = self.trial.get_rate_map(
+                    self.cluster, self.channel)
+            elif self.binning_var.value == VariableToBin.X.value:
+                binned_data = self.trial.get_linear_rate_map(
+                    self.cluster, self.channel, var_type=self.binning_var
+                )
 
         # split into runs
-        field_properties = self.getPosProps(labels)
+        # method = kwargs.get("method", "field")
+        field_properties = self.get_pos_props(
+            binned_data, self.binning_var, **kwargs)
 
         # get theta cycles, amplitudes, phase etc
-        field_properties = self.getThetaProps(field_properties)
-        # TODO: next: getSpikeProps(field_properties)
-        # the fields that are set within getSpikeProps() I think can be added
-        # to the individual runs within the FieldProps instance
-        # spkCount is just spikes binned wrt eeg timebase
-        #
-        # at this point the 'values' and 'pha' arrays in the regressors dict are all
-        # npos elements long and are masked arrays. keep as masked arrays and just modify the
-        # masks instead of truncating the data
-        # Do the regressions
-        self.ppPerField(field_properties)
+        field_properties = self.get_theta_props(field_properties)
 
-        # Plot the results if asked
-        # TODO: make one figure per regressor with subplots for each field
-        # see linear_track.py
-        if do_plot:
-            n_regressors = len(self.get_regressors())
-            n_rows = np.ceil(n_regressors / 2).astype(int)
-            if n_regressors == 1:
-                fig, ax = plt.subplots(1, 1, figsize=(3, 5))
-            else:
-                fig, ax = plt.subplots(2, n_rows, figsize=(10, 10))
-            fig.canvas.manager.set_window_title("Regression results")
-            if isinstance(ax, list | np.ndarray):
-                ax = flatten_list(ax)
-            if n_regressors == 1:
-                ax = [ax]
-            for ra in zip(self.get_regressors(), ax):
-                self.plotRegressor(ra[0], ra[1])
+        breakpoint()
+        reg_results = self.get_phase_reg_per_field(field_properties)
 
-    def get_phase_reg_per_field(self, field_props: list[FieldProps]) -> dict:
-        """
-        Extracts the phase and all regressors for all runs through each
-        field separately
+        self.do_correlation(reg_results, plot=do_plot, ax=ax)
 
-        Parameters
-        ----------
-        field_props : list
-            A list of FieldProps instances
-
-        Returns
-        -------
-        dict
-            two-level dictionary holding regression results per field
-            first level keys are field number
-            second level are the regressors (current_dir etc)
-            items in the second dict are the regression results
-        """
-
-        # helper function to extract the relevant values from
-        # a variable list (e.g. cumulative distance) at the times
-        # when spikes were observed
-        def get_spiking_var(var: np.ndarray, observed_spikes: np.ndarray) -> np.ndarray:
-            var = np.array(flatten_list(var))
-            observed_spikes = np.array(flatten_list(observed_spikes))
-            return flatten_list(np.take(var, repeat_ind(observed_spikes)))
-
-        results = dict.fromkeys([f.label for f in field_props])
-        for field in field_props:
-            results[field.label] = {}
-            results[field.label]["phase"] = np.array(
-                flatten_list(
-                    [run.lfp_data.get_spiking_var().ravel() for run in field.runs]
-                )
-            )
-            for regressor in self.get_regressors():
-                match regressor:
-                    case "pos_timeInRun":
-                        vals = np.array(
-                            get_spiking_var(run.cumulative_time, run.observed_spikes)
-                            for run in field.runs
-                        )
-                    case "spk_numWithinRun":
-                        vals = np.array(
-                            flatten_list([run.spike_num_in_run for run in field.runs])
-                        )
-                    # case "spk_thetaBatchLabelInRun":
-                    #     vals = np.array(
-                    #         flatten_list(
-                    #             [run.spike_theta_batch_labels for run in field.runs]
-                    #         )
-                    #     )
-                    case "pos_d_currentdir":
-                        vals = np.array(
-                            get_spiking_var(
-                                field.current_direction, field.observed_spikes
-                            )
-                        )
-                    case "pos_d_cum":
-                        vals = np.array(
-                            get_spiking_var(
-                                run.cumulative_distance, run.observed_spikes
-                            )
-                            for run in field.runs
-                        )
-                    case "pos_exptdRate_cum":
-                        vals = np.array(
-                            flatten_list([run.expected_spikes for run in field.runs])
-                        )
-                    case "pos_instFR":
-                        vals = np.array(
-                            flatten_list(
-                                [run.instantaneous_firing_rate for run in field.runs]
-                            )
-                        )
-
-                results[field.label][regressor] = vals
-        return results
-        # self._ppRegress(phase, vals)
-
-    def getPosProps(
+    def get_pos_props(
         self,
-        labels: np.ndarray,
+        binned_data: BinnedData = None,
+        var_type: VariableToBin = VariableToBin.XY,
+        **kwargs,
     ) -> list:
         """
-        Uses the output of partitionFields and returns vectors the same
+        Uses the output of fancy_partition and returns vectors the same
         length as pos.
 
         Parameters
         ----------
-        labels : np.ndarray
-            The labels of the fields
+        binned_data - BinnedData
+            optional BinnedData instance. Will be calculated here
+            if not given
 
+        var_type - VariableToBin
+            defines if we are dealing with 1- or 2D data essentially
+
+        **kwargs - keywords
+            valid kwargs:
+                field_threshold - see fancy_partition()
+                field_threshold_percent - see fancy_partition()
+                area_threshold - see fancy_partition()
         Returns
         -------
         list of FieldProps
             A list of FieldProps instances (see ephysiopy.common.fieldcalcs.FieldProps)
         """
-        xy = self.trial.PosCalcs.xy
+        if var_type.value == VariableToBin.XY.value:
+            posdata = self.trial.PosCalcs.xy
+        elif var_type.value == VariableToBin.X.value:
+            posdata = self.trial.PosCalcs.xy[0]
+        elif var_type.value == VariableToBin.PHI.value:
+            posdata = self.trial.PosCalcs.phi
 
-        binned_data = self.trial.get_rate_map(self.cluster, self.channel)
+        self.binning_var = var_type
+
+        if binned_data is None:
+            if var_type.value == VariableToBin.XY.value:
+                binned_data = self.trial.get_rate_map(
+                    self.cluster, self.channel)
+            elif var_type.value == VariableToBin.X.value:
+                binned_data = self.trial.get_linear_rate_map(
+                    self.cluster, self.channel, var_type=var_type
+                )
+            elif var_type.value == VariableToBin.PHI.value:
+                binned_data = self.trial.get_linear_rate_map(
+                    self.cluster, self.channel, var_type=var_type
+                )
+
+        # user might want to override the values for partitioning
+        # the field based on mean rate for example so add the
+        # option to provide as kwargs
+
+        field_threshold_percent = kwargs.get(
+            "field_threshold_percent", self.field_threshold_percent
+        )
+        field_threshold = kwargs.get("field_threshold", self.field_threshold)
+        area_threshold = kwargs.get("area_threshold", self.area_threshold)
+
+        partition_method = kwargs.get("partition_method", "fancy")
+        print(f"Partitioning fields using the {partition_method} method")
+
+        if partition_method == "simple":
+            _, _, labels, _ = simple_partition(
+                binned_data,
+            )
+        else:
+            _, _, labels, _ = fancy_partition(
+                binned_data,
+                field_threshold_percent,
+                field_threshold,
+                area_threshold,
+            )
+
         # The large number of bins combined with the super-smoothed ratemap
         # will lead to fields labelled with lots of small holes in. Fill those
         # gaps in here and calculate the perimeter of the fields based on that
         # labelled image
         labels, _ = ndimage.label(ndimage.binary_fill_holes(labels))
 
+        # This is the main call to get the field properties
+        # for each field found in the ratemap
+
+        method = kwargs.pop("method", "field")
+
         field_props = fieldprops(
             labels,
             binned_data,
             self.trial.get_spike_times(self.cluster, self.channel),
-            xy,
+            posdata,
             sample_rate=self.trial.PosCalcs.sample_rate,
+            method=method,
+            **kwargs,
         )
-        print(
-            f"Filtering runs for min duration {self.minimum_allowed_run_duration}, mean speed {self.minimum_allowed_run_speed} and min spikes {self.min_spikes}"
-        )
+
         field_props = filter_runs(
             field_props,
-            self.minimum_allowed_run_duration,
-            self.minimum_allowed_run_speed,
-            min_spikes=1,
+            ["duration", "n_spikes"],
+            [np.greater, np.greater_equal],
+            [self.minimum_allowed_run_duration, 2],
         )
+        field_props = filter_for_speed(
+            field_props, self.minimum_allowed_run_speed)
+
         # Smooth the runs before calculating other metrics
         [
             f.smooth_runs(
@@ -1090,9 +937,14 @@ class phasePrecession2D(object):
             for f in field_props
         ]
 
+        self.field_properties = field_props
+
+        print("Filtered runs after position processing...")
+        [print(f) for f in field_props]
+
         return field_props
 
-    def getThetaProps(self, field_props: list[FieldProps]):
+    def get_theta_props(self, field_props: list[FieldProps]):
         """
         Processes the LFP data and inserts into each run within each field
         a segment of LFP data that has had its phase and amplitude extracted
@@ -1116,9 +968,11 @@ class phasePrecession2D(object):
         # unmask the valid entries
         spkPhase.mask[spkEEGIdx] = False
 
-        cycleLabel, phaseAdj = get_cycle_labels(spkPhase, self.allowed_min_spike_phase)
+        cycleLabel, phaseAdj = get_cycle_labels(
+            spkPhase, self.allowed_min_spike_phase)
         isNegFreq = np.diff(np.unwrap(phaseAdj)) < 0
         isNegFreq = np.append(isNegFreq, isNegFreq[-1])
+        phaseAdj = phaseAdj.data
 
         isBad = get_bad_cycles(
             self.filteredEEG,
@@ -1130,7 +984,6 @@ class phasePrecession2D(object):
             self.lfp_fs,
         )
         self.bad_cycles = isBad
-        cycleLabel = np.ma.MaskedArray(cycleLabel, mask=np.invert(isBad))
         self.cycleLabel = cycleLabel
         lfp_to_pos_ratio = int(self.lfp_fs / self.pos_sample_rate)
         spike_times = self.trial.get_spike_times(self.cluster, self.channel)
@@ -1154,128 +1007,148 @@ class phasePrecession2D(object):
                     cycle_label=cycleLabel[lfp_slice],
                     sample_rate=self.lfp_fs,
                 )
-                # lfp_segment.mask(np.invert(isBad)[lfp_slice])
-                run.lfp_data = lfp_segment
+                run.lfp = lfp_segment
+
+        # filter again as the lfp data might have masked
+        # some spikes that can lead to runs with no spikes
+        # in them
+
+        field_props = filter_runs(
+            field_props,
+            ["n_spikes"],
+            [np.greater_equal],
+            [2],
+        )
+        self.field_properties = field_props
+
+        print("Filtered runs after theta processing...")
+        [print(f) for f in field_props]
 
         return field_props
 
-    def _ppRegress(self, spkDict, whichSpk="first"):
+    def get_phase_reg_per_field(self, field_props: list[FieldProps], **kwargs) -> dict:
         """
-        Perform the regression analysis on the spike data for each field
-        in the list of FieldProps
+        Extracts the phase and all regressors for all runs through each
+        field separately
 
         Parameters
         ----------
-        spkDict : dict
-            A dictionary containing the spike properties
-        whichSpk : str
-            Which spike(s) in a cycle to use in the regression analysis
+        field_props : list
+            A list of FieldProps instances
 
         Returns
         -------
-        list
-            A list of the updated regressors
+        dict
+            two-level dictionary holding regression results per field
+            first level keys are field number
+            second level are the regressors (current_dir etc)
+            items in the second dict are the regression results
         """
+        regressors = kwargs.get("regressors", self.regressors)
 
-        phase = self.phaseAdj
-        newSpkRunLabel = spkDict["spkRunLabel"].copy()
-        # TODO: need code to deal with splitting the data based on a group of
-        # variables
-        spkUsed = newSpkRunLabel > 0
-        # Calling compressed() method on spkUsed gives a boolean mask with length equal to
-        # the number of spikes emitted by the cluster where True is a valid spike (ie it was
-        # emitted when in a receptive field detected by the getPosProps() method above)
-        # firstInTheta (and presumably lastInTheta) need to be the same length as
-        # the number of pos samples - currently it's just the length of some smaller
-        # subset of the length of the number of spikes
-        if "first" in whichSpk:
-            spkUsed[~spkDict["firstInTheta"]] = False
-        elif "last" in whichSpk:
-            if len(spkDict["lastInTheta"]) < len(spkDict["spkRunLabel"]):
-                spkDict["lastInTheta"] = np.insert(spkDict["lastInTheta"], -1, False)
-            spkUsed[~spkDict["lastInTheta"]] = False
-        spkPosIdxUsed = spkDict["spkPosIdx"].astype(int)
-        # copy self.regressors and update with spk/ pos of interest
-        regressors = self.regressors.copy()
-        # the length of the 'values' of the regressors is dependent on the variable
-        # so 'pos_' regressors are vectors as long as the number of position samples
-        # and 'spk_' regressors are as long as the number of spikes for the current
-        # cluster. These different length vectors need to be dealt with differently..
-        for regressor in regressors.keys():
-            # breakpoint()
-            # self.update_regressor_mask(regressor, spkPosIdxUsed)
-            if regressor.startswith("spk_"):
-                self.update_regressor_values(
-                    regressor, regressors[regressor]["values"][spkUsed]
-                )
-            elif regressor.startswith("pos_"):
-                self.update_regressor_values(
-                    regressor, regressors[regressor]["values"][spkPosIdxUsed[spkUsed]]
-                )
-        # breakpoint()
-        phase = phase[spkDict["spkEEGIdx"][spkUsed]]
-        phase = phase.astype(np.double)
-        if "mean" in whichSpk:
-            goodPhase = ~np.isnan(phase)
-            cycleLabels = spkDict["thetaCycleLabel"][spkUsed]
-            sz = np.max(cycleLabels)
-            cycleComplexPhase = np.squeeze(np.zeros(sz, dtype=np.complex))
-            np.add.at(
-                cycleComplexPhase,
-                cycleLabels[goodPhase] - 1,
-                np.exp(1j * phase[goodPhase]),
+        # helper function to extract the relevant values from
+        # a variable list (e.g. cumulative distance) at the times
+        # when spikes were observed
+        def get_spiking_var(var: np.ndarray, observed_spikes: np.ndarray) -> np.ndarray:
+            var = np.array(flatten_list(var))
+            observed_spikes = np.array(flatten_list(observed_spikes))
+            return flatten_list(np.take(var, repeat_ind(observed_spikes)))
+
+        results = dict.fromkeys([f.label for f in field_props])
+        for field in field_props:
+            results[field.label] = {}
+            results[field.label]["phase"] = np.array(
+                flatten_list([run.lfp.mean_spiking_var().ravel()
+                             for run in field.runs])
             )
-            phase = np.angle(cycleComplexPhase)
-            spkCountPerCycle = np.bincount(cycleLabels[goodPhase], minlength=sz)
-            for regressor in regressors.keys():
-                regressors[regressor]["values"] = (
-                    np.bincount(
-                        cycleLabels[goodPhase],
-                        weights=regressors[regressor]["values"][goodPhase],
-                        minlength=sz,
-                    )
-                    / spkCountPerCycle
-                )
+            for regressor in regressors:
+                match regressor:
+                    case "pos_timeInRun":
+                        vals = field.mean_spiking_var("cumulative_time")
+                    case "spk_numWithinRun":
+                        vals = field.mean_spiking_var("spike_num_in_run")
+                    case "pos_d_normed_x":
+                        vals = field.mean_spiking_var("normed_x")
+                    case "pos_d_currentdir":
+                        vals = field.mean_spiking_var("current_direction")
+                    case "pos_d_cum":
+                        vals = field.mean_spiking_var("cumulative_distance")
+                    case "pos_exptdRate_cum":
+                        vals = field.mean_spiking_var("expected_spikes")
+                    case "pos_instFR":
+                        vals = field.mean_spiking_var(
+                            "instantaneous_firing_rate")
 
-        # a lot of the logic for determining "good phase" and a "good regeressor"
-        # has been taken care of in the various methods that build and modify the
-        # list of FieldProps (called field_props throughout this class)
-        goodPhase = ~np.isnan(phase)
-        for regressor in regressors.keys():
-            print(f"Doing regression: {regressor}")
-            goodRegressor = ~np.isnan(regressors[regressor]["values"])
-            if np.any(goodRegressor):
-                # breakpoint()
-                reg = regressors[regressor]["values"][
-                    np.logical_and(goodRegressor, goodPhase)
-                ]
-                pha = phase[np.logical_and(goodRegressor, goodPhase)]
-                # TODO: all the pha values are masked. make sure only the relevant ones are!
-                regressors[regressor]["slope"], regressors[regressor]["intercept"] = (
-                    circRegress(reg, pha)
-                )
-                regressors[regressor]["pha"] = pha
-                mnx = np.mean(reg)
-                reg = reg - mnx
-                mxx = np.max(np.abs(reg)) + np.spacing(1)
-                reg = reg / mxx
-                # problem regressors = instFR, pos_d_cum
-                # breakpoint()
-                theta = np.mod(np.abs(regressors[regressor]["slope"]) * reg, 2 * np.pi)
-                results = circCircCorrTLinear(
-                    theta, pha, self.nshuffles, self.alpha, self.hyp, self.conf
-                )
-                regressors[regressor]["reg"] = reg
-                regressors[regressor]["cor"] = results.rho
-                regressors[regressor]["p"] = results.p
-                regressors[regressor]["cor_boot"] = results.rho_boot
-                regressors[regressor]["p_shuffled"] = results.p_shuffled
-                regressors[regressor]["ci"] = results.ci
+                results[field.label][regressor] = vals
+        return results
 
-        self.reg_phase = phase
-        return regressors
+    def do_correlation(
+        self, phase_regressors: dict, **kwargs
+    ) -> list[RegressionResults]:
+        """
+        Do the regression(s) for each regressor in the phase_regressors dict,
+        optionally plotting the results of the regression
 
-    def plotRegressor(self, regressor: str, ax=None):
+        Parameters
+        ----------
+        phase_regressors : dict
+            Dictionary with keys as field label (1,2 etc), each key contains a
+            dictionary with keys 'phase' and optional nummbers of regressors
+        plot : bool
+            Whether to plot the regression results
+
+        Notes
+        -----
+        This collapses across fields and does the regression for all
+        phase and regressor values
+        """
+        # extract field label and the list of the regressors
+        field_ids = list(phase_regressors.keys())
+        regressors = list(phase_regressors[field_ids[0]].keys())
+        regressors = [r for r in regressors if "phase" not in r]
+
+        # extract the phase
+        phase = [phase_regressors[field]["phase"] for field in field_ids]
+        phase = np.array(flatten_list(phase))
+
+        results = []
+
+        for reg in regressors:
+            i_reg = np.concatenate(
+                flatten_list([phase_regressors[f][reg] for f in field_ids])
+            )
+            slope, intercept = circRegress(i_reg, phase)
+
+            mn_reg = np.mean(i_reg)
+            i_reg -= mn_reg
+            mxx = np.max(np.abs(i_reg)) + np.spacing(1)
+            i_reg /= mxx
+
+            theta = np.mod(np.abs(slope) * i_reg, 2 * np.pi)
+
+            result = circCircCorrTLinear(
+                theta, phase, self.nshuffles, self.alpha, self.hyp, self.conf
+            )
+            result.slope = slope
+            result.intercept = intercept
+            print(f"\n{reg}:\n{result}")
+
+            R = RegressionResults(reg, phase, i_reg, result)
+            results.append(R)
+
+            if kwargs.get("plot", False):
+                self.plot_regressor(reg, i_reg, phase, result)
+
+        return results
+
+    def plot_regressor(
+        self,
+        regressor: str,
+        vals: np.ndarray,
+        pha: np.ndarray,
+        result: CircStatsResults,
+        ax=None,
+    ):
         """
         Plot the regressor against the phase
 
@@ -1291,83 +1164,29 @@ class phasePrecession2D(object):
         ax : matplotlib.axes.Axes
             The axes with the plot
         """
-        assert regressor in self.regressors.keys()
+        assert regressor in self.regressors
         if ax is None:
             fig = plt.figure(figsize=(3, 5))
             ax = fig.add_subplot(111)
         else:
             ax = ax
-        vals = self.regressors[regressor]["values"]
-        pha = self.reg_phase
-        slope = self.regressors[regressor]["slope"]
-        intercept = self.regressors[regressor]["intercept"]
+        slope = result.slope
+        intercept = result.intercept
         mm = (0, -4 * np.pi, -2 * np.pi, 2 * np.pi, 4 * np.pi)
         for m in mm:
-            ax.plot((-1, 1), (-slope + intercept + m, slope + intercept + m), "r", lw=3)
+            ax.plot((-1, 1), (-slope + intercept + m,
+                    slope + intercept + m), "r", lw=3)
             ax.plot(vals, pha + m, "k.")
         ax.set_xlim(-1, 1)
         xtick_locs = np.linspace(-1, 1, 3)
         ax.set_xticks(xtick_locs, list(map(str, xtick_locs)))
         ax.set_yticks(sorted(mm), ["-4π", "-2π", "0", "2π", "4π"])
         ax.set_ylim(-2 * np.pi, 4 * np.pi)
-        title_str = f"{regressor} vs phase: slope = {slope:.2f}, \nintercept = {intercept:.2f}, p_shuffled = {self.regressors[regressor]['p_shuffled']:.2f}"
+        title_str = f"{regressor} vs phase: slope = {slope:.2f}, \nintercept = {intercept:.2f}, p_shuffled = {result.p_shuffled:.2f}"
         ax.set_title(title_str, fontsize=subaxis_title_fontsize)
         ax.set_ylabel("Phase", fontsize=subaxis_title_fontsize)
         ax.set_xlabel("Normalised position", fontsize=subaxis_title_fontsize)
         return ax
-
-    # def plotPPRegression(self, regressorDict, regressor2plot="pos_d_cum", ax=None):
-    #
-    #     t = self.getLFPPhaseValsForSpikeTS()
-    #     x = self.RateMap.xy[0, self.spike_times_in_pos_samples]
-    #     from ephysiopy.common import fieldcalcs
-    #
-    #     rmap = self.RateMap.get_map(self.spk_weights)
-    #     xe, ye = rmap.bin_edges
-    #     label = fieldcalcs.field_lims(rmap)
-    #     rmap = rmap.binned_data[0].T
-    #     xInField = xe[label.nonzero()[1]]
-    #     mask = np.logical_and(x > np.min(xInField), x < np.max(xInField))
-    #     x = x[mask]
-    #     t = t[mask]
-    #     # keep x between -1 and +1
-    #     mnx = np.mean(x)
-    #     xn = x - mnx
-    #     mxx = np.max(np.abs(xn))
-    #     x = xn / mxx
-    #     # keep tn between 0 and 2pi
-    #     t = np.remainder(t, 2 * np.pi)
-    #     slope, intercept = circRegress(x, t)
-    #     rho, p, rho_boot, p_shuff, ci = circCircCorrTLinear(x, t)
-    #     plt.figure()
-    #     if ax is None:
-    #         fig = plt.figure()
-    #         ax = fig.add_subplot(111)
-    #     else:
-    #         ax = ax
-    #     ax.plot(x, t, ".", color="regressor")
-    #     ax.plot(x, t + 2 * np.pi, ".", color="regressor")
-    #     mm = (0, -2 * np.pi, 2 * np.pi, 4 * np.pi)
-    #     for m in mm:
-    #         ax.plot((-1, 1), (-slope + intercept + m, slope + intercept + m), "r", lw=3)
-    #     ax.set_xlim((-1, 1))
-    #     ax.set_ylim((-np.pi, 3 * np.pi))
-    #     return {
-    #         "slope": slope,
-    #         "intercept": intercept,
-    #         "rho": rho,
-    #         "p": p,
-    #         "rho_boot": rho_boot,
-    #         "p_shuff": p_shuff,
-    #         "ci": ci,
-    #     }
-    #
-    # def getLFPPhaseValsForSpikeTS(self):
-    #     ts = self.spike_times_in_pos_samples * (
-    #         self.lfp_fs / self.pos_sample_rate
-    #     )
-    #     ts_idx = np.array(np.floor(ts), dtype=int)
-    #     return self.phase[ts_idx]
 
 
 # ----------- WHOLE LFP ANALYSIS -----------
@@ -1522,7 +1341,8 @@ def detect_oscillation_episodes(lfp: np.ndarray, fs: float):
     power = np.abs(cwtmatr) ** 2
 
     freq_band = (20, 40)
-    freq_idx = np.where(np.logical_and(freqs >= freq_band[0], freqs <= freq_band[1]))[0]
+    freq_idx = np.where(np.logical_and(
+        freqs >= freq_band[0], freqs <= freq_band[1]))[0]
     mean_power = np.mean(power[freq_idx, :], axis=0)
     power_threshold = np.percentile(mean_power, 97.72)
 
@@ -1560,6 +1380,7 @@ def detect_oscillation_episodes(lfp: np.ndarray, fs: float):
     half_win = int(0.2 * fs)
     final_slices = []
     for pi in peak_indices:
-        final_slices.append(slice(max(0, pi - half_win), min(len(lfp), pi + half_win)))
+        final_slices.append(slice(max(0, pi - half_win),
+                            min(len(lfp), pi + half_win)))
 
     return final_slices, freqs

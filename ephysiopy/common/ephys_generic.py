@@ -642,7 +642,7 @@ class PosCalcsGeneric(object):
         else:
             return xy
 
-    def smoothPos(self, xy: np.ma.MaskedArray):
+    def smoothPos(self, xy: np.ma.MaskedArray, **kwargs) -> np.ma.MaskedArray:
         """
         Smooths position data
 
@@ -651,6 +651,10 @@ class PosCalcsGeneric(object):
         xy : np.ma.MaskedArray
             The xy data
 
+        **kwargs:
+            window_len : int
+                The length of the smoothing window
+
         Returns
         -------
         xy : array_like
@@ -658,14 +662,16 @@ class PosCalcsGeneric(object):
         """
         x = xy[0, :].astype(np.float64)
         y = xy[1, :].astype(np.float64)
+        m = xy.mask
 
         from ephysiopy.common.utils import smooth
 
         # TODO: calculate window_len from pos sampling rate
         # 11 is roughly equal to 400ms at 30Hz (window_len needs to be odd)
-        sm_x = smooth(x, window_len=11, window="flat")
-        sm_y = smooth(y, window_len=11, window="flat")
-        return np.ma.masked_array([sm_x, sm_y])
+        window_len = kwargs.get("window_len", 11)
+        sm_x = smooth(x, window_len=window_len, window="flat")
+        sm_y = smooth(y, window_len=window_len, window="flat")
+        return np.ma.masked_array([sm_x, sm_y], mask=m)
 
     def calcSpeed(self, xy: np.ma.MaskedArray):
         """
