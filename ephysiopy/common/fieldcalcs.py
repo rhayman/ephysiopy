@@ -1318,7 +1318,7 @@ def grid_field_props(A: BinnedData, maxima="centroid", allProps=True, **kwargs):
     # surrounding the central peak at the image centre
     scale = np.median(peak_dist_to_centre[closest_peak_idx])
     orientation = np.nan
-    orientation = grid_orientation(peak_coords, closest_peak_idx)
+    orientation = __grid_orientation(peak_coords, closest_peak_idx)
 
     xv, yv = np.meshgrid(A.bin_edges[0], A.bin_edges[1], indexing="ij")
     xv = xv[:-1, :-1]  # remove last row and column
@@ -1412,7 +1412,7 @@ def grid_field_props(A: BinnedData, maxima="centroid", allProps=True, **kwargs):
     return outDict
 
 
-def grid_orientation(peakCoords, closestPeakIdx):
+def __grid_orientation(peakCoords, closestPeakIdx):
     """
     Calculates the orientation angle of a grid field.
 
@@ -1519,7 +1519,7 @@ def gridness(image, step=30) -> tuple:
     return gridscore, rotationalCorrVals, rotationArr
 
 
-def deform_SAC(A, circleXY=None, ellipseXY=None):
+def __deform_SAC(A, circleXY=None, ellipseXY=None):
     """
     Deforms an elliptical SAC to be circular
 
@@ -1572,11 +1572,12 @@ def deform_SAC(A, circleXY=None, ellipseXY=None):
     return skimage.exposure.rescale_intensity(deformedSAC, out_range=(SACmin, SACmax))
 
 
-def get_circular_regions(A: np.ndarray, **kwargs) -> list:
+def __get_circular_regions(A: np.ndarray, **kwargs) -> tuple:
     """
     Returns a list of images which are expanding circular
     regions centred on the middle of the image out to the
-    image edge. Used for calculating the grid score of each
+    image edge and the radii used to create them.
+    Used for calculating the grid score of each
     image to find the one with the max grid score.
 
     Parameters
@@ -1589,9 +1590,9 @@ def get_circular_regions(A: np.ndarray, **kwargs) -> list:
 
     Returns
     -------
-    list
+    tuple
         A list of images which are circular sub-regions of the
-        original SAC
+        original SAC and a list of the radii used to create them
     """
     from skimage.measure import CircleModel, grid_points_in_poly
 
@@ -1603,6 +1604,7 @@ def get_circular_regions(A: np.ndarray, **kwargs) -> list:
     circle = CircleModel()
 
     result = []
+    radii = []
     for radius in range(min_radius, max_radius):
         circle.params = [*centre, radius]
         xy = circle.predict_xy(t)
@@ -1610,7 +1612,8 @@ def get_circular_regions(A: np.ndarray, **kwargs) -> list:
         im = A.copy()
         im[~mask] = np.nan
         result.append(im)
-    return result
+        radii.append(radius)
+    return result, radii
 
 
 def get_basic_gridscore(A: np.ndarray, **kwargs) -> float:
@@ -1650,7 +1653,7 @@ def get_expanding_circle_gridscore(A: np.ndarray, **kwargs):
         regions of the SAC
     """
 
-    images = get_circular_regions(A, **kwargs)
+    images, _ = __get_circular_regions(A, **kwargs)
     gridscores = [gridness(im)[0] for im in images]
     return max(gridscores)
 
@@ -1672,7 +1675,7 @@ def get_deformed_sac_gridscore(A: np.ndarray) -> float:
     float
         The gridscore of the deformed SAC
     """
-    deformed_SAC = deform_SAC(A)
+    deformed_SAC = __deform_SAC(A)
     return gridness(deformed_SAC)[0]
 
 

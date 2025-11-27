@@ -877,7 +877,8 @@ class FigureMaker(object):
 
         ax = _plot_single_sac(sac, ax, **kwargs)
 
-        return fig
+        return ax
+        # return fig
 
     @saveFigure
     def plot_speed_v_rate(self, cluster: int, channel: int, **kwargs) -> plt.Axes:

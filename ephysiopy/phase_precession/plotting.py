@@ -21,6 +21,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.collections import RegularPolyCollection
 import matplotlib.colors as colours
 import matplotlib.patches as mpatches
+from matplotlib.colors import ListedColormap
 
 
 @stripAxes
@@ -53,8 +54,7 @@ def plot_phase_precession(
     # repeat the y-axis values for clarity
     mm = (0, -4 * np.pi, -2 * np.pi, 2 * np.pi, 4 * np.pi)
     for m in mm:
-        ax.plot((-1, 1), (-slope + intercept + m,
-                slope + intercept + m), "r", lw=3)
+        ax.plot((-1, 1), (-slope + intercept + m, slope + intercept + m), "r", lw=3)
         ax.scatter(normalised_position, phase + m, s=6, c="k", **kwargs)
 
     ax.set_xlim(-1, 1)
@@ -102,21 +102,18 @@ def plot_runs_and_precession(
         method="clump_runs",
     )
     # filter out the short duration runs
-    fp = filter_runs(fp, ["min_speed", "duration"], [
-                     np.greater, np.greater], [0, 0.1])
+    fp = filter_runs(fp, ["min_speed", "duration"], [np.greater, np.greater], [0, 0.1])
     # filter for distance traversed
 
     fig = plt.figure(constrained_layout=True)
 
-    time = np.arange(0, trial.PosCalcs.duration,
-                     1 / trial.PosCalcs.sample_rate)
+    time = np.arange(0, trial.PosCalcs.duration, 1 / trial.PosCalcs.sample_rate)
     run_labels = np.zeros_like(time)
     for i, f in enumerate(fp):
         for r in f.runs:
             run_labels[r.slice] = i
 
-    [plt.plot(r.xy[0], time[r.slice], color="lightgrey", zorder=0)
-     for r in fp[0].runs]
+    [plt.plot(r.xy[0], time[r.slice], color="lightgrey", zorder=0) for r in fp[0].runs]
 
     plt.show()
 
@@ -130,8 +127,7 @@ def plot_field_and_runs(trial: AxonaTrial, field_props: list[FieldProps]):
     """
 
     fig, ax = plt.subplots(layout="constrained")
-    time = np.arange(0, trial.PosCalcs.duration,
-                     1 / trial.PosCalcs.sample_rate)
+    time = np.arange(0, trial.PosCalcs.duration, 1 / trial.PosCalcs.sample_rate)
 
     ax.set_ylim(0, time[-1])
     ax.set_xlim(0, np.nanmax(trial.PosCalcs.xy[0].data))
@@ -149,11 +145,10 @@ def plot_field_and_runs(trial: AxonaTrial, field_props: list[FieldProps]):
     tail = (0.55, 0.025) if xy[0, -1] - xy[0, 0] < 0 else (0.45, 0.025)
     head = (0.45, 0.025) if xy[0, -1] - xy[0, 0] < 0 else (0.55, 0.025)
 
-    arrow = mpatches.FancyArrowPatch(
-        tail, head, mutation_scale=100, color="black")
+    arrow = mpatches.FancyArrowPatch(tail, head, mutation_scale=100, color="black")
     ax.add_patch(arrow)
 
-    _add_colour_wheel(ax, fig, bbox=(0.05, 0.6, 0.15, 0.15))
+    _add_colour_wheel(ax, fig, bbox=(0.05, 0.6, 0.1, 0.1))
 
     be = field_props[0].binned_data.bin_edges[0]
 
@@ -163,8 +158,7 @@ def plot_field_and_runs(trial: AxonaTrial, field_props: list[FieldProps]):
         ax.axvspan(be[slice.start], be[slice.stop], alpha=0.3)
         for irun in f.runs:
             # annotate the run with its run number
-            run_time = np.arange(
-                irun.slice.start, irun.slice.stop) / irun.sample_rate
+            run_time = np.arange(irun.slice.start, irun.slice.stop) / irun.sample_rate
             # draw the run as a black line
             ax.plot(irun.xy[0], run_time, color="black", zorder=1)
 
@@ -239,8 +233,7 @@ def plot_phase_v_position(
         runs_phase = flatten_list(field.phase)
         runs_spikes = flatten_list(field.runs_observed_spikes)
         idx = np.nonzero(np.array(runs_spikes))[0]
-        ax.scatter(np.array(runs_pos)[idx],
-                   np.array(runs_phase)[idx], **kwargs)
+        ax.scatter(np.array(runs_pos)[idx], np.array(runs_phase)[idx], **kwargs)
 
         ax.set_xlabel("Position")
         ax.set_ylabel("Phase (radians)")
@@ -320,14 +313,13 @@ def plot_lfp_and_spikes_per_run(f_props: list[FieldProps]) -> plt.Axes:
         for i, r in enumerate(f.runs):
             plt.subplot(nrows, 2, i + 1)
             t = np.linspace(
-                r.lfp_segment.slice.start / r.lfp_segment.sample_rate,
-                r.lfp_segment.slice.stop / r.lfp_segment.sample_rate,
-                len(r.lfp_segment.phase),
+                r.lfp.slice.start / r.lfp.sample_rate,
+                r.lfp.slice.stop / r.lfp.sample_rate,
+                len(r.lfp.phase),
             )
-            plt.plot(t, r.lfp_segment.filtered_signal, label=f"Run {r.label}")
-            y = np.interp(r.lfp_segment.spike_times, t,
-                          r.lfp_segment.filtered_signal)
-            plt.plot(r.lfp_segment.spike_times, y, "ro")
+            plt.plot(t, r.lfp.filtered_signal, label=f"Run {r.label}")
+            y = np.interp(r.lfp.spike_times, t, r.lfp.filtered_signal)
+            plt.plot(r.lfp.spike_times, y, "ro")
             ax = plt.gca()
             ax.set_xticklabels("")
             ax.set_yticklabels("")
@@ -368,8 +360,7 @@ def plot_field_props(field_props: list[FieldProps]):
     cmap = matplotlib.colormaps["Set1"].resampled(max_field_label)
     [
         [
-            ax.plot(r.xy[0], r.xy[1], color=cmap(
-                f.label - 1), label=f.label - 1)
+            ax.plot(r.xy[0], r.xy[1], color=cmap(f.label - 1), label=f.label - 1)
             for r in f.runs
         ]
         for f in field_props
@@ -384,8 +375,7 @@ def plot_field_props(field_props: list[FieldProps]):
         )
         for f in field_props
     ]
-    [ax.plot(f.xy_at_peak[0], f.xy_at_peak[1], "ko", ms=2)
-     for f in field_props]
+    [ax.plot(f.xy_at_peak[0], f.xy_at_peak[1], "ko", ms=2) for f in field_props]
     norm = matplotlib.colors.Normalize(1, max_field_label)
     tick_locs = np.linspace(1.5, max_field_label - 0.5, max_field_label)
     cbar = fig.colorbar(
@@ -417,8 +407,7 @@ def plot_field_props(field_props: list[FieldProps]):
     ]
     [
         a.add_artist(
-            matplotlib.patches.Circle(
-                (0, 0), 1, fc="none", ec="lightgrey", zorder=3),
+            matplotlib.patches.Circle((0, 0), 1, fc="none", ec="lightgrey", zorder=3),
         )
         for a, _ in zip(ax1, field_props)
     ]
@@ -467,8 +456,7 @@ def plot_field_props(field_props: list[FieldProps]):
         matplotlib.cm.ScalarMappable(cmap=angular_cmap, norm=degs_norm),
         ax=ax2,
     )
-    [ax2.plot(f.xy_at_peak[0], f.xy_at_peak[1], "ko", ms=2)
-     for f in field_props]
+    [ax2.plot(f.xy_at_peak[0], f.xy_at_peak[1], "ko", ms=2) for f in field_props]
     # PLOT 4
     # The smoothed ratemap - maybe make this the first sub plot
     ax3 = subfigs[1, 1].subplots(1, 1)
@@ -478,8 +466,7 @@ def plot_field_props(field_props: list[FieldProps]):
     ax3.pcolormesh(bin_edges[1], bin_edges[0], rmap_to_plot)
     # add the field labels to the ratemap plot
     [
-        ax3.text(f.xy_at_peak[0], f.xy_at_peak[1],
-                 str(f.label), ha="left", va="bottom")
+        ax3.text(f.xy_at_peak[0], f.xy_at_peak[1], str(f.label), ha="left", va="bottom")
         for f in field_props
     ]
 
@@ -520,7 +507,7 @@ def plot_lfp_segment(field: FieldProps, lfp_sample_rate: int = 250):
 
 
 def plot_lfp_run(
-    run: RunProps, cycle_labels: np.ndarray = None, lfp_sample_rate: int = 250
+    run: RunProps, cycle_labels: np.ndarray = None, lfp_sample_rate: int = 250, **kwargs
 ):
     """
     Plot the lfp segment for a single run through a field including
@@ -537,28 +524,22 @@ def plot_lfp_run(
     times etc (if you can be arsed to plot them)
     """
 
-    assert hasattr(run, "lfp_data")
+    assert hasattr(run, "lfp")
+    cmap = kwargs.get("cmap", "tab10")
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
     # create a colormap for the cycle labels
-    if cycle_labels is not None:
-        colours = cycle_labels[run.lfp_data.slice].data
-    sig = run.lfp_data.amplitude
-    t = np.linspace(
-        run.lfp_data.slice.start / lfp_sample_rate,
-        run.lfp_data.slice.stop / lfp_sample_rate,
-        len(sig),
-    )
-    if cycle_labels is None:
-        ax.plot(t, sig)
-    else:
-        colored_line(t, sig, colours, ax=ax, cmap="tab10")
-    inds = repeat_ind(run.lfp_data.spike_count)
+    colours = run.lfp.cycle_label[0]
+    sig = run.lfp.filtered_signal[0]
+    t = run.lfp.time
+    ax.plot(t, sig.data, color="lightgrey")
+    colored_line(t, sig, colours, ax=ax, cmap=cmap)
+    inds = repeat_ind(run.lfp.spike_count.ravel().data)
     spike_amp = np.take(sig, inds)
     spike_times = np.take(t, inds)
     ax.plot(spike_times, spike_amp, "ro")
-    plt.show()
+    return ax
 
 
 def add_colorwheel_to_fig(ax):
@@ -579,3 +560,114 @@ def add_colorwheel_to_fig(ax):
     ax.set_axis_off()
     ax.set_rlim([-1, 1])
     return ax
+
+
+# TODO: Check this works with 1- and 2-D data
+def plot_spikes_in_runs_per_field(
+    field_label: np.ndarray,
+    run_starts: np.ndarray,
+    run_ends: np.ndarray,
+    spikes_in_time: np.ndarray,
+    ttls_in_time: np.ndarray | None = None,
+    **kwargs,
+):
+    """
+    Debug plotting to show spikes per run per field found in the ratemap
+    as a raster plot
+
+    Parameters
+    ----------
+    field_label : np.ndarray
+    The field labels for each position bin a vector
+    run_starts, runs_ends : np.ndarray
+        The start and stop indices of each run (vectors)
+    spikes_in_time : np.ndarray
+        The number of spikes in each position bin (vector)
+    ttls_in_time : np.ndarray
+        TTL occurences in time (vector)
+
+    **kwargs
+        separate_plots : bool
+            If True then each field will be plotted in a separate figure
+        single_axes : bool
+            If True will plot all the runs/ spikes in a single axis with fields delimited by horizontal lines
+
+    Returns
+    -------
+    fig, axes : tuple
+        The figure and axes objects
+    """
+    spikes_in_time = np.ravel(spikes_in_time)
+    if ttls_in_time:
+        assert len(spikes_in_time) == len(ttls_in_time)
+    run_start_stop_idx = np.array([run_starts, run_ends]).T
+    run_field_id = field_label[run_start_stop_idx[:, 0]]
+    runs_per_field = np.histogram(run_field_id, bins=range(1, max(run_field_id) + 2))[0]
+    max_run_len = np.max(run_start_stop_idx[:, 1] - run_start_stop_idx[:, 0])
+    all_slices = np.array([slice(r[0], r[1]) for r in run_start_stop_idx])
+    # create the figure window first then do the iteration through fields etc
+    master_raster_arr = []
+    # a grey colour for the background i.e. how long the run was
+    grey = np.array([0.8627, 0.8627, 0.8627, 1])
+    # iterate through each field then pull out the
+    max_spikes = np.nanmax(spikes_in_time).astype(int) + 1
+    orig_cmap = matplotlib.colormaps["spring"].resampled(max_spikes)
+    cmap = orig_cmap(np.linspace(0, 1, max_spikes))
+    cmap[0, :] = grey
+    newcmap = ListedColormap(cmap)
+    # some lists to hold the outputs
+    # spike count for each run through the field
+    master_raster_arr = []
+    # list for count of total number of spikes per field
+    spikes_per_run = []
+    # counts of ttl puleses emitted during each run
+    if ttls_in_time is not None:
+        ttls_per_field = []
+    # collect all the per field spiking, ttls etc first then plot
+    # in a separate iteration
+    for i, field_id in enumerate(np.unique(run_field_id)):
+        # create a temporary array to hold the raster for this fields runs
+        raster_arr = np.zeros(shape=(runs_per_field[i], max_run_len)) * np.nan
+        ttl_arr = np.zeros(shape=(runs_per_field[i], max_run_len)) * np.nan
+        # get the indices into the time binned spikes of the runs
+        i_field_slices = all_slices[run_field_id == field_id]
+        # breakpoint()
+        for j, s in enumerate(i_field_slices):
+            i_run_len = s.stop - s.start
+            raster_arr[j, 0:i_run_len] = spikes_in_time[s]
+            if ttls_in_time is not None:
+                ttl_arr[j, 0:i_run_len] = ttls_in_time[s]
+        spikes_per_run.append(int(np.nansum(raster_arr)))
+        if ttls_in_time:
+            ttls_per_field.append(ttl_arr)
+        master_raster_arr.append(raster_arr)
+
+    if "separate_plots" in kwargs.keys():
+        for i, field_id in enumerate(np.unique(run_field_id)):
+            _, ax = plt.subplots(1, 1)
+            ax.imshow(master_raster_arr[i], cmap=newcmap, aspect="auto")
+            ax.axes.get_xaxis().set_ticks([])
+            ax.axes.get_yaxis().set_ticks([])
+            ax.set_ylabel(f"Field {field_id}")
+    elif "single_axes" in kwargs.keys():
+        # deal with master_raster_arr here
+        _, ax = plt.subplots(1, 1)
+        if ttls_in_time:
+            ttls = np.array(flatten_list(ttls_per_field))
+            ax.imshow(ttls, cmap=matplotlib.colormaps["bone"])
+        spiking_arr = np.array(flatten_list(master_raster_arr))
+        ax.imshow(spiking_arr, cmap=newcmap, alpha=0.6)
+        ax.axes.get_xaxis().set_ticks([])
+        ax.axes.get_yaxis().set_ticks([])
+        ax.hlines(np.cumsum(runs_per_field)[:-1], 0, max_run_len, "regressor")
+        ax.set_xlim(0, max_run_len)
+        ytick_locs = np.insert(np.cumsum(runs_per_field), 0, 0)
+        ytick_locs = np.diff(ytick_locs) // 2 + ytick_locs[:-1]
+        ax.set_yticks(ytick_locs, list(map(str, np.unique(run_field_id))))
+        ax.set_ylabel("Field ID", rotation=90, labelpad=10)
+        ax.set_xlabel("Time (s)")
+        ax.set_xticks([0, max_run_len], ["0", f"{(max_run_len) / 50:.2f}"])
+        axes2 = ax.twinx()
+        axes2.set_yticks(ytick_locs, list(map(str, spikes_per_run)))
+        axes2.set_ylim(ax.get_ylim())
+        axes2.set_ylabel("Spikes per field", rotation=270, labelpad=10)

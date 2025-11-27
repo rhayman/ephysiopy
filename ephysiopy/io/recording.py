@@ -822,6 +822,10 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         rmap = self.get_rate_map(cluster, channel, **kwargs)
         ids = make_cluster_ids(cluster, channel)
+        if kwargs.get("do_shuffle", True):
+            if len(rmap.binned_data) != len(ids):
+                # repeat the ids for each shuffle
+                ids = ids * len(rmap.binned_data)
         kwargs["cluster_id"] = ids
         sac = self.RateMap.autoCorr2D(rmap, **kwargs)
         return sac

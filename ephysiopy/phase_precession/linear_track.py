@@ -21,10 +21,10 @@ from ephysiopy.common.fieldproperties import (
     FieldProps,
     RunProps,
 )
-from ephysiopy.common.phasecoding import (
-    phasePrecession2D,
-    RegressionResults,
-)
+from ephysiopy.phase_precession.phase_precession import phasePrecessionND
+
+from ephysiopy.common.phasecoding import RegressionResults
+
 
 MIN_THETA = 6
 MAX_THETA = 10
@@ -74,8 +74,10 @@ def run_phase_analysis(
 
     """
     # remove any pre-existing filters
-    trial.apply_filter()
-    PP = phasePrecession2D(
+    run_direction = kwargs.get("run_direction", "e")
+
+    trial = apply_linear_track_filter(trial, run_direction=run_direction)
+    PP = phasePrecessionND(
         trial,
         cluster,
         channel,
@@ -102,7 +104,7 @@ def run_phase_analysis(
     return results
 
 
-def fieldprops_phase_precession(P: phasePrecession2D, **kwargs):
+def fieldprops_phase_precession(P: phasePrecessionND, **kwargs):
     """
     Run the phase analysis on a linear track trial.
 
@@ -121,8 +123,7 @@ def fieldprops_phase_precession(P: phasePrecession2D, **kwargs):
     """
     run_direction = kwargs.get("run_direction", "e")
     # get the field properties for the linear track
-    f_props = get_field_props_for_linear_track(
-        P, direction=run_direction, **kwargs)
+    f_props = get_field_props_for_linear_track(P, **kwargs)
     if not f_props:
         return None, None, None, None, None
     # merge the LFP data with the field properties
@@ -137,8 +138,7 @@ def fieldprops_phase_precession(P: phasePrecession2D, **kwargs):
 
 
 def get_field_props_for_linear_track(
-    P: phasePrecession2D,
-    direction=None,
+    P: phasePrecessionND,
     var_type=VariableToBin.X,
     **kwargs,
 ) -> list[FieldProps]:
@@ -163,8 +163,6 @@ def get_field_props_for_linear_track(
                     different criteria, e.g. field size in bins,
                     field rate threshold (mean, peak, etc.), etc.
     """
-    P = apply_linear_track_filter(P, direction=direction, var_type=var_type)
-
     # partition the cells firing into distinct fields
     binned_data = P.trial.get_linear_rate_map(
         P.cluster, P.channel, var_type=var_type, **kwargs
@@ -181,45 +179,44 @@ def get_field_props_for_linear_track(
 
 
 def apply_linear_track_filter(
-    P: phasePrecession2D, direction=None, var_type=VariableToBin.X
+    T: AxonaTrial, run_direction=None, var_type=VariableToBin.X
 ):
 
     # filter the data for speed, direction and position
     # position filter is there to remove the start and end of the track
+    # remove the filters first
+    T.apply_filter()
     speed_filter = TrialFilter("speed", EXCLUDE_SPEEDS[0], EXCLUDE_SPEEDS[1])
     if var_type.value == VariableToBin.PHI.value:
-        min_pos = np.nanmin(P.trial.PosCalcs.phi.data)
-        max_pos = np.nanmax(P.trial.PosCalcs.phi.data)
+        min_pos = np.nanmin(T.PosCalcs.phi.data)
+        max_pos = np.nanmax(T.PosCalcs.phi.data)
         pos_filt0 = TrialFilter("xrange", min_pos, min_pos + 6)
         pos_filt1 = TrialFilter("xrange", max_pos - 6, max_pos)
     if var_type.value == VariableToBin.X.value:
-        min_pos = np.nanmin(P.trial.PosCalcs.xy[0].data)
-        max_pos = np.nanmax(P.trial.PosCalcs.xy[0].data)
+        min_pos = np.nanmin(T.PosCalcs.xy[0].data)
+        max_pos = np.nanmax(T.PosCalcs.xy[0].data)
         pos_filt0 = TrialFilter("xrange", min_pos, min_pos + 6)
         pos_filt1 = TrialFilter("xrange", max_pos - 6, max_pos)
-    if direction:
+    if run_direction:
         # broaden the directional filters to 180 degrees
         # as runs are getting broken up
-        if direction == "e" or direction == "east":
+        if run_direction == "e" or run_direction == "east":
             # filter out east direction - LEAVING onyl west
-            # dir_filter0 = TrialFilter("dir", 270, 90)
             dir_filter0 = TrialFilter("dir", "e")
-        elif direction == "w" or direction == "west":
+        elif run_direction == "w" or run_direction == "west":
             # filter out west direction - LEAVING only east
-            # dir_filter0 = TrialFilter("dir", 90, 270)
             dir_filter0 = TrialFilter("dir", "w")
 
         n = TrialFilter("dir", "n")
         s = TrialFilter("dir", "s")
-        P.trial.apply_filter(pos_filt0, pos_filt1,
-                             speed_filter, dir_filter0, n, s)
+        T.apply_filter(pos_filt0, pos_filt1, speed_filter, dir_filter0, n, s)
     else:
-        P.trial.apply_filter(
+        T.apply_filter(
             pos_filt0,
             pos_filt1,
             speed_filter,
         )
-    return P
+    return T
 
 
 def get_run_direction(run: RunProps):
