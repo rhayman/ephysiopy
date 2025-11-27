@@ -19,7 +19,6 @@ from ephysiopy.common.fieldcalcs import (
     fancy_partition,
     simple_partition,
     flatten_list,
-    repeat_ind,
 )
 from ephysiopy.common.fieldproperties import fieldprops, LFPSegment, FieldProps
 from ephysiopy.phase_precession.config import phase_precession_config
@@ -426,14 +425,14 @@ class phasePrecessionND(object):
 
         return field_props
 
-    def get_phase_reg_per_field(self, field_props: list[FieldProps], **kwargs) -> dict:
+    def get_phase_reg_per_field(self, fp: list[FieldProps], **kwargs) -> dict:
         """
         Extracts the phase and all regressors for all runs through each
         field separately
 
         Parameters
         ----------
-        field_props : list
+        fp : list
             A list of FieldProps instances
 
         Returns
@@ -446,16 +445,8 @@ class phasePrecessionND(object):
         """
         regressors = kwargs.get("regressors", self.regressors)
 
-        # helper function to extract the relevant values from
-        # a variable list (e.g. cumulative distance) at the times
-        # when spikes were observed
-        def get_spiking_var(var: np.ndarray, observed_spikes: np.ndarray) -> np.ndarray:
-            var = np.array(flatten_list(var))
-            observed_spikes = np.array(flatten_list(observed_spikes))
-            return flatten_list(np.take(var, repeat_ind(observed_spikes)))
-
-        results = dict.fromkeys([f.label for f in field_props])
-        for field in field_props:
+        results = dict.fromkeys([f.label for f in fp])
+        for field in fp:
             results[field.label] = {}
             results[field.label]["phase"] = np.array(
                 flatten_list([run.lfp.mean_spiking_var().ravel()
@@ -582,7 +573,10 @@ class phasePrecessionND(object):
         ax.set_xticks(xtick_locs, list(map(str, xtick_locs)))
         ax.set_yticks(sorted(mm), ["-4π", "-2π", "0", "2π", "4π"])
         ax.set_ylim(-2 * np.pi, 4 * np.pi)
-        title_str = f"{regressor} vs phase: slope = {slope:.2f}, \nintercept = {intercept:.2f}, p_shuffled = {result.p_shuffled:.2f}"
+        title_str0 = f"{regressor} vs phase: slope = {slope:.2f}"
+        title_str1 = f"\nintercept = {intercept:.2f}"
+        title_str2 = f"\np_shuffled = {result.p_shuffled:.2f}"
+        title_str = title_str0 + title_str1 + title_str2
         ax.set_title(title_str, fontsize=subaxis_title_fontsize)
         ax.set_ylabel("Phase", fontsize=subaxis_title_fontsize)
         ax.set_xlabel("Normalised position", fontsize=subaxis_title_fontsize)
