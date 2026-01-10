@@ -4,7 +4,7 @@ from scipy import ndimage
 from scipy.signal import argrelextrema
 from skimage.segmentation import watershed
 from ephysiopy.io.recording import AxonaTrial
-from ephysiopy.common.eegcalcs import LFPOscillations
+from ephysiopy.common.rhythmicity import LFPOscillations
 from ephysiopy.common.phasecoding import get_bad_cycles
 from ephysiopy.common.statscalcs import (
     CircStatsResults,
@@ -12,13 +12,12 @@ from ephysiopy.common.statscalcs import (
     circRegress,
     RegressionResults,
 )
-from ephysiopy.common.utils import VariableToBin, BinnedData
+from ephysiopy.common.utils import VariableToBin, BinnedData, flatten_list
 from ephysiopy.common.fieldcalcs import (
     filter_for_speed,
     filter_runs,
     fancy_partition,
     simple_partition,
-    flatten_list,
 )
 from ephysiopy.common.fieldproperties import fieldprops, LFPSegment, FieldProps
 from ephysiopy.phase_precession.config import phase_precession_config
@@ -135,8 +134,7 @@ class phasePrecessionND(object):
 
         # Some spiking params...
         spk_times_in_pos_samples = T.get_binned_spike_times(cluster, channel)
-        spk_times_in_pos_samples = np.ravel(
-            spk_times_in_pos_samples).astype(int)
+        spk_times_in_pos_samples = np.ravel(spk_times_in_pos_samples).astype(int)
         spk_weights = np.bincount(
             spk_times_in_pos_samples, minlength=len(T.PosCalcs.xyTS)
         )
@@ -196,8 +194,7 @@ class phasePrecessionND(object):
             binned_data = kwargs.get("binned_data")
         else:
             if self.binning_var.value == VariableToBin.XY.value:
-                binned_data = self.trial.get_rate_map(
-                    self.cluster, self.channel)
+                binned_data = self.trial.get_rate_map(self.cluster, self.channel)
             elif self.binning_var.value == VariableToBin.X.value:
                 binned_data = self.trial.get_linear_rate_map(
                     self.cluster, self.channel, var_type=self.binning_var
@@ -205,8 +202,7 @@ class phasePrecessionND(object):
 
         # split into runs
         # method = kwargs.get("method", "field")
-        field_properties = self.get_pos_props(
-            binned_data, self.binning_var, **kwargs)
+        field_properties = self.get_pos_props(binned_data, self.binning_var, **kwargs)
 
         # get theta cycles, amplitudes, phase etc
         field_properties = self.get_theta_props(field_properties)
@@ -256,8 +252,7 @@ class phasePrecessionND(object):
 
         if binned_data is None:
             if var_type.value == VariableToBin.XY.value:
-                binned_data = self.trial.get_rate_map(
-                    self.cluster, self.channel)
+                binned_data = self.trial.get_rate_map(self.cluster, self.channel)
             elif var_type.value == VariableToBin.X.value:
                 binned_data = self.trial.get_linear_rate_map(
                     self.cluster, self.channel, var_type=var_type
@@ -283,6 +278,7 @@ class phasePrecessionND(object):
         if partition_method == "simple":
             _, _, labels, _ = simple_partition(
                 binned_data,
+                rate_threshold_prc=field_threshold_percent,
             )
         else:
             _, _, labels, _ = fancy_partition(
@@ -319,8 +315,7 @@ class phasePrecessionND(object):
             [np.greater, np.greater_equal],
             [self.minimum_allowed_run_duration, 2],
         )
-        field_props = filter_for_speed(
-            field_props, self.minimum_allowed_run_speed)
+        field_props = filter_for_speed(field_props, self.minimum_allowed_run_speed)
 
         # Smooth the runs before calculating other metrics
         [
@@ -449,8 +444,7 @@ class phasePrecessionND(object):
         for field in fp:
             results[field.label] = {}
             results[field.label]["phase"] = np.array(
-                flatten_list([run.lfp.mean_spiking_var().ravel()
-                             for run in field.runs])
+                flatten_list([run.lfp.mean_spiking_var().ravel() for run in field.runs])
             )
             for regressor in regressors:
                 match regressor:
@@ -467,8 +461,7 @@ class phasePrecessionND(object):
                     case "pos_exptdRate_cum":
                         vals = field.mean_spiking_var("expected_spikes")
                     case "pos_instFR":
-                        vals = field.mean_spiking_var(
-                            "instantaneous_firing_rate")
+                        vals = field.mean_spiking_var("instantaneous_firing_rate")
 
                 results[field.label][regressor] = vals
         return results
@@ -565,8 +558,7 @@ class phasePrecessionND(object):
         intercept = result.intercept
         mm = (0, -4 * np.pi, -2 * np.pi, 2 * np.pi, 4 * np.pi)
         for m in mm:
-            ax.plot((-1, 1), (-slope + intercept + m,
-                    slope + intercept + m), "r", lw=3)
+            ax.plot((-1, 1), (-slope + intercept + m, slope + intercept + m), "r", lw=3)
             ax.plot(vals, pha + m, "k.")
         ax.set_xlim(-1, 1)
         xtick_locs = np.linspace(-1, 1, 3)

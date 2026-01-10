@@ -22,8 +22,7 @@ from ephysiopy.common.fieldproperties import (
     RunProps,
 )
 from ephysiopy.phase_precession.phase_precession import phasePrecessionND
-
-from ephysiopy.common.phasecoding import RegressionResults
+from ephysiopy.common.statscalcs import RegressionResults
 
 
 MIN_THETA = 6
@@ -79,8 +78,8 @@ def run_phase_analysis(
     trial = apply_linear_track_filter(trial, run_direction=run_direction)
     PP = phasePrecessionND(
         trial,
-        cluster,
-        channel,
+        int(cluster),
+        int(channel),
         regressors=["pos_d_normed_x"],
         method="clump_runs",
         **kwargs,

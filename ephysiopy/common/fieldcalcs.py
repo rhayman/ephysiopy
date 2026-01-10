@@ -17,6 +17,18 @@ from ephysiopy.common.utils import BinnedData, MapType, blur_image, VariableToBi
 # Some functions to extract and filter runs from field properties
 
 
+def sort_fields_by_attr(field_props: list[FieldProps], attr='area', reverse=True):
+    """
+    Sorts the fields in the list by attribute
+
+    Notes
+    -----
+    In the default case will sort by area, largest first
+    """
+    fp = sorted(field_props, key=lambda x: getattr(x, 'attr'), reverse=reverse)
+    return fp
+
+
 def get_all_phase(field_props: list[FieldProps]) -> np.ndarray:
     """
     Get all the phases from the field properties
@@ -35,6 +47,21 @@ def get_all_phase(field_props: list[FieldProps]) -> np.ndarray:
     for field in field_props:
         phases.extend(field.compressed_phase)
     return np.array(phases)
+
+
+def get_run_times(field_props: list[FieldProps]) -> list:
+    """
+    Get the run start and stop times in seconds for all runs
+    through all fields in the field_props list
+    """
+    run_times = []
+    for field in field_props:
+        for run in field.runs:
+            sample_rate = run.sample_rate
+            run_times.append(
+                (run.slice.start / sample_rate, run.slice.stop / sample_rate)
+            )
+    return run_times
 
 
 def get_run(field_props: list[FieldProps], run_num: int) -> RunProps:

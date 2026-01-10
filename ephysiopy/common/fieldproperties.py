@@ -785,13 +785,18 @@ class RunProps(SpikingProperty, object):
         """
         Normalise the x data to lie between -1 and 1
         with respect to the field limits
-        of the parent field
+        of the parent field and the run direction such
+        that -1 is entry and +1 is exit
         """
         be = self.parent.binned_data.bin_edges[0]
         sl = self.parent.slice[0]
         xmin = be[sl.start]
         xmax = be[sl.stop]
-        fp = np.linspace(-1, 1, 1000)
+        # check for run direction and interpolate accordingly
+        if self.xy[0][0] - self.xy[0][-1] > 0:
+            fp = np.linspace(1, -1, 1000)
+        else:
+            fp = np.linspace(-1, 1, 1000)
         xp = np.linspace(xmin, xmax, 1000)
         return np.interp(self.xy[0], xp, fp)
 
@@ -843,8 +848,7 @@ class RunProps(SpikingProperty, object):
             elif len(labels) > 1:
                 _, _, lens = find_runs(labels)
                 idx = repeat_ind(lens)
-                spike_var = ma.compress_cols(
-                    np.atleast_2d(self.spiking_var(var)))
+                spike_var = ma.compress_cols(np.atleast_2d(self.spiking_var(var)))
                 ndim = np.shape(spike_var)[0]
                 M = np.zeros(shape=[ndim, len(np.unique(labels))], dtype=float)
                 [np.add.at(M[i, :], idx, spike_var[i, :]) for i in range(ndim)]
@@ -1303,8 +1307,7 @@ class FieldProps(RegionProperties):
         elif hasattr(self.runs[0], "lfp"):
             if hasattr(self.runs[0].lfp, var):
                 return np.concatenate(
-                    [r.lfp.mean_spiking_var(
-                        var).T for r in self.runs if r.n_spikes > 0]
+                    [r.lfp.mean_spiking_var(var).T for r in self.runs if r.n_spikes > 0]
                 ).T
 
     # Over-ride the next intensity_* functions so they use the
@@ -1799,8 +1802,7 @@ def fieldprops(
             slice(c.start, c.stop) for c in clumps if (c.stop - c.start) >= min_run
         ]
     # remove runs that aren't in any field
-    run_slices = [rs for rs in all_run_slices if np.any(
-        xy_field_label[rs] != 0)]
+    run_slices = [rs for rs in all_run_slices if np.any(xy_field_label[rs] != 0)]
     # TODO: try getting run starts and stops via np.ma.clump_unmasked
     # Need to add a method argument to this function that determines
     # whether to use ma.clump_unmasked or the old "field"-based method
@@ -1811,12 +1813,10 @@ def fieldprops(
     speed = None
     if xy is not None:
         if xy.ndim == 1:  # linear track data
-            speed = ma.MaskedArray(
-                np.abs(ma.ediff1d(xy, to_begin=0)) * pos_sample_rate)
+            speed = ma.MaskedArray(np.abs(ma.ediff1d(xy, to_begin=0)) * pos_sample_rate)
         else:
             speed = ma.MaskedArray(
-                np.abs(ma.ediff1d(
-                    np.hypot(xy[0], xy[1]), to_begin=0)) * pos_sample_rate
+                np.abs(ma.ediff1d(np.hypot(xy[0], xy[1]), to_begin=0)) * pos_sample_rate
             )
 
         # speed = ma.append(speed, speed[-1])

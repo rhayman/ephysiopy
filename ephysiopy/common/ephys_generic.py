@@ -10,6 +10,20 @@ from scipy.interpolate import griddata
 import astropy.convolution as cnv
 
 
+def nextpow2(val: int):
+    """
+    Calculates the next power of 2 that will hold val
+    """
+    val = val - 1
+    val = (val >> 1) | val
+    val = (val >> 2) | val
+    val = (val >> 4) | val
+    val = (val >> 8) | val
+    val = (val >> 16) | val
+    val = (val >> 32) | val
+    return np.log2(val + 1)
+
+
 class EventsGeneric(object):
     """
     Holds records of events, specifically for now, TTL events produced
@@ -181,19 +195,6 @@ class EEGCalcsGeneric(object):
         else:
             self.sig.mask = False
 
-    def _nextpow2(self, val: int):
-        """
-        Calculates the next power of 2 that will hold val
-        """
-        val = val - 1
-        val = (val >> 1) | val
-        val = (val >> 2) | val
-        val = (val >> 4) | val
-        val = (val >> 8) | val
-        val = (val >> 16) | val
-        val = (val >> 32) | val
-        return np.log2(val + 1)
-
     def butterFilter(self, low: float, high: float, order: int = 5) -> np.ndarray:
         """
          Filters self.sig with a butterworth filter with a bandpass filter
@@ -242,7 +243,7 @@ class EEGCalcsGeneric(object):
         origlen = len(self.sig)
 
         if "pad2pow" not in kwargs:
-            fftlen = int(np.power(2, self._nextpow2(origlen)))
+            fftlen = int(np.power(2, nextpow2(origlen)))
         else:
             pad2pow = kwargs.pop("pad2pow")
             fftlen = int(np.power(2, pad2pow))

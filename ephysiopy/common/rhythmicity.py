@@ -7,20 +7,24 @@ from matplotlib.patches import Rectangle
 import numpy as np
 from pathlib import Path, PurePath
 from typing import Callable
-from ephysiopy.common.ephys_generic import PosCalcsGeneric
-from ephysiopy.common.ephys_generic import EEGCalcsGeneric
+from ephysiopy.common.ephys_generic import (
+    PosCalcsGeneric,
+    EEGCalcsGeneric,
+    nextpow2
+)
 
 from ephysiopy.common.statscalcs import mean_resultant_vector
 from ephysiopy.common.utils import window_rms, find_runs
 from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 from ephysiopy.visualise.plotting import FigureMaker, saveFigure
-from ephysiopy.io.recording import OpenEphysBase
+from ephysiopy.io.recording import OpenEphysBase, AxonaTrial
 
 from scipy import signal
 from scipy import stats
 from scipy.special import i0
 
+from pactools import Comodulogram, REFERENCES
 import pywt
 from dataclasses import dataclass
 
@@ -41,6 +45,9 @@ class FreqPhase:
     inst_freq: np.ndarray
 
 
+# this class needs refactoring to make use of fieldprops for the
+# fitering operations like getRunsOfMinLength etc.
+
 class CosineDirectionalTuning(object):
     """
     Produces output to do with Welday et al (2011) like analysis
@@ -49,12 +56,8 @@ class CosineDirectionalTuning(object):
 
     def __init__(
         self,
-        spike_times: np.ndarray,
-        pos_times: np.ndarray,
-        spk_clusters: np.ndarray,
-        x: np.ndarray,
-        y: np.ndarray,
-        tracker_params={},
+        trial: AxonaTrial | OpenEphysBase,
+        channel: int,
     ):
         """
         Parameters
@@ -113,26 +116,27 @@ class CosineDirectionalTuning(object):
         All timestamps should be given in sub-millisecond accurate seconds
         and pos_xy in cms
         """
-        self.spike_times = spike_times
-        self.pos_times = pos_times
-        self.spk_clusters = spk_clusters
+        if trial.PosCalcs is None:
+            trial.load_pos_data()
+
+        self.trial = trial
+
+        self.spike_times = trial.get_spike_times(tetrode=channel)
+
+        self.pos_times = trial.PosCalcs.xyTS
+        # self.spk_clusters = spk_clusters
         # Make sure spike times are within the range of the position times
         idx_to_keep = self.spike_times < self.pos_times[-1]
         self.spike_times = self.spike_times[idx_to_keep]
-        self.spk_clusters = self.spk_clusters[idx_to_keep]
-        self._pos_sample_rate = 30
-        self._spk_sample_rate = 3e4
+        # self.spk_clusters = self.spk_clusters[idx_to_keep]
+        self._pos_sample_rate = self.trial.PosCalcs.sample_rate
+        self._spk_sample_rate = 3e4  # ? for OpenEphysBase
         self._pos_samples_for_spike = None
         self._min_runlength = 0.4  # in seconds
-        self.posCalcs = PosCalcsGeneric(
-            x, y, 230, cm=True, jumpmax=100, tracker_params=tracker_params
-        )
-        # self.spikeCalcs = SpikeCalcsGeneric(spike_times, spk_clusters[0])
+        self.posCalcs = trial.PosCalcs
         # self.spikeCalcs.spk_clusters = spk_clusters
-        self.posCalcs.postprocesspos(tracker_params)
-        xy = self.posCalcs.xy
-        hdir = self.posCalcs.dir
-        self.posCalcs.calcSpeed(xy)
+        xy = trial.PosCalcs.xy
+        hdir = trial.PosCalcs.dir
         self._xy = xy
         self._hdir = hdir
         self._speed = self.posCalcs.speed
@@ -510,139 +514,6 @@ class CosineDirectionalTuning(object):
             ax.set_xlim(xlim)
         return out
 
-    def power_spectrum(
-        self,
-        eeg,
-        plot=True,
-        binWidthSecs=None,
-        maxFreq=25,
-        pad2pow=None,
-        ymax=None,
-        **kwargs,
-    ):
-        """
-        Method used by eeg_power_spectra and intrinsic_freq_autoCorr.
-        Signal in must be mean normalized already.
-
-        Parameters
-        ----------
-        eeg : np.ndarray
-            The EEG signal to analyze.
-        plot : bool, optional
-            Whether to plot the resulting power spectrum (default is True).
-        binWidthSecs : float, optional
-            The bin width in seconds for the power spectrum.
-        maxFreq : float, optional
-            The maximum frequency to compute the power spectrum up to (default is 25).
-        pad2pow : int, optional
-            The power of 2 to pad the signal to (default is None).
-        ymax : float, optional
-            The maximum y-axis value for the plot (default is None).
-        **kwargs : dict
-            Additional keyword arguments.
-
-        Returns
-        -------
-        dict
-            A dictionary containing the power spectrum and other related metrics.
-
-        """
-
-        # Get raw power spectrum
-        nqLim = 1 / binWidthSecs / 2.0
-        origLen = len(eeg)
-        # if pad2pow is None:
-        # 	fftLen = int(np.power(2, self._nextpow2(origLen)))
-        # else:
-        fftLen = int(np.power(2, pad2pow))
-        fftHalfLen = int(fftLen / float(2) + 1)
-
-        fftRes = np.fft.fft(eeg, fftLen)
-        # get power density from fft and discard second half of spectrum
-        _power = np.power(np.abs(fftRes), 2) / origLen
-        power = np.delete(_power, np.s_[fftHalfLen::])
-        power[1:-2] = power[1:-2] * 2
-
-        # calculate freqs and crop spectrum to requested range
-        freqs = nqLim * np.linspace(0, 1, fftHalfLen)
-        freqs = freqs[freqs <= maxFreq].T
-        power = power[0: len(freqs)]
-
-        # smooth spectrum using gaussian kernel
-        binsPerHz = (fftHalfLen - 1) / nqLim
-        kernelLen = np.round(self.smthKernelWidth * binsPerHz)
-        kernelSig = self.smthKernelSigma * binsPerHz
-
-        k = signal.windows.gaussian(kernelLen, kernelSig) / (kernelLen / 2 / 2)
-        power_sm = signal.fftconvolve(power, k[::-1], mode="same")
-
-        # calculate some metrics
-        # find max in theta band
-        spectrumMaskBand = np.logical_and(
-            freqs > self.thetaRange[0], freqs < self.thetaRange[1]
-        )
-        bandMaxPower = np.max(power_sm[spectrumMaskBand])
-        maxBinInBand = np.argmax(power_sm[spectrumMaskBand])
-        bandFreqs = freqs[spectrumMaskBand]
-        freqAtBandMaxPower = bandFreqs[maxBinInBand]
-        # self.maxBinInBand = maxBinInBand
-        # self.freqAtBandMaxPower = freqAtBandMaxPower
-        # self.bandMaxPower = bandMaxPower
-
-        # find power in small window around peak and divide by power in rest
-        # of spectrum to get snr
-        spectrumMaskPeak = np.logical_and(
-            freqs > freqAtBandMaxPower - self.sn2Width / 2,
-            freqs < freqAtBandMaxPower + self.sn2Width / 2,
-        )
-        s2n = np.nanmean(power_sm[spectrumMaskPeak]) / np.nanmean(
-            power_sm[~spectrumMaskPeak]
-        )
-        self.freqs = freqs
-        self.power_sm = power_sm
-        self.spectrumMaskPeak = spectrumMaskPeak
-        if plot:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            if ymax is None:
-                ymax = np.min([2 * np.max(power), np.max(power_sm)])
-                if ymax == 0:
-                    ymax = 1
-            ax.plot(freqs, power, c=[0.9, 0.9, 0.9])
-            # ax.hold(True)
-            ax.plot(freqs, power_sm, "k", lw=2)
-            ax.axvline(self.thetaRange[0], c="b", ls="--")
-            ax.axvline(self.thetaRange[1], c="b", ls="--")
-            _, stemlines, _ = ax.stem([freqAtBandMaxPower], [
-                                      bandMaxPower], linefmt="r")
-            # plt.setp(stemlines, 'linewidth', 2)
-            ax.fill_between(
-                freqs,
-                0,
-                power_sm,
-                where=spectrumMaskPeak,
-                color="r",
-                alpha=0.25,
-                zorder=25,
-            )
-            # ax.set_ylim(0, ymax)
-            # ax.set_xlim(0, self.xmax)
-            ax.set_xlabel("Frequency (Hz)")
-            ax.set_ylabel("Power density (W/Hz)")
-        out_dict = {
-            "maxFreq": freqAtBandMaxPower,
-            "Power": power_sm,
-            "Freqs": freqs,
-            "s2n": s2n,
-            "Power_raw": power,
-            "k": k,
-            "kernelLen": kernelLen,
-            "kernelSig": kernelSig,
-            "binsPerHz": binsPerHz,
-            "kernelLen": kernelLen,
-        }
-        return out_dict
-
 
 class LFPOscillations(object):
     """
@@ -656,6 +527,12 @@ class LFPOscillations(object):
     def __init__(self, sig, fs, **kwargs):
         self.sig = sig
         self.fs = fs
+        # these member variables are used in power_spectrum()
+        self.smthKernelWidth = 2
+        self.smthKernelSigma = 0.1875
+        self.sn2Width = 2
+        self.thetaRange = [6, 12]
+        self.xmax = 11
 
     def getFreqPhase(self, sig, band2filter: list, ford=3) -> FreqPhase:
         """
@@ -753,6 +630,63 @@ class LFPOscillations(object):
         plt.tight_layout()
         return fig, ax
 
+    def get_comodulogram(self, low_freq_band=[1, 12], **kwargs):
+        """
+        Computes the comodulogram of phase-amplitude coupling
+        between different frequency bands.
+
+        Parameters
+        ----------
+        low_freq_band : list
+            The low frequency band - what the pactools module calls
+            the "driver" frequency
+        **kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        np.ndarray
+            The computed comodulogram.
+
+        Notes
+        -----
+        This method is a placeholder and needs to be implemented.
+        """
+        fs = self.fs
+        signal = self.sig
+
+        method = kwargs.get("method", "duprelatour")
+
+        low_fq_width = 1.0  # Hz
+
+        low_fq_range = np.linspace(low_freq_band[0], low_freq_band[1], 50)
+
+        estimator = Comodulogram(
+            fs=fs,
+            low_fq_range=low_fq_range,
+            low_fq_width=low_fq_width,
+            method=method,
+            progress_bar=False,
+        )
+
+        estimator.fit(signal)
+
+        if kwargs.get("plot", False):
+            if kwargs.get("ax", None):
+                ax = kwargs.get("ax")
+            else:
+                fig, ax = plt.subplots(figsize=(4, 3))
+
+            vmin = kwargs.get("vmin", None)
+            vmax = kwargs.get("vmax", None)
+
+            estimator.plot(titles=[REFERENCES[method]],
+                           axs=[ax], vmin=vmin, vmax=vmax)
+            ax.set_title("Comodulogram")
+            return estimator, ax
+
+        return estimator
+
     def get_oscillatory_epochs(
         self,
         out_window_size: float = 0.4,
@@ -831,27 +765,30 @@ class LFPOscillations(object):
         sig=None,
         nbins=20,
         forder=2,
-        thetaband=[4, 8],
-        gammaband=[30, 80],
-        plot=True,
+        thetaband=[6, 12],
+        gammaband=[20, 90],
+        plot=False,
     ) -> float:
         """
         Calculates the modulation index of theta and gamma oscillations.
         Specifically, this is the circular correlation between the phase of
-        theta and the power of theta.
+        theta and the power of gamma.
 
         Parameters
         ----------
         sig : np.array, optional
-            The LFP signal. If None, uses the signal provided during initialization.
+            The LFP signal. If None, uses the signal provided during
+            initialization.
         nbins : int, optional
             The number of bins in the circular range 0 to 2*pi (default is 20).
         forder : int, optional
             The order of the Butterworth filter (default is 2).
         thetaband : list, optional
-            The lower and upper bands of the theta frequency range (default is [4, 8]).
+            The lower and upper bands of the theta frequency range
+            (default is [6, 12]).
         gammaband : list, optional
-            The lower and upper bands of the gamma frequency range (default is [30, 80]).
+            The lower and upper bands of the gamma frequency range
+            (default is [20, 90]).
         plot : bool, optional
             Whether to plot the results (default is True).
 
@@ -862,8 +799,8 @@ class LFPOscillations(object):
 
         Notes
         -----
-        The modulation index is a measure of the strength of phase-amplitude coupling
-        between theta and gamma oscillations.
+        The modulation index is a measure of the strength of phase-amplitude
+        coupling between theta and gamma oscillations.
 
         """
         if sig is None:
@@ -897,6 +834,156 @@ class LFPOscillations(object):
             ax.bar(pbins[:, 1], amp, width=w)
             ax.set_title("Modulation index={0:.5f}".format(mi))
         return mi
+
+    def power_spectrum(
+        self,
+        eeg=None,
+        plot=True,
+        binWidthSecs=(1/250),
+        maxFreq=25,
+        pad2pow=None,
+        ymax=None,
+        **kwargs,
+    ) -> dict:
+        """
+        Method used by eeg_power_spectra and intrinsic_freq_autoCorr.
+        Signal in must be mean normalized already.
+
+        Parameters
+        ----------
+        eeg : np.ndarray
+            The EEG signal to analyze.
+        plot : bool, optional
+            Whether to plot the resulting power spectrum (default is True).
+        binWidthSecs : float, optional
+            The bin width in seconds for the power spectrum.
+        maxFreq : float, optional
+            The upper limit of the power spectrum frequency range
+            (default is 25).
+        pad2pow : int, optional
+            The power of 2 to pad the signal to (default is None).
+        ymax : float, optional
+            The maximum y-axis value for the plot (default is None).
+        **kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the power spectrum and other
+            related metrics.
+                "maxFreq", (float) - frequency at which max power in theta band
+                                     occurs
+                "Power", (np.ndarray) - smoothed power values
+                "Freqs", (np.ndarray) - frequencies corresponding to power
+                                        values
+                "s2n", - signal to noise ratio
+                "Power_raw", (np.ndarray) - raw power values
+                "k", (np.ndarray) - smoothing kernel
+                "kernelLen", (float) - length of smoothing kernel
+                "kernelSig", (float) - sigma of smoothing kernel
+                "binsPerHz", (float) - bins per Hz in the power spectrum
+                "kernelLen", (float) - length of the smoothing kernel
+
+
+        """
+        if eeg is None:
+            eeg = self.sig
+
+        # Get raw power spectrum
+        nqLim = 1 / binWidthSecs / 2.0
+        origLen = len(eeg)
+        if pad2pow is None:
+            fftLen = int(np.power(2, nextpow2(origLen)))
+        else:
+            fftLen = int(np.power(2, pad2pow))
+        fftHalfLen = int(fftLen / float(2) + 1)
+
+        fftRes = np.fft.fft(eeg, fftLen)
+        # get power density from fft and discard second half of spectrum
+        _power = np.power(np.abs(fftRes), 2) / origLen
+        power = np.delete(_power, np.s_[fftHalfLen::])
+        power[1:-2] = power[1:-2] * 2
+
+        # calculate freqs and crop spectrum to requested range
+        freqs = nqLim * np.linspace(0, 1, fftHalfLen)
+        freqs = freqs[freqs <= maxFreq].T
+        power = power[0: len(freqs)]
+
+        # smooth spectrum using gaussian kernel
+        binsPerHz = (fftHalfLen - 1) / nqLim
+        kernelLen = np.round(self.smthKernelWidth * binsPerHz)
+        kernelSig = self.smthKernelSigma * binsPerHz
+
+        k = signal.windows.gaussian(kernelLen, kernelSig) / (kernelLen / 2 / 2)
+        power_sm = signal.fftconvolve(power, k[::-1], mode="same")
+
+        # calculate some metrics
+        # find max in theta band
+        spectrumMaskBand = np.logical_and(
+            freqs > self.thetaRange[0], freqs < self.thetaRange[1]
+        )
+        bandMaxPower = np.max(power_sm[spectrumMaskBand])
+        maxBinInBand = np.argmax(power_sm[spectrumMaskBand])
+        bandFreqs = freqs[spectrumMaskBand]
+        freqAtBandMaxPower = bandFreqs[maxBinInBand]
+        # self.maxBinInBand = maxBinInBand
+        # self.freqAtBandMaxPower = freqAtBandMaxPower
+        # self.bandMaxPower = bandMaxPower
+
+        # find power in small window around peak and divide by power in rest
+        # of spectrum to get snr
+        spectrumMaskPeak = np.logical_and(
+            freqs > freqAtBandMaxPower - self.sn2Width / 2,
+            freqs < freqAtBandMaxPower + self.sn2Width / 2,
+        )
+        s2n = np.nanmean(power_sm[spectrumMaskPeak]) / np.nanmean(
+            power_sm[~spectrumMaskPeak]
+        )
+        self.freqs = freqs
+        self.power_sm = power_sm
+        self.spectrumMaskPeak = spectrumMaskPeak
+        if plot:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            if ymax is None:
+                ymax = np.min([2 * np.max(power), np.max(power_sm)])
+                if ymax == 0:
+                    ymax = 1
+            ax.plot(freqs, power, c=[0.9, 0.9, 0.9])
+            # ax.hold(True)
+            ax.plot(freqs, power_sm, "k", lw=2)
+            ax.axvline(self.thetaRange[0], c="b", ls="--")
+            ax.axvline(self.thetaRange[1], c="b", ls="--")
+            _, stemlines, _ = ax.stem([freqAtBandMaxPower], [
+                                      bandMaxPower], linefmt="r")
+            # plt.setp(stemlines, 'linewidth', 2)
+            ax.fill_between(
+                freqs,
+                0,
+                power_sm,
+                where=spectrumMaskPeak,
+                color="r",
+                alpha=0.25,
+                zorder=25,
+            )
+            # ax.set_ylim(0, ymax)
+            # ax.set_xlim(0, self.xmax)
+            ax.set_xlabel("Frequency (Hz)")
+            ax.set_ylabel("Power density (W/Hz)")
+        out_dict = {
+            "maxFreq": freqAtBandMaxPower,
+            "Power": power_sm,
+            "Freqs": freqs,
+            "s2n": s2n,
+            "Power_raw": power,
+            "k": k,
+            "kernelLen": kernelLen,
+            "kernelSig": kernelSig,
+            "binsPerHz": binsPerHz,
+            "kernelLen": kernelLen,
+        }
+        return out_dict
 
     def plv(
         self,
@@ -1010,7 +1097,11 @@ class LFPOscillations(object):
         return fx
 
     def theta_running(
-        self, pos_data: PosCalcsGeneric, lfp_data: EEGCalcsGeneric, **kwargs
+        self,
+        pos_data: PosCalcsGeneric,
+        lfp_data: EEGCalcsGeneric,
+        plot: bool = True,
+        **kwargs
     ) -> tuple[np.ma.MaskedArray, ...]:
         """
         Returns metrics to do with the theta frequency/power and
@@ -1022,8 +1113,23 @@ class LFPOscillations(object):
             Position data object containing position and speed information.
         lfp_data : EEGCalcsGeneric
             LFP data object containing the LFP signal and sampling rate.
+        plot : bool
+            Whether to plot the results (default is True).
         **kwargs : dict
-            Additional keyword arguments.
+            Additional keyword arguments:
+                low_theta : float
+                    Lower bound of theta frequency (default is 6).
+                high_theta : float
+                    Upper bound of theta frequency (defaultt is 12).
+                low_speed : float
+                    Lower bound of running speed (data is masked
+                    below this value)
+                high_speed : float
+                    Upper bound of running speed (data is masked
+                    above this value)
+                nbins : int
+                    Number of bins into which to bin data (Same
+                    number for both speed and theta)
 
         Returns
         -------
@@ -1034,10 +1140,10 @@ class LFPOscillations(object):
         -----
         The function calculates the instantaneous frequency of the theta band
         and interpolates the running speed to match the LFP data. It then
-        creates a 2D histogram of theta frequency vs. running speed and overlays
-        the mean points for each speed bin. The function also performs a linear
-        regression to find the correlation between speed and theta frequency.
-
+        creates a 2D histogram of theta frequency vs. running speed and
+        overlays the mean points for each speed bin. The function also
+        performs a linear regression to find the correlation between
+        speed and theta frequency.
 
         """
         low_theta = kwargs.pop("low_theta", 6)
@@ -1083,20 +1189,6 @@ class LFPOscillations(object):
         ]
         std_freqs = __freq_calc__(np.std) / np.sqrt(counts)
 
-        plt.pcolormesh(
-            e[1],
-            e[0],
-            h,
-            cmap=matplotlib.colormaps["bone_r"],
-            norm=matplotlib.colors.LogNorm(),
-        )
-        plt.colorbar()
-        plt.errorbar(x=spd_bins[1:] - 2, y=mean_freqs,
-                     yerr=std_freqs, fmt="r.")
-        ax = plt.gca()
-        ax.set_ylim((low_theta, high_theta))
-        ax.set_ylabel("Frequency (Hz)")
-        ax.set_xlabel("Running speed (cm/s)")
         # mask the speed and lfp vectors so we can return these based
         # on the low/high bounds of speed & theta for doing correlations/
         # stats later
@@ -1107,17 +1199,37 @@ class LFPOscillations(object):
         mask = np.logical_or(speed_masked.mask, theta_masked.mask)
         speed_masked.mask = mask
         theta_masked.mask = mask
-        # do the linear regression to add to the plot
-        # alternative argument here says we expect the correlation to be positive
+        # do the linear regression
+        # alternative argument here says we expect the correlation
+        # to be positive
         res = stats.linregress(
-            speed_masked.compressed(), theta_masked.compressed(), alternative="greater"
+            speed_masked.compressed(),
+            theta_masked.compressed(),
+            alternative="greater"
         )
-        ax.plot(spd_bins[1:] - 2, res.intercept +
-                res.slope * (spd_bins[1:] - 2), "r--")
-        ax.set_title(
-            f"r = {res.rvalue:.2f}, p = {res.pvalue:.2f}, intercept = {res.intercept:.2f}"
-        )
-        return speed_masked, theta_masked
+
+        if plot:
+            plt.pcolormesh(
+                e[1],
+                e[0],
+                h,
+                cmap=matplotlib.colormaps["bone_r"],
+                norm=matplotlib.colors.LogNorm(),
+            )
+            plt.colorbar()
+            plt.errorbar(x=spd_bins[1:] - low_speed, y=mean_freqs,
+                         yerr=std_freqs, fmt="r.")
+            ax = plt.gca()
+            ax.set_ylim((low_theta, high_theta))
+            ax.set_ylabel("Frequency (Hz)")
+            ax.set_xlabel("Running speed (cm/s)")
+            ax.plot(spd_bins[1:] - low_speed, res.intercept +
+                    res.slope * (spd_bins[1:] - low_speed), "r--")
+            ax.set_title(
+                f"r = {res.rvalue:.2f}, p = {res.pvalue:.2f}, intercept = {res.intercept:.2f}"
+            )
+
+        return res, speed_masked, theta_masked
 
     def get_mean_resultant_vector(self, spike_times: np.ndarray, **kws) -> np.ndarray:
         """

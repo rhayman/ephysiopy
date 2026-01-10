@@ -480,6 +480,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             The cluster(s).
         channel (int | list)
             The channel(s).
+        bin_into (str)
+
 
         Returns
         -------
@@ -1166,26 +1168,34 @@ class AxonaTrial(TrialInterface):
         self, cluster: int | list = None, tetrode: int | list = None, *args, **kwargs
     ) -> list | np.ndarray:
         if tetrode is not None:
-            if isinstance(cluster, int):
-                return self.TETRODE.get_spike_samples(int(tetrode), int(cluster))
-            elif isinstance(cluster, list) and isinstance(tetrode, list):
-                if len(cluster) == 1:
-                    tetrode = tetrode[0]
-                    cluster = cluster[0]
+            if cluster is not None:
+                if isinstance(cluster, int):
                     return self.TETRODE.get_spike_samples(int(tetrode), int(cluster))
-                else:
-                    spikes = []
-                    for tc in zip(tetrode, cluster):
-                        spikes.append(
-                            self.TETRODE.get_spike_samples(tc[0], tc[1]))
-                    return spikes
+
+                elif isinstance(cluster, list) and isinstance(tetrode, list):
+                    if len(cluster) == 1:
+                        tetrode = tetrode[0]
+                        cluster = cluster[0]
+                        return self.TETRODE.get_spike_samples(int(tetrode), int(cluster))
+                    else:
+                        spikes = []
+                        for tc in zip(tetrode, cluster):
+                            spikes.append(
+                                self.TETRODE.get_spike_samples(tc[0], tc[1]))
+                        return spikes
+
+            else:
+                # return all spike times
+                return self.TETRODE.get_all_spike_timestamps(tetrode)
 
     def get_waveforms(self, cluster: int | list, channel: int | list, *args, **kwargs):
         if isinstance(cluster, int) and isinstance(channel, int):
             return self.TETRODE[channel].get_waveforms(int(cluster))
+
         elif isinstance(cluster, list) and isinstance(channel, int):
             if len(cluster) == 1:
                 return self.TETRODE[channel].get_waveforms(int(cluster[0]))
+
         elif isinstance(cluster, list) and isinstance(channel, list):
             waveforms = []
             for c, ch in zip(cluster, channel):

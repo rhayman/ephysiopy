@@ -64,3 +64,15 @@ class TetrodeDict(dict):
             return this_tet.getClustTS(cluster) / this_tet.timebase
         except Exception:
             raise Exception(f"Could not get timestamps for cluster: {cluster}")
+
+    def get_all_spike_timestamps(self, tetrode: int) -> np.ma.MaskedArray:
+        """
+        Returns a masked array of spike timestamps for given tetrode
+
+        Returns
+        -------
+        np.ma.MaskedArray
+            A masked array of spike timestamps
+
+        """
+        return self[tetrode].getSpkTS()
