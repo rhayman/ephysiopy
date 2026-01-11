@@ -1,0 +1,31 @@
+[project]
+name = "ephysiopy"
+version = "2.0.57"
+description = "Tools for the analysis of electrophysiological data collected with the Axona or openephys recording systems."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "astropy>=7.2.0",
+    "boost-histogram>=1.6.1",
+    "h5py>=3.15.1",
+    "mahotas>=1.4.18",
+    "matplotlib>=3.10.8",
+    "numpy>=2.4.1",
+    "pactools>=0.3.1",
+    "phylib>=2.7.0",
+    "pycircstat2>=0.1.15",
+    "pycwt>=0.5.0b0",
+    "pytest>=9.0.2",
+    "pytest-mpl>=0.18.0",
+    "pywavelets>=1.9.0",
+    "scikit-image>=0.26.0",
+    "scikit-learn>=1.8.0",
+    "scipy>=1.16.3",
+    "seaborn>=0.13.2",
+    "shapely>=2.1.2",
+    "tqdm>=4.67.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.24,<0.10.0"]
+build-backend = "uv_build"
