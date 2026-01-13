@@ -1,7 +1,7 @@
 [project]
 name = "ephysiopy"
 version = "2.0.57"
-description = "Tools for the analysis of electrophysiological data collected with the Axona or openephys recording systems."
+description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
@@ -20,7 +20,7 @@ dependencies = [
     "pywavelets>=1.9.0",
     "scikit-image>=0.26.0",
     "scikit-learn>=1.8.0",
-    "scipy>=1.16.3",
+    "scipy>=1.17.0",
     "seaborn>=0.13.2",
     "shapely>=2.1.2",
     "tqdm>=4.67.1",
