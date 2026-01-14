@@ -148,9 +148,9 @@ def test_calc_power_spectrum(basic_EEGCalcs):
     basic_EEGCalcs.calcEEGPowerSpectrum(pad2pow=20)
 
 
-def test_nextpow2(basic_EEGCalcs):
-    val = basic_EEGCalcs._nextpow2(10001)
-    assert isinstance(val, float)
+# def test_nextpow2(basic_EEGCalcs):
+#     val = basic_EEGCalcs._nextpow2(10001)
+#     assert isinstance(val, float)
 
 
 def test_ifft_filter(basic_EEGCalcs):

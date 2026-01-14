@@ -291,6 +291,7 @@ class BinnedData:
             return result[idx]
 
 
+
 def cluster_intersection(A: BinnedData, B: BinnedData):
     """
     Gets the intersection of clusters between two instances

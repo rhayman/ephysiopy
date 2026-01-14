@@ -410,6 +410,7 @@ class RateMap(object):
         pos_weights = np.invert(self.pos_weights.mask).astype(int)
 
         def get_sample_and_boundary():
+            # breakpoint()
             dispatch = {
                 VariableToBin.DIR.value: (self.dir, "wrap"),
                 VariableToBin.SPEED.value: (self.speed, "extend"),

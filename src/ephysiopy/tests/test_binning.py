@@ -56,7 +56,7 @@ def test_get_map(standard_Ratemap):
     # A large number of the methods in RateMap are
     # called within the method get_map()
     n_pos = len(standard_Ratemap.pos_weights)
-    spk_weights = np.random.rand(n_pos)
+    spk_weights = np.ma.MaskedArray(np.random.rand(n_pos))
     spk_weights[spk_weights >= 0.95] = 1
     spk_weights[spk_weights >= 0.99] = 2
     spk_weights[spk_weights >= 0.99] = 3
@@ -76,7 +76,7 @@ def test_get_map(standard_Ratemap):
                 for when2smooth in smoothing_when:
                     standard_Ratemap.whenToSmooth = when2smooth
                     ret = standard_Ratemap.get_map(
-                        spk_weights, var_type=var, map_type=map_type, smoothing=smooth
+                        np.atleast_2d(spk_weights), var_type=var, map_type=map_type, smoothing=smooth
                     )
                     assert isinstance(ret, BinnedData)
 
