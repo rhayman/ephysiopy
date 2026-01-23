@@ -5,8 +5,6 @@ import pytest
 from ephysiopy.common.binning import RateMap, VariableToBin, MapType
 from ephysiopy.common.utils import BinnedData
 
-from ephysiopy.tests.conftest import *
-
 
 @pytest.fixture
 def standard_Ratemap(basic_PosCalcs):
@@ -76,7 +74,10 @@ def test_get_map(standard_Ratemap):
                 for when2smooth in smoothing_when:
                     standard_Ratemap.whenToSmooth = when2smooth
                     ret = standard_Ratemap.get_map(
-                        np.atleast_2d(spk_weights), var_type=var, map_type=map_type, smoothing=smooth
+                        np.atleast_2d(spk_weights),
+                        var_type=var,
+                        map_type=map_type,
+                        smoothing=smooth,
                     )
                     assert isinstance(ret, BinnedData)
 

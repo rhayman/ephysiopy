@@ -1,4 +1,3 @@
-import numpy as np
 import pytest
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric, get_param
 from ephysiopy.common.spikecalcs import SpikeCalcsAxona, cluster_quality

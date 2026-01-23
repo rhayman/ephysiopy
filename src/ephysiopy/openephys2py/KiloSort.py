@@ -250,8 +250,9 @@ class KiloSortSession(object):
         np.ndarray
             The template for the specified ID.
         """
-        data, cols = self.templates, self.templates_ind
-        template_w, channel_ids = data[template_id], cols[template_id]
+        pass
+        # data, cols = self.templates, self.templates_ind
+        # template_w, channel_ids = data[template_id], cols[template_id]
         # template_w is (n_samples, n_channels):
 
     def get_cluster_spikes(self, cluster: int) -> np.ndarray:

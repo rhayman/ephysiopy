@@ -36,8 +36,7 @@ def get_cycle_labels(
     # force phase to lie between 0 and 2PI
     minSpikingPhase = get_phase_of_min_spiking(spike_phase)
     phaseAdj = fixAngle(
-        spike_phase - minSpikingPhase *
-        (np.pi / 180) + min_allowed_min_spike_phase
+        spike_phase - minSpikingPhase * (np.pi / 180) + min_allowed_min_spike_phase
     )
     isNegFreq = np.diff(np.unwrap(phaseAdj)) < 0
     isNegFreq = np.append(isNegFreq, isNegFreq[-1])
@@ -301,8 +300,7 @@ def detect_oscillation_episodes(lfp: np.ndarray, fs: float):
     power = np.abs(cwtmatr) ** 2
 
     freq_band = (20, 40)
-    freq_idx = np.where(np.logical_and(
-        freqs >= freq_band[0], freqs <= freq_band[1]))[0]
+    freq_idx = np.where(np.logical_and(freqs >= freq_band[0], freqs <= freq_band[1]))[0]
     mean_power = np.mean(power[freq_idx, :], axis=0)
     power_threshold = np.percentile(mean_power, 97.72)
 
@@ -313,9 +311,9 @@ def detect_oscillation_episodes(lfp: np.ndarray, fs: float):
     # cut 160ms windows around the centres of the high power episodes
     half_win = int(0.08 * fs)
     episode_slices = []
-    for v, s, l in zip(values, starts, lengths):
+    for v, s, lens in zip(values, starts, lengths):
         if v:
-            c = s + l // 2
+            c = s + lens // 2
             episode_slices.append(
                 slice(max(0, c - half_win), min(len(lfp), c + half_win))
             )
@@ -340,7 +338,6 @@ def detect_oscillation_episodes(lfp: np.ndarray, fs: float):
     half_win = int(0.2 * fs)
     final_slices = []
     for pi in peak_indices:
-        final_slices.append(slice(max(0, pi - half_win),
-                            min(len(lfp), pi + half_win)))
+        final_slices.append(slice(max(0, pi - half_win), min(len(lfp), pi + half_win)))
 
     return final_slices, freqs

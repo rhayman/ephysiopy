@@ -978,9 +978,6 @@ class FieldProps(RegionProperties):
         self.binned_data = binned_data
         self._runs = []
 
-    def __str__(self):
-        return f"field: {self.label}: {self.num_runs} runs"
-
     @property
     def runs(self):
         return self._runs
@@ -1056,7 +1053,6 @@ class FieldProps(RegionProperties):
             or self.binned_data.variable.value == VariableToBin.Y.value
             or self.binned_data.variable.value == VariableToBin.PHI.value
         ):
-
             w = np.diff(self.binned_data.bin_edges[0])[0]
             pos_min = self.binned_data.bin_edges[0][self.slice[0].start]
             pos_max = self.binned_data.bin_edges[0][self.slice[0].stop - 1] + w
@@ -1780,7 +1776,6 @@ def fieldprops(
     min_run = kwargs.get("min_run_length", 2)
 
     if method == "field":
-
         labelled_runs = labelContigNonZeroRuns(xy_field_label)
         run_starts = getLabelStarts(labelled_runs)
         run_stops = getLabelEnds(labelled_runs)

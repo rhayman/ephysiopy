@@ -54,8 +54,7 @@ def plot_phase_precession(
     # repeat the y-axis values for clarity
     mm = (0, -4 * np.pi, -2 * np.pi, 2 * np.pi, 4 * np.pi)
     for m in mm:
-        ax.plot((-1, 1), (-slope + intercept + m,
-                slope + intercept + m), "r", lw=3)
+        ax.plot((-1, 1), (-slope + intercept + m, slope + intercept + m), "r", lw=3)
         ax.scatter(normalised_position, phase + m, s=6, c="k", **kwargs)
 
     ax.set_xlim(-1, 1)
@@ -103,21 +102,18 @@ def plot_runs_and_precession(
         method="clump_runs",
     )
     # filter out the short duration runs
-    fp = filter_runs(fp, ["min_speed", "duration"], [
-                     np.greater, np.greater], [0, 0.1])
+    fp = filter_runs(fp, ["min_speed", "duration"], [np.greater, np.greater], [0, 0.1])
     # filter for distance traversed
 
-    fig = plt.figure(constrained_layout=True)
+    plt.figure(constrained_layout=True)
 
-    time = np.arange(0, trial.PosCalcs.duration,
-                     1 / trial.PosCalcs.sample_rate)
+    time = np.arange(0, trial.PosCalcs.duration, 1 / trial.PosCalcs.sample_rate)
     run_labels = np.zeros_like(time)
     for i, f in enumerate(fp):
         for r in f.runs:
             run_labels[r.slice] = i
 
-    [plt.plot(r.xy[0], time[r.slice], color="lightgrey", zorder=0)
-     for r in fp[0].runs]
+    [plt.plot(r.xy[0], time[r.slice], color="lightgrey", zorder=0) for r in fp[0].runs]
 
     plt.show()
 
@@ -131,8 +127,7 @@ def plot_field_and_runs(trial: AxonaTrial, field_props: list[FieldProps]):
     """
 
     fig, ax = plt.subplots(layout="constrained")
-    time = np.arange(0, trial.PosCalcs.duration,
-                     1 / trial.PosCalcs.sample_rate)
+    time = np.arange(0, trial.PosCalcs.duration, 1 / trial.PosCalcs.sample_rate)
 
     ax.set_ylim(0, time[-1])
     ax.set_xlim(0, np.nanmax(trial.PosCalcs.xy[0].data))
@@ -150,8 +145,7 @@ def plot_field_and_runs(trial: AxonaTrial, field_props: list[FieldProps]):
     tail = (0.55, 0.025) if xy[0, -1] - xy[0, 0] < 0 else (0.45, 0.025)
     head = (0.45, 0.025) if xy[0, -1] - xy[0, 0] < 0 else (0.55, 0.025)
 
-    arrow = mpatches.FancyArrowPatch(
-        tail, head, mutation_scale=100, color="black")
+    arrow = mpatches.FancyArrowPatch(tail, head, mutation_scale=100, color="black")
     ax.add_patch(arrow)
 
     _add_colour_wheel(ax, fig, bbox=(0.05, 0.6, 0.1, 0.1))
@@ -164,8 +158,7 @@ def plot_field_and_runs(trial: AxonaTrial, field_props: list[FieldProps]):
         ax.axvspan(be[slice.start], be[slice.stop], alpha=0.3)
         for irun in f.runs:
             # annotate the run with its run number
-            run_time = np.arange(
-                irun.slice.start, irun.slice.stop) / irun.sample_rate
+            run_time = np.arange(irun.slice.start, irun.slice.stop) / irun.sample_rate
             # draw the run as a black line
             ax.plot(irun.xy[0], run_time, color="black", zorder=1)
 
@@ -240,8 +233,7 @@ def plot_phase_v_position(
         runs_phase = flatten_list(field.phase)
         runs_spikes = flatten_list(field.runs_observed_spikes)
         idx = np.nonzero(np.array(runs_spikes))[0]
-        ax.scatter(np.array(runs_pos)[idx],
-                   np.array(runs_phase)[idx], **kwargs)
+        ax.scatter(np.array(runs_pos)[idx], np.array(runs_phase)[idx], **kwargs)
 
         ax.set_xlabel("Position")
         ax.set_ylabel("Phase (radians)")
@@ -368,8 +360,7 @@ def plot_field_props(field_props: list[FieldProps]):
     cmap = matplotlib.colormaps["Set1"].resampled(max_field_label)
     [
         [
-            ax.plot(r.xy[0], r.xy[1], color=cmap(
-                f.label - 1), label=f.label - 1)
+            ax.plot(r.xy[0], r.xy[1], color=cmap(f.label - 1), label=f.label - 1)
             for r in f.runs
         ]
         for f in field_props
@@ -384,8 +375,7 @@ def plot_field_props(field_props: list[FieldProps]):
         )
         for f in field_props
     ]
-    [ax.plot(f.xy_at_peak[0], f.xy_at_peak[1], "ko", ms=2)
-     for f in field_props]
+    [ax.plot(f.xy_at_peak[0], f.xy_at_peak[1], "ko", ms=2) for f in field_props]
     norm = matplotlib.colors.Normalize(1, max_field_label)
     tick_locs = np.linspace(1.5, max_field_label - 0.5, max_field_label)
     cbar = fig.colorbar(
@@ -417,8 +407,7 @@ def plot_field_props(field_props: list[FieldProps]):
     ]
     [
         a.add_artist(
-            matplotlib.patches.Circle(
-                (0, 0), 1, fc="none", ec="lightgrey", zorder=3),
+            matplotlib.patches.Circle((0, 0), 1, fc="none", ec="lightgrey", zorder=3),
         )
         for a, _ in zip(ax1, field_props)
     ]
@@ -467,8 +456,7 @@ def plot_field_props(field_props: list[FieldProps]):
         matplotlib.cm.ScalarMappable(cmap=angular_cmap, norm=degs_norm),
         ax=ax2,
     )
-    [ax2.plot(f.xy_at_peak[0], f.xy_at_peak[1], "ko", ms=2)
-     for f in field_props]
+    [ax2.plot(f.xy_at_peak[0], f.xy_at_peak[1], "ko", ms=2) for f in field_props]
     # PLOT 4
     # The smoothed ratemap - maybe make this the first sub plot
     ax3 = subfigs[1, 1].subplots(1, 1)
@@ -478,8 +466,7 @@ def plot_field_props(field_props: list[FieldProps]):
     ax3.pcolormesh(bin_edges[1], bin_edges[0], rmap_to_plot)
     # add the field labels to the ratemap plot
     [
-        ax3.text(f.xy_at_peak[0], f.xy_at_peak[1],
-                 str(f.label), ha="left", va="bottom")
+        ax3.text(f.xy_at_peak[0], f.xy_at_peak[1], str(f.label), ha="left", va="bottom")
         for f in field_props
     ]
 
@@ -615,8 +602,7 @@ def plot_spikes_in_runs_per_field(
         assert len(spikes_in_time) == len(ttls_in_time)
     run_start_stop_idx = np.array([run_starts, run_ends]).T
     run_field_id = field_label[run_start_stop_idx[:, 0]]
-    runs_per_field = np.histogram(
-        run_field_id, bins=range(1, max(run_field_id) + 2))[0]
+    runs_per_field = np.histogram(run_field_id, bins=range(1, max(run_field_id) + 2))[0]
     max_run_len = np.max(run_start_stop_idx[:, 1] - run_start_stop_idx[:, 0])
     all_slices = np.array([slice(r[0], r[1]) for r in run_start_stop_idx])
     # create the figure window first then do the iteration through fields etc

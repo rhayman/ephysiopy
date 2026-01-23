@@ -2,8 +2,6 @@ import numpy as np
 import pytest
 from ephysiopy.common import fieldcalcs
 from ephysiopy.common.utils import corr_maps
-from ephysiopy.tests.test_binning import standard_Ratemap
-from ephysiopy.tests.conftest import *
 
 
 def test_limit_to_one(basic_ratemap):

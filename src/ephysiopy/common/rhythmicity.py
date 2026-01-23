@@ -11,7 +11,6 @@ from ephysiopy.common.ephys_generic import PosCalcsGeneric, EEGCalcsGeneric, nex
 
 from ephysiopy.common.statscalcs import mean_resultant_vector
 from ephysiopy.common.utils import window_rms, find_runs
-from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 from ephysiopy.visualise.plotting import FigureMaker, saveFigure
 from ephysiopy.io.recording import OpenEphysBase, AxonaTrial
@@ -197,7 +196,6 @@ def power_spectrum(
         "kernelLen": kernelLen,
         "kernelSig": kernelSig,
         "binsPerHz": binsPerHz,
-        "kernelLen": kernelLen,
     }
     return out_dict
 
@@ -492,15 +490,16 @@ class CosineDirectionalTuning(object):
         np.array
             A modified version of the "runs" input variable, shape (3, nRuns)
         """
-        minlength_in_samples = int(self.pos_sample_rate * self.min_runlength)
-        run_list = runs.tolist()
-        all_speed = np.array(self.speed)
-        for start_idx, end_idx, dir_bin in run_list:
-            this_runs_speed = all_speed[start_idx:end_idx]
-            this_runs_runs = self._rolling_window(this_runs_speed, minlength_in_samples)
-            run_mask = np.all(this_runs_runs > minspeed, 1)
-            # if np.any(run_mask):
-            #     print("got one")
+        pass
+        # minlength_in_samples = int(self.pos_sample_rate * self.min_runlength)
+        # run_list = runs.tolist()
+        # all_speed = np.array(self.speed)
+        # for start_idx, end_idx, dir_bin in run_list:
+        #     this_runs_speed = all_speed[start_idx:end_idx]
+        # this_runs_runs = self._rolling_window(this_runs_speed, minlength_in_samples)
+        # run_mask = np.all(this_runs_runs > minspeed, 1)
+        # if np.any(run_mask):
+        #     print("got one")
 
     """
     def testing(self, cluster: int):
@@ -2047,14 +2046,15 @@ class Rippler(object):
 
 
         """
+        pass
         # get some detection parameters from the Ripple Detector plugin
-        settings = Settings(self.pname_for_trial)
-        proc = settings.get_processor("Ripple")
-        rms_window = float(getattr(proc, "rms_samples"))
-        ripple_detect_channel = int(getattr(proc, "Ripple_Input"))
-        ripple_std = int(getattr(proc, "ripple_std"))
-        time_thresh = int(getattr(proc, "time_thresh"))
-        rms_sig = window_rms(self.filtered_eeg, rms_window)
+        # settings = Settings(self.pname_for_trial)
+        # proc = settings.get_processor("Ripple")
+        # rms_window = float(getattr(proc, "rms_samples"))
+        # ripple_detect_channel = int(getattr(proc, "Ripple_Input"))
+        # ripple_std = int(getattr(proc, "ripple_std"))
+        # time_thresh = int(getattr(proc, "time_thresh"))
+        # rms_sig = window_rms(self.filtered_eeg, rms_window)
 
     def filter_timestamps_for_real_ripples(self):
         """

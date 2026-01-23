@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 from ephysiopy.common import utils
-from ephysiopy.tests.conftest import *
 
 
 def test_smooth():
@@ -30,7 +29,7 @@ def test_blur_image(basic_BinnedData):
     for f in filt:
         for rmap in rmaps:
             b = utils.blur_image(rmap, 3, ftype=f)
-            assert isinstance(b, BinnedData)
+            assert isinstance(b, utils.BinnedData)
 
 
 def test_count_to():

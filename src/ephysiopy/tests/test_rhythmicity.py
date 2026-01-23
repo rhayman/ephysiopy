@@ -1,6 +1,4 @@
-import numpy as np
 from ephysiopy.io.recording import AxonaTrial
-from ephysiopy.common.rhythmicity import CosineDirectionalTuning
 from ephysiopy.common.rhythmicity import LFPOscillations
 
 
