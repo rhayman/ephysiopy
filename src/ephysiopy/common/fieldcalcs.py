@@ -17,7 +17,7 @@ from ephysiopy.common.utils import BinnedData, MapType, blur_image, VariableToBi
 # Some functions to extract and filter runs from field properties
 
 
-def sort_fields_by_attr(field_props: list[FieldProps], attr='area', reverse=True):
+def sort_fields_by_attr(field_props: list[FieldProps], attr="area", reverse=True):
     """
     Sorts the fields in the list by attribute
 
@@ -25,7 +25,7 @@ def sort_fields_by_attr(field_props: list[FieldProps], attr='area', reverse=True
     -----
     In the default case will sort by area, largest first
     """
-    fp = sorted(field_props, key=lambda x: getattr(x, 'attr'), reverse=reverse)
+    fp = sorted(field_props, key=lambda x: getattr(x, "attr"), reverse=reverse)
     return fp
 
 
@@ -362,8 +362,7 @@ def fancy_partition(
 
     # breakpoint()
     labels[np.unravel_index(indices=indices, shape=labels.shape)] = 0
-    min_field_size = np.ceil(np.prod(labels.shape) *
-                             area_threshold).astype(int)
+    min_field_size = np.ceil(np.prod(labels.shape) * area_threshold).astype(int)
     # breakpoint()
     labels = skimage.morphology.remove_small_objects(
         labels, min_size=min_field_size, connectivity=2
@@ -546,7 +545,7 @@ def limit_to_one(A, prc=50, min_dist=5):
     Ac[np.isnan(A)] = 0
     # smooth Ac more to remove local irregularities
     n = ny = 5
-    x, y = np.mgrid[-n: n + 1, -ny: ny + 1]
+    x, y = np.mgrid[-n : n + 1, -ny : ny + 1]
     g = np.exp(-(x**2 / float(n) + y**2 / float(ny)))
     g = g / g.sum()
     Ac = signal.convolve(Ac, g, mode="same")
@@ -565,8 +564,7 @@ def limit_to_one(A, prc=50, min_dist=5):
     nFields = np.max(field_labels)
     sub_field_mask = np.zeros((nFields, Ac.shape[0], Ac.shape[1]))
     labelled_sub_field_mask = np.zeros_like(sub_field_mask)
-    sub_field_props = skimage.measure.regionprops(
-        field_labels, intensity_image=Ac)
+    sub_field_props = skimage.measure.regionprops(field_labels, intensity_image=Ac)
     sub_field_centroids = []
     sub_field_size = []
 
@@ -585,8 +583,7 @@ def limit_to_one(A, prc=50, min_dist=5):
     normd_dists = sub_field_centroids - middle
     field_dists_from_middle = np.hypot(normd_dists[:, 0], normd_dists[:, 1])
     central_field_idx = np.argmin(field_dists_from_middle)
-    central_field = np.squeeze(
-        labelled_sub_field_mask[central_field_idx, :, :])
+    central_field = np.squeeze(labelled_sub_field_mask[central_field_idx, :, :])
     # collapse the labelled mask down to an 2d array
     labelled_sub_field_mask = np.sum(labelled_sub_field_mask, 0)
     # clear the border
@@ -681,7 +678,7 @@ def border_score(
         radius = np.max(np.array(np.shape(A))) / 2.0
         dist_mask = skimage.morphology.disk(radius)
         if np.shape(dist_mask) > np.shape(A):
-            dist_mask = dist_mask[1: A_rows + 1, 1: A_cols + 1]
+            dist_mask = dist_mask[1 : A_rows + 1, 1 : A_cols + 1]
         tmp = np.zeros([A_rows + 2, A_cols + 2])
         tmp[1:-1, 1:-1] = dist_mask
         dists = ndi.distance_transform_bf(tmp)
@@ -717,8 +714,7 @@ def border_score(
     labels, nFields = ndi.label(A_thresh)
     # remove small objects
     min_size = int(minArea / binSize) - 1
-    skimage.morphology.remove_small_objects(
-        labels, min_size=min_size, connectivity=2)
+    skimage.morphology.remove_small_objects(labels, min_size=min_size, connectivity=2)
     labels = skimage.segmentation.relabel_sequential(labels)[0]
     nFields = np.nanmax(labels)
     if nFields == 0:
@@ -764,7 +760,8 @@ def border_score(
     if not np.any(field_sizes) > (minArea / binSize):
         warnings.warn(
             f"No fields bigger than the minimum size of {
-                minArea / binSize} (minArea/binSize) could be found"
+                minArea / binSize
+            } (minArea/binSize) could be found"
         )
         return np.nan
 
@@ -778,8 +775,7 @@ def border_score(
         Dm = Dm / radius
     elif "square" in shape:
         Dm = Dm / (np.nanmax(np.shape(A)) / 2.0)
-    borderScore = (fractionOfPixelsOnBorder - Dm) / \
-        (fractionOfPixelsOnBorder + Dm)
+    borderScore = (fractionOfPixelsOnBorder - Dm) / (fractionOfPixelsOnBorder + Dm)
     return np.nanmax(borderScore)
 
 
@@ -867,7 +863,7 @@ def field_props(
     Ac[np.isnan(A)] = 0
     # smooth Ac more to remove local irregularities
     n = ny = 5
-    x, y = np.mgrid[-n: n + 1, -ny: ny + 1]
+    x, y = np.mgrid[-n : n + 1, -ny : ny + 1]
     g = np.exp(-(x**2 / float(n) + y**2 / float(ny)))
     g = g / g.sum()
     Ac = signal.convolve(Ac, g, mode="same")
@@ -877,14 +873,12 @@ def field_props(
     nFields = np.max(field_labels)
     if neighbours > nFields:
         print(
-            "neighbours value of {0} > the {1} peaks found".format(
-                neighbours, nFields)
+            "neighbours value of {0} > the {1} peaks found".format(neighbours, nFields)
         )
         print("Reducing neighbours to number of peaks found")
         neighbours = nFields
     sub_field_mask = np.zeros((nFields, Ac.shape[0], Ac.shape[1]))
-    sub_field_props = skimage.measure.regionprops(
-        field_labels, intensity_image=Ac)
+    sub_field_props = skimage.measure.regionprops(field_labels, intensity_image=Ac)
     sub_field_centroids = []
     sub_field_size = []
 
@@ -898,8 +892,7 @@ def field_props(
     sub_field_mask = np.sum(sub_field_mask, 0)
     contours = skimage.measure.find_contours(sub_field_mask, 0.5)
     # find the nearest neighbors to the peaks of each sub-field
-    nbrs = NearestNeighbors(n_neighbors=neighbours,
-                            algorithm="ball_tree").fit(peak_idx)
+    nbrs = NearestNeighbors(n_neighbors=neighbours, algorithm="ball_tree").fit(peak_idx)
     distances, _ = nbrs.kneighbors(peak_idx)
     mean_field_distance = np.mean(distances[:, 1:neighbours])
 
@@ -966,8 +959,7 @@ def field_props(
         print(f"Mean firing rate: {np.nanmean(A)} Hz")
         print(f"Number of fields: {nFields}")
         print(f"Mean field size: {np.mean(sub_field_size)} cm")
-        print(
-            f"Mean inter-peak distance between fields: {mean_field_distance} cm")
+        print(f"Mean inter-peak distance between fields: {mean_field_distance} cm")
     return props
 
 
@@ -1328,8 +1320,7 @@ def grid_field_props(A: BinnedData, maxima="centroid", allProps=True, **kwargs):
 
     # Get some statistics about the labeled regions
     lbl_range = np.arange(0, nLbls)
-    peak_coords = ndi.maximum_position(
-        A.binned_data[0], half_peak_labels, lbl_range)
+    peak_coords = ndi.maximum_position(A.binned_data[0], half_peak_labels, lbl_range)
     peak_coords = np.array(peak_coords)
     # Now convert the peak_coords to the image centre coordinate system
     x_peaks, y_peaks = peak_coords.T
@@ -1340,8 +1331,7 @@ def grid_field_props(A: BinnedData, maxima="centroid", allProps=True, **kwargs):
     peak_dist_to_centre = np.hypot(peak_coords[:, 0], peak_coords[:, 1])
     closest_peak_idx = np.argsort(peak_dist_to_centre)
     central_peak_label = closest_peak_idx[0]
-    closest_peak_idx = closest_peak_idx[1: np.min(
-        (7, len(closest_peak_idx) - 1))]
+    closest_peak_idx = closest_peak_idx[1 : np.min((7, len(closest_peak_idx) - 1))]
     # closest_peak_idx should now the indices of the labeled 6 peaks
     # surrounding the central peak at the image centre
     scale = np.median(peak_dist_to_centre[closest_peak_idx])
@@ -1379,8 +1369,7 @@ def grid_field_props(A: BinnedData, maxima="centroid", allProps=True, **kwargs):
     else:
         step = 30
     try:
-        gridscore, rotationCorrVals, rotationArr = gridness(
-            sac_middle, step=step)
+        gridscore, rotationCorrVals, rotationArr = gridness(sac_middle, step=step)
     except Exception:
         gridscore, rotationCorrVals, rotationArr = np.nan, np.nan, np.nan
 
@@ -1534,15 +1523,13 @@ def gridness(image, step=30) -> tuple:
             allNans = np.logical_or(origNanIdx, rotatedNanIdx)
             # get the correlation between the original and rotated images
             rotationalCorrVals[angle] = stats.pearsonr(
-                autoCorrMiddleRescaled.ravel()[~allNans], rotatedA.ravel()[
-                    ~allNans]
+                autoCorrMiddleRescaled.ravel()[~allNans], rotatedA.ravel()[~allNans]
             )[0]
             rotationArr[idx] = rotationalCorrVals[angle]
     except Exception:
         return gridscore, rotationalCorrVals, rotationArr
     gridscore = np.min((rotationalCorrVals[60], rotationalCorrVals[120])) - np.max(
-        (rotationalCorrVals[150],
-         rotationalCorrVals[30], rotationalCorrVals[90])
+        (rotationalCorrVals[150], rotationalCorrVals[30], rotationalCorrVals[90])
     )
     return gridscore, rotationalCorrVals, rotationArr
 
@@ -1736,18 +1723,15 @@ def get_thigmotaxis_score(xy: np.ndarray, shape: str = "circle") -> float:
     if shape == "circle":
         outer_radius = np.nanmax(np.hypot(xy[0], xy[1]))
         inner_radius = outer_radius / np.sqrt(2)
-        inner_mask = np.less(
-            np.hypot(xy[0], xy[1]), inner_radius, out=inner_mask)
+        inner_mask = np.less(np.hypot(xy[0], xy[1]), inner_radius, out=inner_mask)
     elif shape == "square":
         width, height = np.nanmax(xy, -1) - np.nanmin(xy, -1)
         inner_width = width / np.sqrt(2)
         inner_height = height / np.sqrt(2)
         x_gap = (width - inner_width) / 2
         y_gap = (height - inner_height) / 2
-        x_mask = (xy[0] > np.nanmin(xy[0]) + x_gap) & (xy[0]
-                                                       < np.nanmax(xy[0]) - x_gap)
-        y_mask = (xy[1] > np.nanmin(xy[1]) + y_gap) & (xy[1]
-                                                       < np.nanmax(xy[1]) - y_gap)
+        x_mask = (xy[0] > np.nanmin(xy[0]) + x_gap) & (xy[0] < np.nanmax(xy[0]) - x_gap)
+        y_mask = (xy[1] > np.nanmin(xy[1]) + y_gap) & (xy[1] < np.nanmax(xy[1]) - y_gap)
         inner_mask = np.logical_and(x_mask, y_mask, out=inner_mask)
     return (np.count_nonzero(inner_mask) - np.count_nonzero(~inner_mask)) / n_pos
 
