@@ -758,11 +758,7 @@ def border_score(
     )
     field_sizes /= binSize
     if not np.any(field_sizes) > (minArea / binSize):
-        warnings.warn(
-            f"No fields bigger than the minimum size of {
-                minArea / binSize
-            } (minArea/binSize) could be found"
-        )
+        warnings.warn("No fields bigger than the minimum size found")
         return np.nan
 
     fieldAngularCoverage = fieldAngularCoverage / 360.0
