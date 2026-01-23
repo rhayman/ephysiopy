@@ -763,7 +763,8 @@ def border_score(
     field_sizes /= binSize
     if not np.any(field_sizes) > (minArea / binSize):
         warnings.warn(
-            f"No fields bigger than the minimum size of {minArea / binSize} (minArea/binSize) could be found"
+            f"No fields bigger than the minimum size of {
+                minArea / binSize} (minArea/binSize) could be found"
         )
         return np.nan
 
@@ -1185,7 +1186,7 @@ def kldiv(
     return float(KL)
 
 
-def skaggs_info(ratemap, dwelltimes, **kwargs):
+def skaggs_info(ratemap: np.ndarray, dwelltimes: np.ndarray, **kwargs):
     """
     Calculates Skaggs information measure
 

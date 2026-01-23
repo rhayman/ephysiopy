@@ -34,6 +34,30 @@ def circ_r(alpha, w=None, d=0, axis=0):
     return r
 
 
+def z_normalize(scores: np.ndarray) -> np.ndarray:
+    """
+    Z-normalize an array of scores.
+    """
+    return (scores - np.nanmean(scores)) / np.nanstd(scores)
+
+
+def box_cox_normalize(scores: np.ndarray, lam: float) -> np.ndarray:
+    """
+    Box-Cox normalize an array of scores.
+
+    Args:
+        scores (np.ndarray): The scores to normalize.
+        lam (float): The lambda parameter for Box-Cox transformation.
+
+    Returns:
+        np.ndarray: The normalized scores.
+    """
+    if lam == 0:
+        return np.log(scores)
+    else:
+        return (np.power(scores, lam) - 1) / lam
+
+
 def mean_resultant_vector(angles):
     """
     Calculate the mean resultant length and direction for angles.

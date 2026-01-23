@@ -97,12 +97,19 @@ class BinnedData:
         i : int
             The index of binned_data to return
         """
+        # this try/except fixes an error when generating
+        # shuffled data
+        try:
+            cluster_id = self.cluster_id[i]
+        except IndexError:
+            cluster_id = 0
+
         return BinnedData(
             variable=self.variable,
             map_type=self.map_type,
             binned_data=[copy.deepcopy(self.binned_data[i])],
             bin_edges=self.bin_edges,
-            cluster_id=self.cluster_id[i],
+            cluster_id=cluster_id,
         )
 
     def __truediv__(self, other):
@@ -265,12 +272,14 @@ class BinnedData:
             self.__assert_equal_bin_edges__(other)
         if other is not None:
             result = np.reshape(
-                [corr_maps(a, b) for a in self.binned_data for b in other.binned_data],
+                [corr_maps(a, b)
+                 for a in self.binned_data for b in other.binned_data],
                 newshape=(len(self.binned_data), len(other.binned_data)),
             )
         else:
             result = np.reshape(
-                [corr_maps(a, b) for a in self.binned_data for b in self.binned_data],
+                [corr_maps(a, b)
+                 for a in self.binned_data for b in self.binned_data],
                 newshape=(len(self.binned_data), len(self.binned_data)),
             )
         if as_matrix:
@@ -289,7 +298,6 @@ class BinnedData:
             else:
                 idx = np.tril_indices(n=len(self.binned_data), k=k)
             return result[idx]
-
 
 
 def cluster_intersection(A: BinnedData, B: BinnedData):
