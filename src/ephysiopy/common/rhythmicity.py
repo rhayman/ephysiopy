@@ -1283,8 +1283,8 @@ class LFPOscillations(object):
                 "r--",
             )
             ax.set_title(
-                f"r = {res.rvalue:.2f}, p = {res.pvalue:.3f}, intercept = {
-                    res.intercept:.2f}"
+                f"""r = {res.rvalue:.2f}, p = {res.pvalue:.3f}, intercept = {
+                    res.intercept:.2f}"""
             )
 
         return res, speed_masked, theta_masked
