@@ -20,7 +20,6 @@ from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
 from ephysiopy.common.fieldcalcs import skaggs_info
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.utils import VariableToBin, MapType, BinnedData, filter_data
-from ephysiopy.openephys2py.KiloSort import KiloSortSession
 from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.visualise.plotting import FigureMaker
 from ephysiopy.common.utils import (
@@ -1110,7 +1109,7 @@ class AxonaTrial(TrialInterface):
                     if remove0:
                         try:
                             clusters.remove(0)
-                        except ValueError as ve:
+                        except ValueError:
                             pass
                     if clusters:
                         tetrode_num = int(cut_path.stem.rsplit("_")[-1])
