@@ -1116,6 +1116,7 @@ class SpikeCalcsGeneric(object):
         See scipy.stats.PermutationMethod.
 
         """
+        speed = np.ma.masked_invalid(speed)
         speed = speed.ravel()
         orig_speed_mask = speed.mask
         posSampRate = self.pos_sample_rate
@@ -1190,8 +1191,6 @@ class SpikeCalcsGeneric(object):
 
         Parameters
         ----------
-        cluster : int
-            The cluster to check.
         threshold : float
             The amount of activity the cluster needs to go
             beyond to be classified as a responder (1.5 = 50% more or less
@@ -1257,7 +1256,7 @@ class SpikeCalcsGeneric(object):
         # set up the return variables here and set /return appropriately
         # in the conditional code below
         responds_to_stim = False
-        mag = np.empty(0)
+        mag = 0
         Response = namedtuple(
             "Response", ["responds", "normed_response_curve", "response_magnitude"]
         )
@@ -1265,7 +1264,7 @@ class SpikeCalcsGeneric(object):
         slices = np.ma.notmasked_contiguous(normd_masked)
         if slices and np.any(np.isfinite(normd)):
             # make sure that slices are within the first 25ms post-stim
-            if ~np.any([s.start > 50 and s.start < 75 for s in slices]):
+            if ~np.any([s.start >= 50 and s.start <= 75 for s in slices]):
                 return this_response
             max_runlength = max([len(normd_masked[s]) for s in slices])
             if max_runlength >= min_contiguous:
