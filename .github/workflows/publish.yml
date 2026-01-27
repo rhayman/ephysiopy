@@ -37,6 +37,6 @@ jobs:
       # - name: Smoke test (source distribution)
         # run: uv run --isolated --no-project --with dist/*.tar.gz src/ephysiopy/tests
       - name: Test with pytest
-        run: uv run pytest --all-extras
+        run: uv run pytest src/ephysiopy/tests
       - name: Publish
         run: uv publish
