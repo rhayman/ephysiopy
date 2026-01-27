@@ -1688,9 +1688,9 @@ class OpenEphysBase(TrialInterface):
                             self.path2RippleDetector = os.path.join(d)
                             if verbose:
                                 print(
-                                    f"Ripple Detector plugin found at {
+                                    f"""Ripple Detector plugin found at {
                                         self.path2RippleDetector
-                                    }\n"
+                                    }\n"""
                                 )
                     if ".nwb" in ff:
                         self.path2NWBData = os.path.join(d, ff)
