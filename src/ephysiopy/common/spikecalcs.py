@@ -1291,8 +1291,8 @@ class SpikeCalcsGeneric(object):
         Calculates a theta modulation index of a spike train based on the cells
         autocorrelogram.
 
-        The difference of the mean power in the theta frequency band (6-11 Hz) and
-        the mean power in the 1-50 Hz frequency band is divided by their sum to give
+        The difference of the mean power in the theta band (6-11 Hz) and
+        the mean power in the 1-50 Hz band is divided by their sum to give
         a metric that lives between 0 and 1
 
         Parameters
@@ -1370,14 +1370,14 @@ class SpikeCalcsGeneric(object):
         see https://doi.org/10.7554/eLife.35949.001
 
         Uses the binned spike train instead of the autocorrelogram as
-        the input to the periodogram function (they use pwelch in R; periodogram is a
-        simplified call to welch in scipy.signal)
+        the input to the periodogram function (they use pwelch in R;
+        periodogram is a simplified call to welch in scipy.signal)
 
-        The resulting metric is similar to the one in theta_mod_idx above except
+        The resulting metric is similar to that in theta_mod_idx above except
         that the frequency bands compared to the theta band are narrower and
         exclusive of the theta band
 
-        Produces a fairly normally distributed looking score with a mean and median
+        Produces a fairly normally distributed score with a mean and median
         pretty close to 0
 
         Parameters
