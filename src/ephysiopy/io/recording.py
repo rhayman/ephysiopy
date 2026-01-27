@@ -1555,9 +1555,9 @@ class OpenEphysBase(TrialInterface):
                 # now downsample the aux data a lot
                 # might take a while so print a message to console
                 print(
-                    f"Downsampling {aux_data.shape[1]} samples over {
+                    f"""Downsampling {aux_data.shape[1]} samples over {
                         aux_data.shape[0]
-                    } channels..."
+                    } channels..."""
                 )
                 aux_data = downsample_aux(aux_data, target_freq=target_freq)
                 self.aux_data = aux_data
