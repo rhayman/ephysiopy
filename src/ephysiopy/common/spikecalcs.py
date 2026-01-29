@@ -11,6 +11,9 @@ import matplotlib.pylab as plt
 import matplotlib.transforms as transforms
 import numpy as np
 from scipy.special import erf
+from scipy import interpolate
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PolynomialFeatures
 from phylib.io.model import TemplateModel
 from scipy import signal, stats
 from ephysiopy.common.utils import (
@@ -56,7 +59,6 @@ def get_param(waveforms, param="Amp", t=200, fet=1) -> np.ndarray:
         The requested parameter as a numpy array.
 
     """
-    from scipy import interpolate
     from sklearn.decomposition import PCA
 
     if param == "Amp":
@@ -705,6 +707,7 @@ class SpikeCalcsGeneric(object):
         self._sample_rate = 30000
         self._pos_sample_rate = 50
         self._duration = None
+        self._invert_waveforms = False
         # these values should be specific to OE data
         self._pre_spike_samples = 16
         self._post_spike_samples = 34
@@ -745,6 +748,16 @@ class SpikeCalcsGeneric(object):
     def post_spike_samples(self, value: int) -> None:
         self._post_spike_samples = int(self._post_spike_samples)
 
+    # its possible due to referencing that waveforms are inverted
+    # so add the option to correct that here
+    @property
+    def invert_waveforms(self) -> bool:
+        return self._invert_waveforms
+
+    @invert_waveforms.setter
+    def invert_waveforms(self, val: bool) -> None:
+        self._invert_waveforms = val
+
     def waveforms(self, channel_id: Sequence = None) -> np.ndarray | None:
         """
         Returns the waveforms of the cluster.
@@ -764,12 +777,15 @@ class SpikeCalcsGeneric(object):
 
         """
         if self._waves is not None:
+            scaling = 1
+            if self.invert_waveforms:
+                scaling = -1
             if channel_id is None:
-                return self._waves[:, :, :]
+                return self._waves[:, :, :] * scaling
             else:
                 if isinstance(channel_id, int):
                     channel_id = [channel_id]
-                return self._waves[:, channel_id, :]
+                return self._waves[:, channel_id, :] * scaling
         else:
             return None
 
@@ -931,13 +947,14 @@ class SpikeCalcsGeneric(object):
 
     def mean_waveform(self, channel_id: Sequence = None):
         """
-        Returns the mean waveform and standard error of the mean (SEM) for a given spike train on a
-        particular channel.
+        Returns the mean waveform and standard error of the mean (SEM) for a
+        given spike train on a particular channel.
 
         Parameters
         ----------
         channel_id : Sequence, optional
-            The channel IDs to return the mean waveform for. If None, returns mean waveforms for all channels.
+            The channel IDs to return the mean waveform for. If None, returns
+            mean waveforms for all channels.
 
         Returns
         -------
@@ -967,6 +984,68 @@ class SpikeCalcsGeneric(object):
             amps = np.mean(np.ptp(wvs, axis=-1), axis=0)
             return np.argmax(amps)
         else:
+            return None
+
+    def estimate_AHP(self) -> float | None:
+        """
+        Estimate the decay time for the AHP of the waveform of the
+        best channel for the current cluster.
+
+        Returns
+        -------
+        float | None
+            The estimated AHP decay time in microseconds,
+            or None if no waveforms are available.
+        """
+        best_chan = self.get_best_channel()
+        waveform, _ = self.mean_waveform(best_chan)
+
+        if waveform is None:
+            return None
+
+        # get the times
+        times = np.arange(0, 1000, 20)
+        f = interpolate.interp1d(
+            times, np.linspace(-200, 800, len(waveform)), "nearest"
+        )
+        f_t = f(times)
+
+        # get the baseline voltage (for Axona this should be the
+        # 200 microseconds before the spike)
+        baseline_voltage = np.mean(waveform[f_t < 0])
+        # make sure this min measure isafter the spike would
+        # have triggered the capture of the buffer i.e. after t=0
+        min_voltage = np.min(waveform[f_t >= 0])
+        half_voltage = (baseline_voltage + min_voltage) / 2
+
+        # get the index of the minima of the waveform
+        t_thresh = np.nonzero(f_t > 0)[0][0]
+        idx = np.argmin(waveform[f_t > 0]) + t_thresh
+
+        # find the time it takes to return to baseline voltage
+        X = np.atleast_2d(f_t[idx:]).T
+        y = np.atleast_2d(waveform[idx:]).T
+
+        poly = PolynomialFeatures(degree=2)
+        X_poly = poly.fit_transform(X)
+
+        poly.fit(X_poly, y)
+        lin2 = LinearRegression()
+        lin2.fit(X_poly, y)
+
+        tn = np.linspace(f_t[idx], 1500, 1000).reshape(-1, 1)
+        yn = lin2.predict(poly.fit_transform(tn))
+
+        # predict the time it takes to return to half voltage
+        ahp_time = None
+        for i, v in enumerate(yn):
+            if v >= half_voltage:
+                ahp_time = tn[i][0]
+                break
+
+        try:
+            return ahp_time - f_t[idx]
+        except Exception:
             return None
 
     def psth(self) -> tuple[list, ...]:
