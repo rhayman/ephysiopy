@@ -62,7 +62,7 @@ def get_param(waveforms, param="Amp", t=200, fet=1) -> np.ndarray:
     from sklearn.decomposition import PCA
 
     if param == "Amp":
-        return np.ptp(waveforms + 128, axis=-1)
+        return np.ptp(waveforms, axis=-1)
     elif param == "P":
         return np.max(waveforms, axis=-1)
     elif param == "T":
@@ -694,6 +694,10 @@ class SpikeCalcsGeneric(object):
     ):
         self.spike_times = np.ma.MaskedArray(spike_times)  # IN SECONDS
         if waveforms is not None:
+            n_spikes, n_channels, n_samples = waveforms.shape
+            assert self.n_spikes == n_spikes, (
+                "Number of spike times does not match number of waveforms"
+            )
             self._waves = np.ma.MaskedArray(waveforms)
         else:
             self._waves = None
@@ -704,13 +708,28 @@ class SpikeCalcsGeneric(object):
         self._stim_width = None  # the width, in ms, of the stimulus
         # used to increase / decrease size of bins in psth
         self._secs_per_bin = 0.001
-        self._sample_rate = 30000
+        self._sample_rate = 50000
         self._pos_sample_rate = 50
         self._duration = None
         self._invert_waveforms = False
-        # these values should be specific to OE data
-        self._pre_spike_samples = 16
-        self._post_spike_samples = 34
+        # these values should be specific to Axona data
+        # this I think is wrong as the pre capture buffer
+        # should be 200ms and 800ms post trigger
+        # whereas these values are equal to 330 microseconds
+        # and 708 microseconds if sampling is at 48kHz
+        self._pre_spike_samples = 10
+        self._post_spike_samples = 40
+        if waveforms is not None:
+            if self.n_samples > 50:
+                self.pre_spike_samples = 41
+                self.post_spike_samples = 41
+                self.sample_rate = 30000
+        # these values are specific to OE data
+        # if sample rate is 3kHz and the number of samples
+        # captured per waveform is 82 then it looks from
+        # plotting the waveforms that the pre spike samples is
+        # 40 so 1.33 milliseconds and the pos spike samples is
+        # 1.40 milliseconds
         # values from running KS
         self._ksmeta = KSMetaTuple(None, None, None, None)
         # update the __dict__ attribute with the kwargs
@@ -746,7 +765,7 @@ class SpikeCalcsGeneric(object):
 
     @post_spike_samples.setter
     def post_spike_samples(self, value: int) -> None:
-        self._post_spike_samples = int(self._post_spike_samples)
+        self._post_spike_samples = int(value)
 
     # its possible due to referencing that waveforms are inverted
     # so add the option to correct that here
@@ -800,6 +819,38 @@ class SpikeCalcsGeneric(object):
             The number of spikes in the cluster
         """
         return np.ma.count(self.spike_times)
+
+    @property
+    def n_channels(self) -> int | None:
+        """
+        Returns the number of channels in the waveforms.
+
+        Returns
+        -------
+        int | None
+            The number of channels in the waveforms,
+            or None if no waveforms are available.
+        """
+        if self._waves is not None:
+            return self._waves.shape[1]
+        else:
+            return None
+
+    @property
+    def n_samples(self) -> int | None:
+        """
+        Returns the number of samples in the waveforms.
+
+        Returns
+        -------
+        int | None
+            The number of samples in the waveforms,
+            or None if no waveforms are available.
+        """
+        if self._waves is not None:
+            return self._waves.shape[2]
+        else:
+            return None
 
     @property
     def event_ts(self) -> np.ndarray:
@@ -1004,9 +1055,12 @@ class SpikeCalcsGeneric(object):
             return None
 
         # get the times
-        times = np.arange(0, 1000, 20)
+        times = np.linspace(0, 1000, self.n_samples)  # in microseconds
+        pre_spike = int(self.pre_spike_samples * (1000000 / self.sample_rate))
+        post_spike = int(self.post_spike_samples * (1000000 / self.sample_rate))
+
         f = interpolate.interp1d(
-            times, np.linspace(-200, 800, len(waveform)), "nearest"
+            times, np.linspace(-(pre_spike), post_spike, self.n_samples), "nearest"
         )
         f_t = f(times)
 
@@ -1033,6 +1087,7 @@ class SpikeCalcsGeneric(object):
         lin2 = LinearRegression()
         lin2.fit(X_poly, y)
 
+        breakpoint()
         tn = np.linspace(f_t[idx], 1500, 1000).reshape(-1, 1)
         yn = lin2.predict(poly.fit_transform(tn))
 

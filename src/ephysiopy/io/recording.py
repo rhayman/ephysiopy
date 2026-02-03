@@ -1360,23 +1360,6 @@ class OpenEphysBase(TrialInterface):
 
     def load_cluster_data(self, removeNoiseClusters=True, *args, **kwargs) -> bool:
         warnings.warn("load_cluster_data is deprecated. Use load_neural_data instead.")
-        # if self.path2KiloSortData is not None:
-        #     clusterData = KiloSortSession(self.pname)
-        # else:
-        #     return False
-        # if clusterData is not None:
-        #     if clusterData.load():
-        #         print("Loaded KiloSort data")
-        #         if removeNoiseClusters:
-        #             try:
-        #                 clusterData.removeKSNoiseClusters()
-        #                 print("Removed noise clusters")
-        #             except Exception:
-        #                 pass
-        # else:
-        #     return False
-        # self.clusterData = clusterData
-        # return True
 
     def load_pos_data(
         self, ppm: int = 300, jumpmax: int = 100, *args, **kwargs
@@ -1569,7 +1552,34 @@ class OpenEphysBase(TrialInterface):
         return False
 
     def get_waveforms(self, cluster: int | list, channel: int | list, *args, **kwargs):
-        pass
+        """
+        Gets the waveforms for the specified cluster(s). Ignores the channel input
+        and instead returns the waveforms for the four "best" channels for the cluster.
+        """
+        self.bit_volts = 0.1949999928474426  # hard-coded for now
+        if not self.template_model:
+            self.load_neural_data()
+        if isinstance(cluster, int):
+            spike_ids = self.template_model.get_cluster_spikes(int(cluster))
+            channels = self.template_model.get_cluster_channels(int(cluster))
+            channels = channels[0:4]  # get the top 4 channels
+            w = self.template_model.get_waveforms(spike_ids, channels) * self.bit_volts
+            # swap to (n_spikes, n_channel, n_samples)
+            return np.swapaxes(w, -1, 1)
+        elif isinstance(cluster, list):
+            waveforms = []
+            for c in cluster:
+                spike_ids = self.template_model.get_cluster_spikes(int(cluster))
+                channels = self.template_model.get_cluster_channels(int(cluster))
+                channels = channels[0:4]  # get the top 4 channels
+                w = (
+                    self.template_model.get_waveforms(spike_ids, channels)
+                    * self.bit_volts
+                )
+                waveforms.append(
+                    np.swapaxes(w, -1, 1)
+                )  # swap to (n_spikes, n_channel, n_samples)
+            return waveforms
 
     def apply_filter(self, *trial_filter: TrialFilter) -> np.ndarray:
         mask = super().apply_filter(*trial_filter)

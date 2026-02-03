@@ -854,12 +854,13 @@ class LFPOscillations(object):
 
         Parameters
         ----------
-        out_window_size (float) - the window which is cut around
-                              the identified time points
-
+        out_window_size : float, optional
+            The size of the output window in seconds (default is 0.4).
         Returns
         -------
-
+        dict
+            A dictionary where keys are the center time of the oscillatory
+            window and values are the LFP signal in that window.
         Notes
         -----
         Uses a similar method to jun et al., but expands the window
@@ -870,34 +871,36 @@ class LFPOscillations(object):
         Jun et al., 2020, Neuron 107, 1095–1112
         https://doi.org/10.1016/j.neuron.2020.06.023
         """
-        wavelet = "cmor1.0-1.0"
-        scales = np.geomspace(2, 140, num=100)
+        wavelet = kwargs.get("wavelet", "cmor1.0-1.0")
+        sd_threshold = kwargs.get("sd_threshold", 2)
+
+        scales = np.geomspace(2, 1024, num=100)
         cwtmatr, freqs = pywt.cwt(
             self.sig, scales, wavelet, sampling_period=1 / self.fs, method="fft"
         )
         # cwtmatr is complex - amplitude is the real part,
         # phase the imaginary part
         # so power is the square of the abs
-        power = np.abs(cwtmatr) ** 2
-        # get the mean power in the gamma band
-        mean_gamma_power = np.mean(
+        power = np.abs(cwtmatr[:-1, :-1]) ** 2
+        # get the mean power in the frequency band
+        mean_band_power = np.mean(
             power[(freqs >= FREQ_BAND[0]) & (freqs <= FREQ_BAND[1]), :], axis=0
         )
         # Jun et al define periods of high oscillatory power as those
         # over 2 SDs of the mean power
-        threshold = np.std(mean_gamma_power) * 2
-        high_power_mask = mean_gamma_power > np.mean(mean_gamma_power) + threshold
+        threshold = np.std(mean_band_power) * sd_threshold
+        high_power_mask = mean_band_power > np.mean(mean_band_power) + threshold
         # find the runs of True's in the high_power_mask
         # these are epochs with high gamma power
         vals, run_starts, run_lens = find_runs(high_power_mask.astype(int))
         # calculate the maxima of the amplitude for each segment
-        # of the gamma band pass version of the LFP
+        # of the frequency band pass version of the LFP
         F = self.getFreqPhase(self.sig, band2filter=list(FREQ_BAND))
         amplitude_filtered = F.amplitude_filtered
         good_runs = np.nonzero(vals == 1)[0]
 
         # for each of these epochs get a window of the raw LFP signal
-        # centred on the maximum gamma power
+        # centred on the maximum band power
         t = int(out_window_size / (1 / self.fs))
         oscillatory_windows = {}
 
@@ -905,9 +908,9 @@ class LFPOscillations(object):
             run_start = run_starts[run_idx]
             s = slice(run_start, run_start + run_lens[run_idx])
             run_max_idx = np.argmax(amplitude_filtered[s], 0) + run_start
-            oscillatory_windows[s.start / self.fs] = self.sig[
-                run_max_idx - int(t / 2) : run_max_idx + int(t / 2)
-            ]
+            sig_slice = slice(run_max_idx - int(t / 2), run_max_idx + int(t / 2))
+            slice_in_seconds = sig_slice.start / self.fs, sig_slice.stop / self.fs
+            oscillatory_windows[slice_in_seconds] = self.sig[sig_slice]
 
         return oscillatory_windows
 

@@ -618,7 +618,7 @@ class FigureMaker(object):
         return _plot_single_map(rmap, ax, **kwargs)
 
     @saveFigure
-    def plot_spike_path(self, cluster=None, channel=None, **kwargs) -> plt.Figure:
+    def plot_spike_path(self, cluster=None, channel=None, **kws) -> plt.Figure:
         """
         Plots the spikes on the path for the specified cluster(s) and channel.
 
@@ -640,9 +640,10 @@ class FigureMaker(object):
         if not self.RateMap:
             self.initialise()
 
-        ax = kwargs.pop("ax", None)
-        separate_plots = kwargs.pop("separate_plots", False)
-        save_as = kwargs.pop("save_as", None)
+        ax = kws.pop("ax", None)
+        separate_plots = kws.pop("separate_plots", False)
+        save_as = kws.pop("save_as", None)
+        breakpoint()
         # multiple clusters have been passed in so plot either in
         # one window  or one per cluster
         if cluster or channel is not None:
@@ -650,7 +651,9 @@ class FigureMaker(object):
             spike_locations = [self.PosCalcs.xy[:, idx] for idx in pos_idx]
 
             if len(spike_locations):
-                kwargs["equal_axes"] = kwargs.pop("equal_axes", True)
+                kws["equal_axes"] = kws.pop("equal_axes", True)
+                breakpoint()
+
                 if separate_plots:
                     for idx in spike_locations:
                         if ax is None:
@@ -659,12 +662,12 @@ class FigureMaker(object):
                         else:
                             ax = self._plot_path(idx, ax)
                             fig = plt.gcf()
-                        _plot_patch_collection(idx, ax, **kwargs)
+                        _plot_patch_collection(idx, ax, **kws)
                     return fig
                 else:
-                    kwargs["func2"] = self._plot_path
+                    kws["func2"] = self._plot_path
                     return _plot_multiple_clusters(
-                        _plot_patch_collection, spike_locations, **kwargs
+                        _plot_patch_collection, spike_locations, **kws
                     )
 
         if ax is None:
@@ -675,10 +678,11 @@ class FigureMaker(object):
             ax = self._plot_path(None, ax)
             return fig
 
+        breakpoint()
         ax = self._plot_path(pos_idx, ax)
         spike_locations = self.PosCalcs.xy[:, pos_idx[0]]
-        ax = _plot_patch_collection(spike_locations, ax, **kwargs)
-        kwargs["save_as"] = save_as
+        ax = _plot_patch_collection(spike_locations, ax, **kws)
+        kws["save_as"] = save_as
 
         return fig
 
@@ -1215,7 +1219,9 @@ class FigureMaker(object):
             return axHistx
         else:
             warnings.warn(
-                f"PSTH for cluster {cluster} is empty. The cell fired no spikes in the period under question"
+                f"PSTH for cluster {
+                    cluster
+                } is empty. The cell fired no spikes in the period under question"
             )
             return
 
@@ -1347,7 +1353,7 @@ class FigureMaker(object):
 
     # @saveFigure
     # @stripAxes
-    def plot_waveforms(self, cluster: int, channel: int, *kws) -> plt.Figure:
+    def plot_waveforms(self, cluster: int, channel: int, **kws) -> plt.Figure:
         """
         Plot the waveforms for the selected cluster on the channel (tetrode)
 
@@ -1367,15 +1373,25 @@ class FigureMaker(object):
         n_spikes, n_channels, n_samples = waves.shape
         time = np.linspace(0, 1, n_samples)
 
-        fig, axs = plt.subplots(2, 2, sharey=True)
-        axs = flatten_list(axs)
+        axs = kws.get("ax", None)
+        if axs is None:
+            fig, axs = plt.subplots(2, 2, sharey=True)
+            axs = flatten_list(axs)
+            mn_cols = ["r"] * 4
+            alpha = 0.5
+        else:
+            fig = plt.gcf()
+            axs = [axs, axs, axs, axs]
+            mn_cols = ["r", "g", "b", "k"]
+            alpha = 0
+
+        col = [0.8627, 0.8627, 0.8627]
+
         max_wave = np.max(waves)
         min_wave = np.min(waves)
 
         mean_waves = np.mean(waves, 0)
         std_waves = np.std(waves, 0) * 3
-
-        col = [0.8627, 0.8627, 0.8627]
 
         for i, ax in enumerate(axs):
             ax.plot(
@@ -1384,6 +1400,7 @@ class FigureMaker(object):
                 linestyle="-",
                 color=col,
                 linewidth=1,
+                alpha=alpha,
             )
             ax.plot(
                 time,
@@ -1391,14 +1408,14 @@ class FigureMaker(object):
                 linestyle="-",
                 color=col,
                 linewidth=1,
+                alpha=alpha,
             )
-            ax.plot(time, mean_waves[i], c="r", linewidth=2)
+            ax.plot(time, mean_waves[i], c=mn_cols[i], linewidth=2)
             plt.setp(ax.get_xticklabels(), visible=False)
             plt.setp(ax.get_yticklabels(), visible=False)
             ax.axes.get_xaxis().set_visible(False)
             ax.axes.get_yaxis().set_visible(False)
-
-        ax.set_ylim(min_wave, max_wave)
+            ax.set_ylim(min_wave, max_wave)
 
         return fig
 
