@@ -850,7 +850,13 @@ class RateMap(object):
         BinnedData
             the data in A with the maps replaced by autocorrelograms
         """
-        result = BinnedData(A.variable, MapType.CROSS_CORR)
+        result = BinnedData(
+            A.variable,
+            A.map_type,
+            A.binned_data,
+            A.bin_edges,
+            MapType.CROSS_CORR,
+        )
         for rmap in A:
             for rmap2 in B:
                 rr = self._crossCorr2D(rmap, rmap2, A_nodwell, B_nodwell, tol)
