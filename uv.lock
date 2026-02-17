@@ -260,7 +260,7 @@ wheels = [
 
 [[package]]
 name = "ephysiopy"
-version = "2.0.62"
+version = "2.0.63"
 source = { editable = "." }
 dependencies = [
     { name = "astropy" },
