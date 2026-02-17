@@ -223,7 +223,6 @@ def get_cross_wavelet(
 
     for i, i_slice in enumerate(slices):
         i_phase = theta_phase[i_slice]
-        breakpoint()
         xwt = pycwt.xwt(
             theta_lfp[i_slice],
             gamma_lfp[i_slice],

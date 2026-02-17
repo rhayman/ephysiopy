@@ -26,8 +26,13 @@ Functions
 
 .. autoapisummary::
 
+   ephysiopy.visualise.plotting._add_colour_wheel
+   ephysiopy.visualise.plotting._plot_multiple_clusters
+   ephysiopy.visualise.plotting._plot_patch_collection
+   ephysiopy.visualise.plotting._plot_pcolormesh
    ephysiopy.visualise.plotting.addClusterChannelToAxes
-   ephysiopy.visualise.plotting.savePlot
+   ephysiopy.visualise.plotting.colored_line
+   ephysiopy.visualise.plotting.saveFigure
    ephysiopy.visualise.plotting.stripAxes
 
 
@@ -106,120 +111,7 @@ Module Contents
           !! processed by numpydoc !!
 
 
-   .. py:method:: _getRasterPlot(spk_times, dt=(-0.05, 0.1), ax = None, cluster=0, secs_per_bin = 0.001, **kwargs)
-
-      
-      Plots a raster plot for a specified tetrode/ cluster.
-
-      :param spk_times: The spike times in seconds.
-      :type spk_times: np.ndarray
-      :param dt: The window of time in ms to examine zeroed on the event of interest.
-                 Defaults to (-0.05, 0.1).
-      :type dt: tuple, optional
-      :param ax: The axes to plot into. If not provided, a new figure is created.
-                 Defaults to None.
-      :type ax: matplotlib.axes, optional
-      :param cluster: The cluster number. Defaults to 0.
-      :type cluster: int, optional
-      :param secs_per_bin: The number of seconds in each bin of the raster plot. Defaults to 0.001.
-      :type secs_per_bin: int, optional
-      :param \*\*kwargs: Additional keyword arguments for the function.
-      :type \*\*kwargs: dict
-
-      :returns: The axes with the plot, or None if no spikes were fired in the period.
-      :rtype: plt.Axes or None
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      ..
-          !! processed by numpydoc !!
-
-
-   .. py:method:: _getXCorrPlot(spk_times, ax = None, **kwargs)
-
-      
-      Returns an axis containing the autocorrelogram of the spike
-      times provided over the range +/-500ms.
-
-      :param spk_times: Spike times in seconds.
-      :type spk_times: np.array
-      :param ax: The axes to plot into. If None, new axes are created.
-      :type ax: matplotlib.axes, optional
-      :param \*\*kwargs: Additional keyword arguments for the function, including:
-                         binsize : int, optional
-                             The size of the bins in ms. Gets passed to SpikeCalcsGeneric.xcorr().
-                             Defaults to 1.
-      :type \*\*kwargs: dict
-
-      :returns: The axes with the plot.
-      :rtype: plt.Axes
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      ..
-          !! processed by numpydoc !!
-
-
-   .. py:method:: _plotWaves(waves, ax, **kwargs)
-
-
-   .. py:method:: _plot_multiple_clusters(func, clusters, channel, **kwargs)
-
-      
-      Plots multiple clusters.
-
-      :param func: The function to apply to each cluster.
-      :type func: function
-      :param clusters: The list of clusters to plot.
-      :type clusters: list
-      :param channel: The channel number.
-      :type channel: int
-      :param \*\*kwargs: Additional keyword arguments for the function.
-      :type \*\*kwargs: dict
-
-      :returns: The figure containing the plots.
-      :rtype: matplotlib.figure.Figure
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      ..
-          !! processed by numpydoc !!
+   .. py:method:: _plot_path(ax)
 
 
    .. py:method:: plotSpectrogramByDepth(nchannels = 384, nseconds = 100, maxFreq = 125, channels = [], frequencies = [], frequencyIncrement = 1, **kwargs)
@@ -279,7 +171,11 @@ Module Contents
       :type cluster: int
       :param channel: The channel number.
       :type channel: int
-      :param \*\*kwargs: Additional keyword arguments for the function.
+      :param \*\*kwargs: Additional keyword arguments for the function, including:
+                         binsize : int, optional
+                             The size of the bins in ms.
+                             Gets passed to SpikeCalcsGeneric.xcorr().
+                             Defaults to 1.
       :type \*\*kwargs: dict
 
       :returns: The axes containing the autocorrelogram plot.
@@ -419,6 +315,45 @@ Module Contents
       :returns: The axes containing the head direction map plot.
       :rtype: plt.Axes
 
+      .. rubric:: Notes
+
+      NB Following mathmatical convention, 0/360 degrees is
+      3 o'clock, 90 degrees is 12 o'clock, 180 degrees is
+      9 o'clock and 270 degrees
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: plot_linear_rate_map(cluster, channel, **kwargs)
+
+      
+      Plots the linear rate map for the specified cluster(s) and channel.
+
+      :param cluster: The cluster(s) to get the linear rate map for.
+      :type cluster: int or list
+      :param channel: The channel number.
+      :type channel: int or list
+      :param \*\*kwargs: Additional keyword arguments for the function.
+      :type \*\*kwargs: dict
+
+      :returns: The axes containing the linear rate map plot.
+      :rtype: plt.Axes
+
 
 
 
@@ -505,10 +440,15 @@ Module Contents
       Plots the rate map for the specified cluster(s) and channel.
 
       :param cluster: The cluster(s) to get the rate map for.
-      :type cluster: int
+      :type cluster: int or list
       :param channel: The channel number.
-      :type channel: int
+      :type channel: int or list
       :param \*\*kwargs: Additional keyword arguments for the function.
+                         ax : plt.Axes, optional
+                             The axes to plot on. If None, new axes are created.
+                         separate_plots : bool, optional
+                             If True, each cluster will be plotted on a separate plot.
+                             Defaults to False.
       :type \*\*kwargs: dict
 
       :returns: The axes containing the rate map plot.
@@ -635,7 +575,7 @@ Module Contents
           !! processed by numpydoc !!
 
 
-   .. py:method:: plot_spike_path(cluster=None, channel=None, **kwargs)
+   .. py:method:: plot_spike_path(cluster=None, channel=None, **kws)
 
       
       Plots the spikes on the path for the specified cluster(s) and channel.
@@ -686,6 +626,34 @@ Module Contents
 
       :returns: The QuadMesh object containing the plot.
       :rtype: QuadMesh
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: plot_waveforms(cluster, channel, **kws)
+
+      
+      Plot the waveforms for the selected cluster on the channel (tetrode)
+
+      :param cluster (int) - the cluster:
+      :param channel (int) - the channel(s) / tetrode:
+
+      :rtype: plt.Axes - the axes holding the plot
 
 
 
@@ -766,6 +734,100 @@ Module Contents
           !! processed by numpydoc !!
 
 
+.. py:function:: _add_colour_wheel(ax, fig, **kwargs)
+
+   
+   Adds a colour wheel to the axes
+
+   :param ax: The axes to add the colour wheel to.
+   :type ax: plt.Axes
+   :param fig: The figure containing the axes.
+   :type fig: plt.Figure
+
+   :returns: The axes containing the colour wheel.
+   :rtype: plt.Axes
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: _plot_multiple_clusters(func, rmap, *args, **kwargs)
+
+   
+   Plots multiple clusters.
+
+   :param func: The function to apply to each cluster.
+   :type func: function
+   :param rmap: The rate map.
+   :type rmap: BinnedData
+   :param \*\*kwargs: Additional keyword arguments for the function.
+   :type \*\*kwargs: dict
+
+   :returns: The figure containing the plots.
+   :rtype: matplotlib.figure.Figure
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: _plot_patch_collection(xy, ax, **kws)
+
+   
+   Plot a patch collection
+
+   :param xy: shape is [2  x m], where to put the rectangles
+   :type xy: np.ndarray
+   :param \*\*kwargs: ms - marker size for the rectangles
+                      c - array-like list or float of colour(s) for each rectangle
+
+   :returns: the axes into which the patches were plotted
+   :rtype: plt.Axes
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: _plot_pcolormesh(rmap, ax, **kwargs)
+
 .. py:function:: addClusterChannelToAxes(func)
 
    
@@ -774,7 +836,7 @@ Module Contents
    :param func: The function that generates the plot.
    :type func: callable
 
-   :returns: The wrapped function that adds cluster and channel information to the axes.
+   :returns: The wrapped function that adds cluster and channel info to the axes.
    :rtype: callable
 
 
@@ -794,7 +856,49 @@ Module Contents
    ..
        !! processed by numpydoc !!
 
-.. py:function:: savePlot(func)
+.. py:function:: colored_line(x, y, c, ax, **lc_kwargs)
+
+   
+   Plot a line with a color specified along the line by a third value.
+
+   It does this by creating a collection of line segments. Each line segment is
+   made up of two straight lines each connecting the current (x, y) point to the
+   midpoints of the lines connecting the current point with its two neighbors.
+   This creates a smooth line with no gaps between the line segments.
+
+   :param x: The horizontal and vertical coordinates of the data points.
+   :type x: array-like
+   :param y: The horizontal and vertical coordinates of the data points.
+   :type y: array-like
+   :param c: The color values, which should be the same size as x and y.
+   :type c: array-like
+   :param ax: Axis object on which to plot the colored line.
+   :type ax: Axes
+   :param \*\*lc_kwargs: Any additional arguments to pass to matplotlib.collections.LineCollection
+                         constructor. This should not include the array keyword argument because
+                         that is set to the color argument. If provided, it will be overridden.
+
+   :returns: The generated line collection representing the colored line.
+   :rtype: matplotlib.collections.LineCollection
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: saveFigure(func)
 
    
    Decorator to save a plot generated by a function.
@@ -802,7 +906,8 @@ Module Contents
    :param func: The function that generates the plot.
    :type func: callable
 
-   :returns: The wrapped function that saves the plot if 'save_as' is provided in kwargs.
+   :returns: The wrapped function that saves the plot if 'save_as'
+             is provided in kwargs.
    :rtype: callable
 
 

@@ -576,19 +576,22 @@ Module Contents
 
    .. attribute:: param
 
-      A boolean parameter, converted from a string ("1" for True, otherwise False).
+      A boolean parameter, converted from a string
+      ("1" for True, otherwise False).
 
       :type: bool
 
    .. attribute:: record
 
-      A boolean indicating if the channel is recorded, converted from a string ("1" for True, otherwise False).
+      A boolean indicating if the channel is recorded,
+      converted from a string ("1" for True, otherwise False).
 
       :type: bool
 
    .. attribute:: audio
 
-      A boolean indicating if the channel is audio, converted from a string ("1" for True, otherwise False).
+      A boolean indicating if the channel is audio,
+      converted from a string ("1" for True, otherwise False).
 
       :type: bool
 
@@ -1408,7 +1411,8 @@ Module Contents
 
 
    
-   Loads up the structure.oebin file for Open Ephys flat binary format recordings.
+   Loads up the structure.oebin file for Open Ephys flat
+   binary format recordings.
 
    :param fname: The path to the directory containing the structure.oebin file.
    :type fname: Path
@@ -1714,11 +1718,13 @@ Module Contents
 .. py:class:: ProcessorFactory
 
    
-   Factory class for creating various processor objects based on the processor name.
+   Factory class for creating various processor objects
+   based on the processor name.
 
    .. attribute:: factory
 
-      An instance of AbstractProcessorFactory used to create processor objects.
+      An instance of AbstractProcessorFactory used to create
+      processor objects.
 
       :type: AbstractProcessorFactory
 
@@ -2005,7 +2011,8 @@ Module Contents
 
    .. attribute:: mov_std
 
-      Movement standard deviation setting for the Ripple Detector, default is -1.
+      Movement standard deviation setting for the Ripple Detector,
+      default is -1.
 
       :type: FloatConversion
 
@@ -2794,7 +2801,8 @@ Module Contents
       
       Load TTL times from a specified path.
 
-      :param path2data: The path to the directory containing the timestamps and states files.
+      :param path2data: The path to the directory containing the timestamps
+                        and states files.
       :type path2data: Path
 
       :returns: A numpy array containing the TTL times.

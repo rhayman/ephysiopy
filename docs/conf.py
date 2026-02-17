@@ -58,7 +58,7 @@ numpydoc_class_members_toctree = False
 
 # -- Options for autoapi -------------------------------------------------------
 autoapi_type = "python"
-autoapi_dirs = ["../ephysiopy"]
+autoapi_dirs = ["../src/ephysiopy"]
 autoapi_keep_files = True
 autoapi_root = "api"
 autoapi_member_order = "groupwise"

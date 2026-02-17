@@ -535,7 +535,7 @@ Module Contents
    .. py:method:: __getitem__(key)
 
       
-      x.__getitem__(y) <==> x[y]
+      Return self[key].
 
 
 
@@ -583,8 +583,8 @@ Module Contents
    .. py:method:: update(*args, **kwargs)
 
       
-      D.update([E, ]**F) -> None.  Update D from dict/iterable E and F.
-      If E is present and has a .keys() method, then does:  for k in E: D[k] = E[k]
+      D.update([E, ]**F) -> None.  Update D from mapping/iterable E and F.
+      If E is present and has a .keys() method, then does:  for k in E.keys(): D[k] = E[k]
       If E is present and lacks a .keys() method, then does:  for k, v in E: D[k] = v
       In either case, this is followed by: for k in F:  D[k] = F[k]
 
@@ -647,6 +647,35 @@ Module Contents
 
    ..
        !! processed by numpydoc !!
+
+   .. py:method:: __add__(other)
+
+      
+      Adds two Tetrode objects together
+
+      :param other: The other Tetrode object to add
+      :type other: Tetrode
+
+      :returns: A new Tetrode object with the combined data
+      :rtype: Tetrode
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: apply_mask(mask, **kwargs)
 
@@ -828,6 +857,36 @@ Module Contents
       
       Returns the unique clusters
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: get_waveforms(cluster = None)
+
+      
+      Returns the waveforms for a cluster on the tetrode
+
+      :param cluster: The cluster whose waveforms we want. If None then all clusters
+                      are returned
+      :type cluster: int, optional
+
+      :returns: The waveforms for the cluster or all clusters if None was supplied
+      :rtype: np.ndarray
 
 
 

@@ -30,6 +30,7 @@ Functions
 .. autoapisummary::
 
    ephysiopy.io.recording.find_path_to_ripple_ttl
+   ephysiopy.io.recording.make_cluster_ids
 
 
 Module Contents
@@ -137,6 +138,9 @@ Module Contents
    ..
        !! processed by numpydoc !!
 
+   .. py:method:: __add__(other)
+
+
    .. py:method:: apply_filter(*trial_filter)
 
       
@@ -151,6 +155,9 @@ Module Contents
 
                            Valid names are:
                                'dir' - the directional range to filter for
+                                   NB Following mathmatical convention, 0/360 degrees is
+                                   3 o'clock, 90 degrees is 12 o'clock, 180 degrees is
+                                   9 o'clock and 270 degrees
                                'speed' - min and max speed to filter for
                                'xrange' - min and max values to filter x pos values
                                'yrange' - same as xrange but for y pos
@@ -182,7 +189,30 @@ Module Contents
           !! processed by numpydoc !!
 
 
-   .. py:method:: get_available_clusters_channels()
+   .. py:method:: get_available_clusters_channels(remove0=True)
+
+      
+      Slightly laborious and low-level way of getting the cut
+      data but it's faster than accessing the TETRODE's as that
+      will load the waveforms as well as everything else
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:method:: get_spike_times(cluster = None, tetrode = None, *args, **kwargs)
@@ -196,6 +226,37 @@ Module Contents
       :type channel: int | list
 
       :returns: the spike times
+      :rtype: list | np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: get_waveforms(cluster, channel, *args, **kwargs)
+
+      
+      Returns the waveforms for a given cluster and channel
+
+      :param cluster: The cluster(s) to get the waveforms for
+      :type cluster: int | list
+      :param channel: The channel(s) to get the waveforms for
+      :type channel: int | list
+
+      :returns: the waveforms for the cluster(s) and channel(s)
       :rtype: list | np.ndarray
 
 
@@ -471,6 +532,9 @@ Module Contents
 
                            Valid names are:
                                'dir' - the directional range to filter for
+                                   NB Following mathmatical convention, 0/360 degrees is
+                                   3 o'clock, 90 degrees is 12 o'clock, 180 degrees is
+                                   9 o'clock and 270 degrees
                                'speed' - min and max speed to filter for
                                'xrange' - min and max values to filter x pos values
                                'yrange' - same as xrange but for y pos
@@ -510,7 +574,7 @@ Module Contents
       
       Get available clusters and their corresponding channels.
 
-      :returns: A dictionary where keys are channels and values are lists of clusters available on those channels.
+      :returns: A dict where keys are channels and values are lists of clusters
       :rtype: dict
 
 
@@ -543,6 +607,31 @@ Module Contents
 
       :returns: the spike times
       :rtype: list | np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: get_waveforms(cluster, channel, *args, **kwargs)
+
+      
+      Gets the waveforms for the specified cluster(s). Ignores the channel input
+      and instead returns the waveforms for the four "best" channels for the cluster.
+
 
 
 
@@ -896,15 +985,48 @@ Module Contents
           !! processed by numpydoc !!
 
 
-.. py:class:: RecordingKind
+.. py:class:: RecordingKind(*args, **kwds)
 
    Bases: :py:obj:`enum.Enum`
 
 
    
-   Generic enumeration.
+   Create a collection of name/value pairs.
 
-   Derive from this class to define new enumerations.
+   Example enumeration:
+
+   >>> class Color(Enum):
+   ...     RED = 1
+   ...     BLUE = 2
+   ...     GREEN = 3
+
+   Access them by:
+
+   - attribute access:
+
+     >>> Color.RED
+     <Color.RED: 1>
+
+   - value lookup:
+
+     >>> Color(1)
+     <Color.RED: 1>
+
+   - name lookup:
+
+     >>> Color['RED']
+     <Color.RED: 1>
+
+   Enumerations can be iterated over, and know how many members they have:
+
+   >>> len(Color)
+   3
+
+   >>> list(Color)
+   [<Color.RED: 1>, <Color.BLUE: 2>, <Color.GREEN: 3>]
+
+   Methods can be added to enumerations, and members can have their own
+   attributes -- see the documentation for details.
 
 
 
@@ -1045,6 +1167,30 @@ Module Contents
    ..
        !! processed by numpydoc !!
 
+   .. py:method:: __apply_mask_to_subcls__(mask)
+
+      
+      Applies a mask to the sub-class specific data
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
    .. py:method:: __subclasshook__(subclass)
       :classmethod:
 
@@ -1059,19 +1205,17 @@ Module Contents
       :type cluster: int or list
       :param channel: The channel(s).
       :type channel: int or list
-      :param var2bin: The variable to bin. This is an enum that specifies the type of variable to bin.
+      :param var2bin: The variable to bin.
       :type var2bin: VariableToBin.XY
-      :param \*\*kwargs: Additional keyword arguments passed to the _get_spike_pos_idx function.
-                         - do_shuffle (bool): If True, the rate map will be shuffled by the default number of shuffles (100).
-                                         If the n_shuffles keyword is provided, the rate map will be shuffled by that number of shuffles, and
-                                         an array of shuffled rate maps will be returned e.g [100 x nx x ny].
-                                         The shuffles themselves are generated by shifting the spike times by a random amount between 30s and the
-                                         length of the position data minus 30s. The random amount is drawn from a uniform distribution. In order to preserve
-                                         the shifts over multiple calls to this function, the option is provided to set the random seed to a fixed
-                                         value using the random_seed keyword.
-                                         Default is False
-                         - n_shuffles (int): The number of shuffles to perform. Default is 100.
-                         - random_seed (int): The random seed to use for the shuffles. Default is None.
+      :param \*\*kwargs: Additional keyword arguments for the _get_spike_pos_idx function.
+                         - do_shuffle (bool): If True, the rate map will be shuffled by
+                         - map_type (MapType): the type of map to generate, default
+                                     is MapType.POS but can be any of the options
+                                     in MapType
+                                              the default number of shuffles (100).
+                         - n_shuffles (int): the number of shuffles for the rate map
+                                             A list of shuffled rate maps will be returned.
+                         - random_seed (int): The random seed to use for the shuffles.
       :type \*\*kwargs: dict, optional
 
       :returns: The rate map as a numpy array.
@@ -1111,7 +1255,7 @@ Module Contents
 
       :returns: The indices into the position data at which the spikes
                 occurred.
-      :rtype: np.ndarray
+      :rtype: list of np.ndarray
 
 
 
@@ -1148,6 +1292,9 @@ Module Contents
 
                            Valid names are:
                                'dir' - the directional range to filter for
+                                   NB Following mathmatical convention, 0/360 degrees is
+                                   3 o'clock, 90 degrees is 12 o'clock, 180 degrees is
+                                   9 o'clock and 270 degrees
                                'speed' - min and max speed to filter for
                                'xrange' - min and max values to filter x pos values
                                'yrange' - same as xrange but for y pos
@@ -1160,6 +1307,39 @@ Module Contents
 
       :returns: An array of bools that is True where the mask is applied
       :rtype: np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: get_acorr(cluster, channel, **kwargs)
+
+      
+      Computes the cross-correlation for a given cluster and channel.
+
+      :param cluster: The cluster(s).
+      :type cluster: int or list
+      :param channel: The channel(s).
+      :type channel: int or list
+      :param \*\*kwargs: Additional keyword arguments passed to the xcorr function.
+      :type \*\*kwargs: dict, optional
+
+      :returns: The cross-correlation as a BinnedData object.
+      :rtype: BinnedData
 
 
 
@@ -1212,13 +1392,46 @@ Module Contents
           !! processed by numpydoc !!
 
 
+   .. py:method:: get_all_maps(channels_clusters, var2bin, maptype, **kwargs)
+
+
    .. py:method:: get_available_clusters_channels()
+      :abstractmethod:
+
+
+
+   .. py:method:: get_binned_spike_times(cluster, channel, bin_into = 'pos')
+
+      
+      :param cluster (int | list): The cluster(s).
+      :param channel (int | list): The channel(s).
+      :param bin_into (str):
+
+      :returns: the spike times binned into the position data
+      :rtype: np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:method:: get_eb_map(cluster, channel, **kwargs)
 
       
-      Gets the egocentric boundary map for the specified cluster(s) and channel.
+      Gets the egocentric boundary map for the cluster(s) and channel.
 
       :param cluster: The cluster(s) to get the speed vs rate for.
       :type cluster: int, list
@@ -1229,6 +1442,51 @@ Module Contents
 
       :returns: the binned data
       :rtype: BinnedData
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: get_field_properties(cluster, channel, **kwargs)
+
+      
+      Gets the properties of a given field
+
+      :param cluster: The cluster(s) to get the field properties for
+      :type cluster: int | list
+      :param channel: The channel(s) to get the field properties for
+      :type channel: int | list
+      :param \*\*kwargs:
+                         partition : str
+                             The partition to use for the field properties. This is passed to
+                             the fieldproperties function and can be used to specify the partition
+                             to use for the field properties.
+
+                             Valid options are 'simple' and 'fancy'
+
+                             Other kwargs get passed to get_rate_map and
+                             fieldprops, the most important of which may be
+                             how the runs are split in fieldprops (options are
+                             'field' and 'clump_runs') which differ depending on
+                             if the position data is open-field (field) or linear track
+                             in which case you should probably use 'clunmp_runs'
+
+      :returns: A list of FieldProps namedtuples containing the properties of the field
+      :rtype: list[FieldProps]
 
 
 
@@ -1313,6 +1571,72 @@ Module Contents
           !! processed by numpydoc !!
 
 
+   .. py:method:: get_linear_rate_map(cluster, channel, **kwargs)
+
+      
+      Gets the linear rate map for the specified cluster(s) and channel.
+
+      :param cluster: The cluster(s) to get the speed vs rate for.
+      :type cluster: int, list
+      :param channel: The channel(s) number.
+      :type channel: int, list
+      :param \*\*kwargs: Additional keyword arguments passed to _get_map
+
+      :returns: the binned data
+      :rtype: BinnedData
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: get_psth(cluster, channel, **kwargs)
+
+      
+      Computes the peri-stimulus time histogram (PSTH) for a given cluster and channel.
+
+      :param cluster: The cluster(s).
+      :type cluster: int or list
+      :param channel: The channel(s).
+      :type channel: int or list
+      :param \*\*kwargs: Additional keyword arguments passed to the psth function.
+      :type \*\*kwargs: dict, optional
+
+      :returns: The list of time differences between the spikes of the cluster
+                and the events (0) and the trials (1)
+      :rtype: tuple of lists
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
    .. py:method:: get_rate_map(cluster, channel, **kwargs)
 
       
@@ -1345,12 +1669,45 @@ Module Contents
           !! processed by numpydoc !!
 
 
+   .. py:method:: get_spatial_info_score(cluster, channel, **kwargs)
+
+      
+      Computes the spatial information score
+
+      :param cluster: The cluster(s).
+      :type cluster: int or list
+      :param channel: The channel(s).
+      :type channel: int or list
+      :param \*\*kwargs: Additional keyword arguments passed to the binning function.
+      :type \*\*kwargs: dict, optional
+
+      :returns: The spatial information score
+      :rtype: float
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
    .. py:method:: get_speed_v_hd_map(cluster, channel, **kwargs)
 
       
-      Gets the speed vs head direction map for the specified cluster(s) and channel.
+      Gets the speed vs head direction map for the cluster(s) and channel.
 
-      :param cluster: The cluster(s) to get the speed vs head direction map for.
+      :param cluster: The cluster(s)
       :type cluster: int, list
       :param channel: The channel number.
       :type channel: int, list
@@ -1440,14 +1797,20 @@ Module Contents
           !! processed by numpydoc !!
 
 
-   .. py:method:: get_spike_times_binned_into_position(cluster, channel)
+   .. py:method:: get_waveforms(cluster, channel, *args, **kwargs)
+      :abstractmethod:
+
 
       
-      :param cluster (int | list): The cluster(s).
-      :param channel (int | list): The channel(s).
+      Returns the waveforms for a given cluster and channel
 
-      :returns: the spike times binned into the position data
-      :rtype: np.ndarray
+      :param cluster: The cluster(s) to get the waveforms for
+      :type cluster: int | list
+      :param channel: The channel(s) to get the waveforms for
+      :type channel: int | list
+
+      :returns: the waveforms for the cluster(s) and channel(s)
+      :rtype: list | np.ndarray
 
 
 
@@ -1467,7 +1830,7 @@ Module Contents
           !! processed by numpydoc !!
 
 
-   .. py:method:: get_xcorr(cluster, channel, **kwargs)
+   .. py:method:: get_xcorr(cluster_a, cluster_b, channel_a, channel_b, **kwargs)
 
       
       Computes the cross-correlation for a given cluster and channel.
@@ -1581,7 +1944,7 @@ Module Contents
           !! processed by numpydoc !!
 
 
-   .. py:method:: load_pos_data(ppm = 300, jumpmax = 100, *args, **kwargs)
+   .. py:method:: load_pos_data(ppm = 300, jumpmax = 100, *args, **kws)
       :abstractmethod:
 
 
@@ -1698,6 +2061,11 @@ Module Contents
 
 
 
+   .. py:attribute:: _concatenated
+      :value: False
+
+
+
    .. py:attribute:: _filter
       :type:  list
       :value: []
@@ -1741,6 +2109,9 @@ Module Contents
 
 
    .. py:property:: clusterData
+
+
+   .. py:property:: concatenated
 
 
    .. py:property:: filter
@@ -1790,6 +2161,8 @@ Module Contents
 
    ..
        !! processed by numpydoc !!
+
+.. py:function:: make_cluster_ids(cluster, channel)
 
 .. py:data:: Xml2RecordingKind
 

@@ -3,9 +3,11 @@ import copy
 import warnings
 import skimage
 from skimage.segmentation import watershed
+from skimage.feature import peak_local_max
 from scipy import ndimage as ndi
 from scipy import spatial
 from scipy import stats
+import skimage.filters as skifilters
 import scipy.signal as signal
 from astropy.convolution import Gaussian1DKernel as gk1d
 from astropy.convolution import Gaussian2DKernel as gk2d
@@ -25,7 +27,7 @@ def sort_fields_by_attr(field_props: list[FieldProps], attr="area", reverse=True
     -----
     In the default case will sort by area, largest first
     """
-    fp = sorted(field_props, key=lambda x: getattr(x, "attr"), reverse=reverse)
+    fp = sorted(field_props, key=lambda x: getattr(x, attr), reverse=reverse)
     return fp
 
 
@@ -202,6 +204,21 @@ def infill_ratemap(rmap: np.ndarray) -> np.ndarray:
     return output
 
 
+def get_peak_coords(rmap, labels):
+    """
+    Get the peak coordinates of the firing fields in the ratemap
+    """
+    fieldId, _ = np.unique(labels, return_index=True)
+    if np.any(labels == 0):
+        fieldId = fieldId[1::]
+    else:
+        fieldId = fieldId[0::]
+    peakCoords = np.array(
+        ndi.maximum_position(rmap, labels=labels, index=fieldId)
+    ).astype(int)
+    return peakCoords
+
+
 def simple_partition(
     binned_data: BinnedData, rate_threshold_prc: int = 200, **kwargs
 ) -> tuple[np.ndarray]:
@@ -246,14 +263,14 @@ def simple_partition(
         return None, None, None, None
     field_props = skimage.measure.regionprops(labels, intensity_image=rmap)
     # get the field with the highest mean firing rate
-    mean_rates = [fp.mean_intensity for fp in field_props]
+    mean_rates = [fp.intensity_mean for fp in field_props]
     max_field_idx = np.argmax(mean_rates)
     max_field = field_props[max_field_idx]
     # create output arrays
     peaksXY = np.array(
-        [[max_field.weighted_centroid[1]], [max_field.weighted_centroid[0]]]
+        [[max_field.centroid_weighted[1]], [max_field.centroid_weighted[0]]]
     )
-    peaksRate = np.array([max_field.max_intensity])
+    peaksRate = np.array([max_field.intensity_max])
     output_labels = np.zeros_like(labels)
     output_labels[max_field.coords[:, 0], max_field.coords[:, 1]] = 1
     rmap_filled = infill_ratemap(rmap)
@@ -269,114 +286,51 @@ def simple_partition(
 
 def fancy_partition(
     binned_data: BinnedData,
-    field_threshold_percent: int = 50,
-    field_rate_threshold: float = 0.5,
-    area_threshold=0.01,
+    field_threshold_percent: int | float = 50,
+    area_threshold_percent: float = 10,
 ) -> tuple[np.ndarray, ...]:
     """
-    Partitions spikes into fields by finding the watersheds around the
-        peaks of a super-smoothed ratemap
+    Another partitioning method
 
-        Parameters
-        ----------
-        binned_data : BinnedData
-            an instance of ephysiopy.common.utils.BinnedData
-        field_threshold_percent : int
-            removes pixels in a field that fall below this percent of the maximum firing rate in the field
-        field_rate_threshold : float
-            anything below this firing rate in Hz threshold is set to 0
-        area_threshold : float
-            defines the minimum field size as a proportion of the
-            environment size. Default of 0.01 says a field has to be at
-            least 1% of the size of the environment i.e.
-            binned_area_width * binned_area_height to be counted as a field
+    Parameters
+    ----------
+    binned_data - BinnedData
 
-        Returns
-        -------
-        tuple of np.ndarray
-            peaksXY - The xy coordinates of the peak rates in
-            each field
-            peaksRate - The peak rates in peaksXY
-            labels - An array of the labels corresponding to each field (starting  1)
-            rmap - The ratemap of the tetrode / cluster
+    field_threshold_percent - int | float
+        pixels below this are set to zero and ignored
+
+    area_threshold_percent - float
+        the expected minimum size of a receptive field
     """
-    # start image processing:
-    # Usually the binned_data has a large number of bins which potentially
-    # leaves lots of "holes" in the ratemap (nans) as there will be lots of
-    # positions that aren't sampled. Get over this by preserving areas outside
-    # the sampled area as nans whilst filling in the nans that live within the
-    # receptive fields
     rmap_filled = infill_ratemap(binned_data.binned_data[0])
-    # get the labels
-    # binarise the ratemap so that anything above field_rate_threshold is set to 1
-    # and anything below to 0
-    rmap_to_label = copy.copy(rmap_filled.data)
-    rmap_to_label[np.isnan(rmap_filled)] = 0
-    good_idx = rmap_to_label > field_rate_threshold
-    bad_idx = rmap_to_label <= field_rate_threshold
-    # check here to see if everything evaluates to a True
-    # in bad_idx - likely that this is a very low rate ratemap
-    # or something simimlar that will be hard to generate
-    # labels for. Return a bunch of Nones if so...
-    if np.all(bad_idx):
+
+    # Only label pixels above field_threshold_percent
+    mn = np.nanmean(rmap_filled)
+    threshold = mn * (field_threshold_percent / 100)
+    rmap_to_label = rmap_filled > threshold
+
+    # return here if nothing is above the threshold
+    if not np.any(rmap_to_label):
         return None, None, None, None
-    rmap_to_label[good_idx] = 1
-    rmap_to_label[bad_idx] = 0
+
     labels = skimage.measure.label(rmap_to_label, background=0)
 
-    # labels is now a labelled int array from 0 to however many fields have
-    # been detected
-    # Get the coordinates of the peak firing rate within each firing field...
-    # define a function to get the peak coordinates as we'll use more than once
-    def _get_peak_coords(rmap, labels):
-        """
-        Get the peak coordinates of the firing fields in the ratemap
-        """
-        fieldId, _ = np.unique(labels, return_index=True)
-        if np.any(labels == 0):
-            fieldId = fieldId[1::]
-        else:
-            fieldId = fieldId[0::]
-        peakCoords = np.array(
-            ndi.maximum_position(rmap, labels=labels, index=fieldId)
-        ).astype(int)
-        return peakCoords
+    mean_env_len = np.mean([np.mean(e) for e in binned_data.bin_edges])
+    min_size = mean_env_len * (area_threshold_percent / 100)
 
-    peakCoords = _get_peak_coords(rmap_filled, labels)
+    block_size = int(min_size) if int(min_size) % 2 == 1 else int(min_size) + 1
 
-    # TODO: this labeled_comprehension is not working too well for fields that
-    # have a fairly uniform firing rate distribution across them (using np.nanmax
-    # in the function fn defined for use in the labeled_comprehension)
-    # or those that have nicely gaussian shaped fields (which was using np.nanmedian)
-    # find the peak rate at each of the centre of the detected fields to
-    # subsequently threshold the field at some fraction of the peak value
-    # use a labeled_comprehension to do this
-
-    def fn(val, pos):
-        return pos[val < (np.nanmax(val) * (field_threshold_percent / 100))]
-
-    #
-    indices = ndi.labeled_comprehension(
-        rmap_filled, labels, None, fn, np.ndarray, 0, True
+    # Locally threshold the ratemap with a gaussian and a block
+    # size approximately equal to the minimum expected size of a
+    # receptive field. This is to get the markers for the watershed algorithm.
+    sm = skifilters.threshold_local(
+        rmap_filled, block_size=block_size, method="gaussian", param=3
     )
 
-    # breakpoint()
-    labels[np.unravel_index(indices=indices, shape=labels.shape)] = 0
-    min_field_size = np.ceil(np.prod(labels.shape) * area_threshold).astype(int)
-    # breakpoint()
-    labels = skimage.morphology.remove_small_objects(
-        labels, min_size=min_field_size, connectivity=2
-    )
-    # breakpoint()
-    # relabel the fields
-    # a labelled field could have been split by the above procedure
-    # so redo the labelling step
-    labels = skimage.measure.label(labels, background=0)
-    labels = skimage.segmentation.relabel_sequential(labels)[0]
+    sm[rmap_to_label < threshold] = 0
 
-    # re-calculate the peakCoords array as we may have removed some
-    # objects
-    peakCoords = _get_peak_coords(rmap_filled, labels)
+    peakCoords = get_peak_coords(rmap_filled, labels)
+
     if len(binned_data.bin_edges) == 1:
         # if there is only one bin edge then we are dealing with a 1D ratemap
         be = binned_data.bin_edges[0]

@@ -10,6 +10,7 @@ import matplotlib.pylab as plt
 import matplotlib.transforms as transforms
 from pycircstat2 import Circular
 from pycircstat2.utils import rotate_data
+from pycircstat2.descriptive import circ_mean_and_r
 import numpy as np
 from scipy.signal import hilbert
 from matplotlib.patches import Rectangle
@@ -32,9 +33,12 @@ from ephysiopy.common.utils import (
 from ephysiopy.common import fieldcalcs as fc
 
 """
-A decorator class that accepts arguments. This one allows us to save the
+This one allows us to save the
 returned matplotlib Axis object to a location and name specified by the
-user in the decorated function
+user in the decorated function.
+
+TODO: This should take in an axes which should gcf() and then save
+as Axes are the thing that's returned from most of the functions below
 """
 
 
@@ -335,7 +339,7 @@ def _plot_pcolormesh(rmap: BinnedData, ax: plt.Axes, **kwargs) -> plt.Axes:
 
 @addClusterChannelToAxes
 @stripAxes
-def _plot_patch_collection(xy: np.ndarray, ax: plt.Axes, **kwargs) -> plt.Axes:
+def _plot_patch_collection(xy: np.ma.MaskedArray, ax: plt.Axes, **kws) -> plt.Axes:
     """
     Plot a patch collection
 
@@ -353,9 +357,10 @@ def _plot_patch_collection(xy: np.ndarray, ax: plt.Axes, **kwargs) -> plt.Axes:
     plt.Axes
         the axes into which the patches were plotted
     """
-    equal_axes = kwargs.pop("equal_axes", False)
-    rect_size = kwargs.pop("ms", 1)
-    col = kwargs.pop("c", tcols.colours[1])
+    equal_axes = kws.pop("equal_axes", False)
+    tight_axes = kws.pop("tight_axes", True)
+    rect_size = kws.pop("ms", 1)
+    col = kws.pop("c", tcols.colours[1])
     col = np.array(col)
     if len(col) == 3:  # a singular value
         col = [col for _ in range(xy.shape[1])]
@@ -365,16 +370,21 @@ def _plot_patch_collection(xy: np.ndarray, ax: plt.Axes, **kwargs) -> plt.Axes:
             _xy,
             width=rect_size,
             height=rect_size,
-            clip_box=ax.bbox,
+            # clip_box=ax.bbox,
             facecolor=_col.T,
             rasterized=True,
-            **kwargs,
+            **kws,
         )
         for _xy, _col in zip(xy.T, col)
     ]
     ax.add_collection(PatchCollection(rects, match_original=True))
     if equal_axes:
         ax.set_aspect("equal")
+
+    if tight_axes:
+        ax.set_xlim(np.ma.min(xy[0, :]), np.ma.max(xy[0, :]))
+        ax.set_ylim(np.ma.min(xy[1, :]), np.ma.max(xy[1, :]))
+
     return ax
 
 
@@ -398,7 +408,7 @@ class FigureMaker(object):
             self.npos = self.PosCalcs.xy.shape[1]
 
     @stripAxes
-    def _plot_path(self, A: BinnedData, ax: plt.Axes) -> plt.Axes:
+    def _plot_path(self, ax: plt.Axes) -> plt.Axes:
         ax.plot(
             self.PosCalcs.xy[0, :],
             self.PosCalcs.xy[1, :],
@@ -439,7 +449,6 @@ class FigureMaker(object):
                 or kwargs["var_type"] == VariableToBin.Y.value
                 or kwargs["var_type"] == VariableToBin.PHI.value
             ):
-                breakpoint()
                 return self.plot_linear_rate_map(cluster, channel, **kwargs)
 
         rmap = self.get_rate_map(cluster, channel, **kwargs)
@@ -501,9 +510,20 @@ class FigureMaker(object):
             """
             label = kws.pop("label", None)
             kws = clean_kwargs(plt.plot, kws)
-            ax.plot(rmap.bin_edges[0][:-1], rmap.binned_data[0], label=label, **kws)
+            # check if the data is masked as the ends of linear tracks
+            # are frequently ignored
+            mask = np.ma.getmask(rmap.binned_data[0])
+            ax.plot(
+                rmap.bin_edges[0][:-1][~mask],
+                rmap.binned_data[0][~mask],
+                label=label,
+                **kws,
+            )
             ax.set_xlabel("Position (cm)")
             ax.set_ylabel("Rate (Hz)")
+            ax.set_xlim(
+                rmap.bin_edges[0][:-1][~mask][0], rmap.bin_edges[0][:-1][~mask][-1]
+            )
             return ax
 
         ax = kwargs.pop("ax", None)
@@ -577,15 +597,16 @@ class FigureMaker(object):
 
             # See if we should add the mean resultant vector (mrv)
             if add_mrv and hasData:
-                veclen = fc.get_mean_resultant_length(rmap.binned_data[0])
-                th = fc.get_mean_resultant_angle(rmap.binned_data[0])
+                th, veclen = circ_mean_and_r(
+                    np.deg2rad(rmap.bin_edges[0][:-1]), rmap.binned_data[0]
+                )
+
                 ax.plot(
                     [0, th],
                     [
                         0,
-                        veclen
-                        * np.max(rmap.binned_data[0])
-                        * self.PosCalcs.sample_rate,
+                        veclen * np.max(rmap.binned_data[0]),
+                        # * self.PosCalcs.sample_rate,
                     ],
                     "r",
                 )
@@ -617,8 +638,8 @@ class FigureMaker(object):
 
         return _plot_single_map(rmap, ax, **kwargs)
 
-    @saveFigure
-    def plot_spike_path(self, cluster=None, channel=None, **kws) -> plt.Figure:
+    # @saveFigure
+    def plot_spike_path(self, cluster=None, channel=None, **kws) -> plt.Axes:
         """
         Plots the spikes on the path for the specified cluster(s) and channel.
 
@@ -639,20 +660,18 @@ class FigureMaker(object):
         """
         if not self.RateMap:
             self.initialise()
-
         ax = kws.pop("ax", None)
         separate_plots = kws.pop("separate_plots", False)
         save_as = kws.pop("save_as", None)
-        breakpoint()
         # multiple clusters have been passed in so plot either in
         # one window  or one per cluster
-        if cluster or channel is not None:
+
+        if cluster is not None or channel is not None:
             pos_idx = self._get_spike_pos_idx(cluster, channel)
             spike_locations = [self.PosCalcs.xy[:, idx] for idx in pos_idx]
 
-            if len(spike_locations):
+            if len(spike_locations) > 1:
                 kws["equal_axes"] = kws.pop("equal_axes", True)
-                breakpoint()
 
                 if separate_plots:
                     for idx in spike_locations:
@@ -660,10 +679,10 @@ class FigureMaker(object):
                             fig = plt.figure()
                             ax = fig.add_subplot(111)
                         else:
-                            ax = self._plot_path(idx, ax)
+                            ax = self._plot_path(ax)
                             fig = plt.gcf()
                         _plot_patch_collection(idx, ax, **kws)
-                    return fig
+                    return ax
                 else:
                     kws["func2"] = self._plot_path
                     return _plot_multiple_clusters(
@@ -674,17 +693,16 @@ class FigureMaker(object):
             fig = plt.figure()
             ax = fig.add_subplot(111)
 
-        if cluster or channel is None:
-            ax = self._plot_path(None, ax)
-            return fig
+        if cluster is None or channel is None:
+            ax = self._plot_path(ax)
+            return ax
 
-        breakpoint()
-        ax = self._plot_path(pos_idx, ax)
+        ax = self._plot_path(ax)
         spike_locations = self.PosCalcs.xy[:, pos_idx[0]]
         ax = _plot_patch_collection(spike_locations, ax, **kws)
         kws["save_as"] = save_as
 
-        return fig
+        return ax
 
     def plot_eb_map(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
@@ -781,7 +799,7 @@ class FigureMaker(object):
                 for idx in spike_locations:
                     fig = plt.figure()
                     ax = fig.add_subplot(111)
-                    ax = self._plot_path([], ax)
+                    ax = self._plot_path(ax)
                     _plot_patch_collection(idx, ax, **kwargs)
                 return fig
             else:
@@ -795,7 +813,7 @@ class FigureMaker(object):
             ax = fig.add_subplot(111)
         ax.set_aspect("equal")
 
-        ax = self._plot_path([], ax)
+        ax = self._plot_path(ax)
         ax = _plot_patch_collection(spike_locations[0], ax, **kwargs)
 
         if add_colour_wheel:
@@ -1037,7 +1055,6 @@ class FigureMaker(object):
             return stripAxes(ax)
         axtrans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
         ax.vlines(0, ymin=0, ymax=1, colors="lightgrey", transform=axtrans, zorder=1)
-        return ax
 
         return ax
 
@@ -1353,7 +1370,7 @@ class FigureMaker(object):
 
     # @saveFigure
     # @stripAxes
-    def plot_waveforms(self, cluster: int, channel: int, **kws) -> plt.Figure:
+    def plot_waveforms(self, cluster: int, channel: int, **kws) -> list[plt.Axes]:
         """
         Plot the waveforms for the selected cluster on the channel (tetrode)
 
@@ -1371,18 +1388,22 @@ class FigureMaker(object):
         # units are volts so x 1e6 to get microvolts
         waves = self.get_waveforms(cluster, channel) * 1e6
         n_spikes, n_channels, n_samples = waves.shape
-        time = np.linspace(0, 1, n_samples)
+        # if n_samples == 82:
+        # waves = waves[:, :, 16:66]
+        # n_samples = 50
+        time = np.linspace(-200, 800, n_samples)
 
         axs = kws.get("ax", None)
+        axes_labels = kws.get("axes_labels", False)
+
         if axs is None:
             fig, axs = plt.subplots(2, 2, sharey=True)
             axs = flatten_list(axs)
             mn_cols = ["r"] * 4
             alpha = 0.5
         else:
-            fig = plt.gcf()
             axs = [axs, axs, axs, axs]
-            mn_cols = ["r", "g", "b", "k"]
+            mn_cols = sns.color_palette("colorblind", 4)
             alpha = 0
 
         col = [0.8627, 0.8627, 0.8627]
@@ -1411,13 +1432,21 @@ class FigureMaker(object):
                 alpha=alpha,
             )
             ax.plot(time, mean_waves[i], c=mn_cols[i], linewidth=2)
-            plt.setp(ax.get_xticklabels(), visible=False)
-            plt.setp(ax.get_yticklabels(), visible=False)
-            ax.axes.get_xaxis().set_visible(False)
-            ax.axes.get_yaxis().set_visible(False)
+            if axes_labels:
+                ax.set_xlim(-250, 850)
+                ax.set_xticks([-200, 0, 800])
+                ax.set_xticklabels(["-200μs", "0", "800μs"])
+                ylim = ax.get_ylim()
+                ax.set_yticks([ylim[0], 0, ylim[1]])
+                ax.set_yticklabels([f"{int(ylim[0])}μV", "0", f"{int(ylim[1])}μV"])
+            else:
+                plt.setp(ax.get_xticklabels(), visible=False)
+                plt.setp(ax.get_yticklabels(), visible=False)
+                ax.axes.get_xaxis().set_visible(False)
+                ax.axes.get_yaxis().set_visible(False)
             ax.set_ylim(min_wave, max_wave)
 
-        return fig
+        return axs
 
     def _getPowerSpectrumPlot(
         self,

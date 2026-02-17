@@ -13,6 +13,7 @@ Submodules
    /api/ephysiopy/common/binning/index
    /api/ephysiopy/common/ephys_generic/index
    /api/ephysiopy/common/fieldcalcs/index
+   /api/ephysiopy/common/fieldproperties/index
    /api/ephysiopy/common/mle_von_mises_vals/index
    /api/ephysiopy/common/phasecoding/index
    /api/ephysiopy/common/rhythmicity/index

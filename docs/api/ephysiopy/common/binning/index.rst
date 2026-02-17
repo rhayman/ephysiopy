@@ -39,16 +39,18 @@ Module Contents
                        In the case of binning up position this will be an array of mostly 1's
                        unless there are some positions you want excluded.
    :type pos_weights: np.ndarray
-   :param ppm: Optional. Pixels per metre. Specifies how many camera pixels per metre so this,
+   :param ppm: Optional. Pixels per metre. Specifies how many camera pixels per metre
+               so this,
                in combination with cmsPerBin, will determine how many bins there are
                in the rate map. Defaults to None.
    :type ppm: int
    :param xyInCms: Optional. Whether the positional data is in cms. Defaults to False.
    :type xyInCms: bool
-   :param cmsPerBin: Optional. How many cms on a side each bin is in a rate map OR the number of
+   :param cmsPerBin: Optional. How many cms each bin is in a rate map OR the number of
                      degrees per bin in the case of directional binning. Defaults to 3.
    :type cmsPerBin: int
-   :param smooth_sz: Optional. The width of the smoothing kernel for smoothing rate maps. Defaults to 5.
+   :param smooth_sz: Optional. The smoothing kernel width for smoothing rate maps.
+                     Defaults to 5.
    :type smooth_sz: int
 
    .. attribute:: xy
@@ -279,7 +281,8 @@ Module Contents
       
       Aims to get the right number of bins for the variable to be binned
 
-      :param binsize: Optional. The number of cms per bin for XY OR degrees for DIR OR cm/s for SPEED. Defaults to 3.
+      :param binsize: Optional. The number of cms per bin for XY OR degrees for
+                      DIR OR cm/s for SPEED. Defaults to 3.
       :type binsize: int | tuple
 
       :returns: **bins** -- each member an array of bin edges
@@ -342,7 +345,8 @@ Module Contents
    .. py:method:: _crossCorr2D(A, B, A_nodwell, B_nodwell, tol = 1e-10)
 
       
-      Performs crosscorrelations between the maps in two instances of BinnedData, A and B.
+      Performs crosscorrelations between the maps in two instances
+      of BinnedData, A and B.
 
       :param A: instance of BinnedData
       :type A: BinnedData
@@ -403,7 +407,7 @@ Module Contents
    .. py:method:: apply_mask(mask)
 
 
-   .. py:method:: autoCorr2D(A, nodwell, tol = 1e-10)
+   .. py:method:: autoCorr2D(A, nodwell = None, tol = 1e-10, **kwargs)
 
       
       Performs autocorrelations on all the maps in an instance of BinnedData.
@@ -411,7 +415,8 @@ Module Contents
       :param A: The binned data
       :type A: BinnedData
       :param nodwell: An array with NaNs where there was no position sampled.
-      :type nodwell: np.ndarray
+                      If None, it's created from A where there are NaNs.
+      :type nodwell: np.ndarray or None
       :param tol: Tolerance below which values are set to 0.
       :type tol: float
 
@@ -439,7 +444,8 @@ Module Contents
    .. py:method:: crossCorr2D(A, B, A_nodwell, B_nodwell, tol = 1e-10)
 
       
-      Performs crosscorrelations between the maps in two instances of BinnedData, A and B.
+      Performs crosscorrelations between the maps in two instances
+      of BinnedData, A and B.
 
       :param A: an instance of BinnedData
       :type A: BinnedData
@@ -484,9 +490,12 @@ Module Contents
       :param spk_binned: The binned spikes
       :type spk_binned: np.ndarray
       :param alpha: A scaling parameter determing the amount of occupancy to aim at
-                    in each bin. Defaults to 4. In the original paper this was set to 200.
-                    This is 4 here as the pos data is binned in seconds (the original data was in pos
-                    samples so this is a factor of 50 smaller than the original paper's value, given 50Hz sample rate)
+                    in each bin. Defaults to 4.
+                    In the original paper this was set to 200.
+                    This is 4 here as the pos data is binned in seconds
+                    (the original data was in pos
+                    samples so this is a factor of 50 smaller than the
+                    original paper's value, given 50Hz sample rate)
       :type alpha: int, optional
 
       :returns: The adaptively binned spike and pos maps.
@@ -541,23 +550,14 @@ Module Contents
           !! processed by numpydoc !!
 
 
-   .. py:method:: get_disperion_map(spk_times, pos_times)
+   .. py:method:: get_map(spk_weights, var_type=VariableToBin.XY, map_type=MapType.RATE, smoothing=True, **kwargs)
 
       
-      Attempt to write a faster version of creating an overdispersion
-      map. A cell will sometimes fire too much or too little on a given
-      run through its receptive field. This function quantifies that.
+      Bins up the variable type var_type and returns a tuple of
+      (rmap, binnedPositionDir) or
+      (rmap, binnedPostionX, binnedPositionY)
+      ...
 
-      This shows the amount of 'observed' variance in spiking around
-      the mean spiking in a bin...
-
-      :param spk_times: a vector of spike times (in seconds)
-      :type spk_times: np.ndarray
-      :param pos_times: vector of position times (in seconds)
-      :type pos_times: np.ndarray
-
-      :returns: the overdispersion map in an instance of BinnedData
-      :rtype: BinnedData
 
 
 
@@ -577,34 +577,13 @@ Module Contents
           !! processed by numpydoc !!
 
 
-   .. py:method:: get_map(spk_weights, var_type=VariableToBin.XY, map_type=MapType.RATE, smoothing=True, **kwargs)
+   .. py:method:: get_samples_when_spiking()
 
       
-      Bins up the variable type var_type and returns a tuple of
-      (rmap, binnedPositionDir) or
-      (rmap, binnedPostionX, binnedPositionY)
+      Returns the current sample values when spikes occurred..
+      This is useful for debugging and for checking that the right samples
+      are being binned up when get_map is called.
 
-      :param spk_weights: Shape equal to number of positions samples captured and consists of
-                          position weights. For example, if there were 5 positions
-                          recorded and a cell spiked once in position 2 and 5 times in
-                          position 3 and nothing anywhere else then pos_weights looks
-                          like: [0 0 1 5 0].
-                          spk_weights can also be list-like where each entry in the list is a different set of
-                          weights - these are enumerated through in a list comp in the ._bin_data function. In
-                          this case the returned tuple will consist of a 2-tuple where the first entry is an
-                          array of the ratemaps (binned_spk / binned_pos) and the second part is the binned pos data (as it's common to all
-                          the spike weights)
-      :type spk_weights: np.ndarray
-      :param var_type: The variable to bin. See ephysiopy.common.utils for legal values.
-      :type var_type: Variable2Bin
-      :param map_type: The kind of map returned. See ephysiopy.common.utils for legal values.
-      :type map_type: MapType
-      :param smoothing: Optional. Smooth the data or not. Default True.
-      :type smoothing: bool
-
-      :returns: An instance of BinnedData containing the binned data, the bin edges, the variable binned and
-                the map type. See ephysiopy.common.utils for details of the class.
-      :rtype: BinnedData
 
 
 
@@ -639,11 +618,15 @@ Module Contents
       :type winSize: int
       :param pos_sample_rate: Optional. The rate at which position was sampled. Default 50
       :type pos_sample_rate: int
-      :param nbins: Optional. The number of bins for creating the resulting ratemap. Default 71
+      :param nbins: Optional. The number of bins for creating the resulting ratemap.
+                    Default 71
       :type nbins: int
-      :param boxcar: Optional. The size of the smoothing kernel to smooth ratemaps. Default 5
+      :param boxcar: Optional. The size of the smoothing kernel to smooth ratemaps.
+                     Default 5
       :type boxcar: int
-      :param Pthresh: Optional. The cut-off for values in the ratemap; values < Pthresh become nans. Default 100
+      :param Pthresh: Optional. The cut-off for values in the ratemap; values < Pthresh
+                      become nans.
+                      Default 100
       :type Pthresh: int
       :param downsampfreq: Optional. How much to downsample. Default 50
       :type downsampfreq: int
@@ -748,6 +731,9 @@ Module Contents
    .. py:property:: mapType
 
 
+   .. py:property:: phi
+
+
    .. py:property:: pos_times
 
 
@@ -780,6 +766,9 @@ Module Contents
 
 
    .. py:property:: ppm
+
+
+   .. py:property:: sample_to_bin
 
 
    .. py:property:: smooth_sz

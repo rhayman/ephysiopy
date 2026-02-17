@@ -57,6 +57,66 @@ Module Contents
    ..
        !! processed by numpydoc !!
 
+   .. py:method:: _get_template_from_spikes(spike_ids)
+
+      
+      Returns the template for a given set of spike ids.
+
+      :param spike_ids: The spike indices.
+      :type spike_ids: np.ndarray
+
+      :returns: The template for the specified spikes.
+      :rtype: np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: _spikes_in_clusters(clusters, cluster_ids)
+
+      
+      Returns the spike ids that belong to a given cluster.
+
+      :param clusters: The cluster IDs for each spike.
+      :type clusters: np.ndarray
+      :param cluster_ids: The cluster IDs to filter.
+      :type cluster_ids: list
+
+      :returns: The spike indices for the specified cluster.
+      :rtype: np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
    .. py:method:: apply_mask(mask, **kwargs)
 
       
@@ -90,6 +150,35 @@ Module Contents
           !! processed by numpydoc !!
 
 
+   .. py:method:: get_cluster_channels(cluster)
+
+      
+      Returns the most relevant channels for a given cluster.
+
+      :param cluster: The cluster ID.
+      :type cluster: int
+
+      :returns: The channels for the specified cluster.
+      :rtype: np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
    .. py:method:: get_cluster_spike_times(cluster)
 
       
@@ -99,6 +188,64 @@ Module Contents
       :type cluster: int
 
       :returns: The spike times for the specified cluster.
+      :rtype: np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: get_cluster_spikes(cluster)
+
+      
+      Returns the spike ids that belong to a given template.
+
+      :param cluster: The cluster ID.
+      :type cluster: int
+
+      :returns: The spike indices for the specified cluster.
+      :rtype: np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: get_template(template_id)
+
+      
+      Returns the template for a given template ID.
+
+      :param template_id: The template ID.
+      :type template_id: int
+
+      :returns: The template for the specified ID.
       :rtype: np.ndarray
 
 

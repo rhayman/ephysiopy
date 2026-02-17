@@ -72,10 +72,12 @@ def run_phase_analysis(
            results for that field
 
     """
-    # remove any pre-existing filters
     run_direction = kwargs.get("run_direction", "e")
+    track_end_size = kwargs.get("track_end_size", 6)
 
-    trial = apply_linear_track_filter(trial, run_direction=run_direction)
+    trial = apply_linear_track_filter(
+        trial, run_direction=run_direction, track_end_size=track_end_size
+    )
     PP = phasePrecessionND(
         trial,
         int(cluster),
@@ -178,9 +180,11 @@ def get_field_props_for_linear_track(
 
 
 def apply_linear_track_filter(
-    T: AxonaTrial, run_direction=None, var_type=VariableToBin.X
+    T: AxonaTrial,
+    run_direction=None,
+    var_type=VariableToBin.X,
+    track_end_size=6,
 ):
-
     # filter the data for speed, direction and position
     # position filter is there to remove the start and end of the track
     # remove the filters first
@@ -189,13 +193,13 @@ def apply_linear_track_filter(
     if var_type.value == VariableToBin.PHI.value:
         min_pos = np.nanmin(T.PosCalcs.phi.data)
         max_pos = np.nanmax(T.PosCalcs.phi.data)
-        pos_filt0 = TrialFilter("xrange", min_pos, min_pos + 6)
-        pos_filt1 = TrialFilter("xrange", max_pos - 6, max_pos)
+        pos_filt0 = TrialFilter("xrange", min_pos, min_pos + track_end_size)
+        pos_filt1 = TrialFilter("xrange", max_pos - track_end_size, max_pos)
     if var_type.value == VariableToBin.X.value:
         min_pos = np.nanmin(T.PosCalcs.xy[0].data)
         max_pos = np.nanmax(T.PosCalcs.xy[0].data)
-        pos_filt0 = TrialFilter("xrange", min_pos, min_pos + 6)
-        pos_filt1 = TrialFilter("xrange", max_pos - 6, max_pos)
+        pos_filt0 = TrialFilter("xrange", min_pos, min_pos + track_end_size)
+        pos_filt1 = TrialFilter("xrange", max_pos - track_end_size, max_pos)
     if run_direction:
         # broaden the directional filters to 180 degrees
         # as runs are getting broken up
@@ -269,7 +273,6 @@ def plot_linear_runs(f_props: list[FieldProps], var: str = "speed", **kwargs):
     axTrans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
 
     for f in f_props:
-
         rect = Rectangle(
             (edges[f.slice[0].start], 0),
             width=edges[f.slice[0].stop] - edges[f.slice[0].start],

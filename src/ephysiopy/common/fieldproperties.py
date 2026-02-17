@@ -55,6 +55,7 @@ PROPS["perimeter_dist_from_peak"] = "perimeter_dist_from_peak"
 PROPS["r_unsmoothed"] = "r_unsmoothed"
 PROPS["r_and_phi_to_x_and_y"] = "r_and_phi_to_x_and_y"
 PROPS["phase"] = "phase"
+PROPS["area"] = "area"
 PROP_VALS = set(PROPS.values())
 
 
@@ -965,6 +966,7 @@ class FieldProps(RegionProperties):
         index=0,
     ):
         intensity_image = binned_data.binned_data[index]
+        label_image[label_image != label] = 0
         super().__init__(
             slice,
             label,
@@ -977,6 +979,11 @@ class FieldProps(RegionProperties):
         )
         self.binned_data = binned_data
         self._runs = []
+        self._label_image = label_image
+
+    @property
+    def label_image(self):
+        return self._label_image
 
     @property
     def runs(self):
@@ -1381,7 +1388,7 @@ class FieldProps(RegionProperties):
             # retrieve deprecated property (excluding old CamelCase ones)
             return getattr(self, PROPS[attr])
         else:
-            raise AttributeError(f"'{type(self)}' has no attribute '{attr}'")
+            raise AttributeError(f"{type(self)} has no attribute {attr}")
 
     def __str__(self):
         """
@@ -1835,8 +1842,8 @@ def fieldprops(
 
         props = FieldProps(
             sl,
-            label,
-            label_image,
+            int(label),
+            label_image.astype(int),
             binned_data,
             cache=cache,
             spacing=spacing,

@@ -68,9 +68,35 @@ class BinnedData:
 
     variable: VariableToBin = VariableToBin.XY
     map_type: MapType = MapType.RATE
-    binned_data: list[np.ndarray] = field(default_factory=list)
+    binned_data: list[np.ma.MaskedArray] = field(default_factory=list)
     bin_edges: list[np.ndarray] = field(default_factory=list)
     cluster_id: list[ClusterID] = field(default_factory=list)
+
+    def __init__(
+        self,
+        variable: VariableToBin,
+        map_type: MapType,
+        binned_data: list[np.ma.MaskedArray],
+        bin_edges: list[np.ndarray],
+        cluster_id: list[ClusterID] = ClusterID(0, 0),
+    ):
+        if isinstance(binned_data, np.ndarray) or isinstance(
+            binned_data, np.ma.MaskedArray
+        ):
+            binned_data = [binned_data]
+
+        if isinstance(bin_edges, np.ndarray):
+            bin_edges = [bin_edges]
+
+        if isinstance(cluster_id, int):
+            cluster_id = [cluster_id]
+
+        self.variable = variable
+        self.map_type = map_type
+        self.binned_data = [np.ma.masked_invalid(bd) for bd in binned_data]
+        self.bin_edges = bin_edges
+        if cluster_id is not None:
+            self.cluster_id = cluster_id
 
     def __iter__(self):
         current = 0
@@ -233,7 +259,7 @@ class BinnedData:
             The indices to convert to NaN
         """
         for i in range(len(self.binned_data)):
-            self.binned_data[i][indices] = np.nan
+            self.binned_data[i].mask[indices] = True
 
     def T(self):
         return BinnedData(
@@ -272,14 +298,12 @@ class BinnedData:
             self.__assert_equal_bin_edges__(other)
         if other is not None:
             result = np.reshape(
-                [corr_maps(a, b)
-                 for a in self.binned_data for b in other.binned_data],
+                [corr_maps(a, b) for a in self.binned_data for b in other.binned_data],
                 newshape=(len(self.binned_data), len(other.binned_data)),
             )
         else:
             result = np.reshape(
-                [corr_maps(a, b)
-                 for a in self.binned_data for b in self.binned_data],
+                [corr_maps(a, b) for a in self.binned_data for b in self.binned_data],
                 newshape=(len(self.binned_data), len(self.binned_data)),
             )
         if as_matrix:
@@ -345,10 +369,10 @@ class TrialFilter:
     A basic dataclass for holding filter values
 
     Units:
-    time: seconds
-    dir: degrees
-    speed: cm/s
-    xrange/ yrange: cm
+        time: seconds
+        dir: degrees
+        speed: cm/s
+        xrange/ yrange: cm
 
     """
 
@@ -814,9 +838,10 @@ def blur_image(
             g = cnv.Gaussian2DKernel(stddev, x_size=n, y_size=ny)
     g = np.array(g)
     for i, m in enumerate(im.binned_data):
-        im.binned_data[i] = cnv.convolve(
+        sm = cnv.convolve(
             m, g, boundary=boundary, normalize_kernel=True, preserve_nan=True
         )
+        im.binned_data[i] = np.ma.masked_invalid(sm)
     return im
 
 

@@ -15,6 +15,7 @@ Submodules
    /api/ephysiopy/format_converters/index
    /api/ephysiopy/io/index
    /api/ephysiopy/openephys2py/index
+   /api/ephysiopy/phase_precession/index
    /api/ephysiopy/visualise/index
 
 

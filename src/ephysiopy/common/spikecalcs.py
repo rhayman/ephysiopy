@@ -584,15 +584,19 @@ def contamination_percent(
     Tr = max(np.concatenate([x1, x2])) - min(np.concatenate([x1, x2]))
 
     def get_normd_shoulder(idx):
-        return np.sum(c[idx[:-1]]) / (
+        return np.nansum(c[idx[:-1]]) / (
             len(np.nonzero(idx)[0]) * tbin * len(x1) * len(x2) / Tr
         )
 
     Q00 = get_normd_shoulder(outer)
-    Q01 = max(get_normd_shoulder(inner_left), get_normd_shoulder(inner_right))
+    Q01 = np.nanmax([get_normd_shoulder(inner_left), get_normd_shoulder(inner_right)])
 
-    R00 = max(
-        np.mean(c[outer[:-1]]), np.mean(c[inner_left[:-1]]), np.mean(c[inner_right[1:]])
+    R00 = np.nanmax(
+        [
+            np.nanmean(c[outer[:-1]]),
+            np.nanmean(c[inner_left[:-1]]),
+            np.nanmean(c[inner_right[1:]]),
+        ]
     )
 
     middle_idx = np.nonzero(b == 0)[0]
@@ -608,7 +612,7 @@ def contamination_percent(
         # compute the same normalized ratio as above;
         # this should be 1 if there is no refractoriness
         Qi[i] = get_normd_shoulder(chunk)  # save the normd prob
-        n = np.sum(c[chunk[:-1]]) / 2
+        n = np.nansum(c[chunk[:-1]]) / 2
         lam = R00 * i
         # this is tricky: we approximate the Poisson likelihood with a
         # gaussian of equal mean and variance
@@ -694,6 +698,10 @@ class SpikeCalcsGeneric(object):
     ):
         self.spike_times = np.ma.MaskedArray(spike_times)  # IN SECONDS
         if waveforms is not None:
+            # if waveforms.shape[-1] > 50:
+            # this is a hack to deal with the fact that KiloSort waveforms are 82 samples long
+            # and I want them comparable with Axona which is 50
+            # waveforms = waveforms[:, :, 16:66]
             n_spikes, n_channels, n_samples = waveforms.shape
             assert self.n_spikes == n_spikes, (
                 "Number of spike times does not match number of waveforms"
@@ -719,11 +727,11 @@ class SpikeCalcsGeneric(object):
         # and 708 microseconds if sampling is at 48kHz
         self._pre_spike_samples = 10
         self._post_spike_samples = 40
-        if waveforms is not None:
-            if self.n_samples > 50:
-                self.pre_spike_samples = 41
-                self.post_spike_samples = 41
-                self.sample_rate = 30000
+        # if waveforms is not None:
+        #     if self.n_samples > 50:
+        # self.pre_spike_samples = 41
+        # self.post_spike_samples = 41
+        # self.sample_rate = 30000
         # these values are specific to OE data
         # if sample rate is 3kHz and the number of samples
         # captured per waveform is 82 then it looks from
@@ -1080,14 +1088,13 @@ class SpikeCalcsGeneric(object):
         X = np.atleast_2d(f_t[idx:]).T
         y = np.atleast_2d(waveform[idx:]).T
 
-        poly = PolynomialFeatures(degree=2)
+        poly = PolynomialFeatures(degree=3)
         X_poly = poly.fit_transform(X)
 
         poly.fit(X_poly, y)
         lin2 = LinearRegression()
         lin2.fit(X_poly, y)
 
-        breakpoint()
         tn = np.linspace(f_t[idx], 1500, 1000).reshape(-1, 1)
         yn = lin2.predict(poly.fit_transform(tn))
 
@@ -1640,10 +1647,11 @@ class SpikeCalcsGeneric(object):
         """
 
         _, Qi, Q00, Q01, Ri = contamination_percent(self.spike_times, **kwargs)
-        Q = min(Qi / (max(Q00, Q01)))  # this is a measure of refractoriness
+        # this is a measure of refractoriness
+        Q = np.nanmin([Qi / (np.nanmax([Q00, Q01]))])
         # this is a second measure of refractoriness (kicks in for very low
         # firing rates)
-        R = min(Ri)
+        R = np.nanmin(Ri)
         return Q, R
 
     def plot_waveforms(self, n_waveforms: int = 2000, n_channels: int = 4):

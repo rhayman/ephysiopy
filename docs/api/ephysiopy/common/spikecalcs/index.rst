@@ -24,7 +24,9 @@ Functions
    ephysiopy.common.spikecalcs.cluster_quality
    ephysiopy.common.spikecalcs.contamination_percent
    ephysiopy.common.spikecalcs.fit_smoothed_curve_to_xcorr
+   ephysiopy.common.spikecalcs.get_burstiness
    ephysiopy.common.spikecalcs.get_param
+   ephysiopy.common.spikecalcs.get_peak_to_trough_time
    ephysiopy.common.spikecalcs.mahal
    ephysiopy.common.spikecalcs.xcorr
 
@@ -49,7 +51,7 @@ Module Contents
    .. py:attribute:: group
 
 
-.. py:class:: SpikeCalcsAxona(spike_times, cluster, waveforms = None, **kwargs)
+.. py:class:: SpikeCalcsAxona(spike_times, cluster, waveforms = None, *args, **kwargs)
 
    Bases: :py:obj:`SpikeCalcsGeneric`
 
@@ -189,6 +191,13 @@ Module Contents
    recording session. NB this differs from previous versions of this
    class where there was one instance per recording session and clusters
    were selected by passing in the cluster id to the methods.
+
+   NB Axona waveforms are nSpikes x nChannels x nSamples - this boils
+   down to nSpikes x 4 x 50
+   NB KiloSort waveforms are nSpikes x nSamples x nChannels - these are ordered
+   by 'best' channel first and then the rest of the channels. This boils
+   down to nSpikes x 61 x 12 SO THIS NEEDS TO BE CHANGED to
+   nSpikes x nChannels x nSamples
 
    :param spike_times: The times of spikes in the trial in seconds.
    :type spike_times: np.ndarray
@@ -386,6 +395,61 @@ Module Contents
           !! processed by numpydoc !!
 
 
+   .. py:method:: estimate_AHP()
+
+      
+      Estimate the decay time for the AHP of the waveform of the
+      best channel for the current cluster.
+
+      :returns: The estimated AHP decay time in microseconds,
+                or None if no waveforms are available.
+      :rtype: float | None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: get_best_channel()
+
+      
+      Returns the channel with the highest mean amplitude of the waveforms.
+
+      :returns: The index of the channel with the highest mean amplitude,
+                or None if no waveforms are available.
+      :rtype: int | None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
    .. py:method:: get_ifr(spike_times, n_samples, **kwargs)
 
       
@@ -514,7 +578,7 @@ Module Contents
       >> rng = np.random.default_rng()
       >> method = stats.PermutationMethod(n_resamples=nShuffles, random_state=rng)
 
-      .. seealso:: :obj:`See`
+      .. seealso:: :py:obj:`See`
 
 
 
@@ -537,13 +601,13 @@ Module Contents
    .. py:method:: mean_isi_range(isi_range)
 
       
-      Calculates the mean of the autocorrelation from 0 to n milliseconds.
+      Calculates the mean of the autocorrelation from 0 to n seconds.
       Used to help classify a neuron's type (principal, interneuron, etc).
 
-      :param isi_range: The range in ms to calculate the mean over.
+      :param isi_range: The range in seconds to calculate the mean over.
       :type isi_range: int
 
-      :returns: The mean of the autocorrelogram between 0 and n milliseconds.
+      :returns: The mean of the autocorrelogram between 0 and n seconds.
       :rtype: float
 
 
@@ -567,16 +631,47 @@ Module Contents
    .. py:method:: mean_waveform(channel_id = None)
 
       
-      Returns the mean waveform and standard error of the mean (SEM) for a given spike train on a
-      particular channel.
+      Returns the mean waveform and standard error of the mean (SEM) for a
+      given spike train on a particular channel.
 
-      :param channel_id: The channel IDs to return the mean waveform for. If None, returns mean waveforms for all channels.
+      :param channel_id: The channel IDs to return the mean waveform for. If None, returns
+                         mean waveforms for all channels.
       :type channel_id: Sequence, optional
 
       :returns: A tuple containing:
                 - mn_wvs (np.ndarray): The mean waveforms, usually 4x50 for tetrode recordings.
                 - std_wvs (np.ndarray): The standard deviations of the waveforms, usually 4x50 for tetrode recordings.
       :rtype: tuple
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: plot_waveforms(n_waveforms = 2000, n_channels = 4)
+
+      
+      Plots the waveforms of the cluster.
+
+      :param n_waveforms: The number of waveforms to plot.
+      :type n_waveforms: int, optional
+      :param n_channels: The number of channels to plot.
+      :type n_channels: int, optional
+
+      :rtype: None
 
 
 
@@ -661,8 +756,6 @@ Module Contents
       
       Checks whether a cluster responds to a laser stimulus.
 
-      :param cluster: The cluster to check.
-      :type cluster: int
       :param threshold: The amount of activity the cluster needs to go
                         beyond to be classified as a responder (1.5 = 50% more or less
                         than the baseline activity).
@@ -775,8 +868,8 @@ Module Contents
       Calculates a theta modulation index of a spike train based on the cells
       autocorrelogram.
 
-      The difference of the mean power in the theta frequency band (6-11 Hz) and
-      the mean power in the 1-50 Hz frequency band is divided by their sum to give
+      The difference of the mean power in the theta band (6-11 Hz) and
+      the mean power in the 1-50 Hz band is divided by their sum to give
       a metric that lives between 0 and 1
 
       :param x1: The spike time-series.
@@ -851,14 +944,14 @@ Module Contents
       see https://doi.org/10.7554/eLife.35949.001
 
       Uses the binned spike train instead of the autocorrelogram as
-      the input to the periodogram function (they use pwelch in R; periodogram is a
-      simplified call to welch in scipy.signal)
+      the input to the periodogram function (they use pwelch in R;
+      periodogram is a simplified call to welch in scipy.signal)
 
-      The resulting metric is similar to the one in theta_mod_idx above except
+      The resulting metric is similar to that in theta_mod_idx above except
       that the frequency bands compared to the theta band are narrower and
       exclusive of the theta band
 
-      Produces a fairly normally distributed looking score with a mean and median
+      Produces a fairly normally distributed score with a mean and median
       pretty close to 0
 
       :param \*\*kwargs: Passed into get_ifr_power_spectrum
@@ -921,10 +1014,12 @@ Module Contents
       
       Returns the waveforms of the cluster.
 
-      :param channel_id: The channel IDs to return the waveforms for. If None, returns waveforms for all channels.
+      :param channel_id: The channel IDs to return the waveforms for.
+                         If None, returns waveforms for all channels.
       :type channel_id: Sequence, optional
 
-      :returns: The waveforms of the cluster, or None if no waveforms are available.
+      :returns: The waveforms of the cluster,
+                or None if no waveforms are available.
       :rtype: np.ndarray | None
 
 
@@ -963,6 +1058,11 @@ Module Contents
    .. py:attribute:: _event_window
 
 
+   .. py:attribute:: _invert_waveforms
+      :value: False
+
+
+
    .. py:attribute:: _ksmeta
 
 
@@ -972,17 +1072,17 @@ Module Contents
 
 
    .. py:attribute:: _post_spike_samples
-      :value: 34
+      :value: 40
 
 
 
    .. py:attribute:: _pre_spike_samples
-      :value: 16
+      :value: 10
 
 
 
    .. py:attribute:: _sample_rate
-      :value: 30000
+      :value: 50000
 
 
 
@@ -1012,6 +1112,69 @@ Module Contents
    .. py:property:: event_window
       :type: numpy.ndarray
 
+
+
+   .. py:property:: invert_waveforms
+      :type: bool
+
+
+
+   .. py:property:: n_channels
+      :type: int | None
+
+
+      
+      Returns the number of channels in the waveforms.
+
+      :returns: The number of channels in the waveforms,
+                or None if no waveforms are available.
+      :rtype: int | None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:property:: n_samples
+      :type: int | None
+
+
+      
+      Returns the number of samples in the waveforms.
+
+      :returns: The number of samples in the waveforms,
+                or None if no waveforms are available.
+      :rtype: int | None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
 
 
    .. py:property:: n_spikes
@@ -1084,6 +1247,13 @@ Module Contents
    recording session. NB this differs from previous versions of this
    class where there was one instance per recording session and clusters
    were selected by passing in the cluster id to the methods.
+
+   NB Axona waveforms are nSpikes x nChannels x nSamples - this boils
+   down to nSpikes x 4 x 50
+   NB KiloSort waveforms are nSpikes x nSamples x nChannels - these are ordered
+   by 'best' channel first and then the rest of the channels. This boils
+   down to nSpikes x 61 x 12 SO THIS NEEDS TO BE CHANGED to
+   nSpikes x nChannels x nSamples
 
    :param spike_times: The times of spikes in the trial in seconds.
    :type spike_times: np.ndarray
@@ -1305,6 +1475,30 @@ Module Contents
 
    .. py:attribute:: n_samples
 
+      
+      Returns the number of samples in the waveforms.
+
+      :returns: The number of samples in the waveforms,
+                or None if no waveforms are available.
+      :rtype: int | None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
 .. py:class:: SpikeCalcsProbe
 
@@ -1419,6 +1613,72 @@ Module Contents
    a view to correlating the result with another auto- or cross-correlogram
    to see how similar two of these things are.
 
+   Check Brandon et al., 2011?2012?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: get_burstiness(isi_matrix, whiten = False, plot_pcs = False)
+
+   
+   Returns the burstiness of a waveform.
+
+   :param isi_matrix: A matrix of normalized interspike intervals (ISIs) for the neurons.
+                      Rows are neurons, columns are ISI time bins.
+   :type isi_matrix: np.ndarray
+
+   :rtype: np.ndarray
+
+   .. rubric:: Notes
+
+   Algorithm:
+
+   1) The interspike intervals between 0 and 60ms were binned into 2ms bins,
+   and the area of the histogram was normalised to 1 to produce a
+   probability distribution histogram for each neuron
+
+   2) A principal components analysis (PCA) is performed on the matrix of
+   the ISI probability distributions of all neurons
+
+   3) Neurons were then assigned to two clusters using a k-means clustering
+   algorithm on the first three principal components
+
+   4) a linear discriminant analysis performed in MATLAB (‘classify’) was
+   undertaken to determine the optimal linear discriminant (Fishers Linear
+   Discriminant) i.e., the plane which best separated the two clusters in a
+   three-dimensional scatter plot of the principal components.
+
+   Training on 80% of the data and testing on the remaining 20% resulted in a
+   good separation of the two clusters.
+
+   5) A burstiness score was assigned to each neuron which was calculated by
+   computing the shortest distance between the plotted point for each neuron
+   in the three-dimensional cluster space (principal components 1,2 and 3),
+   and the plane separating the two clusters (i.e., the optimal linear
+   discriminant).
+
+   6) To ensure the distribution of these burstiness scores was bimodal,
+   reflecting the presence of two classes of neuron (‘bursty’ versus
+   ‘non-bursty’), probability density functions for Gaussian mixture models
+   with between one and four underlying Gaussian curves were fitted and the
+   fit of each compared using the Akaike information criterion (AIC)
+
+   7) Optionally plot the principal components and the centres of the
+   kmeans results
 
 
 
@@ -1459,6 +1719,34 @@ Module Contents
    :type fet: int, default=1
 
    :returns: The requested parameter as a numpy array.
+   :rtype: np.ndarray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: get_peak_to_trough_time(waveforms)
+
+   
+   Returns the time in seconds of the peak to trough in a waveform.
+
+   :param waveforms: The waveforms to calculate the peak to trough time for.
+   :type waveforms: np.ndarray
+
+   :returns: The time of the peak to trough in seconds.
    :rtype: np.ndarray
 
 

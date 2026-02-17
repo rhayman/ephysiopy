@@ -48,8 +48,34 @@ Module Contents
    .. py:method:: __getitem__(key)
 
       
-      x.__getitem__(y) <==> x[y]
+      Return self[key].
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: get_all_spike_timestamps(tetrode)
+
+      
+      Returns a masked array of spike timestamps for given tetrode
+
+      :returns: A masked array of spike timestamps
+      :rtype: np.ma.MaskedArray
 
 
 
@@ -104,8 +130,8 @@ Module Contents
    .. py:method:: update(*args, **kwargs)
 
       
-      D.update([E, ]**F) -> None.  Update D from dict/iterable E and F.
-      If E is present and has a .keys() method, then does:  for k in E: D[k] = E[k]
+      D.update([E, ]**F) -> None.  Update D from mapping/iterable E and F.
+      If E is present and has a .keys() method, then does:  for k in E.keys(): D[k] = E[k]
       If E is present and lacks a .keys() method, then does:  for k, v in E: D[k] = v
       In either case, this is followed by: for k in F:  D[k] = F[k]
 

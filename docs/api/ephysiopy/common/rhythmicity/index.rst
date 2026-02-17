@@ -10,14 +10,24 @@ Classes
 .. autoapisummary::
 
    ephysiopy.common.rhythmicity.CosineDirectionalTuning
+   ephysiopy.common.rhythmicity.FreqPhase
    ephysiopy.common.rhythmicity.LFPOscillations
+   ephysiopy.common.rhythmicity.PowerSpectrumParams
    ephysiopy.common.rhythmicity.Rippler
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   ephysiopy.common.rhythmicity.power_spectrum
 
 
 Module Contents
 ---------------
 
-.. py:class:: CosineDirectionalTuning(spike_times, pos_times, spk_clusters, x, y, tracker_params={})
+.. py:class:: CosineDirectionalTuning(trial, channel)
 
    Bases: :py:obj:`object`
 
@@ -197,48 +207,6 @@ Module Contents
           !! processed by numpydoc !!
 
 
-   .. py:method:: power_spectrum(eeg, plot=True, binWidthSecs=None, maxFreq=25, pad2pow=None, ymax=None, **kwargs)
-
-      
-      Method used by eeg_power_spectra and intrinsic_freq_autoCorr.
-      Signal in must be mean normalized already.
-
-      :param eeg: The EEG signal to analyze.
-      :type eeg: np.ndarray
-      :param plot: Whether to plot the resulting power spectrum (default is True).
-      :type plot: bool, optional
-      :param binWidthSecs: The bin width in seconds for the power spectrum.
-      :type binWidthSecs: float, optional
-      :param maxFreq: The maximum frequency to compute the power spectrum up to (default is 25).
-      :type maxFreq: float, optional
-      :param pad2pow: The power of 2 to pad the signal to (default is None).
-      :type pad2pow: int, optional
-      :param ymax: The maximum y-axis value for the plot (default is None).
-      :type ymax: float, optional
-      :param \*\*kwargs: Additional keyword arguments.
-      :type \*\*kwargs: dict
-
-      :returns: A dictionary containing the power spectrum and other related metrics.
-      :rtype: dict
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      ..
-          !! processed by numpydoc !!
-
-
    .. py:method:: speedFilterRuns(runs, minspeed=5.0)
 
       
@@ -291,8 +259,6 @@ Module Contents
 
 
    .. py:attribute:: _pos_sample_rate
-      :value: 30
-
 
 
    .. py:attribute:: _pos_samples_for_spike
@@ -329,47 +295,41 @@ Module Contents
    .. py:attribute:: pos_times
 
 
-   .. py:attribute:: smthKernelSigma
-      :value: 0.1875
-
-
-
-   .. py:attribute:: smthKernelWidth
-      :value: 2
-
-
-
-   .. py:attribute:: sn2Width
-      :value: 2
-
-
-
    .. py:property:: speed
-
-
-   .. py:attribute:: spikeCalcs
 
 
    .. py:attribute:: spike_times
 
 
-   .. py:attribute:: spk_clusters
-
-
    .. py:property:: spk_sample_rate
 
 
-   .. py:attribute:: thetaRange
-      :value: [7, 11]
-
-
-
-   .. py:attribute:: xmax
-      :value: 11
-
+   .. py:attribute:: trial
 
 
    .. py:property:: xy
+
+
+.. py:class:: FreqPhase
+
+   .. py:attribute:: amplitude
+      :type:  numpy.ndarray
+
+
+   .. py:attribute:: amplitude_filtered
+      :type:  numpy.ndarray
+
+
+   .. py:attribute:: filt_sig
+      :type:  numpy.ndarray
+
+
+   .. py:attribute:: inst_freq
+      :type:  numpy.ndarray
+
+
+   .. py:attribute:: phase
+      :type:  numpy.ndarray
 
 
 .. py:class:: LFPOscillations(sig, fs, **kwargs)
@@ -472,6 +432,119 @@ Module Contents
           !! processed by numpydoc !!
 
 
+   .. py:method:: get_comodulogram(low_freq_band=[1, 12], **kwargs)
+
+      
+      Computes the comodulogram of phase-amplitude coupling
+      between different frequency bands.
+
+      :param low_freq_band: The low frequency band - what the pactools module calls
+                            the "driver" frequency
+      :type low_freq_band: list
+      :param \*\*kwargs: Additional keyword arguments.
+      :type \*\*kwargs: dict
+
+      :returns: The computed comodulogram.
+      :rtype: np.ndarray
+
+      .. rubric:: Notes
+
+      This method is a placeholder and needs to be implemented.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: get_mean_resultant_vector(spike_times, **kws)
+
+      
+      Calculates the mean phase at which the cluster emitted spikes
+      and the length of the mean resultant vector.
+
+      :param lfp_data (np.ndarray) - the LFP signal:
+      :param fs (float) - the sample rate of the LFP signal:
+
+      :returns: mean resultant direction
+      :rtype: tuple (float, float) - the mean resultant vector length and mean
+
+      .. rubric:: Notes
+
+      For similar approach see Boccara et al., 2010.
+      doi: 10.1038/nn.2602
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: get_oscillatory_epochs(out_window_size = 0.4, FREQ_BAND=(20, 90), **kwargs)
+
+      
+      Uses the continuous wavelet transform to find epochs
+      of high oscillatory power in the LFP
+
+      :param out_window_size: The size of the output window in seconds (default is 0.4).
+      :type out_window_size: float, optional
+
+      :returns: A dictionary where keys are the center time of the oscillatory
+                window and values are the LFP signal in that window.
+      :rtype: dict
+
+      .. rubric:: Notes
+
+      Uses a similar method to jun et al., but expands the window
+      for candidate oscillatory windows in a better way
+
+      .. rubric:: References
+
+      Jun et al., 2020, Neuron 107, 1095–1112
+      https://doi.org/10.1016/j.neuron.2020.06.023
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
    .. py:method:: get_theta_phase(cluster_times, **kwargs)
 
       
@@ -489,8 +562,9 @@ Module Contents
           high_theta : int
               High end for bandpass filter.
 
-      :returns: A tuple containing the phase of theta at which the cluster emitted spikes,
-                the x values for the vonmises distribution, and the y values for the vonmises distribution.
+      :returns: A tuple containing the phase of theta at which the cluster
+                emitted spikes, the x values for the vonmises distribution,
+                and the y values for the vonmises distribution.
       :rtype: tuple
 
 
@@ -511,22 +585,25 @@ Module Contents
           !! processed by numpydoc !!
 
 
-   .. py:method:: modulationindex(sig=None, nbins=20, forder=2, thetaband=[4, 8], gammaband=[30, 80], plot=True)
+   .. py:method:: modulationindex(sig=None, nbins=20, forder=2, thetaband=[6, 12], gammaband=[20, 90], plot=False)
 
       
       Calculates the modulation index of theta and gamma oscillations.
       Specifically, this is the circular correlation between the phase of
-      theta and the power of theta.
+      theta and the power of gamma.
 
-      :param sig: The LFP signal. If None, uses the signal provided during initialization.
+      :param sig: The LFP signal. If None, uses the signal provided during
+                  initialization.
       :type sig: np.array, optional
       :param nbins: The number of bins in the circular range 0 to 2*pi (default is 20).
       :type nbins: int, optional
       :param forder: The order of the Butterworth filter (default is 2).
       :type forder: int, optional
-      :param thetaband: The lower and upper bands of the theta frequency range (default is [4, 8]).
+      :param thetaband: The lower and upper bands of the theta frequency range
+                        (default is [6, 12]).
       :type thetaband: list, optional
-      :param gammaband: The lower and upper bands of the gamma frequency range (default is [30, 80]).
+      :param gammaband: The lower and upper bands of the gamma frequency range
+                        (default is [20, 90]).
       :type gammaband: list, optional
       :param plot: Whether to plot the results (default is True).
       :type plot: bool, optional
@@ -536,8 +613,42 @@ Module Contents
 
       .. rubric:: Notes
 
-      The modulation index is a measure of the strength of phase-amplitude coupling
-      between theta and gamma oscillations.
+      The modulation index is a measure of the strength of phase-amplitude
+      coupling between theta and gamma oscillations.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: plot_cwt(sig, Pos, start, stop, FREQ_BAND=(20, 90), **kwargs)
+
+      
+      Plots the continuous wavelet transform of the signal
+
+      :param sig: The signal to be analysed.
+      :type sig: np.ndarray
+      :param Pos: The position object containing speed and time information.
+      :type Pos: PosCalcsGeneric
+      :param start: The start time for the plot (in seconds).
+      :type start: float
+      :param stop: The stop time for the plot (in seconds).
+      :type stop: float
+      :param FREQ_BAND: The frequency band to be highlighted (default is (20, 90)).
+      :type FREQ_BAND: tuple, optional
 
 
 
@@ -602,7 +713,63 @@ Module Contents
           !! processed by numpydoc !!
 
 
-   .. py:method:: spike_xy_phase_plot(cluster, pos_data, phy_data, lfp_data)
+   .. py:method:: power_spectrum(eeg=None, plot=True, binWidthSecs=1 / 250, maxFreq=25, pad2pow=None, ymax=None, **kwargs)
+
+      
+      Method used by eeg_power_spectra and intrinsic_freq_autoCorr.
+      Signal in must be mean normalized already.
+
+      :param eeg: The EEG signal to analyze.
+      :type eeg: np.ndarray
+      :param plot: Whether to plot the resulting power spectrum (default is True).
+      :type plot: bool, optional
+      :param binWidthSecs: The bin width in seconds for the power spectrum.
+      :type binWidthSecs: float, optional
+      :param maxFreq: The upper limit of the power spectrum frequency range
+                      (default is 25).
+      :type maxFreq: float, optional
+      :param pad2pow: The power of 2 to pad the signal to (default is None).
+      :type pad2pow: int, optional
+      :param ymax: The maximum y-axis value for the plot (default is None).
+      :type ymax: float, optional
+      :param \*\*kwargs: Additional keyword arguments.
+      :type \*\*kwargs: dict
+
+      :returns: A dictionary containing the power spectrum and other
+                related metrics.
+                    "maxFreq", (float) - frequency at which max power in theta band
+                                         occurs
+                    "Power", (np.ndarray) - smoothed power values
+                    "Freqs", (np.ndarray) - frequencies corresponding to power
+                                            values
+                    "s2n", - signal to noise ratio
+                    "Power_raw", (np.ndarray) - raw power values
+                    "k", (np.ndarray) - smoothing kernel
+                    "kernelLen", (float) - length of smoothing kernel
+                    "kernelSig", (float) - sigma of smoothing kernel
+                    "binsPerHz", (float) - bins per Hz in the power spectrum
+                    "kernelLen", (float) - length of the smoothing kernel
+      :rtype: dict
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: spike_xy_phase_plot(cluster, pos_data, lfp_data, cluster_times)
 
       
       Produces a plot of the phase of theta at which each spike was
@@ -640,16 +807,33 @@ Module Contents
           !! processed by numpydoc !!
 
 
-   .. py:method:: theta_running(pos_data, lfp_data, **kwargs)
+   .. py:method:: theta_running(pos_data, lfp_data, plot = True, **kwargs)
 
       
-      Returns metrics to do with the theta frequency/power and running speed/acceleration.
+      Returns metrics to do with the theta frequency/power and
+      running speed/acceleration.
 
       :param pos_data: Position data object containing position and speed information.
       :type pos_data: PosCalcsGeneric
       :param lfp_data: LFP data object containing the LFP signal and sampling rate.
       :type lfp_data: EEGCalcsGeneric
-      :param \*\*kwargs: Additional keyword arguments.
+      :param plot: Whether to plot the results (default is True).
+      :type plot: bool
+      :param \*\*kwargs:
+                         Additional keyword arguments:
+                             low_theta : float
+                                 Lower bound of theta frequency (default is 6).
+                             high_theta : float
+                                 Upper bound of theta frequency (defaultt is 12).
+                             low_speed : float
+                                 Lower bound of running speed (data is masked
+                                 below this value)
+                             high_speed : float
+                                 Upper bound of running speed (data is masked
+                                 above this value)
+                             nbins : int
+                                 Number of bins into which to bin data (Same
+                                 number for both speed and theta)
       :type \*\*kwargs: dict
 
       :returns: A tuple containing masked arrays for speed and theta frequency.
@@ -659,9 +843,10 @@ Module Contents
 
       The function calculates the instantaneous frequency of the theta band
       and interpolates the running speed to match the LFP data. It then
-      creates a 2D histogram of theta frequency vs. running speed and overlays
-      the mean points for each speed bin. The function also performs a linear
-      regression to find the correlation between speed and theta frequency.
+      creates a 2D histogram of theta frequency vs. running speed and
+      overlays the mean points for each speed bin. The function also
+      performs a linear regression to find the correlation between
+      speed and theta frequency.
 
 
 
@@ -687,6 +872,100 @@ Module Contents
    .. py:attribute:: sig
 
 
+   .. py:attribute:: smthKernelSigma
+      :value: 0.1875
+
+
+
+   .. py:attribute:: smthKernelWidth
+      :value: 2
+
+
+
+   .. py:attribute:: sn2Width
+      :value: 2
+
+
+
+   .. py:attribute:: thetaRange
+      :value: [6, 12]
+
+
+
+   .. py:attribute:: xmax
+      :value: 11
+
+
+
+.. py:class:: PowerSpectrumParams
+
+   
+   Dataclass for holding the parameters for calculating a power
+   spectrum as this was being used in several classes and needed
+   refactoring out into a standalone function
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+   .. py:attribute:: bin_width_in_secs
+      :type:  float
+      :value: 0.004
+
+
+
+   .. py:attribute:: max_frequency
+      :type:  float
+      :value: 25
+
+
+
+   .. py:attribute:: pad_to_power
+      :type:  int
+
+
+   .. py:attribute:: signal
+      :type:  numpy.ndarray
+
+
+   .. py:attribute:: signal_to_noise_width
+      :type:  float
+      :value: 2
+
+
+
+   .. py:attribute:: smoothing_kernel_sigma
+      :type:  float
+      :value: 0.1875
+
+
+
+   .. py:attribute:: smoothing_kernel_width
+      :type:  float
+      :value: 2
+
+
+
+   .. py:attribute:: theta_range
+      :type:  List
+      :value: [6, 12]
+
+
+
 .. py:class:: Rippler(trial_root, signal, fs)
 
    Bases: :py:obj:`object`
@@ -695,6 +974,9 @@ Module Contents
    
    Does some spectrographic analysis and plots of LFP data
    looking specifically at the ripple band
+
+   NB This is tied pretty specifically to an experiment that
+   uses TTL pulses to trigger some 'event' / 'events'...
 
    Until I modified the Ripple Detector plugin the duration of the TTL
    pulses was variable with a more or less bimodal distribution which
@@ -1053,6 +1335,28 @@ Module Contents
 
    .. py:method:: plot_mean_spectrograms(**kwargs)
 
+      
+      Plots the spectrograms of the LFP signal for both laser on
+      and laser off conditions.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
 
    .. py:method:: plot_rasters(laser_on)
 
@@ -1217,4 +1521,59 @@ Module Contents
       :value: 100
 
 
+
+.. py:function:: power_spectrum(params, plot=True, pad2pow=None, ymax=None, **kwargs)
+
+   
+   Method used by eeg_power_spectra and intrinsic_freq_autoCorr.
+   Signal in must be mean normalized already.
+
+   :param eeg: The EEG signal to analyze.
+   :type eeg: np.ndarray
+   :param plot: Whether to plot the resulting power spectrum (default is True).
+   :type plot: bool, optional
+   :param binWidthSecs: The bin width in seconds for the power spectrum.
+   :type binWidthSecs: float, optional
+   :param maxFreq: The upper limit of the power spectrum frequency range
+                   (default is 25).
+   :type maxFreq: float, optional
+   :param pad2pow: The power of 2 to pad the signal to (default is None).
+   :type pad2pow: int, optional
+   :param ymax: The maximum y-axis value for the plot (default is None).
+   :type ymax: float, optional
+   :param \*\*kwargs: Additional keyword arguments.
+   :type \*\*kwargs: dict
+
+   :returns: A dictionary containing the power spectrum and other
+             related metrics.
+                 "maxFreq", (float) - frequency at which max power in theta band
+                                         occurs
+                 "Power", (np.ndarray) - smoothed power values
+                 "Freqs", (np.ndarray) - frequencies corresponding to power
+                                         values
+                 "s2n", - signal to noise ratio
+                 "Power_raw", (np.ndarray) - raw power values
+                 "k", (np.ndarray) - smoothing kernel
+                 "kernelLen", (float) - length of smoothing kernel
+                 "kernelSig", (float) - sigma of smoothing kernel
+                 "binsPerHz", (float) - bins per Hz in the power spectrum
+                 "kernelLen", (float) - length of the smoothing kernel
+   :rtype: dict
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
 

@@ -10,6 +10,7 @@ Classes
 .. autoapisummary::
 
    ephysiopy.common.utils.BinnedData
+   ephysiopy.common.utils.ClusterID
    ephysiopy.common.utils.MapType
    ephysiopy.common.utils.TrialFilter
    ephysiopy.common.utils.VariableToBin
@@ -26,10 +27,13 @@ Functions
    ephysiopy.common.utils.cart2pol
    ephysiopy.common.utils.circ_abs
    ephysiopy.common.utils.clean_kwargs
+   ephysiopy.common.utils.cluster_intersection
    ephysiopy.common.utils.corr_maps
    ephysiopy.common.utils.count_runs_and_unique_numbers
    ephysiopy.common.utils.count_to
    ephysiopy.common.utils.fileContainsString
+   ephysiopy.common.utils.filter_data
+   ephysiopy.common.utils.filter_trial_by_time
    ephysiopy.common.utils.find_runs
    ephysiopy.common.utils.fixAngle
    ephysiopy.common.utils.flatten_list
@@ -54,22 +58,25 @@ Functions
 Module Contents
 ---------------
 
-.. py:class:: BinnedData
+.. py:class:: BinnedData(variable, map_type, binned_data, bin_edges, cluster_id = ClusterID(0, 0))
 
    
-   A dataclass to store binned data. The binned data is stored in a list of numpy
-   arrays. The bin edges are stored in a list of numpy arrays. The variable to bin
-   is stored as an instance of the VariableToBin enum. The map type is stored as an
-   instance of the MapType enum. The binned data and bin edges are initialized as
+   A dataclass to store binned data. The binned data is stored in a list of
+   numpy arrays. The bin edges are stored in a list of numpy arrays. The
+   variable to bin is stored as an instance of the VariableToBin enum.
+   The map type is stored as an instance of the MapType enum.
+   The binned data and bin edges are initialized as
    empty lists. bin_units is how to conver the binned data
-   to "real" units e.g. for XY it might be how to convert to cms, for time to seconds
-   etc. You multiply the binned data by that number to get the real values. Note that
-   this might not make sense/ be obvious for some binning (i.e. SPEED_DIR)
+   to "real" units e.g. for XY it might be how to convert to cms,
+   for time to seconds etc. You multiply the binned data by that
+   number to get the real values. Note that this might not make sense
+   / be obvious for some binning (i.e. SPEED_DIR)
 
    The BinnedData class is the output of the main binning function in the
-   ephysiopy.common.binning.RateMap class. It is used to store the binned data as a
-   convenience mostly for easily iterating over the binned data and using the bin_edges
-   to plot the data. As such, it is used as a convenience for plotting as the bin edges
+   ephysiopy.common.binning.RateMap class. It is used to store the binned data
+   as a convenience mostly for easily iterating over the binned data and
+   using the bin_edges to plot the data.
+   As such, it is used as a convenience for plotting as the bin edges
    are used when calling pcolormesh in the plotting functions.
 
 
@@ -149,9 +156,9 @@ Module Contents
    .. py:method:: __getitem__(i)
 
       
-      Returns a specified index of the binned_data as a BinnedData instance. The data
-      in binned_data is a deep copy of the original so can be modified without
-      affecting the original.
+      Returns a specified index of the binned_data as a BinnedData instance.
+      The data in binned_data is a deep copy of the original so can be
+      modified without affecting the original.
 
       :param i: The index of binned_data to return
       :type i: int
@@ -184,10 +191,8 @@ Module Contents
 
       
       Divides the binned data by the binned data of
-      another BinnedData instance i.e. spike data / pos data to get a rate map. I've
-      added a check to this for instances where the length of the binned data in the
-      numerator (i.e. binned spike arrays) is greater than the length of the denominator
-      (i.e.the binned position array).
+      another BinnedData instance i.e. spike data / pos data to get
+      a rate map.
 
       :param other: the denominator
       :type other: BinnedData
@@ -248,6 +253,36 @@ Module Contents
           !! processed by numpydoc !!
 
 
+   .. py:method:: get_cluster(id)
+
+      
+      Returns the binned data for the specified cluster id
+
+      :param id: The cluster id to return
+      :type id: ClusterID
+
+      :returns: A new BinnedData instance with the binned data for
+                the specified cluster id
+      :rtype: BinnedData
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
    .. py:method:: set_nan_indices(indices)
 
       
@@ -281,7 +316,13 @@ Module Contents
 
 
    .. py:attribute:: binned_data
-      :type:  list[numpy.ndarray]
+      :type:  list[numpy.ma.MaskedArray]
+      :value: []
+
+
+
+   .. py:attribute:: cluster_id
+      :type:  list[ClusterID]
       :value: []
 
 
@@ -294,7 +335,18 @@ Module Contents
       :type:  VariableToBin
 
 
-.. py:class:: MapType
+.. py:class:: ClusterID
+
+   Bases: :py:obj:`tuple`
+
+
+   .. py:attribute:: Channel
+
+
+   .. py:attribute:: Cluster
+
+
+.. py:class:: MapType(*args, **kwds)
 
    Bases: :py:obj:`enum.Enum`
 
@@ -350,7 +402,7 @@ Module Contents
 
 
 
-.. py:class:: TrialFilter(name, start, end)
+.. py:class:: TrialFilter(name, start, end = None)
 
    
    A basic dataclass for holding filter values
@@ -390,7 +442,7 @@ Module Contents
       :type:  float | str
 
 
-.. py:class:: VariableToBin
+.. py:class:: VariableToBin(*args, **kwds)
 
    Bases: :py:obj:`enum.Enum`
 
@@ -426,6 +478,11 @@ Module Contents
 
 
 
+   .. py:attribute:: PHI
+      :value: 10
+
+
+
    .. py:attribute:: SPEED
       :value: 3
 
@@ -441,6 +498,11 @@ Module Contents
 
 
 
+   .. py:attribute:: X
+      :value: 8
+
+
+
    .. py:attribute:: XY
       :value: 1
 
@@ -448,6 +510,11 @@ Module Contents
 
    .. py:attribute:: XY_TIME
       :value: 4
+
+
+
+   .. py:attribute:: Y
+      :value: 9
 
 
 
@@ -644,6 +711,38 @@ Module Contents
    ..
        !! processed by numpydoc !!
 
+.. py:function:: cluster_intersection(A, B)
+
+   
+   Gets the intersection of clusters between two instances
+   of BinnedData.
+
+   :param A: The two instances
+   :type A: BinnedData
+   :param B: The two instances
+   :type B: BinnedData
+
+   :returns: **A, B** -- The modified instances with only the overlapping clusters
+             present in both
+   :rtype: BinnedData
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
 .. py:function:: corr_maps(map1, map2, maptype='normal')
 
    
@@ -757,6 +856,74 @@ Module Contents
 
    :returns: Whether the string was found or not
    :rtype: bool
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: filter_data(data, f)
+
+   
+   Filters the input data based on the specified TrialFilter.
+
+   :param data: The data to filter.
+   :type data: np.ndarray
+   :param f: The filter to apply.
+   :type f: TrialFilter
+
+   :returns: A boolean array where Trues are the 'to-be' masked values.
+   :rtype: np.ndarray
+
+   .. rubric:: Notes
+
+   When calculating the filters, be sure to do the calculations on the
+   'data' property of the masked arrays so you get access to the
+   underlying data without the mask.
+
+   This function is used in io.recording to filter the data
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: filter_trial_by_time(duration, how = 'in_half')
+
+   
+   Filters the data in trial by time
+
+   :param duration - the duration of the trial in seconds:
+   :param how (str) - how to split the trial.: Legal values: "in_half" or "odd_even"
+                                               "in_half" filters for first n seconds and last n second
+                                               "odd_even" filters for odd vs even minutes
+
+   :returns: A tuple of TrialFilter instances, one for each half or odd/even minutes
+   :rtype: tuple of TrialFilter
 
 
 
@@ -1364,7 +1531,7 @@ Module Contents
    >>> x=sin(t)+randn(len(t))*0.1
    >>> y=smooth(x)
 
-   .. seealso:: :obj:`numpy.hanning`, :obj:`numpy.hamming`, :obj:`numpy.bartlett`, :obj:`numpy.blackman`, :obj:`numpy.convolve`, :obj:`scipy.signal.lfilter`
+   .. seealso:: :py:obj:`numpy.hanning`, :py:obj:`numpy.hamming`, :py:obj:`numpy.bartlett`, :py:obj:`numpy.blackman`, :py:obj:`numpy.convolve`, :py:obj:`scipy.signal.lfilter`
 
    .. rubric:: Notes
 

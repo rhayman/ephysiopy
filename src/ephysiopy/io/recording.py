@@ -17,7 +17,12 @@ from ephysiopy.common.ephys_generic import (
     PosCalcsGeneric,
 )
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
-from ephysiopy.common.fieldcalcs import skaggs_info
+from ephysiopy.common.fieldcalcs import (
+    skaggs_info,
+    fancy_partition,
+    simple_partition,
+)
+from ephysiopy.common.fieldproperties import FieldProps, fieldprops
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.utils import VariableToBin, MapType, BinnedData, filter_data
 from ephysiopy.openephys2py.OESettings import Settings
@@ -106,9 +111,9 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     settings (dict) : contains metadata about the trial
     PosCalcs (PosCalcsGeneric) : contains the positional data for the trial
     RateMap : RateMap
-        methods for binning data mostly
+        A class for binning data
     EEGCalcs : EEGCalcs
-        methods for dealing with LFP data
+        For dealing with LFP data
     clusterData : clusterData
         contains results of a spike sorting session (i.e. KiloSort)
     recording_start_time : float
@@ -143,7 +148,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self._path2PosData = None  # Path or str
         self._filter: list = []
         self._mask_array = None
-        self._concatenated = False  # whether this is a concatenated trial or not
+        self._concatenated = False  # whether this is a concatenated trial
 
     @classmethod
     def __subclasshook__(cls, subclass):
@@ -383,6 +388,57 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         raise NotImplementedError
 
+    def get_field_properties(
+        self, cluster: int | list, channel: int | list, **kwargs
+    ) -> list[FieldProps]:
+        """
+        Gets the properties of a given field (area, runs through the field,
+        etc)
+
+        Parameters
+        ----------
+        cluster : int | list
+            The cluster(s) to get the field properties for
+        channel : int | list
+            The channel(s) to get the field properties for
+        **kwargs
+            partition : str
+                How the field is separated from the background. This is passed to
+                the fieldproperties function and can be used to specify the partition
+                to use for the field properties.
+
+                Valid options are 'simple' and 'fancy'
+
+                Other kwargs get passed to get_rate_map and
+                fieldprops, the most important of which may be
+                how the runs are split in fieldprops (options are
+                'field' and 'clump_runs') which differ depending on
+                if the position data is open-field (field) or linear track
+                in which case you should probably use 'clunmp_runs'
+
+
+        Returns
+        -------
+        list[FieldProps]
+            A list of FieldProps namedtuples containing the properties of the field
+        """
+        partition = kwargs.pop("partition", "fancy")
+
+        if not self.RateMap:
+            self.initialise()
+
+        rmap = self.get_rate_map(cluster, channel, **kwargs)
+
+        if partition == "simple":
+            _, _, labels, _ = simple_partition(rmap)
+        elif partition == "fancy":
+            _, _, labels, _ = fancy_partition(rmap)
+
+        spike_times = self.get_spike_times(cluster, channel)
+        xy = getattr(self.PosCalcs, "xy")
+
+        return fieldprops(labels, rmap, spike_times, xy, **kwargs)
+
     def apply_filter(self, *trial_filter: TrialFilter) -> np.ndarray:
         """
         Apply a mask to the recorded data. This will mask all the currently
@@ -618,6 +674,9 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         **kwargs : dict, optional
             Additional keyword arguments for the _get_spike_pos_idx function.
             - do_shuffle (bool): If True, the rate map will be shuffled by
+            - map_type (MapType): the type of map to generate, default
+                        is MapType.POS but can be any of the options
+                        in MapType
                                  the default number of shuffles (100).
             - n_shuffles (int): the number of shuffles for the rate map
                                 A list of shuffled rate maps will be returned.

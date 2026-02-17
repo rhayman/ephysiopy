@@ -31,6 +31,7 @@ Functions
    ephysiopy.common.ephys_generic.calculate_rms_and_std
    ephysiopy.common.ephys_generic.downsample_aux
    ephysiopy.common.ephys_generic.find_high_amp_long_duration
+   ephysiopy.common.ephys_generic.nextpow2
 
 
 Module Contents
@@ -66,11 +67,16 @@ Module Contents
    ..
        !! processed by numpydoc !!
 
-   .. py:method:: _nextpow2(val)
+   .. py:method:: __add__(other)
 
       
-      Calculates the next power of 2 that will hold val
+      Adds two EEGCalcsGeneric objects together
 
+      :param other: The other EEGCalcsGeneric object to add
+      :type other: EEGCalcsGeneric
+
+      :returns: A new EEGCalcsGeneric object with the combined sig and fs
+      :rtype: EEGCalcsGeneric
 
 
 
@@ -523,12 +529,41 @@ Module Contents
    ..
        !! processed by numpydoc !!
 
+   .. py:method:: __add__(other)
+
+      
+      Adds two PosCalcsGeneric objects together
+
+      :param other: The other PosCalcsGeneric object to add
+      :type other: PosCalcsGeneric
+
+      :returns: A new PosCalcsGeneric object with the combined xy data
+      :rtype: PosCalcsGeneric
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
    .. py:method:: apply_mask(mask)
 
       
       Applies a mask to the position data
 
-      :param mask: The mask to be applied. For use with np.ma.MaskedArray's mask attribute
+      :param mask: The mask to be applied.
       :type mask: np.ndarray
 
       .. rubric:: Notes
@@ -566,6 +601,32 @@ Module Contents
 
       :returns: The head direction data
       :rtype: np.ma.MaskedArray
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      ..
+          !! processed by numpydoc !!
+
+
+   .. py:method:: calcPhi(xy)
+
+      
+      Calculates phi, distance along a linear track
+
+      :param xy: The xy positional data
+      :type xy: np.ma.MaskedArray
 
 
 
@@ -675,13 +736,16 @@ Module Contents
           !! processed by numpydoc !!
 
 
-   .. py:method:: smoothPos(xy)
+   .. py:method:: smoothPos(xy, **kwargs)
 
       
       Smooths position data
 
       :param xy: The xy data
       :type xy: np.ma.MaskedArray
+      :param \*\*kwargs:
+                         window_len : int
+                             The length of the smoothing window
 
       :returns: **xy** -- The smoothed positional data
       :rtype: array_like
@@ -809,6 +873,9 @@ Module Contents
 
 
 
+   .. py:attribute:: _phi
+
+
    .. py:attribute:: _ppm
 
 
@@ -856,6 +923,11 @@ Module Contents
 
    .. py:attribute:: orig_xy
       :type:  numpy.ma.MaskedArray
+
+
+   .. py:property:: phi
+      :type: numpy.ma.MaskedArray
+
 
 
    .. py:property:: ppm
@@ -987,6 +1059,29 @@ Module Contents
 
    Todorova & Zugaro, 2019. Isolated cortical computations during delta waves support memory consolidation. 366: 6463
    doi: 10.1126/science.aay0616
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   ..
+       !! processed by numpydoc !!
+
+.. py:function:: nextpow2(val)
+
+   
+   Calculates the next power of 2 that will hold val
+
 
 
 
