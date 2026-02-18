@@ -17,6 +17,7 @@ dependencies = [
     "phylib>=2.7.0",
     "pycircstat2>=0.1.15",
     "pycwt>=0.5.0b0",
+    "pydata-sphinx-theme>=0.16.1",
     "pytest>=9.0.2",
     "pytest-mpl>=0.18.0",
     "pywavelets>=1.9.0",
