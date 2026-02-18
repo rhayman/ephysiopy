@@ -299,12 +299,12 @@ class BinnedData:
         if other is not None:
             result = np.reshape(
                 [corr_maps(a, b) for a in self.binned_data for b in other.binned_data],
-                newshape=(len(self.binned_data), len(other.binned_data)),
+                shape=(len(self.binned_data), len(other.binned_data)),
             )
         else:
             result = np.reshape(
                 [corr_maps(a, b) for a in self.binned_data for b in self.binned_data],
-                newshape=(len(self.binned_data), len(self.binned_data)),
+                shape=(len(self.binned_data), len(self.binned_data)),
             )
         if as_matrix:
             return result
