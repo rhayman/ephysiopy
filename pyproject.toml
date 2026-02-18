@@ -10,7 +10,9 @@ dependencies = [
     "h5py>=3.15.1",
     "mahotas>=1.4.18",
     "matplotlib>=3.10.8",
+    "myst-parser>=5.0.0",
     "numpy>=2.4.1",
+    "numpydoc>=1.10.0",
     "pactools>=0.3.1",
     "phylib>=2.7.0",
     "pycircstat2>=0.1.15",
@@ -23,6 +25,10 @@ dependencies = [
     "scipy>=1.17.0",
     "seaborn>=0.13.2",
     "shapely>=2.1.2",
+    "sphinx>=9.1.0",
+    "sphinx-autodoc-typehints>=3.6.3",
+    "sphinx-copybutton>=0.5.2",
+    "sphinx-prompt>=1.10.2",
     "tqdm>=4.67.1",
 ]
 
