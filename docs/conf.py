@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.abspath("../../ephysiopy/"))
 project = "ephysiopy"
 copyright = "2025, Robin Hayman"
 author = "Robin Hayman"
-release = "2.0.57"  # use ephysiopy.version
+release = "2.0.65"  # use ephysiopy.version
 
 
 # -- General configuration ---------------------------------------------------
