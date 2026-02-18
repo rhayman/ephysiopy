@@ -12,6 +12,15 @@ wheels = [
 ]
 
 [[package]]
+name = "astroid"
+version = "4.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b0/79/f1e971b3700bcc24c09b3f0d47745d8404675a74afc10b32df8e4929dfdc/astroid-4.1.0.tar.gz", hash = "sha256:e2fbab37f205a651e6a168cb1e9a6a10677f6fa6a1c21833d113999855b04259", size = 412160, upload-time = "2026-02-09T02:19:57.705Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3f/38/b2becedff0bef4af9ff474b82e2dcaefca608b6d24753d0b460c94003d91/astroid-4.1.0-py3-none-any.whl", hash = "sha256:2f8263bc7a33cbe8fc2bf5a3d37cfa8327a3284bf4afe3f47f5f0debba638e36", size = 279168, upload-time = "2026-02-09T02:19:55.89Z" },
+]
+
+[[package]]
 name = "astropy"
 version = "7.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -311,6 +320,7 @@ dependencies = [
     { name = "seaborn" },
     { name = "shapely" },
     { name = "sphinx" },
+    { name = "sphinx-autoapi" },
     { name = "sphinx-autodoc-typehints" },
     { name = "sphinx-copybutton" },
     { name = "sphinx-prompt" },
@@ -340,6 +350,7 @@ requires-dist = [
     { name = "seaborn", specifier = ">=0.13.2" },
     { name = "shapely", specifier = ">=2.1.2" },
     { name = "sphinx", specifier = ">=9.1.0" },
+    { name = "sphinx-autoapi", specifier = ">=3.7.0" },
     { name = "sphinx-autodoc-typehints", specifier = ">=3.6.3" },
     { name = "sphinx-copybutton", specifier = ">=0.5.2" },
     { name = "sphinx-prompt", specifier = ">=1.10.2" },
@@ -1479,6 +1490,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/cd/bd/f08eb0f4eed5c83f1ba2a3bd18f7745a2b1525fad70660a1c00224ec468a/sphinx-9.1.0.tar.gz", hash = "sha256:7741722357dd75f8190766926071fed3bdc211c74dd2d7d4df5404da95930ddb", size = 8718324, upload-time = "2025-12-31T15:09:27.646Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/73/f7/b1884cb3188ab181fc81fa00c266699dab600f927a964df02ec3d5d1916a/sphinx-9.1.0-py3-none-any.whl", hash = "sha256:c84fdd4e782504495fe4f2c0b3413d6c2bf388589bb352d439b2a3bb99991978", size = 3921742, upload-time = "2025-12-31T15:09:25.561Z" },
+]
+
+[[package]]
+name = "sphinx-autoapi"
+version = "3.7.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "astroid" },
+    { name = "jinja2" },
+    { name = "pyyaml" },
+    { name = "sphinx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/47/22/7ea4b660e98ffa271dbec5847b64738127955746d887f9596940279d30bf/sphinx_autoapi-3.7.0.tar.gz", hash = "sha256:5c8a934d788f00d11b8c8092536c7373592cce986820de8dd7daf6dfd79afd91", size = 58136, upload-time = "2026-02-11T05:24:29.86Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d8/11/9825443890d3ef6b6a0db938054e7c806e9911509e0315fe984d00a090c1/sphinx_autoapi-3.7.0-py3-none-any.whl", hash = "sha256:5ea37271b50de08538cf6e33044ef4fb6e981ddb693060ec84f297005014fdfd", size = 36021, upload-time = "2026-02-11T05:24:28.657Z" },
 ]
 
 [[package]]
