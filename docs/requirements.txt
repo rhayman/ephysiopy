@@ -2,6 +2,8 @@
 #    uv pip compile pyproject.toml -o docs/requirements.txt
 alabaster==1.0.0
     # via sphinx
+astroid==4.1.0
+    # via sphinx-autoapi
 astropy==7.2.0
     # via ephysiopy (pyproject.toml)
 astropy-iers-data==0.2026.2.16.0.48.25
@@ -57,6 +59,7 @@ jinja2==3.1.6
     #   myst-parser
     #   pytest-mpl
     #   sphinx
+    #   sphinx-autoapi
     #   sphinx-prompt
 joblib==1.5.3
     # via
@@ -190,6 +193,7 @@ pyyaml==6.0.3
     #   dask
     #   myst-parser
     #   responses
+    #   sphinx-autoapi
 requests==2.32.5
     # via
     #   phylib
@@ -230,9 +234,12 @@ sphinx==9.1.0
     #   ephysiopy (pyproject.toml)
     #   myst-parser
     #   numpydoc
+    #   sphinx-autoapi
     #   sphinx-autodoc-typehints
     #   sphinx-copybutton
     #   sphinx-prompt
+sphinx-autoapi==3.7.0
+    # via ephysiopy (pyproject.toml)
 sphinx-autodoc-typehints==3.6.3
     # via ephysiopy (pyproject.toml)
 sphinx-copybutton==0.5.2
