@@ -51,7 +51,7 @@ nav = [
     "what_is_ephysiopy.md",
     "installation.md",
     "quickstart.md",
-    "usage.md",
+    "usage.md"
   ]},
   { "API reference" = [
     "io.md",
@@ -60,8 +60,8 @@ nav = [
     "lfp.md",
     "utils.md",
     "plotting.md",
-    "field_analysis.md",
-  ]},
+    "field_analysis.md"
+  ]}
 ]
 
 repo_url = "https://github.com/rhayman/ephysiopy"
@@ -195,7 +195,7 @@ features = [
     # When section index pages are enabled, documents can be directly attached
     # to sections, which is particularly useful for providing overview pages.
     # https://zensical.org/docs/setup/navigation/#section-index-pages
-    "navigation.indexes",
+    # "navigation.indexes",
 
     # When instant navigation is enabled, clicks on all internal links will be
     # intercepted and dispatched via XHR without fully reloading the page.
