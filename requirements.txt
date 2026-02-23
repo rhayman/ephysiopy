@@ -14,6 +14,7 @@ click==8.3.1
     # via
     #   dask
     #   mkdocs
+    #   zensical
 cloudpickle==3.1.2
     # via dask
 contourpy==1.3.3
@@ -24,6 +25,8 @@ dask==2026.1.2
     # via phylib
 decorator==5.2.1
     # via mne
+deepmerge==2.0
+    # via zensical
 fonttools==4.61.1
     # via matplotlib
 fsspec==2026.2.0
@@ -68,6 +71,7 @@ markdown==3.10.2
     #   mkdocs-autorefs
     #   mkdocstrings
     #   pymdown-extensions
+    #   zensical
 markupsafe==3.0.3
     # via
     #   jinja2
@@ -176,9 +180,13 @@ pycwt==0.5.0b0
 pyerfa==2.0.1.5
     # via astropy
 pygments==2.19.2
-    # via pytest
+    # via
+    #   pytest
+    #   zensical
 pymdown-extensions==10.21
-    # via mkdocstrings
+    # via
+    #   mkdocstrings
+    #   zensical
 pyparsing==3.3.2
     # via matplotlib
 pytest==9.0.2
@@ -203,6 +211,7 @@ pyyaml==6.0.3
     #   pymdown-extensions
     #   pyyaml-env-tag
     #   responses
+    #   zensical
 pyyaml-env-tag==1.1
     # via mkdocs
 requests==2.32.5
@@ -255,3 +264,5 @@ urllib3==2.6.3
     #   responses
 watchdog==6.0.0
     # via mkdocs
+zensical==0.0.23
+    # via ephysiopy (pyproject.toml)

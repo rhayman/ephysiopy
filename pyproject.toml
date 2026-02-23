@@ -25,6 +25,7 @@ dependencies = [
     "seaborn>=0.13.2",
     "shapely>=2.1.2",
     "tqdm>=4.67.1",
+    "zensical>=0.0.23",
 ]
 
 [build-system]

@@ -292,6 +292,7 @@ dependencies = [
     { name = "seaborn" },
     { name = "shapely" },
     { name = "tqdm" },
+    { name = "zensical" },
 ]
 
 [package.dev-dependencies]
@@ -321,6 +322,7 @@ requires-dist = [
     { name = "seaborn", specifier = ">=0.13.2" },
     { name = "shapely", specifier = ">=2.1.2" },
     { name = "tqdm", specifier = ">=4.67.1" },
+    { name = "zensical", specifier = ">=0.0.23" },
 ]
 
 [package.metadata.requires-dev]
