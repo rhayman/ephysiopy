@@ -1,0 +1,5365 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A new project generated from the default template project.">
+      
+      
+        <meta name="author" content="Robin Hayman">
+      
+      
+      
+        <link rel="prev" href="../plotting/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="zensical-0.0.23">
+    
+    
+      
+        <title>Firing field analysis - ephysiopy</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../assets/stylesheets/modern/main.1e989742.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.dfe2e883.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,a=__md_scope)=>JSON.parse(t.getItem(a.pathname+"."+e)),__md_set=(e,t,a=localStorage,_=__md_scope)=>{try{a.setItem(_.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#firing-field-analysis" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="./.." title="ephysiopy" class="md-header__button md-logo" aria-label="ephysiopy" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ephysiopy
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Firing field analysis
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/rhayman/ephysiopy" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../index1/" class="md-tabs__link">
+        
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../ephysiopy_tutorial/" class="md-tabs__link">
+          
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../io/" class="md-tabs__link">
+          
+  
+  API reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="./.." title="ephysiopy" class="md-nav__button md-logo" aria-label="ephysiopy" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+
+    </a>
+    ephysiopy
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rhayman/ephysiopy" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../index1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ephysiopy_tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ephysiopy user guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../what_is_ephysiopy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What is ephysiopy?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Further usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../io/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data input/ output
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../oe_settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenEphys settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../position/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Position data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lfp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local field potential (LFP)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Utility classes and functions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plotting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plotting functions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Firing field analysis
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Firing field analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#ephysiopy.io.recording.TrialInterface.get_field_properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_field_properties
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.fieldprops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fieldprops
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FieldProps
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="FieldProps">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.compressed_phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        compressed_phase
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.n_spikes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        n_spikes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.normalized_position" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        normalized_position
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        phase
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.phi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        phi
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.pos_phi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pos_phi
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.pos_r" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pos_r
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.projected_direction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        projected_direction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.__str__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __str__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.mean_spiking_var" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mean_spiking_var
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.overdispersion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        overdispersion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.runs_expected_spikes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        runs_expected_spikes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.smooth_runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        smooth_runs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.spiking_var" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        spiking_var
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RunProps
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RunProps">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.current_direction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        current_direction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.ndim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ndim
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.normed_x" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        normed_x
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.phi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        phi
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.pos_phi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pos_phi
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.pos_r" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pos_r
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.raw_spike_times" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        raw_spike_times
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.rho" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rho
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.spike_index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        spike_index
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.xy_dist_to_peak_normed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        xy_dist_to_peak_normed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.__init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.expected_spikes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        expected_spikes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.mean_spiking_var" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mean_spiking_var
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.overdispersion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        overdispersion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.smooth_xy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        smooth_xy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.spiking_var" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        spiking_var
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.LFPSegment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LFPSegment
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LFPSegment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.LFPSegment.raw_spike_times" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        raw_spike_times
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.LFPSegment.spike_index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        spike_index
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.LFPSegment.__init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.LFPSegment.mean_spiking_var" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mean_spiking_var
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.LFPSegment.spiking_var" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        spiking_var
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#ephysiopy.io.recording.TrialInterface.get_field_properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_field_properties
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.fieldprops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fieldprops
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FieldProps
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="FieldProps">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.compressed_phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        compressed_phase
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.n_spikes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        n_spikes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.normalized_position" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        normalized_position
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        phase
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.phi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        phi
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.pos_phi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pos_phi
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.pos_r" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pos_r
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.projected_direction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        projected_direction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.__str__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __str__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.mean_spiking_var" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mean_spiking_var
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.overdispersion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        overdispersion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.runs_expected_spikes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        runs_expected_spikes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.smooth_runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        smooth_runs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.FieldProps.spiking_var" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        spiking_var
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RunProps
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RunProps">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.current_direction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        current_direction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.ndim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ndim
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.normed_x" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        normed_x
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.phi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        phi
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.pos_phi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pos_phi
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.pos_r" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pos_r
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.raw_spike_times" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        raw_spike_times
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.rho" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rho
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.spike_index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        spike_index
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.xy_dist_to_peak_normed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        xy_dist_to_peak_normed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.__init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.expected_spikes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        expected_spikes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.mean_spiking_var" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mean_spiking_var
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.overdispersion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        overdispersion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.smooth_xy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        smooth_xy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.RunProps.spiking_var" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        spiking_var
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.LFPSegment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LFPSegment
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LFPSegment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.LFPSegment.raw_spike_times" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        raw_spike_times
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.LFPSegment.spike_index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        spike_index
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.LFPSegment.__init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.LFPSegment.mean_spiking_var" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mean_spiking_var
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ephysiopy.common.fieldproperties.LFPSegment.spiking_var" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        spiking_var
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="./.." class="md-path__link">
+        
+  <span class="md-ellipsis">
+    Get started
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../io/" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    API reference
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+  
+  
+
+
+<h1 id="firing-field-analysis">Firing field analysis<a class="headerlink" href="#firing-field-analysis" title="Permanent link">&para;</a></h1>
+<p>You can extract various properties of the firing field of a cluster using the 
+get_field_properties method the TrialInterface class. This method returns a FieldProps object which contains various properties of the firing field of a cluster.</p>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="ephysiopy.io.recording.TrialInterface.get_field_properties" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">ephysiopy</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">recording</span><span class="o">.</span><span class="n">TrialInterface</span><span class="o">.</span><span class="n">get_field_properties</span><span class="p">(</span><span class="n">cluster</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">list</span><span class="p">,</span> <span class="n">channel</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">list</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">FieldProps</span><span class="p">]</span></code>
+
+<a href="#ephysiopy.io.recording.TrialInterface.get_field_properties" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+
+        <p>Gets the properties of a given field (area, runs through the field,
+etc)</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>cluster</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a> | <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The cluster(s) to get the field properties for</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>channel</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a> | <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The channel(s) to get the field properties for</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>partition : str
+    How the field is separated from the background. This is passed to
+    the fieldproperties function and can be used to specify the partition
+    to use for the field properties.</p>
+<div class="language-text highlight"><pre><span></span><code>Valid options are &#39;simple&#39; and &#39;fancy&#39;
+
+Other kwargs get passed to get_rate_map and
+fieldprops, the most important of which may be
+how the runs are split in fieldprops (options are
+&#39;field&#39; and &#39;clump_runs&#39;) which differ depending on
+if the position data is open-field (field) or linear track
+in which case you should probably use &#39;clunmp_runs&#39;
+</code></pre></div>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<span title="ephysiopy.common.fieldproperties.FieldProps">FieldProps</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A list of FieldProps namedtuples containing the properties of the field</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div><p>The underlying objects are described here:</p>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="ephysiopy.common.fieldproperties.fieldprops" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">ephysiopy</span><span class="o">.</span><span class="n">common</span><span class="o">.</span><span class="n">fieldproperties</span><span class="o">.</span><span class="n">fieldprops</span><span class="p">(</span><span class="n">label_image</span><span class="p">,</span> <span class="n">binned_data</span><span class="p">,</span> <span class="n">spike_times</span><span class="p">,</span> <span class="n">xy</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;field&#39;</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">extra_properties</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
+
+<a href="#ephysiopy.common.fieldproperties.fieldprops" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+
+        <p>Measure properties of labeled image regions.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>label_image</code>
+            </td>
+            <td>
+                  <code>(M, N[, P]) ndarray</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Labeled input image. Labels with value 0 are ignored.</p>
+<p>.. versionchanged:: 0.14.1
+    Previously, <code>label_image</code> was processed by <code>numpy.squeeze</code> and
+    so any number of singleton dimensions was allowed. This resulted in
+    inconsistent handling of images with singleton dimensions. To
+    recover the old behaviour, use
+    <code>regionprops(np.squeeze(label_image), ...)</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>xy</code>
+            </td>
+            <td>
+                  <code>(2 x n_samples) np.ndarray</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The x-y coordinates for all runs through the field corresponding to
+a particular label</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>binned_data</code>
+            </td>
+            <td>
+                  <code>BinnedData instance from ephysiopy.common.utils</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>spike_times</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The spike times for the neuron being analysed</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>method</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Method used to calculate region properties:</p>
+<ul>
+<li>'field': Standard method using discrete pixel counts based
+    on a segmentation of the rate map into labeled regions (fields).
+    This method
+    is faster, but can be inaccurate for small regions and will not
+    work well for positional data that has been masked for direction of
+    running say (ie linear track)</li>
+<li>'clump_runs': Exact method which accounts for filtered data better by
+    looking for contiguous areas of the positional data that are NOT
+    masked (uses np.ma.clump_unmasked)
+cache : bool, optional
+Determine whether to cache calculated properties. The computation is
+much faster for cached properties, whereas the memory consumption
+increases.</li>
+</ul>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;field&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extra_properties</code>
+            </td>
+            <td>
+                  <code>Iterable of callables</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Add extra property computation functions that are not included with
+skimage. The name of the property is derived from the function name,
+the dtype is inferred by calling the function on a small sample.
+If the name of an extra property clashes with the name of an existing
+property the extra property will not be visible and a UserWarning is
+issued. A property computation function must take a region mask as its
+first argument. If the property requires an intensity image, it must
+accept the intensity image as the second argument.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>spacing</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The pixel spacing along each axis of the image.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>offset</code>
+            </td>
+            <td>
+                  <code>array-like of int, shape `(label_image.ndim,)`</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Coordinates of the origin ("top-left" corner) of the label image.
+Normally this is ([0, ]0, 0), but it might be different if one wants
+to obtain regionprops of subvolumes within a larger volume.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**kwargs</code>
+            </td>
+            <td>
+                  <code>keyword arguments</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional arguments passed to the FieldProps constructor.
+Legal arguments are:
+    pos_sample_rate : int
+    min_run_length : int</p>
+<p>.. versionadded:: 0.14.1</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>properties</code></td>            <td>
+                  <code>list of RegionProperties</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Each item describes one labeled region, and can be accessed using the
+attributes listed below.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="note" open>
+  <summary>Notes</summary>
+  <p>The following properties can be accessed as attributes or keys:</p>
+<p>area : float
+    Area of the region i.e. number of pixels of the region scaled
+    by pixel-area.</p>
+<p>area_bbox : float
+    Area of the bounding box i.e. number of pixels of bounding box scaled
+    by pixel-area.</p>
+<p>area_convex : float
+    Area of the convex hull image, which is the smallest convex
+    polygon that encloses the region.</p>
+<p>area_filled : float
+    Area of the region with all the holes filled in.</p>
+<p>axis_major_length : float
+    The length of the major axis of the ellipse that has the same
+    normalized second central moments as the region.
+axis_minor_length : float
+    The length of the minor axis of the ellipse that has the same
+    normalized second central moments as the region.
+bbox : tuple
+    Bounding box <code>(min_row, min_col, max_row, max_col)</code>.
+    Pixels belonging to the bounding box are in the half-open interval
+    <code>[min_row; max_row)</code> and <code>[min_col; max_col)</code>.
+centroid : array
+    Centroid coordinate tuple <code>(row, col)</code>.
+centroid_local : array
+    Centroid coordinate tuple <code>(row, col)</code>, relative to region bounding
+    box.
+centroid_weighted : array
+    Centroid coordinate tuple <code>(row, col)</code> weighted with intensity
+    image.
+centroid_weighted_local : array
+    Centroid coordinate tuple <code>(row, col)</code>, relative to region bounding
+    box, weighted with intensity image.
+coords_scaled : (K, 2) ndarray
+    Coordinate list <code>(row, col)</code> of the region scaled by <code>spacing</code>.
+coords : (K, 2) ndarray
+    Coordinate list <code>(row, col)</code> of the region.
+eccentricity : float
+    Eccentricity of the ellipse that has the same second-moments as the
+    region. The eccentricity is the ratio of the focal distance
+    (distance between focal points) over the major axis length.
+    The value is in the interval [0, 1).
+    When it is 0, the ellipse becomes a circle.
+equivalent_diameter_area : float
+    The diameter of a circle with the same area as the region.
+euler_number : int
+    Euler characteristic of the set of non-zero pixels.
+    Computed as number of connected components subtracted by number of
+    holes (input.ndim connectivity). In 3D, number of connected
+    components plus number of holes subtracted by number of tunnels.
+extent : float
+    Ratio of pixels in the region to pixels in the total bounding box.
+    Computed as <code>area / (rows  cols)</code>
+feret_diameter_max : float
+    Maximum Feret's diameter computed as the longest distance between
+    points around a region's convex hull contour as determined by
+    <code>find_contours</code>. [5]_
+image : (H, J) ndarray
+    Sliced binary region image which has the same size as bounding box.
+image_convex : (H, J) ndarray
+    Binary convex hull image which has the same size as bounding box.
+image_filled : (H, J) ndarray
+    Binary region image with filled holes which has the same size as
+    bounding box.
+image_intensity : ndarray
+    Image inside region bounding box.
+inertia_tensor : ndarray
+    Inertia tensor of the region for the rotation around its mass.
+inertia_tensor_eigvals : tuple
+    The eigenvalues of the inertia tensor in decreasing order.
+intensity_max : float
+    Value with the greatest intensity in the region.
+intensity_mean : float
+    Value with the mean intensity in the region.
+intensity_min : float
+    Value with the least intensity in the region.
+intensity_std : float
+    Standard deviation of the intensity in the region.
+label : int
+    The label in the labeled input image.
+moments : (3, 3) ndarray
+    Spatial moments up to 3<sup>rd</sup> order::</p>
+<div class="language-text highlight"><pre><span></span><code>    m_ij = sum{ array(row, col)  row^i  col^j }
+
+where the sum is over the `row`, `col` coordinates of the region.
+</code></pre></div>
+<p>moments_central : (3, 3) ndarray
+    Central moments (translation invariant) up to 3<sup>rd</sup> order::</p>
+<div class="language-text highlight"><pre><span></span><code>    mu_ij = sum{ array(row, col)  (row - row_c)^i  (col - col_c)^j }
+
+where the sum is over the `row`, `col` coordinates of the region,
+and `row_c` and `col_c` are the coordinates of the region&#39;s centroid.
+</code></pre></div>
+<p>moments_hu : tuple
+    Hu moments (translation, scale and rotation invariant).
+moments_normalized : (3, 3) ndarray
+    Normalized moments (translation and scale invariant) up to 3<sup>rd</sup> order::</p>
+<div class="language-text highlight"><pre><span></span><code>    nu_ij = mu_ij / m_00^[(i+j)/2 + 1]
+
+where `m_00` is the zeroth spatial moment.
+</code></pre></div>
+<p>moments_weighted : (3, 3) ndarray
+    Spatial moments of intensity image up to 3<sup>rd</sup> order::</p>
+<div class="language-text highlight"><pre><span></span><code>    wm_ij = sum{ array(row, col)  row^i  col^j }
+
+where the sum is over the `row`, `col` coordinates of the region.
+</code></pre></div>
+<p>moments_weighted_central : (3, 3) ndarray
+    Central moments (translation invariant) of intensity image up to
+    3<sup>rd</sup> order::</p>
+<div class="language-text highlight"><pre><span></span><code>    wmu_ij = sum{ array(row, col)  (row - row_c)^i  (col - col_c)^j }
+
+where the sum is over the `row`, `col` coordinates of the region,
+and `row_c` and `col_c` are the coordinates of the region&#39;s weighted
+centroid.
+</code></pre></div>
+<p>moments_weighted_hu : tuple
+    Hu moments (translation, scale and rotation invariant) of intensity
+    image.
+moments_weighted_normalized : (3, 3) ndarray
+    Normalized moments (translation and scale invariant) of intensity
+    image up to 3<sup>rd</sup> order::</p>
+<div class="language-text highlight"><pre><span></span><code>    wnu_ij = wmu_ij / wm_00^[(i+j)/2 + 1]
+
+where ``wm_00`` is the zeroth spatial moment (intensity-weighted area).
+</code></pre></div>
+<p>num_pixels : int
+    Number of foreground pixels.
+orientation : float
+    Angle between the 0<sup>th</sup> axis (rows) and the major
+    axis of the ellipse that has the same second moments as the region,
+    ranging from <code>-pi/2</code> to <code>pi/2</code> counter-clockwise.
+perimeter : float
+    Perimeter of object which approximates the contour as a line
+    through the centers of border pixels using a 4-connectivity.
+perimeter_crofton : float
+    Perimeter of object approximated by the Crofton formula in 4
+    directions.
+slice : tuple of slices
+    A slice to extract the object from the source image.
+solidity : float
+    Ratio of pixels in the region to pixels of the convex hull image.</p>
+<p>Each region also supports iteration, so that you can do::</p>
+<p>for prop in region:
+      print(prop, region[prop])</p>
+</details>
+
+<details class="see-also" open>
+  <summary>See Also</summary>
+  <p>label</p>
+</details>
+
+<details class="references" open>
+  <summary>References</summary>
+  <p>.. [1] Wilhelm Burger, Mark Burge. Principles of Digital Image Processing:
+       Core Algorithms. Springer-Verlag, London, 2009.
+.. [2] B. Jähne. Digital Image Processing. Springer-Verlag,
+       Berlin-Heidelberg, 6. edition, 2005.
+.. [3] T. H. Reiss. Recognizing Planar Objects Using Invariant Image
+       Features, from Lecture notes in computer science, p. 676. Springer,
+       Berlin, 1993.
+.. [4] <a href="https://en.wikipedia.org/wiki/Image_moment">https://en.wikipedia.org/wiki/Image_moment</a>
+.. [5] W. Pabst, E. Gregorová. Characterization of particles and particle
+       systems, pp. 27-28. ICT Prague, 2007.
+       <a href="https://old.vscht.cz/sil/keramika/Characterization_of_particles/CPPS%20_English%20version_.pdf">https://old.vscht.cz/sil/keramika/Characterization_of_particles/CPPS%20_English%20version_.pdf</a></p>
+</details>
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="language-pycon highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">skimage</span><span class="w"> </span><span class="kn">import</span> <span class="n">data</span><span class="p">,</span> <span class="n">util</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">skimage.measure</span><span class="w"> </span><span class="kn">import</span> <span class="n">label</span><span class="p">,</span> <span class="n">regionprops</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">img</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">img_as_ubyte</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">coins</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">110</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">label_img</span> <span class="o">=</span> <span class="n">label</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">connectivity</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">props</span> <span class="o">=</span> <span class="n">regionprops</span><span class="p">(</span><span class="n">label_img</span><span class="p">)</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">&gt;&gt;&gt; </span><span class="c1"># centroid of first labeled object</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">props</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">centroid</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="go">(22.72987986048314, 81.91228523446583)</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="gp">&gt;&gt;&gt; </span><span class="c1"># centroid of first labeled object</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">props</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;centroid&#39;</span><span class="p">]</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="go">(22.72987986048314, 81.91228523446583)</span>
+</span></code></pre></div>
+    <p>Add custom measurements by passing functions as <code>extra_properties</code></p>
+    <div class="language-pycon highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">skimage</span><span class="w"> </span><span class="kn">import</span> <span class="n">data</span><span class="p">,</span> <span class="n">util</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">skimage.measure</span><span class="w"> </span><span class="kn">import</span> <span class="n">label</span><span class="p">,</span> <span class="n">regionprops</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">img</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">img_as_ubyte</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">coins</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">110</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">label_img</span> <span class="o">=</span> <span class="n">label</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">connectivity</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">pixelcount</span><span class="p">(</span><span class="n">regionmask</span><span class="p">):</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">... </span>    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">regionmask</span><span class="p">)</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">props</span> <span class="o">=</span> <span class="n">regionprops</span><span class="p">(</span><span class="n">label_img</span><span class="p">,</span> <span class="n">extra_properties</span><span class="o">=</span><span class="p">(</span><span class="n">pixelcount</span><span class="p">,))</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">props</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">pixelcount</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="go">7741</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">props</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;pixelcount&#39;</span><span class="p">]</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="go">42</span>
+</span></code></pre></div>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="ephysiopy.common.fieldproperties.FieldProps" class="doc doc-heading">
+            <code>ephysiopy.common.fieldproperties.FieldProps</code>
+
+
+<a href="#ephysiopy.common.fieldproperties.FieldProps" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="skimage.measure._regionprops.RegionProperties">RegionProperties</span></code></p>
+
+
+
+        <p>Describes various properties of a receptive field.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.slice">slice</span></code></td>
+            <td>
+                  <code>tuple of slice</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The slice of the field in the binned data (x slice, y slice)</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.label">label</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The label of the field</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.image_intensity">image_intensity</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The intensity image of the field (in Hz)</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.runs">runs</span></code></td>
+            <td>
+                  <code>list of RunProps</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The runs through the field</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.run_slices">run_slices</span></code></td>
+            <td>
+                  <code>list of slice</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The slices of the runs through the field (slices are position indices)</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.run_labels">run_labels</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The labels of the runs</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.max_index">max_index</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The index of the maximum intensity in the field</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.num_runs">num_runs</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The number of runs through the field</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.cumulative_time">cumulative_time</span></code></td>
+            <td>
+                  <code>list of np.ndarray</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The cumulative time spent on the field for each run through the field</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.cumulative_distance">cumulative_distance</span></code></td>
+            <td>
+                  <code>list of np.ndarray</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The cumulative time spent on the field for each run through the field</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.runs_speed">runs_speed</span></code></td>
+            <td>
+                  <code>list of np.ndarray</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The speed of each run through the field</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.runs_observed_spikes">runs_observed_spikes</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The observed spikes for each run through the field</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.spike_index">spike_index</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The index of the spikes in the position data</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.xy_at_peak">xy_at_peak</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The x-y coordinate of the field max</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.xy">xy</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The x-y coordinates of the field for all runs</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.xy_relative_to_peak">xy_relative_to_peak</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The x-y coordinates of the field zeroed with respect to the peak</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.xy_angle_to_peak">xy_angle_to_peak</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The angle each x-y coordinate makes to the field peak</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.xy_dist_to_peak">xy_dist_to_peak</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The distance of each x-y coordinate to the field peak</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.bw_perim">bw_perim</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The perimeter of the field as an array of bool</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.perimeter_coords">perimeter_coords</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The x-y coordinates of the field perimeter</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.global_perimeter_coords">global_perimeter_coords</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The global x-y coordinates of the field perimeter</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.perimeter_minus_field_max">perimeter_minus_field_max</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The x-y coordinates of the field perimeter minus the field max</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.perimeter_angle_from_peak">perimeter_angle_from_peak</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The angle each point on the perimeter makes to the field peak</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.perimeter_dist_from_peak">perimeter_dist_from_peak</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The distance of each point on the perimeter to the field peak</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.bin_coords">bin_coords</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The x-y coordinates of the field in the binned data</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.phi">phi</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The angular distance between the mean direction of each run and
+each position samples direction to the field centre</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.rho">rho</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The distance of each position sample to the field max (1 is furthest)</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.pos_xy">pos_xy</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The cartesian x-y coordinates of each position sample</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.pos_phi">pos_phi</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The angular distance between the mean direction of each run and
+each position samples direction to the field centre</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.pos_r">pos_r</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The ratio of the distance from the field peak to the position sample
+and the distance from the field peak to the point on the perimeter
+that is most colinear with the position sample</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.r_and_phi_to_x_and_y">r_and_phi_to_x_and_y</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Converts rho and phi to x and y coordinates</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.r_per_run">r_per_run</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The polar radial distance for each run</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.current_direction">current_direction</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The direction projected onto the mean run direction</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.cumulative_distance">cumulative_distance</span></code></td>
+            <td>
+                  <code>list of np.ndarray</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The cumulative distance for each run</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.projected_direction">projected_direction</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The direction projected onto the mean run direction</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.intensity_max">intensity_max</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The maximum intensity of the field (i.e. field peak rate)</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.intensity_mean">intensity_mean</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The mean intensity of the field</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.intensity_min">intensity_min</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The minimum intensity of the field</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.intensity_std">intensity_std</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The standard deviation of the field intensity</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+
+
+
+
+<p><span class="doc-section-title">Methods:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+            <tr class="doc-section-item">
+              <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.__str__">__str__</span></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Override the string representation printed to the console</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.mean_spiking_var">mean_spiking_var</span></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Get the mean value of a variable at the posiition of</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.overdispersion">overdispersion</span></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Calculate the overdispersion for each run through the field</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.runs_expected_spikes">runs_expected_spikes</span></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Calculate the expected number of spikes along each run given the</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.smooth_runs">smooth_runs</span></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Smooth in x and y in preparation for converting the smoothed cartesian</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><span title="ephysiopy.common.fieldproperties.FieldProps.spiking_var">spiking_var</span></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Get the value of a variable at the position of</p>
+                </div>
+              </td>
+            </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.FieldProps.compressed_phase" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">compressed_phase</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.FieldProps.compressed_phase" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>The phases of the LFP signal for all runs through this field
+compressed into a single array</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.FieldProps.n_spikes" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">n_spikes</span><span class="p">:</span> <span class="nb">int</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.FieldProps.n_spikes" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>The total number of spikes emitted on all runs through the field</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.FieldProps.normalized_position" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">normalized_position</span><span class="p">:</span> <span class="nb">list</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.FieldProps.normalized_position" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Only makes sense to run this on linear track data unless
+we want to pass the unit circle distance or something...</p>
+<p>Get the normalized position for each run through the field.</p>
+<p>Normalized position is the position of the run relative to the
+start of the field (0) to the end of the field (1).</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.FieldProps.phase" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">phase</span><span class="p">:</span> <span class="nb">list</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.FieldProps.phase" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>The phases of the LFP signal for all runs through this field</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.FieldProps.phi" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">phi</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.FieldProps.phi" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Calculate the angular distance between the mean direction of each run
+and each position samples direction to the field centre</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.FieldProps.pos_phi" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">pos_phi</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.FieldProps.pos_phi" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Calculate the angular distance between the mean direction of each run
+and each position samples direction to the field centre</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.FieldProps.pos_r" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">pos_r</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.FieldProps.pos_r" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Calculate the ratio of the distance from the field peak to the position
+sample and the distance from the field peak to the point on the
+perimeter that is most colinear with the position sample</p>
+<p>NB The values just before being returned can be &gt;= 1 so these are
+capped to 1</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.FieldProps.projected_direction" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">projected_direction</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.FieldProps.projected_direction" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>direction projected onto the mean run direction is just the x-coord
+when cartesian x and y is converted to from polar rho and phi</p>
+
+    </div>
+
+</div>
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="ephysiopy.common.fieldproperties.FieldProps.__str__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="fm">__str__</span><span class="p">()</span></code>
+
+<a href="#ephysiopy.common.fieldproperties.FieldProps.__str__" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Override the string representation printed to the console</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="ephysiopy.common.fieldproperties.FieldProps.mean_spiking_var" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">mean_spiking_var</span><span class="p">(</span><span class="n">var</span><span class="o">=</span><span class="s1">&#39;current_direction&#39;</span><span class="p">)</span></code>
+
+<a href="#ephysiopy.common.fieldproperties.FieldProps.mean_spiking_var" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Get the mean value of a variable at the posiition of
+the spikes for all runs through this field when multiple spikes
+occur in a single theta cycle</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>var</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the variable to get the mean value of at the position of spikes</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;current_direction&#39;</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the mean value of the variable at the position of spikes
+for all runs through this field</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="ephysiopy.common.fieldproperties.FieldProps.overdispersion" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">overdispersion</span><span class="p">(</span><span class="n">spikes</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span></code>
+
+<a href="#ephysiopy.common.fieldproperties.FieldProps.overdispersion" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Calculate the overdispersion for each run through the field</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>spike_train</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the spike train (spikes binned up by position) for the whole trial.
+Same length as the trial n_samples</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>fs</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the sample rate of the position data</p>
+              </div>
+            </td>
+            <td>
+                  <code>50</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the overdispersion for each run through the field</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="ephysiopy.common.fieldproperties.FieldProps.runs_expected_spikes" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">runs_expected_spikes</span><span class="p">(</span><span class="n">expected_rate</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span></code>
+
+<a href="#ephysiopy.common.fieldproperties.FieldProps.runs_expected_spikes" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Calculate the expected number of spikes along each run given the
+whole ratemap.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>expected_rate</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the rate seen at each xy position of the whole trial</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>sample_rate</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the sample rate of the position data</p>
+              </div>
+            </td>
+            <td>
+                  <code>50</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the expected rate at each xy position for each run</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <p>The expected spikes should be calculated from the smoothed
+ratemap and the xy position data using np.digitize:</p>
+    <div class="language-pycon highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">xbins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">digitize</span><span class="p">(</span><span class="n">xy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">binned_data</span><span class="o">.</span><span class="n">bin_edges</span><span class="p">[</span><span class="mi">1</span><span class="p">][:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">ybins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">digitize</span><span class="p">(</span><span class="n">xy</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">binned_data</span><span class="o">.</span><span class="n">bin_edges</span><span class="p">[</span><span class="mi">0</span><span class="p">][:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">expected_rate_at_pos</span> <span class="o">=</span> <span class="n">binned_data</span><span class="o">.</span><span class="n">binned_data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">ybins</span><span class="p">,</span> <span class="n">xbins</span><span class="p">]</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">exptd_spks</span> <span class="o">=</span> <span class="n">fieldprops</span><span class="o">.</span><span class="n">runs_expected_spikes</span><span class="p">(</span><span class="n">expected_rate_at_pos</span><span class="p">)</span>
+</span></code></pre></div>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="ephysiopy.common.fieldproperties.FieldProps.smooth_runs" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">smooth_runs</span><span class="p">(</span><span class="n">k</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">spatial_lp_cut</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span></code>
+
+<a href="#ephysiopy.common.fieldproperties.FieldProps.smooth_runs" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Smooth in x and y in preparation for converting the smoothed cartesian
+coordinates to polar ones</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>k</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>smoothing constant for the instantaneous firing rate</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>spatial_lp_cut</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>spatial lowpass cut off</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>sample_rate</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>position sample rate in Hz</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="ephysiopy.common.fieldproperties.FieldProps.spiking_var" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">spiking_var</span><span class="p">(</span><span class="n">var</span><span class="o">=</span><span class="s1">&#39;current_direction&#39;</span><span class="p">)</span></code>
+
+<a href="#ephysiopy.common.fieldproperties.FieldProps.spiking_var" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Get the value of a variable at the position of
+spikes for all runs through this field</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>var</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the variable to get the value of at the position of spikes</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;current_direction&#39;</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the value of the variable at the position of spikes
+for all runs through this field</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="ephysiopy.common.fieldproperties.RunProps" class="doc doc-heading">
+            <code>ephysiopy.common.fieldproperties.RunProps</code>
+
+
+<a href="#ephysiopy.common.fieldproperties.RunProps" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="ephysiopy.common.fieldproperties.SpikingProperty">SpikingProperty</span></code>, <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#object">object</a></code></p>
+
+
+
+        <p>A custom class for holding information about runs through a receptive field</p>
+<p>Each run needs to have some information about the field to which it belongs
+so the constructor takes in the peak x-y coordinate of the field and its
+index as well as the coordinates of the perimeter of the field</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.label">label</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the run id</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.slice">slice</span></code></td>
+            <td>
+                  <code><span title="ephysiopy.common.fieldproperties.RunProps.slice">slice</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the slice of the position data for a run</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.xy">xy</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the x-y coordinates for a run (global coordinates)</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.speed">speed</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the speed at each xy coordinate</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.peak_xy">peak_xy</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a>, <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the fields max rate xy location</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.max_index">max_index</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the index into the arrays of the field max</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.perimeter_coords">perimeter_coords</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>xy coordinates of the field perimeter</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.hdir">hdir</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the heading direction</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.min_speed">min_speed</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the minimum speed</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.cumulative_time">cumulative_time</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the cumulative time spent on a run</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.duration">duration</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the total duration of a run in seconds</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.n_spikes">n_spikes</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the total number of spikes emitted on a run</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.run_start">run_start</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the position index of the run start</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.run_stop">run_stop</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the position index of the run stop</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.mean_direction">mean_direction</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the mean direction of a run</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.current_direction">current_direction</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the current direction of a run</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.cumulative_distance">cumulative_distance</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the cumulative distance covered in a run</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.spike_index">spike_index</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the index into the position data of the spikes on a run</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.observed_spikes">observed_spikes</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the observed spikes on a run (binned by position samples)</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.xy_angle_to_peak">xy_angle_to_peak</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the xy angle to the peak (radians)</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.xy_dist_to_peak">xy_dist_to_peak</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the distance to the field max</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.xy_dist_to_peak_normed">xy_dist_to_peak_normed</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>normalised distance to field max</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.pos_xy">pos_xy</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>cartesian xy coordinates but normalised on a unit circle</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.pos_phi">pos_phi</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the angular distance between a runs main direction and the
+direction to the peak for each position sample</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.rho">rho</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the polar radial distance (1 = field edge)</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.phi">phi</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the polar angle (radians)</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.r_and_phi_to_x_and_y">r_and_phi_to_x_and_y</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>converts rho and phi to x and y coordinates (range = -1 -&gt; +1)</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.tortuosity">tortuosity</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the tortuosity for a run (closer to 1 = a straighter run)</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.RunProps.xy_is_smoothed">xy_is_smoothed</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>whether the xy data has been smoothed</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+
+
+
+
+<p><span class="doc-section-title">Methods:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+            <tr class="doc-section-item">
+              <td><code><span title="ephysiopy.common.fieldproperties.RunProps.__init__">__init__</span></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Parameters</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><span title="ephysiopy.common.fieldproperties.RunProps.expected_spikes">expected_spikes</span></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Calculates the expected number of spikes along this run given the</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><span title="ephysiopy.common.fieldproperties.RunProps.mean_spiking_var">mean_spiking_var</span></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Get the mean value of a variable at the posiition of</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><span title="ephysiopy.common.fieldproperties.RunProps.overdispersion">overdispersion</span></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>The overdispersion map for this run</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><span title="ephysiopy.common.fieldproperties.RunProps.smooth_xy">smooth_xy</span></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Smooth in x and y in preparation for converting the smoothed cartesian</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><span title="ephysiopy.common.fieldproperties.RunProps.spiking_var">spiking_var</span></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Get the value of a variable at the position of</p>
+                </div>
+              </td>
+            </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.RunProps.current_direction" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">current_direction</span><span class="p">:</span> <span class="n">ma</span><span class="o">.</span><span class="n">MaskedArray</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.RunProps.current_direction" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Supposed to calculate current direction wrt to field centre?</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.RunProps.ndim" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">ndim</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.RunProps.ndim" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Return the dimensionality of the data</p>
+<p>For 1 x n linear track data dimensionality = 1
+for 2 x n open field (or other) data dimensionality = 2</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.RunProps.normed_x" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">normed_x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.RunProps.normed_x" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Normalise the x data to lie between -1 and 1
+with respect to the field limits
+of the parent field and the run direction such
+that -1 is entry and +1 is exit</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.RunProps.phi" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">phi</span><span class="p">:</span> <span class="n">ma</span><span class="o">.</span><span class="n">MaskedArray</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.RunProps.phi" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Values lie between 0 and 2pi</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.RunProps.pos_phi" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">pos_phi</span><span class="p">:</span> <span class="n">ma</span><span class="o">.</span><span class="n">MaskedArray</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.RunProps.pos_phi" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Values lie between 0 and 2pi</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.RunProps.pos_r" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">pos_r</span><span class="p">:</span> <span class="n">ma</span><span class="o">.</span><span class="n">MaskedArray</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.RunProps.pos_r" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Values lie between 0 and 1</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.RunProps.raw_spike_times" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">raw_spike_times</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.RunProps.raw_spike_times" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Return the spike times that fall within the slice without masking</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.RunProps.rho" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">rho</span><span class="p">:</span> <span class="n">ma</span><span class="o">.</span><span class="n">MaskedArray</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.RunProps.rho" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Values lie between 0 and 1</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.RunProps.spike_index" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">spike_index</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.RunProps.spike_index" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Get the index into the LFP data of the spikes for this segment</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the index into the LFP data of the spikes for this segment</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.RunProps.xy_dist_to_peak_normed" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">xy_dist_to_peak_normed</span><span class="p">:</span> <span class="n">ma</span><span class="o">.</span><span class="n">MaskedArray</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.RunProps.xy_dist_to_peak_normed" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Values lie between 0 and 1</p>
+
+    </div>
+
+</div>
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="ephysiopy.common.fieldproperties.RunProps.__init__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">slice</span><span class="p">:</span> <span class="nb">slice</span><span class="p">,</span> <span class="n">spike_times</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">xy_coords</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">speed</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">peak_xy</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">max_index</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">perimeter_coords</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">50</span><span class="p">)</span></code>
+
+<a href="#ephysiopy.common.fieldproperties.RunProps.__init__" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>label</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the field label the run belongs to</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>slice</code>
+            </td>
+            <td>
+                  <code><span title="ephysiopy.common.fieldproperties.RunProps(slice)">slice</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the slice into the position array that holds all the position data</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>spike_times</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the spike times for this run</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>xy_coords</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the xy data for this run (global coordinates)</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>hdir</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the heading direction for this run</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>speed</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the speed for this run</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>peak_xy</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the peak location of the field for the this run</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_index</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the index (r,c) of the maximum of the firing field</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>perimeter_coords</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the xy coordinates of the perimeter of the field</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="ephysiopy.common.fieldproperties.RunProps.expected_spikes" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">expected_spikes</span><span class="p">(</span><span class="n">expected_rate_at_pos</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span></code>
+
+<a href="#ephysiopy.common.fieldproperties.RunProps.expected_spikes" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Calculates the expected number of spikes along this run given the
+whole ratemap.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>expected_rate_at_pos</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the rate seen at each xy position of the whole trial</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>expected_rate</code></td>            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the expected rate at each xy position of this run</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="ephysiopy.common.fieldproperties.RunProps.mean_spiking_var" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">mean_spiking_var</span><span class="p">(</span><span class="n">var</span><span class="o">=</span><span class="s1">&#39;current_direction&#39;</span><span class="p">)</span></code>
+
+<a href="#ephysiopy.common.fieldproperties.RunProps.mean_spiking_var" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Get the mean value of a variable at the posiition of
+the spikes for all runs through this field when multiple spikes
+occur in a single theta cycle</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="ephysiopy.common.fieldproperties.RunProps.overdispersion" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">overdispersion</span><span class="p">(</span><span class="n">spike_train</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span></code>
+
+<a href="#ephysiopy.common.fieldproperties.RunProps.overdispersion" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>The overdispersion map for this run</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>spike_train</code>
+            </td>
+            <td>
+                  <code><span title="numpy.mdarray">mdarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the spike train (spikes binned up by position) for the whole trial.
+Same length as the trial n_samples</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>fs</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the sample rate of the position data</p>
+              </div>
+            </td>
+            <td>
+                  <code>50</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="ephysiopy.common.fieldproperties.RunProps.smooth_xy" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">smooth_xy</span><span class="p">(</span><span class="n">k</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">spatial_lp</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span></code>
+
+<a href="#ephysiopy.common.fieldproperties.RunProps.smooth_xy" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Smooth in x and y in preparation for converting the smoothed cartesian
+coordinates to polar ones</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>k</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>smoothing constant for the instantaneous firing rate</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>spatial_lp_cut</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>spatial lowpass cut off</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>sample_rate</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>position sample rate in Hz</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="ephysiopy.common.fieldproperties.RunProps.spiking_var" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">spiking_var</span><span class="p">(</span><span class="n">var</span><span class="o">=</span><span class="s1">&#39;current_direction&#39;</span><span class="p">)</span></code>
+
+<a href="#ephysiopy.common.fieldproperties.RunProps.spiking_var" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Get the value of a variable at the position of
+spikes for this run</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="ephysiopy.common.fieldproperties.LFPSegment" class="doc doc-heading">
+            <code>ephysiopy.common.fieldproperties.LFPSegment</code>
+
+
+<a href="#ephysiopy.common.fieldproperties.LFPSegment" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="ephysiopy.common.fieldproperties.SpikingProperty">SpikingProperty</span></code>, <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#object">object</a></code></p>
+
+
+
+        <p>A custom class for dealing with segments of an LFP signal and how
+they relate to specific runs through a receptive field
+(see RunProps and FieldProps below)</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.LFPSegment.field_label">field_label</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The field id</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.LFPSegment.run_label">run_label</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The run id</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.LFPSegment.slice">slice</span></code></td>
+            <td>
+                  <code><span title="ephysiopy.common.fieldproperties.LFPSegment.slice">slice</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>slice into the LFP data for a segment</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.LFPSegment.spike_times">spike_times</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the times in seconds spikes occurred for a segment</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.LFPSegment.spike_count">spike_count</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>spikes binned into lfp samples for a segment</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.LFPSegment.signal">signal</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>raw signal for a segment</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.LFPSegment.filtered_signal">filtered_signal</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>bandpass filtered signal for a segment</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.LFPSegment.phase">phase</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>phase data for a segment</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.LFPSegment.amplitude">amplitude</span></code></td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>amplitude for a segment</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.LFPSegment.sample_rate">sample_rate</span></code></td>
+            <td>
+                  <code>(<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a>, <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a>)</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>sample rate for the LFP segment</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="ephysiopy.common.fieldproperties.LFPSegment.filter_band">filter_band</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a>, <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the bandpass filter values</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+
+
+
+
+<p><span class="doc-section-title">Methods:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+            <tr class="doc-section-item">
+              <td><code><span title="ephysiopy.common.fieldproperties.LFPSegment.__init__">__init__</span></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Parameters</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><span title="ephysiopy.common.fieldproperties.LFPSegment.mean_spiking_var">mean_spiking_var</span></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Get the mean value of a variable at the posiition of</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><span title="ephysiopy.common.fieldproperties.LFPSegment.spiking_var">spiking_var</span></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Get the value of a variable at the position of</p>
+                </div>
+              </td>
+            </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.LFPSegment.raw_spike_times" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">raw_spike_times</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.LFPSegment.raw_spike_times" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Return the spike times that fall within the slice without masking</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="ephysiopy.common.fieldproperties.LFPSegment.spike_index" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">spike_index</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#ephysiopy.common.fieldproperties.LFPSegment.spike_index" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Get the index into the LFP data of the spikes for this segment</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the index into the LFP data of the spikes for this segment</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+    </div>
+
+</div>
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="ephysiopy.common.fieldproperties.LFPSegment.__init__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="n">field_label</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">run_label</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">slice</span><span class="p">:</span> <span class="nb">slice</span><span class="p">,</span> <span class="n">spike_times</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">signal</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">filtered_signal</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">phase</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">cycle_label</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">int</span><span class="p">)</span></code>
+
+<a href="#ephysiopy.common.fieldproperties.LFPSegment.__init__" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>field_label</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the field id to which this LFP segment belongs</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>run_label</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the run id through the field to which this LFP segment belongs</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>slice</code>
+            </td>
+            <td>
+                  <code><span title="ephysiopy.common.fieldproperties.LFPSegment(slice)">slice</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the slice corresponding the pos sample I think</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>spike_count</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>spikes binned into lfp samples</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>signal</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the raw, filtered, and phase of the LFP for a given segment</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>filtered_signal</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the raw, filtered, and phase of the LFP for a given segment</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>phase</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the raw, filtered, and phase of the LFP for a given segment</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>sample_rate</code>
+            </td>
+            <td>
+                  <code>(<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a>, <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a>)</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the sample rate for the LFP signal</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>filter_band</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the bandpass filter giving filtered_signal</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="ephysiopy.common.fieldproperties.LFPSegment.mean_spiking_var" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">mean_spiking_var</span><span class="p">(</span><span class="n">var</span><span class="o">=</span><span class="s1">&#39;phase&#39;</span><span class="p">)</span></code>
+
+<a href="#ephysiopy.common.fieldproperties.LFPSegment.mean_spiking_var" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Get the mean value of a variable at the posiition of
+the spikes for all runs through this field when multiple spikes
+occur in a single theta cycle</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="ephysiopy.common.fieldproperties.LFPSegment.spiking_var" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">spiking_var</span><span class="p">(</span><span class="n">var</span><span class="o">=</span><span class="s1">&#39;phase&#39;</span><span class="p">)</span></code>
+
+<a href="#ephysiopy.common.fieldproperties.LFPSegment.spiking_var" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Get the value of a variable at the position of
+spikes for this run</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../plotting/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Plotting functions">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Plotting functions
+              </div>
+            </div>
+          </a>
+        
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 Robin Hayman
+
+    </div>
+  
+  
+    Made with
+    <a href="https://zensical.org/" target="_blank" rel="noopener">
+      Zensical
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rhayman/ephysiopy" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      
+      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["announce.dismiss","content.code.annotate","content.code.copy","content.code.select","content.footnote.tooltips","content.tabs.link","content.tooltips","navigation.footer","navigation.indexes","navigation.instant","navigation.instant.prefetch","navigation.instant.progress","navigation.path","navigation.sections","navigation.tabs","navigation.top","navigation.tracking","search.highlight","toc.follow"],"search":"../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.5fcf0de6.min.js"></script>
+      
+    
+  </body>
+</html>
