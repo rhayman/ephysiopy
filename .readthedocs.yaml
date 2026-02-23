@@ -3,6 +3,7 @@ version: 2
 build:
   os: ubuntu-24.04
   tools:
+    uv: latest
     python: latest
   jobs:
     install:
