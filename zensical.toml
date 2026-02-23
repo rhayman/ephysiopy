@@ -45,7 +45,7 @@ Copyright &copy; 2026 Robin Hayman
 #
 # Read more: https://zensical.org/docs/setup/navigation/
 nav = [
-  { "Home" = "index1.md" },
+  { "Home" = "index.md" },
   { "User Guide" = [
     "ephysiopy_tutorial.md",
     "what_is_ephysiopy.md",
