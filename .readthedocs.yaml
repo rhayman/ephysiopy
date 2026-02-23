@@ -4,6 +4,9 @@
  os: ubuntu-24.04
  tools:
      python: latest
+ python:
+   install:
+     - requirements: requirements.txt
  jobs:
    # We recommend using a requirements file for reproducible builds.
    # This is just a quick example to get started.
