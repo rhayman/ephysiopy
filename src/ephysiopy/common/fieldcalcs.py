@@ -1,9 +1,7 @@
 import numpy as np
-import copy
 import warnings
 import skimage
 from skimage.segmentation import watershed
-from skimage.feature import peak_local_max
 from scipy import ndimage as ndi
 from scipy import spatial
 from scipy import stats

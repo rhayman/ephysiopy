@@ -13,6 +13,7 @@ import os
 class VariableToBin(Enum):
     """
     Holds a human readable representation of the variable being binned
+
     """
 
     XY = 1
@@ -368,6 +369,8 @@ class TrialFilter:
     """
     A basic dataclass for holding filter values
 
+    Notes
+    -----
     Units:
         time: seconds
         dir: degrees

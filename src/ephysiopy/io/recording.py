@@ -529,6 +529,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self, cluster: int | list, channel: int | list, bin_into: str = "pos"
     ) -> np.ndarray:
         """
+        Get the spike times binned into either position ("pos") or LFP ("lfp") data
+
         Parameters
         ----------
         cluster (int | list)
@@ -1389,6 +1391,9 @@ class OpenEphysBase(TrialInterface):
             warnings.warn("Could not find raw data file")
 
     def load_settings(self, *args, **kwargs):
+        """
+        Load the settings.xml file associated with the recording
+        """
         if self._settings is None:
             # pname_root gets walked through and over-written with
             # correct location of settings.xml
@@ -1430,10 +1435,7 @@ class OpenEphysBase(TrialInterface):
         # which needs updating
         # TODO: Update / overhaul OpenEphysNWB
         # Load the start time from the sync_messages file
-        if "cm" in kwargs:
-            cm = kwargs["cm"]
-        else:
-            cm = True
+        cm = kwargs.get("cm", True)
 
         recording_start_time = self._get_recording_start_time()
 

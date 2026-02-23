@@ -121,8 +121,7 @@ class EventsGeneric(object):
         self._event_dict = dict.fromkeys(level_one_keys)
         self._event_dict["stim_params"] = OrderedDict.fromkeys(level_two_keys)
         for k in self._event_dict["stim_params"].keys():
-            self._event_dict["stim_params"][k] = dict.fromkeys(
-                level_three_keys)
+            self._event_dict["stim_params"][k] = dict.fromkeys(level_three_keys)
 
 
 class EEGCalcsGeneric(object):
@@ -197,25 +196,25 @@ class EEGCalcsGeneric(object):
 
     def butterFilter(self, low: float, high: float, order: int = 5) -> np.ndarray:
         """
-         Filters self.sig with a butterworth filter with a bandpass filter
-         defined by low and high
+        Filters self.sig with a butterworth filter with a bandpass filter
+        defined by low and high
 
         Parameters
         ----------
-         low, high : float
-             the lower and upper bounds of the bandpass filter
-         order : int
-             the order of the filter
+        low, high : float
+            the lower and upper bounds of the bandpass filter
+        order : int
+            the order of the filter
 
-         Returns
-         -------
-         filt : np.ndarray
-             the filtered signal
+        Returns
+        -------
+        filt : np.ndarray
+            the filtered signal
 
-         Notes
-         -----
-         the signal is filtered in both the forward and
-             reverse directions (scipy.signal.filtfilt)
+        Notes
+        -----
+        the signal is filtered in both the forward and
+            reverse directions (scipy.signal.filtfilt)
         """
         nyqlim = self.fs / 2
         lowcut = low / nyqlim
@@ -301,8 +300,7 @@ class EEGCalcsGeneric(object):
         idx = np.zeros([len(freqs), len(f)]).astype(bool)
 
         for i, freq in enumerate(freqs):
-            idx[i, :] = np.logical_and(
-                np.abs(f) < freq + band, np.abs(f) > freq - band)
+            idx[i, :] = np.logical_and(np.abs(f) < freq + band, np.abs(f) > freq - band)
 
         pollutedIdx = np.sum(idx, 0)
         fftRes[pollutedIdx] = np.mean(fftRes)
@@ -572,8 +570,7 @@ class PosCalcsGeneric(object):
         # self.dir = np.mod(
         #     np.arctan2(np.diff(xy_f[1]), np.diff(xy_f[0])) * (180 / np.pi), 360
         # )
-        self.dir = np.rad2deg(np.arctan2(
-            np.diff(xy_f[1]), np.diff(xy_f[0]))) + 180
+        self.dir = np.rad2deg(np.arctan2(np.diff(xy_f[1]), np.diff(xy_f[0]))) + 180
         self.dir = np.append(self.dir, self.dir[-1])
         self.dir[~good] = np.ma.masked
         return self.dir
@@ -684,8 +681,7 @@ class PosCalcsGeneric(object):
             The xy positional data
 
         """
-        speed = np.ma.MaskedArray(
-            np.abs(np.ma.ediff1d(np.hypot(xy[0], xy[1]))))
+        speed = np.ma.MaskedArray(np.abs(np.ma.ediff1d(np.hypot(xy[0], xy[1]))))
         self.speed = np.append(speed, speed[-1])
         self.speed = self.speed * self.sample_rate
 
@@ -729,10 +725,8 @@ class PosCalcsGeneric(object):
 
         denom = np.gcd(upsample_rate, 30)
 
-        new_x = signal.resample_poly(
-            xy[0, :], upsample_rate / denom, 30 / denom)
-        new_y = signal.resample_poly(
-            xy[1, :], upsample_rate / denom, 30 / denom)
+        new_x = signal.resample_poly(xy[0, :], upsample_rate / denom, 30 / denom)
+        new_y = signal.resample_poly(xy[1, :], upsample_rate / denom, 30 / denom)
         return np.array([new_x, new_y])
 
     def apply_mask(self, mask: np.ndarray):
@@ -819,12 +813,10 @@ def calculate_rms_and_std(
         the RMS and standard deviation of the signal
     """
     rms = np.nanmean(
-        np.sqrt(
-            np.power(sig[int(time_window[0] * fs): int(time_window[1] * fs)], 2))
+        np.sqrt(np.power(sig[int(time_window[0] * fs) : int(time_window[1] * fs)], 2))
     )
     std = np.nanstd(
-        np.sqrt(
-            np.power(sig[int(time_window[0] * fs): int(time_window[1] * fs)], 2))
+        np.sqrt(np.power(sig[int(time_window[0] * fs) : int(time_window[1] * fs)], 2))
     )
     return rms, std
 

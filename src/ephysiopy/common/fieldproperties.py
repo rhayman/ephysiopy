@@ -1433,15 +1433,15 @@ class FieldProps(RegionProperties):
         np.ndarray
             the expected rate at each xy position for each run
 
-        Notes
-        -----
+        Examples
+        --------
         The expected spikes should be calculated from the smoothed
         ratemap and the xy position data using np.digitize:
 
-        >> xbins = np.digitize(xy[0], binned_data.bin_edges[1][:-1]) - 1
-        >> ybins = np.digitize(xy[1], binned_data.bin_edges[0][:-1]) - 1
-        >> expected_rate_at_pos = binned_data.binned_data[0][ybins, xbins]
-        >> exptd_spks = fieldprops.runs_expected_spikes(expected_rate_at_pos)
+        >>> xbins = np.digitize(xy[0], binned_data.bin_edges[1][:-1]) - 1
+        >>> ybins = np.digitize(xy[1], binned_data.bin_edges[0][:-1]) - 1
+        >>> expected_rate_at_pos = binned_data.binned_data[0][ybins, xbins]
+        >>> exptd_spks = fieldprops.runs_expected_spikes(expected_rate_at_pos)
         """
         return np.concatenate(
             [r.expected_spikes(expected_rate, sample_rate) for r in self.runs]
@@ -1551,146 +1551,150 @@ def fieldprops(
     -----
     The following properties can be accessed as attributes or keys:
 
-    **area** : float
+    area : float
         Area of the region i.e. number of pixels of the region scaled
         by pixel-area.
-    **area_bbox** : float
+
+    area_bbox : float
         Area of the bounding box i.e. number of pixels of bounding box scaled
         by pixel-area.
-    **area_convex** : float
+
+    area_convex : float
         Area of the convex hull image, which is the smallest convex
         polygon that encloses the region.
-    **area_filled** : float
+
+    area_filled : float
         Area of the region with all the holes filled in.
-    **axis_major_length** : float
+
+    axis_major_length : float
         The length of the major axis of the ellipse that has the same
         normalized second central moments as the region.
-    **axis_minor_length** : float
+    axis_minor_length : float
         The length of the minor axis of the ellipse that has the same
         normalized second central moments as the region.
-    **bbox** : tuple
+    bbox : tuple
         Bounding box ``(min_row, min_col, max_row, max_col)``.
         Pixels belonging to the bounding box are in the half-open interval
         ``[min_row; max_row)`` and ``[min_col; max_col)``.
-    **centroid** : array
+    centroid : array
         Centroid coordinate tuple ``(row, col)``.
-    **centroid_local** : array
+    centroid_local : array
         Centroid coordinate tuple ``(row, col)``, relative to region bounding
         box.
-    **centroid_weighted** : array
+    centroid_weighted : array
         Centroid coordinate tuple ``(row, col)`` weighted with intensity
         image.
-    **centroid_weighted_local** : array
+    centroid_weighted_local : array
         Centroid coordinate tuple ``(row, col)``, relative to region bounding
         box, weighted with intensity image.
-    **coords_scaled** : (K, 2) ndarray
+    coords_scaled : (K, 2) ndarray
         Coordinate list ``(row, col)`` of the region scaled by ``spacing``.
-    **coords** : (K, 2) ndarray
+    coords : (K, 2) ndarray
         Coordinate list ``(row, col)`` of the region.
-    **eccentricity** : float
+    eccentricity : float
         Eccentricity of the ellipse that has the same second-moments as the
         region. The eccentricity is the ratio of the focal distance
         (distance between focal points) over the major axis length.
         The value is in the interval [0, 1).
         When it is 0, the ellipse becomes a circle.
-    **equivalent_diameter_area** : float
+    equivalent_diameter_area : float
         The diameter of a circle with the same area as the region.
-    **euler_number** : int
+    euler_number : int
         Euler characteristic of the set of non-zero pixels.
         Computed as number of connected components subtracted by number of
         holes (input.ndim connectivity). In 3D, number of connected
         components plus number of holes subtracted by number of tunnels.
-    **extent** : float
+    extent : float
         Ratio of pixels in the region to pixels in the total bounding box.
-        Computed as ``area / (rows * cols)``
-    **feret_diameter_max** : float
+        Computed as ``area / (rows  cols)``
+    feret_diameter_max : float
         Maximum Feret's diameter computed as the longest distance between
         points around a region's convex hull contour as determined by
         ``find_contours``. [5]_
-    **image** : (H, J) ndarray
+    image : (H, J) ndarray
         Sliced binary region image which has the same size as bounding box.
-    **image_convex** : (H, J) ndarray
+    image_convex : (H, J) ndarray
         Binary convex hull image which has the same size as bounding box.
-    **image_filled** : (H, J) ndarray
+    image_filled : (H, J) ndarray
         Binary region image with filled holes which has the same size as
         bounding box.
-    **image_intensity** : ndarray
+    image_intensity : ndarray
         Image inside region bounding box.
-    **inertia_tensor** : ndarray
+    inertia_tensor : ndarray
         Inertia tensor of the region for the rotation around its mass.
-    **inertia_tensor_eigvals** : tuple
+    inertia_tensor_eigvals : tuple
         The eigenvalues of the inertia tensor in decreasing order.
-    **intensity_max** : float
+    intensity_max : float
         Value with the greatest intensity in the region.
-    **intensity_mean** : float
+    intensity_mean : float
         Value with the mean intensity in the region.
-    **intensity_min** : float
+    intensity_min : float
         Value with the least intensity in the region.
-    **intensity_std** : float
+    intensity_std : float
         Standard deviation of the intensity in the region.
-    **label** : int
+    label : int
         The label in the labeled input image.
-    **moments** : (3, 3) ndarray
+    moments : (3, 3) ndarray
         Spatial moments up to 3rd order::
 
-            m_ij = sum{ array(row, col) * row^i * col^j }
+            m_ij = sum{ array(row, col)  row^i  col^j }
 
         where the sum is over the `row`, `col` coordinates of the region.
-    **moments_central** : (3, 3) ndarray
+    moments_central : (3, 3) ndarray
         Central moments (translation invariant) up to 3rd order::
 
-            mu_ij = sum{ array(row, col) * (row - row_c)^i * (col - col_c)^j }
+            mu_ij = sum{ array(row, col)  (row - row_c)^i  (col - col_c)^j }
 
         where the sum is over the `row`, `col` coordinates of the region,
         and `row_c` and `col_c` are the coordinates of the region's centroid.
-    **moments_hu** : tuple
+    moments_hu : tuple
         Hu moments (translation, scale and rotation invariant).
-    **moments_normalized** : (3, 3) ndarray
+    moments_normalized : (3, 3) ndarray
         Normalized moments (translation and scale invariant) up to 3rd order::
 
             nu_ij = mu_ij / m_00^[(i+j)/2 + 1]
 
         where `m_00` is the zeroth spatial moment.
-    **moments_weighted** : (3, 3) ndarray
+    moments_weighted : (3, 3) ndarray
         Spatial moments of intensity image up to 3rd order::
 
-            wm_ij = sum{ array(row, col) * row^i * col^j }
+            wm_ij = sum{ array(row, col)  row^i  col^j }
 
         where the sum is over the `row`, `col` coordinates of the region.
-    **moments_weighted_central** : (3, 3) ndarray
+    moments_weighted_central : (3, 3) ndarray
         Central moments (translation invariant) of intensity image up to
         3rd order::
 
-            wmu_ij = sum{ array(row, col) * (row - row_c)^i * (col - col_c)^j }
+            wmu_ij = sum{ array(row, col)  (row - row_c)^i  (col - col_c)^j }
 
         where the sum is over the `row`, `col` coordinates of the region,
         and `row_c` and `col_c` are the coordinates of the region's weighted
         centroid.
-    **moments_weighted_hu** : tuple
+    moments_weighted_hu : tuple
         Hu moments (translation, scale and rotation invariant) of intensity
         image.
-    **moments_weighted_normalized** : (3, 3) ndarray
+    moments_weighted_normalized : (3, 3) ndarray
         Normalized moments (translation and scale invariant) of intensity
         image up to 3rd order::
 
             wnu_ij = wmu_ij / wm_00^[(i+j)/2 + 1]
 
         where ``wm_00`` is the zeroth spatial moment (intensity-weighted area).
-    **num_pixels** : int
+    num_pixels : int
         Number of foreground pixels.
-    **orientation** : float
+    orientation : float
         Angle between the 0th axis (rows) and the major
         axis of the ellipse that has the same second moments as the region,
         ranging from `-pi/2` to `pi/2` counter-clockwise.
-    **perimeter** : float
+    perimeter : float
         Perimeter of object which approximates the contour as a line
         through the centers of border pixels using a 4-connectivity.
-    **perimeter_crofton** : float
+    perimeter_crofton : float
         Perimeter of object approximated by the Crofton formula in 4
         directions.
-    **slice** : tuple of slices
+    slice : tuple of slices
         A slice to extract the object from the source image.
-    **solidity** : float
+    solidity : float
         Ratio of pixels in the region to pixels of the convex hull image.
 
     Each region also supports iteration, so that you can do::
