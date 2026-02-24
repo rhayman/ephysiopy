@@ -618,6 +618,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#examining-individual-firing-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examining individual firing fields
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -971,6 +982,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#examining-individual-firing-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examining individual firing fields
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1176,6 +1198,50 @@ The name of the filter should be one of the following:</p>
 </span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>yrange
 </span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>phi
 </span></code></pre></div>
+<h2 id="examining-individual-firing-fields">Examining individual firing fields<a class="headerlink" href="#examining-individual-firing-fields" title="Permanent link">&para;</a></h2>
+<p>We can extract individual firing fields from a firing rate map to look more
+closely at what's happening during individual passes through a firing field.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">field_props</span> <span class="o">=</span> <span class="n">trial</span><span class="o">.</span><span class="n">get_field_properties</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="n">Field</span> <span class="mi">1</span> <span class="n">has</span> <span class="mi">47</span> <span class="n">potential</span> <span class="n">runs</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="n">Field</span> <span class="mi">2</span> <span class="n">has</span> <span class="mi">134</span> <span class="n">potential</span> <span class="n">runs</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="n">Field</span> <span class="mi">3</span> <span class="n">has</span> <span class="mi">165</span> <span class="n">potential</span> <span class="n">runs</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="n">Field</span> <span class="mi">4</span> <span class="n">has</span> <span class="mi">55</span> <span class="n">potential</span> <span class="n">runs</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="n">Field</span> <span class="mi">5</span> <span class="n">has</span> <span class="mi">95</span> <span class="n">potential</span> <span class="n">runs</span>
+</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="n">Field</span> <span class="mi">6</span> <span class="n">has</span> <span class="mi">113</span> <span class="n">potential</span> <span class="n">runs</span>
+</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="n">Field</span> <span class="mi">7</span> <span class="n">has</span> <span class="mi">4</span> <span class="n">potential</span> <span class="n">runs</span>
+</span></code></pre></div>
+<p>The <a href=".././field_analysis/">get_field_properties()</a> method has detected 7 fields and a number of 
+runs through each one and returned them as a list. </p>
+<p>You can plot the results of this image segmentation like so:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ephysiopy.common.fieldcalcs</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_field_props</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="n">plot_field_props</span><span class="p">(</span><span class="n">field_props</span><span class="p">)</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</span></code></pre></div>
+<p><img _="," alt="field_props" height="700px" src="../field_props.png" width="700px" /></p>
+<p>The top left-hand part of the figure shows the results of the segmentation colour-coded
+for field number (should go from 1 to n numbering from the top left and rastering left to 
+right). The plot at the top-right is the result of taking each run through a field and
+transforming it so that it lies on a unit circle. This is useful for performing phase
+precession anaylsis in 2D environments<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup>. The bottom left-hand
+part of the figure shows the angle of each point on the perimeter of each field that that
+firing fields peak and the central heatmap part of each field shows the distance of
+each bin the field to the firing field centre. The bottom right-hand part of the figure
+shows the firing rate map numbered with the firing field identity.</p>
+<p>Each item in field_props in the example above is of type ephysiopy.common.fieldproperties.FieldProps
+and has a large number of attributes availabale. You can also add LFP data for each run through
+the field(s) which should make phase precession type anaylses easier.</p>
+<div class="footnote">
+<hr />
+<ol>
+<li id="fn:1">
+<p>Jeewajee A, Barry C, Douchamps V, Manson D, Lever C, Burgess N.
+    Theta phase precession of grid and place cell firing in open
+    environments.
+    Philos Trans R Soc Lond B Biol Sci. 2013 Dec 23;369(1635):20120532.
+    doi: 10.1098/rstb.2012.0532.&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div>
 
 
 

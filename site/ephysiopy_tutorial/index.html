@@ -514,22 +514,33 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#the-underlying-data" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The underlying data
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="The underlying data">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#binneddata" class="md-nav__link">
     <span class="md-ellipsis">
       
         BinnedData
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="BinnedData">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#correlating-maps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Correlating maps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#iterating-over-binneddata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Iterating over BinnedData
       
     </span>
   </a>
@@ -1019,22 +1030,33 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#the-underlying-data" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The underlying data
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="The underlying data">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#binneddata" class="md-nav__link">
     <span class="md-ellipsis">
       
         BinnedData
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="BinnedData">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#correlating-maps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Correlating maps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#iterating-over-binneddata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Iterating over BinnedData
       
     </span>
   </a>
@@ -1124,10 +1146,7 @@
 <p><a href="../installation">Installation</a></p>
 <p><a href="../quickstart">ephsyiopy quickstart</a></p>
 <h2 id="data-organisation">Data organisation<a class="headerlink" href="#data-organisation" title="Permanent link">&para;</a></h2>
-<ol>
-<li>With data recorded using OpenEphys the folder structure looks something like this:</li>
-</ol>
-<p>::
+<p>With data recorded using OpenEphys the folder structure looks something like this:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>  RHA1-00064_2023-07-07_10-47-31
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  ├── Record Node 101
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  │   ├── experiment1
@@ -1194,7 +1213,7 @@
 </span><span id="__span-0-64"><a id="__codelineno-0-64" name="__codelineno-0-64" href="#__codelineno-0-64"></a>      │       ├── structure.oebin
 </span><span id="__span-0-65"><a id="__codelineno-0-65" name="__codelineno-0-65" href="#__codelineno-0-65"></a>      │       └── sync_messages.txt
 </span><span id="__span-0-66"><a id="__codelineno-0-66" name="__codelineno-0-66" href="#__codelineno-0-66"></a>      └── settings.xml
-</span></code></pre></div></p>
+</span></code></pre></div>
 <p>Despite looking overwhelming this is actually fairly straighforward...</p>
 <p>The top level (or parent) folder is called </p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>RHA1-00064_2023-07-07_10-47-31
@@ -1308,11 +1327,10 @@ especially true when there are multiple sub-plots in the Figure window.</p>
 for lots of reasons but it's a de facto standard). White areas in the firing rate map are areas the animal didn't / couldn't go to and so have no valid values.</p>
 <p>Before moving on to the other types of plots we can make it's worthwhile to understand the underlying data of the rate map as this will help you understand how the data
 is processed and the kinds of arguments you can add/ change in calling functions like plot_rate_map() and the impact they have.</p>
-<h3 id="the-underlying-data">The underlying data<a class="headerlink" href="#the-underlying-data" title="Permanent link">&para;</a></h3>
+<h3 id="binneddata"><a href=".././utils/#ephysiopy.common.utils.BinnedData">BinnedData</a><a class="headerlink" href="#binneddata" title="Permanent link">&para;</a></h3>
 <p>All (op nearly all) of the plot_* (i.e. plot_rate_map(), plot_hd_map() etc) functions have a get_* counterpart (i.e. get_rate_map() etc). The plot functions take what is
 returned from the get_* functions and simply plot that data (with some bells and whistles added). The object returned from the get_* functions is almost always (CHECK THIS) a
 BinnedData object.</p>
-<h4 id="binneddata"><a href=".././utils/#ephysiopy.common.utils.BinnedData">BinnedData</a><a class="headerlink" href="#binneddata" title="Permanent link">&para;</a></h4>
 <p>This is a fairly simple <a href="https://docs.python.org/3/library/dataclasses.html">dataclass</a> that encapsulates some variable(s) that has been binned up according to some algorithm. To give a concrete example given the data
 we've been working with above:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">data</span> <span class="o">=</span> <span class="n">trial</span><span class="o">.</span><span class="n">get_rate_map</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
@@ -1346,6 +1364,7 @@ re-bin the data to do that.</p>
 from the example above you can call the get_cluster() function:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="n">cluster_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_cluster</span><span class="p">(</span><span class="n">ClusterID</span><span class="p">(</span><span class="mi">79</span><span class="p">,</span> <span class="mi">34</span><span class="p">))</span>
 </span></code></pre></div>
+<h4 id="correlating-maps">Correlating maps<a class="headerlink" href="#correlating-maps" title="Permanent link">&para;</a></h4>
 <p>One of the commonly performed analysis steps is to correlate rate maps together to try and get a sense of how similar two maps are to each other. To do that you can call
 correlate():</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="n">data</span><span class="o">.</span><span class="n">correlate</span><span class="p">()</span>
@@ -1376,6 +1395,18 @@ bin up a PHI variable which is the cartesian distance down the track) and this w
 <div class="language-python highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="n">ratemap</span> <span class="o">=</span> <span class="n">trial</span><span class="o">.</span><span class="n">get_rate_map</span><span class="p">(</span><span class="mi">79</span><span class="p">,</span> <span class="mi">34</span><span class="p">,</span> <span class="n">var_type</span><span class="o">=</span><span class="n">VariableToBin</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
 </span></code></pre></div>
 <p>Now ratemap.bin_edges will be a list of length 1 containing the x bin edges.</p>
+<h4 id="iterating-over-binneddata">Iterating over BinnedData<a class="headerlink" href="#iterating-over-binneddata" title="Permanent link">&para;</a></h4>
+<p>BinnedData can also be iterated over with each iteration yielding a BinnedData instance:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="n">channels_clusters</span> <span class="o">=</span> <span class="n">trial</span><span class="o">.</span><span class="n">get_available_clusters_channels</span><span class="p">()</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="n">all_maps</span> <span class="o">=</span> <span class="n">trial</span><span class="o">.</span><span class="n">get_all_maps</span><span class="p">(</span><span class="n">channels_clusters</span><span class="p">)</span>
+</span></code></pre></div>
+<p>all_maps is an instance of BinnedData, the VariableToBin is XY with MapType of RATE (the defaults) and we can iterate over it:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="k">for</span> <span class="n">i_map</span> <span class="ow">in</span> <span class="n">all_maps</span><span class="p">:</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>  <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i_map</span><span class="o">.</span><span class="n">cluster_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="n">ClusterID</span><span class="p">(</span><span class="n">Cluster</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">Channel</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="n">ClusterID</span><span class="p">(</span><span class="n">Cluster</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">Channel</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="o">...</span>
+</span></code></pre></div>
 
 
 

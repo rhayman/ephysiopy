@@ -209,3 +209,55 @@ yrange
 phi
 ```
 
+## Examining individual firing fields
+
+We can extract individual firing fields from a firing rate map to look more
+closely at what's happening during individual passes through a firing field.
+
+```python
+field_props = trial.get_field_properties(2, 3)
+Field 1 has 47 potential runs
+Field 2 has 134 potential runs
+Field 3 has 165 potential runs
+Field 4 has 55 potential runs
+Field 5 has 95 potential runs
+Field 6 has 113 potential runs
+Field 7 has 4 potential runs
+```
+
+The [get_field_properties()](./field_analysis.md) method has detected 7 fields and a number of 
+runs through each one and returned them as a list. 
+
+You can plot the results of this image segmentation like so:
+
+```python
+from ephysiopy.common.fieldcalcs import plot_field_props
+plot_field_props(field_props)
+plt.show()
+```
+
+![field_props](field_props.png){width='700px', height='700px'}
+
+The top left-hand part of the figure shows the results of the segmentation colour-coded
+for field number (should go from 1 to n numbering from the top left and rastering left to 
+right). The plot at the top-right is the result of taking each run through a field and
+transforming it so that it lies on a unit circle. This is useful for performing phase
+precession anaylsis in 2D environments[^1]. The bottom left-hand
+part of the figure shows the angle of each point on the perimeter of each field that that
+firing fields peak and the central heatmap part of each field shows the distance of
+each bin the field to the firing field centre. The bottom right-hand part of the figure
+shows the firing rate map numbered with the firing field identity.
+
+Each item in field_props in the example above is of type ephysiopy.common.fieldproperties.FieldProps
+and has a large number of attributes availabale. You can also add LFP data for each run through
+the field(s) which should make phase precession type anaylses easier.
+
+
+
+
+[^1]: Jeewajee A, Barry C, Douchamps V, Manson D, Lever C, Burgess N.
+        Theta phase precession of grid and place cell firing in open
+        environments.
+        Philos Trans R Soc Lond B Biol Sci. 2013 Dec 23;369(1635):20120532.
+        doi: 10.1098/rstb.2012.0532.
+

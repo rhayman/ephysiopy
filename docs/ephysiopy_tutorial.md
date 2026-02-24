@@ -12,9 +12,8 @@ This guide is an overview and explains basic features; details are found in the 
 
 ## Data organisation
 
-1. With data recorded using OpenEphys the folder structure looks something like this:
+With data recorded using OpenEphys the folder structure looks something like this:
 
-::
 ```
   RHA1-00064_2023-07-07_10-47-31
   ├── Record Node 101
@@ -271,13 +270,11 @@ for lots of reasons but it's a de facto standard). White areas in the firing rat
 Before moving on to the other types of plots we can make it's worthwhile to understand the underlying data of the rate map as this will help you understand how the data
 is processed and the kinds of arguments you can add/ change in calling functions like plot_rate_map() and the impact they have.
 
-### The underlying data
+### [BinnedData](./utils.md#ephysiopy.common.utils.BinnedData)
 
 All (op nearly all) of the plot_* (i.e. plot_rate_map(), plot_hd_map() etc) functions have a get_* counterpart (i.e. get_rate_map() etc). The plot functions take what is
 returned from the get_* functions and simply plot that data (with some bells and whistles added). The object returned from the get_* functions is almost always (CHECK THIS) a
 BinnedData object.
-
-#### [BinnedData](./utils.md#ephysiopy.common.utils.BinnedData)
 
 This is a fairly simple [dataclass](https://docs.python.org/3/library/dataclasses.html) that encapsulates some variable(s) that has been binned up according to some algorithm. To give a concrete example given the data
 we've been working with above:
@@ -319,6 +316,8 @@ from the example above you can call the get_cluster() function:
 ```python
 cluster_data = data.get_cluster(ClusterID(79, 34))
 ```
+
+#### Correlating maps
 
 One of the commonly performed analysis steps is to correlate rate maps together to try and get a sense of how similar two maps are to each other. To do that you can call
 correlate():
@@ -368,3 +367,24 @@ ratemap = trial.get_rate_map(79, 34, var_type=VariableToBin.X)
 ```
 
 Now ratemap.bin_edges will be a list of length 1 containing the x bin edges.
+
+#### Iterating over BinnedData
+
+BinnedData can also be iterated over with each iteration yielding a BinnedData instance:
+
+```python
+channels_clusters = trial.get_available_clusters_channels()
+all_maps = trial.get_all_maps(channels_clusters)
+```
+
+all_maps is an instance of BinnedData, the VariableToBin is XY with MapType of RATE (the defaults) and we can iterate over it:
+
+```python
+for i_map in all_maps:
+  print(f"{i_map.cluster_id}")
+ClusterID(Cluster=8, Channel=7)
+ClusterID(Cluster=4, Channel=8)
+...
+```
+
+

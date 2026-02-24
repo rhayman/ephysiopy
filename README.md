@@ -23,7 +23,7 @@ Documentation
 
 An ongoing lack of effort. There is more or less up-to-date documentation here:
 
-https://rhayman.github.io/ephysiopy/
+https://ephysiopy.readthedocs.io/
 
 Code Example
 ============

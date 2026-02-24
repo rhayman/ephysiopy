@@ -639,8 +639,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     def get_all_maps(
         self,
         channels_clusters: dict,
-        var2bin: VariableToBin.XY,
-        maptype: MapType,
+        var2bin: VariableToBin = VariableToBin.XY,
+        maptype: MapType = MapType.RATE,
         **kwargs,
     ) -> dict:
         old_data = None

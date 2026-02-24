@@ -105,6 +105,11 @@ def stripAxes(func):
     return wrapper
 
 
+@stripAxes
+def _stripAx(ax):
+    return ax
+
+
 def addClusterChannelToAxes(func):
     """
     Decorator to add cluster and channel information to the axes of a plot.
