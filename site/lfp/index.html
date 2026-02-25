@@ -899,6 +899,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../spike_train_analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Spike train analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../misc_stats/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Miscellaneous statistical functions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../phase_precession/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase precession
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1079,8 +1163,7 @@
 
 
 <h2 id="ephysiopy.common.ephys_generic.EEGCalcsGeneric" class="doc doc-heading">
-            <code>ephysiopy.common.ephys_generic.EEGCalcsGeneric</code>
-
+              <code class="highlight language-python"><span class="n">ephysiopy</span><span class="o">.</span><span class="n">common</span><span class="o">.</span><span class="n">ephys_generic</span><span class="o">.</span><span class="n">EEGCalcsGeneric</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="n">fs</span><span class="p">)</span></code>
 
 <a href="#ephysiopy.common.ephys_generic.EEGCalcsGeneric" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -1249,7 +1332,7 @@
                 <code>other</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="&lt;code&gt;ephysiopy.common.ephys_generic.EEGCalcsGeneric&lt;/code&gt;" href="./#ephysiopy.common.ephys_generic.EEGCalcsGeneric">EEGCalcsGeneric</a></code>
+                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;highlight language-python&quot;&gt;&lt;span class=&quot;n&quot;&gt;ephysiopy&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;common&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ephys_generic&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;EEGCalcsGeneric&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sig&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;/code&gt;" href="./#ephysiopy.common.ephys_generic.EEGCalcsGeneric">EEGCalcsGeneric</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1275,7 +1358,7 @@
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="&lt;code&gt;ephysiopy.common.ephys_generic.EEGCalcsGeneric&lt;/code&gt;" href="./#ephysiopy.common.ephys_generic.EEGCalcsGeneric">EEGCalcsGeneric</a></code>
+                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;highlight language-python&quot;&gt;&lt;span class=&quot;n&quot;&gt;ephysiopy&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;common&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ephys_generic&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;EEGCalcsGeneric&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sig&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;/code&gt;" href="./#ephysiopy.common.ephys_generic.EEGCalcsGeneric">EEGCalcsGeneric</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1483,92 +1566,52 @@ defined by low and high</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-<td><code>psd</code></td>            <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<span title="numpy.ndarray">ndarray</span>, <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a>, ...]</code>
+<td><code>freqs</code></td>            <td>
+                  <code><span title="numpy.ndaray">ndaray</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                
+                <p>The frequencies at which the spectrogram was calculated</p>
               </div>
             </td>
           </tr>
           <tr class="doc-section-item">
-<td></td>            <td>
-                  <code>A 5-tuple of the following and sets a bunch of member variables:</code>
+<td><code>power</code></td>            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                
+                <p>The power at the frequencies defined above</p>
               </div>
             </td>
           </tr>
           <tr class="doc-section-item">
-<td></td>            <td>
-                  <code>freqs (array_like): The frequencies at which the spectrogram</code>
+<td><code>sm_power</code></td>            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                
+                <p>The smoothed power</p>
               </div>
             </td>
           </tr>
           <tr class="doc-section-item">
-<td></td>            <td>
-                  <code>was calculated</code>
+<td><code>bandmaxpower</code></td>            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                
+                <p>The maximum power in the theta band</p>
               </div>
             </td>
           </tr>
           <tr class="doc-section-item">
-<td></td>            <td>
-                  <code>power (array_like): The power at the frequencies defined above</code>
+<td><code>freqatbandmaxpower</code></td>            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-<td></td>            <td>
-                  <code>sm_power (array_like): The smoothed power</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-<td></td>            <td>
-                  <code>bandmaxpower (float): The maximum power in the theta band</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-<td></td>            <td>
-                  <code>freqatbandmaxpower (float): The frequency at which the power</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-<td></td>            <td>
-                  <code>is maximum</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                
+                <p>The frequency at which the power is maximum</p>
               </div>
             </td>
           </tr>

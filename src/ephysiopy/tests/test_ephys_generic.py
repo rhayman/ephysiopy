@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
-from ephysiopy.common.utils import BinnedData
+from ephysiopy.common.utils import BinnedData, nextpow2
 
 
 @pytest.fixture

@@ -8,6 +8,7 @@ from enum import Enum
 import copy
 from pathlib import Path
 import os
+from typing import List
 
 
 class VariableToBin(Enum):
@@ -496,6 +497,47 @@ def filter_trial_by_time(
         return list(even_filters), list(odd_filters)
 
 
+def nextpow2(val: int):
+    """
+    Calculates the next power of 2 that will hold val
+    """
+    val = val - 1
+    val = (val >> 1) | val
+    val = (val >> 2) | val
+    val = (val >> 4) | val
+    val = (val >> 8) | val
+    val = (val >> 16) | val
+    val = (val >> 32) | val
+    return np.log2(val + 1)
+
+
+@dataclass(frozen=True)
+class FreqPhase:
+    filt_sig: np.ndarray
+    phase: np.ndarray
+    amplitude: np.ndarray
+    amplitude_filtered: np.ndarray
+    inst_freq: np.ndarray
+
+
+@dataclass
+class PowerSpectrumParams:
+    """
+    Dataclass for holding the parameters for calculating a power
+    spectrum as this was being used in several classes and needed
+    refactoring out into a standalone function
+    """
+
+    signal: np.ndarray
+    smoothing_kernel_width: float = 2
+    smoothing_kernel_sigma: float = 0.1875
+    signal_to_noise_width: float = 2
+    theta_range: List = field(default_factory=lambda: [6, 12])
+    max_frequency: float = 25
+    bin_width_in_secs: float = 1 / 250
+    pad_to_power: int = lambda: int(nextpow2(len(signal)))
+
+
 def memmapBinaryFile(path2file: Path, n_channels=384, **kwargs) -> np.ndarray:
     """
     Returns a numpy memmap of the int16 data in the
@@ -683,7 +725,7 @@ def remap_to_range(x: np.ndarray, new_min=0, new_max=1, axis=0) -> np.ndarray:
         the array to remap
     new_min : float
         the minimun value in the returned array
-    max : float
+    new_max : float
         the maximum value in the returned array
 
     Returns
@@ -861,8 +903,6 @@ def shift_vector(v, shift, maxlen=None):
         The input vector.
     shift : int
         The amount to shift the elements.
-    fill_value : int
-        The value to fill the empty spaces.
 
     Returns
     -------

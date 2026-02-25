@@ -8,20 +8,7 @@ import numpy as np
 from scipy import signal
 from scipy.interpolate import griddata
 import astropy.convolution as cnv
-
-
-def nextpow2(val: int):
-    """
-    Calculates the next power of 2 that will hold val
-    """
-    val = val - 1
-    val = (val >> 1) | val
-    val = (val >> 2) | val
-    val = (val >> 4) | val
-    val = (val >> 8) | val
-    val = (val >> 16) | val
-    val = (val >> 32) | val
-    return np.log2(val + 1)
+from ephysiopy.common.utils import nextpow2
 
 
 class EventsGeneric(object):
@@ -228,15 +215,20 @@ class EEGCalcsGeneric(object):
 
         Returns
         -------
-        psd : tuple[np.ndarray, float,...]
-        A 5-tuple of the following and sets a bunch of member variables:
-        freqs (array_like): The frequencies at which the spectrogram
-        was calculated
-        power (array_like): The power at the frequencies defined above
-        sm_power (array_like): The smoothed power
-        bandmaxpower (float): The maximum power in the theta band
-        freqatbandmaxpower (float): The frequency at which the power
-        is maximum
+        freqs : np.ndaray
+            The frequencies at which the spectrogram was calculated
+
+        power : np.ndarray
+            The power at the frequencies defined above
+
+        sm_power : np.ndarray
+            The smoothed power
+
+        bandmaxpower : float
+            The maximum power in the theta band
+
+        freqatbandmaxpower : float
+            The frequency at which the power is maximum
         """
         nqlim = self.fs / 2
         origlen = len(self.sig)

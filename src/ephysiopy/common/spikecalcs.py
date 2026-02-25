@@ -1297,7 +1297,7 @@ class SpikeCalcsGeneric(object):
 
         Parameters
         ----------
-        ts : np.ndarray
+        spike_times : np.ndarray
             The times in seconds at which the cluster fired.
         n_samples : int
             The number of samples to use in the calculation.
@@ -1435,11 +1435,6 @@ class SpikeCalcsGeneric(object):
         The difference of the mean power in the theta band (6-11 Hz) and
         the mean power in the 1-50 Hz band is divided by their sum to give
         a metric that lives between 0 and 1
-
-        Parameters
-        ----------
-        x1 : np.ndarray
-            The spike time-series.
 
         Returns
         -------

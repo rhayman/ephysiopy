@@ -478,8 +478,6 @@ class phasePrecessionND(object):
         phase_regressors : dict
             Dictionary with keys as field label (1,2 etc), each key contains a
             dictionary with keys 'phase' and optional nummbers of regressors
-        plot : bool
-            Whether to plot the regression results
 
         Notes
         -----

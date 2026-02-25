@@ -3,7 +3,7 @@ import warnings
 import matplotlib
 import numpy as np
 from ephysiopy.common.utils import flatten_list, BinnedData, repeat_ind
-from ephysiopy.visualise.plotting import stripAxes, _add_colour_wheel
+from ephysiopy.visualise.plotting import _add_colour_wheel
 from ephysiopy.visualise.plotting import colored_line
 from ephysiopy.io.recording import AxonaTrial
 from ephysiopy.common.fieldcalcs import (
@@ -27,10 +27,18 @@ def plot_phase_precession(
 
     Parameters
     ----------
-    field_phase_pos : dict[str, dict[np.ndarray, np.ndarray]]
-        Dictionary containing the phase and normalised position for each field.
-
+    phase : np.ndarray
+        The phase of the LFP signal at each spike time.
+    normalised_position : np.ndarray
+        The normalised position of the animal at each spike time.
+    slope : float
+        The slope of the phase precession.
+    intercept : float
+        The intercept of the phase precession.
     ax : matplotlib.axes.Axes, optional
+        Axes to plot on. If None, a new figure and axes will be created.
+    **kwargs : dict
+        Additional keyword arguments for plotting.
 
     """
 
@@ -110,6 +118,15 @@ def plot_runs_and_precession(
 
 def plot_field_and_runs(trial: AxonaTrial, field_props: list[FieldProps]):
     """
+    Parameters
+    ----------
+    trial : AxonaTrial
+        The trial containing the position and spike data.
+    field_props : list[FieldProps]
+        List of FieldProps objects containing run and LFP data.
+
+    Notes
+    -----
     Plot runs versus time where the colour of the line indicates
     directional heading. The field limits are also plotted and spikes are
     overlaid on the runs. Boxes delineate the runs that have been identified
@@ -421,9 +438,11 @@ def plot_spikes_in_runs_per_field(
     Parameters
     ----------
     field_label : np.ndarray
-    The field labels for each position bin a vector
-    run_starts, runs_ends : np.ndarray
-        The start and stop indices of each run (vectors)
+        The field labels for each position bin a vector
+    run_starts, : np.ndarray
+        The start indices of each run (vectors)
+    run_ends : np.ndarray
+            The stop indices of each run (vectors)
     spikes_in_time : np.ndarray
         The number of spikes in each position bin (vector)
     ttls_in_time : np.ndarray

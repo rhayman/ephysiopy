@@ -11,6 +11,7 @@
         - load_cluster_data
         - load_settings
         - apply_filter
+        - get_field_properties
       show_root_heading: true
 
 ::: ephysiopy.io.recording.OpenEphysBase

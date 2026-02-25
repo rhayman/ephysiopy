@@ -654,7 +654,7 @@ class RunProps(SpikingProperty, object):
         ----------
         k : float
             smoothing constant for the instantaneous firing rate
-        spatial_lp_cut : int
+        spatial_lp : int
             spatial lowpass cut off
         sample_rate : int
             position sample rate in Hz
@@ -1453,7 +1453,7 @@ class FieldProps(RegionProperties):
 
         Parameters
         ----------
-        spike_train : np.ndarray
+        spikes : np.ndarray
             the spike train (spikes binned up by position) for the whole trial.
             Same length as the trial n_samples
         fs : int
@@ -1481,19 +1481,13 @@ def fieldprops(
     offset=None,
     **kwargs,
 ):
-    r"""Measure properties of labeled image regions.
+    """
+    Measure properties of labeled image regions.
 
     Parameters
     ----------
-    label_image : (M, N[, P]) ndarray
+    label_image : (M, N[, P]) np.ndarray
         Labeled input image. Labels with value 0 are ignored.
-
-        .. versionchanged:: 0.14.1
-            Previously, ``label_image`` was processed by ``numpy.squeeze`` and
-            so any number of singleton dimensions was allowed. This resulted in
-            inconsistent handling of images with singleton dimensions. To
-            recover the old behaviour, use
-            ``regionprops(np.squeeze(label_image), ...)``.
     xy : (2 x n_samples) np.ndarray
         The x-y coordinates for all runs through the field corresponding to
         a particular label
@@ -1537,13 +1531,9 @@ def fieldprops(
             pos_sample_rate : int
             min_run_length : int
 
-
-
-        .. versionadded:: 0.14.1
-
     Returns
     -------
-    properties : list of RegionProperties
+    properties : list of FieldProps
         Each item describes one labeled region, and can be accessed using the
         attributes listed below.
 
@@ -1569,77 +1559,103 @@ def fieldprops(
     axis_major_length : float
         The length of the major axis of the ellipse that has the same
         normalized second central moments as the region.
+
     axis_minor_length : float
         The length of the minor axis of the ellipse that has the same
         normalized second central moments as the region.
+
     bbox : tuple
         Bounding box ``(min_row, min_col, max_row, max_col)``.
         Pixels belonging to the bounding box are in the half-open interval
         ``[min_row; max_row)`` and ``[min_col; max_col)``.
+
     centroid : array
         Centroid coordinate tuple ``(row, col)``.
+
     centroid_local : array
         Centroid coordinate tuple ``(row, col)``, relative to region bounding
         box.
+
     centroid_weighted : array
         Centroid coordinate tuple ``(row, col)`` weighted with intensity
         image.
+
     centroid_weighted_local : array
         Centroid coordinate tuple ``(row, col)``, relative to region bounding
         box, weighted with intensity image.
+
     coords_scaled : (K, 2) ndarray
         Coordinate list ``(row, col)`` of the region scaled by ``spacing``.
+
     coords : (K, 2) ndarray
         Coordinate list ``(row, col)`` of the region.
+
     eccentricity : float
         Eccentricity of the ellipse that has the same second-moments as the
         region. The eccentricity is the ratio of the focal distance
         (distance between focal points) over the major axis length.
         The value is in the interval [0, 1).
         When it is 0, the ellipse becomes a circle.
+
     equivalent_diameter_area : float
         The diameter of a circle with the same area as the region.
+
     euler_number : int
         Euler characteristic of the set of non-zero pixels.
         Computed as number of connected components subtracted by number of
         holes (input.ndim connectivity). In 3D, number of connected
         components plus number of holes subtracted by number of tunnels.
+
     extent : float
         Ratio of pixels in the region to pixels in the total bounding box.
         Computed as ``area / (rows  cols)``
+
     feret_diameter_max : float
         Maximum Feret's diameter computed as the longest distance between
         points around a region's convex hull contour as determined by
         ``find_contours``. [5]_
+
     image : (H, J) ndarray
         Sliced binary region image which has the same size as bounding box.
+
     image_convex : (H, J) ndarray
         Binary convex hull image which has the same size as bounding box.
+
     image_filled : (H, J) ndarray
         Binary region image with filled holes which has the same size as
         bounding box.
+
     image_intensity : ndarray
         Image inside region bounding box.
+
     inertia_tensor : ndarray
         Inertia tensor of the region for the rotation around its mass.
+
     inertia_tensor_eigvals : tuple
         The eigenvalues of the inertia tensor in decreasing order.
+
     intensity_max : float
         Value with the greatest intensity in the region.
+
     intensity_mean : float
         Value with the mean intensity in the region.
+
     intensity_min : float
         Value with the least intensity in the region.
+
     intensity_std : float
         Standard deviation of the intensity in the region.
+
     label : int
         The label in the labeled input image.
+
     moments : (3, 3) ndarray
         Spatial moments up to 3rd order::
 
             m_ij = sum{ array(row, col)  row^i  col^j }
 
         where the sum is over the `row`, `col` coordinates of the region.
+
     moments_central : (3, 3) ndarray
         Central moments (translation invariant) up to 3rd order::
 
@@ -1647,20 +1663,24 @@ def fieldprops(
 
         where the sum is over the `row`, `col` coordinates of the region,
         and `row_c` and `col_c` are the coordinates of the region's centroid.
+
     moments_hu : tuple
         Hu moments (translation, scale and rotation invariant).
+
     moments_normalized : (3, 3) ndarray
         Normalized moments (translation and scale invariant) up to 3rd order::
 
             nu_ij = mu_ij / m_00^[(i+j)/2 + 1]
 
         where `m_00` is the zeroth spatial moment.
+
     moments_weighted : (3, 3) ndarray
         Spatial moments of intensity image up to 3rd order::
 
             wm_ij = sum{ array(row, col)  row^i  col^j }
 
         where the sum is over the `row`, `col` coordinates of the region.
+
     moments_weighted_central : (3, 3) ndarray
         Central moments (translation invariant) of intensity image up to
         3rd order::
@@ -1670,9 +1690,11 @@ def fieldprops(
         where the sum is over the `row`, `col` coordinates of the region,
         and `row_c` and `col_c` are the coordinates of the region's weighted
         centroid.
+
     moments_weighted_hu : tuple
         Hu moments (translation, scale and rotation invariant) of intensity
         image.
+
     moments_weighted_normalized : (3, 3) ndarray
         Normalized moments (translation and scale invariant) of intensity
         image up to 3rd order::
@@ -1680,20 +1702,26 @@ def fieldprops(
             wnu_ij = wmu_ij / wm_00^[(i+j)/2 + 1]
 
         where ``wm_00`` is the zeroth spatial moment (intensity-weighted area).
+
     num_pixels : int
         Number of foreground pixels.
+
     orientation : float
         Angle between the 0th axis (rows) and the major
         axis of the ellipse that has the same second moments as the region,
         ranging from `-pi/2` to `pi/2` counter-clockwise.
+
     perimeter : float
         Perimeter of object which approximates the contour as a line
         through the centers of border pixels using a 4-connectivity.
+
     perimeter_crofton : float
         Perimeter of object approximated by the Crofton formula in 4
         directions.
+
     slice : tuple of slices
         A slice to extract the object from the source image.
+
     solidity : float
         Ratio of pixels in the region to pixels of the convex hull image.
 
@@ -1704,18 +1732,25 @@ def fieldprops(
 
     See Also
     --------
-    label
+    ephysiopy.common.utils.BinnedData
+
+    skimage.measure.regionprops
+
 
     References
     ----------
     .. [1] Wilhelm Burger, Mark Burge. Principles of Digital Image Processing:
            Core Algorithms. Springer-Verlag, London, 2009.
+
     .. [2] B. Jähne. Digital Image Processing. Springer-Verlag,
            Berlin-Heidelberg, 6. edition, 2005.
+
     .. [3] T. H. Reiss. Recognizing Planar Objects Using Invariant Image
            Features, from Lecture notes in computer science, p. 676. Springer,
            Berlin, 1993.
+
     .. [4] https://en.wikipedia.org/wiki/Image_moment
+
     .. [5] W. Pabst, E. Gregorová. Characterization of particles and particle
            systems, pp. 27-28. ICT Prague, 2007.
            https://old.vscht.cz/sil/keramika/Characterization_of_particles/CPPS%20_English%20version_.pdf

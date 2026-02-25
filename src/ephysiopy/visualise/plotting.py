@@ -250,19 +250,6 @@ def colored_line(x, y, c, ax, **lc_kwargs):
 jet_cmap = matplotlib.colormaps["jet"]
 grey_cmap = matplotlib.colormaps["gray_r"]
 
-# TODO: i think i want to separate out the plotting functions from the FigureMaker class
-# and put them in a separate module. This will make it easier to test them and also
-# make the code more modular and easier to read. I will also need to update the
-# FigureMaker class to use the new plotting functions
-# Axes preparation could be split out here or in the FigureMaker class
-# functions using pcolormesh are:
-# plot_rate_map
-# plot_eb_map
-# plot_eb_spikes (this is more complex as it uses a PatchCollection)
-# plot_sac (again, complex as it has lots of annotations done)
-# plot_speed_v_hd
-# plot_theta_vs_running_speed
-
 
 def _plot_multiple_clusters(
     func: Callable[..., plt.Figure], rmap: BinnedData, *args, **kwargs
@@ -460,7 +447,7 @@ class FigureMaker(object):
 
         ax = kwargs.pop("ax", None)
         separate_plots = kwargs.pop("separate_plots", False)
-        kwargs["cmap"] = jet_cmap
+        kwargs["cmap"] = kwargs.pop("cmap", jet_cmap)
 
         kwargs["equal_axes"] = kwargs.pop("equal_axes", True)
         # multiple clusters have been passed in so plot either in
@@ -654,7 +641,7 @@ class FigureMaker(object):
             The cluster(s) to get the spike path for.
         channel : int or None
             The channel number.
-        **kwargs : dict
+        **kws : dict
             Additional keyword arguments for the function.
 
         Returns

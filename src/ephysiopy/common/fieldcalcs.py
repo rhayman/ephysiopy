@@ -785,7 +785,8 @@ def plot_field_props(field_props: list[FieldProps]):
 
     Parameters
     ----------
-    list of FieldProps
+    field_props : list of FieldProps
+        The field properties to plot
     """
     fig = plt.figure()
     subfigs = fig.subfigures(
@@ -924,151 +925,6 @@ def plot_field_props(field_props: list[FieldProps]):
     ax3.invert_yaxis()
     ax3.set_aspect("equal")
     _stripAx(ax3)
-
-
-# TODO: This needs moving and /or renaming due to conflicts with fieldproperties stuff
-def field_props(
-    A,
-    min_dist=5,
-    neighbours=2,
-    prc=50,
-    plot=False,
-    ax=None,
-    tri=False,
-    verbose=True,
-    **kwargs,
-):
-    """
-    Returns a dictionary of properties of the field(s) in a ratemap A
-
-    Args:
-        A (array_like): a ratemap (but could be any image)
-        min_dist (float): the separation (in bins) between fields for measures
-            such as field distance to make sense. Used to
-            partition the image into separate fields in the call to
-            feature.peak_local_max
-        neighbours (int): the number of fields to consider as neighbours to
-            any given field. Defaults to 2
-        prc (float): percent of fields to consider
-        ax (matplotlib.Axes): user supplied axis. If None a new figure window
-        is created
-        tri (bool): whether to do Delaunay triangulation between fields
-            and add to plot
-        verbose (bool): dumps the properties to the console
-        plot (bool): whether to plot some output - currently consists of the
-            ratemap A, the fields of which are outline in a black
-            contour. Default False
-
-    Returns:
-        result (dict): The properties of the field(s) in the input ratemap A
-    """
-
-    from skimage.measure import find_contours
-    from sklearn.neighbors import NearestNeighbors
-
-    nan_idx = np.isnan(A)
-    Ac = A.copy()
-    Ac[np.isnan(A)] = 0
-    # smooth Ac more to remove local irregularities
-    n = ny = 5
-    x, y = np.mgrid[-n : n + 1, -ny : ny + 1]
-    g = np.exp(-(x**2 / float(n) + y**2 / float(ny)))
-    g = g / g.sum()
-    Ac = signal.convolve(Ac, g, mode="same")
-
-    peak_idx, field_labels = _get_field_labels(Ac, **kwargs)
-
-    nFields = np.max(field_labels)
-    if neighbours > nFields:
-        print(
-            "neighbours value of {0} > the {1} peaks found".format(neighbours, nFields)
-        )
-        print("Reducing neighbours to number of peaks found")
-        neighbours = nFields
-    sub_field_mask = np.zeros((nFields, Ac.shape[0], Ac.shape[1]))
-    sub_field_props = skimage.measure.regionprops(field_labels, intensity_image=Ac)
-    sub_field_centroids = []
-    sub_field_size = []
-
-    for sub_field in sub_field_props:
-        tmp = np.zeros(Ac.shape).astype(bool)
-        tmp[sub_field.coords[:, 0], sub_field.coords[:, 1]] = True
-        tmp2 = Ac > sub_field.max_intensity * (prc / float(100))
-        sub_field_mask[sub_field.label - 1, :, :] = np.logical_and(tmp2, tmp)
-        sub_field_centroids.append(sub_field.centroid)
-        sub_field_size.append(sub_field.area)  # in bins
-    sub_field_mask = np.sum(sub_field_mask, 0)
-    contours = skimage.measure.find_contours(sub_field_mask, 0.5)
-    # find the nearest neighbors to the peaks of each sub-field
-    nbrs = NearestNeighbors(n_neighbors=neighbours, algorithm="ball_tree").fit(peak_idx)
-    distances, _ = nbrs.kneighbors(peak_idx)
-    mean_field_distance = np.mean(distances[:, 1:neighbours])
-
-    nValid_bins = np.sum(~nan_idx)
-    # calculate the amount of out of field firing
-    A_non_field = np.zeros_like(A) * np.nan
-    A_non_field[~sub_field_mask.astype(bool)] = A[~sub_field_mask.astype(bool)]
-    A_non_field[nan_idx] = np.nan
-    out_of_field_firing_prc = (
-        np.count_nonzero(A_non_field > 0) / float(nValid_bins)
-    ) * 100
-    Ac[np.isnan(A)] = np.nan
-    # get some stats about the field ellipticity
-    ellipse_ratio = np.nan
-    _, central_field, _ = limit_to_one(A, prc=50)
-
-    contour_coords = find_contours(central_field, 0.5)
-    from skimage.measure import EllipseModel
-
-    E = EllipseModel()
-    E.estimate(contour_coords[0])
-    ellipse_axes = E.params[2:4]
-    ellipse_ratio = np.min(ellipse_axes) / np.max(ellipse_axes)
-
-    """ using the peak_idx values calculate the angles of the triangles that
-    make up a delaunay tesselation of the space if the calc_angles arg is
-    in kwargs
-    """
-    if "calc_angs" in kwargs.keys():
-        angs = calc_angs(peak_idx)
-    else:
-        angs = None
-
-    props = {
-        "Ac": Ac,
-        "Peak_rate": np.nanmax(A),
-        "Mean_rate": np.nanmean(A),
-        "Field_size": np.mean(sub_field_size),
-        "Pct_bins_with_firing": (np.sum(sub_field_mask) / nValid_bins) * 100,
-        "Out_of_field_firing_prc": out_of_field_firing_prc,
-        "Dist_between_fields": mean_field_distance,
-        "Num_fields": float(nFields),
-        "Sub_field_mask": sub_field_mask,
-        "Smoothed_map": Ac,
-        "field_labels": field_labels,
-        "Peak_idx": peak_idx,
-        "angles": angs,
-        "contours": contours,
-        "ellipse_ratio": ellipse_ratio,
-    }
-
-    if verbose:
-        print(
-            "\nPercentage of bins with firing: {:.2%}".format(
-                np.sum(sub_field_mask) / nValid_bins
-            )
-        )
-        print(
-            "Percentage out of field firing: {:.2%}".format(
-                np.count_nonzero(A_non_field > 0) / float(nValid_bins)
-            )
-        )
-        print(f"Peak firing rate: {np.nanmax(A)} Hz")
-        print(f"Mean firing rate: {np.nanmean(A)} Hz")
-        print(f"Number of fields: {nFields}")
-        print(f"Mean field size: {np.mean(sub_field_size)} cm")
-        print(f"Mean inter-peak distance between fields: {mean_field_distance} cm")
-    return props
 
 
 def calc_angs(points):
@@ -1217,7 +1073,7 @@ def kldiv(
     ----------
     X : np.ndarray
         Vector of M variable values
-    P1, P2 : np.ndarray
+    pvect1, pvect2 : np.ndarray
         Length-M vectors of probabilities representing distribution 1 and 2
     variant : str, default 'sym'
         If 'sym', returns a symmetric variant of the

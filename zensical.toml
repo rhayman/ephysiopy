@@ -60,7 +60,10 @@ nav = [
     "lfp.md",
     "utils.md",
     "plotting.md",
-    "field_analysis.md"
+    "field_analysis.md",
+    "spike_train_analysis.md",
+    "misc_stats.md",
+    "phase_precession.md"
   ]}
 ]
 
@@ -333,3 +336,10 @@ show_source = false
 summary = true
 show_signature_annotations = true
 show_docstring_examples = true
+show_docstring_attributes = true
+show_docstring_functions = true
+merge_init_into_class = true
+docstring_options.ignore_init_summary = true
+annotations_path = "brief"
+# [project.plugins.mkdocstrings.handlers.python.options.docstring_options]
+# ignore_init_summary = true

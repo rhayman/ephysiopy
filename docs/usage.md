@@ -248,9 +248,60 @@ firing fields peak and the central heatmap part of each field shows the distance
 each bin the field to the firing field centre. The bottom right-hand part of the figure
 shows the firing rate map numbered with the firing field identity.
 
-Each item in field_props in the example above is of type ephysiopy.common.fieldproperties.FieldProps
+Each item in field_props in the example above is of type [FieldProps](./field_analysis.md#ephysiopy.common.fieldproperties.FieldProps) 
 and has a large number of attributes availabale. You can also add LFP data for each run through
 the field(s) which should make phase precession type anaylses easier.
+
+Each field will have one or more runs associated with it, each of these is of type [RunProps](./field_analysis.md #ephysiopy.common.fieldproperties.RunProps)
+and has a large number of attributes available.
+
+You can also add LFP data for each run through a field - each run will also then have an [LFPSegment](./field_analysis.md#ephysiopy.common.fieldproperties.LFPSegment)
+object associated with it which contains the LFP data for that run.
+
+### Dealing with field properties
+
+There are a number of methods for dealing with the field properties objects. We might want to
+sort them by some particular attribute or filter them similarly. As each FieldProps object will 
+have a list of RunProps associated with it it's likely that not all of these runs will have spikes
+associated with them for example. We may also want to filter out small fields that are unlikely
+to contain enough data.
+
+```python title="Sort fields by field size"
+from ephysiopy.common.fieldcalcs import sort_fields_by_attr
+sorted_fields = sort_fields_by_attr(field_props, "area")
+for field in sorted_fields:
+    print(field.area)
+157.0
+132.0
+130.0
+123.0
+100.0
+83.0
+5.0
+```
+
+We can also filter the runs by some attribute but we need to give a bit more information this time.
+```python title="Filter runs by number of spikes"
+from ephysiopy.common.fieldcalcs import filter_runs
+
+filter_runs(field_props, ["num_spikes"], [np.greater], [3])
+Filtering runs for n_spikes greater than 3...
+Field 1 has 18 potential runs
+Filtering runs for n_spikes greater than 3...
+Field 2 has 37 potential runs
+Filtering runs for n_spikes greater than 3...
+Field 3 has 39 potential runs
+...    
+```
+
+Notice how the filtering occurs in place so the field_props object is updated with the filtered runs. In this example we have filtered out all runs that had 3 or fewer spikes in them.
+
+There are two important options we can use to change how the segmentation of fields from the rate map occurs.
+The partitioning of the rate map can be done in either a 'simple' or a 'fancy' way.
+
+The [simple_parition]() method essentially just returns the areas of the ratemap that are greater than some threshold
+percentage4  of the **mean** firing rate. This was done mostly to deal with one-dimensional linear track
+data
 
 
 

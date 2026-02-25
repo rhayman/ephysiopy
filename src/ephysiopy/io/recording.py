@@ -4,7 +4,8 @@ import re
 import warnings
 from enum import Enum
 from pathlib import Path, PurePath
-
+from scipy.signal import argrelextrema
+from skimage.segmentation import watershed
 import h5py
 import numpy as np
 from scipy import signal
@@ -22,7 +23,8 @@ from ephysiopy.common.fieldcalcs import (
     fancy_partition,
     simple_partition,
 )
-from ephysiopy.common.fieldproperties import FieldProps, fieldprops
+from ephysiopy.common.phasecoding import LFPOscillations, get_bad_cycles
+from ephysiopy.common.fieldproperties import FieldProps, LFPSegment, fieldprops
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.utils import VariableToBin, MapType, BinnedData, filter_data
 from ephysiopy.openephys2py.OESettings import Settings
@@ -423,10 +425,15 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             A list of FieldProps namedtuples containing the properties of the field
         """
         partition = kwargs.pop("partition", "fancy")
+        min_theta = kwargs.pop("min_theta", 6)
+        max_theta = kwargs.pop("max_theta", 12)
+        min_power_percent_threshold = kwargs.pop("min_power_percent_threshold", 0)
 
         if not self.RateMap:
             self.initialise()
 
+        # First create the list of FieldProps objects. After that add the LFPSegments...
+        # 1) get the rate map for the cluster and channel
         rmap = self.get_rate_map(cluster, channel, **kwargs)
 
         if partition == "simple":
@@ -437,7 +444,64 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         spike_times = self.get_spike_times(cluster, channel)
         xy = getattr(self.PosCalcs, "xy")
 
-        return fieldprops(labels, rmap, spike_times, xy, **kwargs)
+        # 2) create the FieldProps list
+        fp = fieldprops(labels, rmap, spike_times, xy, **kwargs)
+
+        # 3) make sure the LFP is loaded and extract the phase and filter out
+        # the bad segments
+        if not self.EEGCalcs:
+            self.load_lfp()
+
+        L = LFPOscillations(self.EEGCalcs.sig, self.EEGCalcs.fs)
+
+        FreqPhase = L.getFreqPhase(self.EEGCalcs.sig, [min_theta, max_theta], 2)
+
+        phase = FreqPhase.phase
+
+        minima = argrelextrema(phase, np.less)[0]
+        markers = np.bincount(minima, minlength=len(phase))
+        markers = np.cumsum(markers)
+        cycle_label = watershed(phase, markers=markers)
+        is_neg_freq = np.diff(np.unwrap(phase)) < 0
+        is_neg_freq = np.append(is_neg_freq, is_neg_freq[-1])
+
+        filt_sig = FreqPhase.filt_sig
+
+        is_bad = get_bad_cycles(
+            filt_sig,
+            is_neg_freq,
+            cycle_label,
+            min_power_percent_threshold,
+            min_theta,
+            max_theta,
+            self.EEGCalcs.fs,
+        )
+
+        lfp_to_pos_ratio = self.EEGCalcs.fs / self.PosCalcs.sample_rate
+
+        for field in fp:
+            for run in field.runs:
+                lfp_slice = slice(
+                    int(run.slice.start * lfp_to_pos_ratio),
+                    int(run.slice.stop * lfp_to_pos_ratio),
+                )
+
+                lfp_segment = LFPSegment(
+                    run,
+                    field.label,
+                    run.label,
+                    lfp_slice,
+                    spike_times=spike_times,
+                    mask=is_bad[lfp_slice],
+                    signal=self.EEGCalcs.sig[lfp_slice],
+                    filtered_signal=filt_sig[lfp_slice],
+                    phase=phase[lfp_slice],
+                    cycle_label=cycle_label[lfp_slice],
+                    sample_rate=self.EEGCalcs.fs,
+                )
+                run.lfp = lfp_segment
+
+        return fp
 
     def apply_filter(self, *trial_filter: TrialFilter) -> np.ndarray:
         """

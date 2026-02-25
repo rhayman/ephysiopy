@@ -111,16 +111,23 @@ def fieldprops_phase_precession(P: phasePrecessionND, **kwargs):
 
     Parameters
     ----------
-    trial (AxonaTrial) - the trial
-    cluster (int) - the cluster id
-    channel (int) - the channel id
+    P (phasePrecessionND) - the phasePrecessionND instance containing the
+                            trial, cluster and channel information
     kwargs (dict) - additional parameters to pass to the
 
     Returns
     -------
-    dict - a dictionary with the field id as the key and the correlation
-           results for that field as the value
-
+    tuple - (phase_pos, f_props, run_direction, n_fields, P) where:
+    phase_pos (np.ndarray) - the position of each spike in the phase precession
+                                analysis, normalised to the field limits and
+                                the run direction (east or west)
+    f_props (list[FieldProps]) - the field properties for each field in the linear
+                                track trial, with the LFPSegment instance attached
+    run_direction (str) - the run direction (east or west) for the linear track trial
+    n_fields (int) - the number of fields in the linear track trial
+    P (phasePrecessionND) - the phasePrecessionND instance containing the
+                            trial, cluster and channel information, with the
+                            field properties and phase positions attached
     """
     run_direction = kwargs.get("run_direction", "e")
     # get the field properties for the linear track

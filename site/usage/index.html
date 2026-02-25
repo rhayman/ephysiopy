@@ -627,6 +627,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Examining individual firing fields">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dealing-with-field-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dealing with field properties
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -893,6 +910,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../spike_train_analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Spike train analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../misc_stats/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Miscellaneous statistical functions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../phase_precession/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase precession
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -990,6 +1091,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Examining individual firing fields">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dealing-with-field-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dealing with field properties
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1227,9 +1345,49 @@ part of the figure shows the angle of each point on the perimeter of each field 
 firing fields peak and the central heatmap part of each field shows the distance of
 each bin the field to the firing field centre. The bottom right-hand part of the figure
 shows the firing rate map numbered with the firing field identity.</p>
-<p>Each item in field_props in the example above is of type ephysiopy.common.fieldproperties.FieldProps
+<p>Each item in field_props in the example above is of type <a href=".././field_analysis/#ephysiopy.common.fieldproperties.FieldProps">FieldProps</a> 
 and has a large number of attributes availabale. You can also add LFP data for each run through
 the field(s) which should make phase precession type anaylses easier.</p>
+<p>Each field will have one or more runs associated with it, each of these is of type <a href=".././field_analysis.md #ephysiopy.common.fieldproperties.RunProps">RunProps</a>
+and has a large number of attributes available.</p>
+<p>You can also add LFP data for each run through a field - each run will also then have an <a href=".././field_analysis/#ephysiopy.common.fieldproperties.LFPSegment">LFPSegment</a>
+object associated with it which contains the LFP data for that run.</p>
+<h3 id="dealing-with-field-properties">Dealing with field properties<a class="headerlink" href="#dealing-with-field-properties" title="Permanent link">&para;</a></h3>
+<p>There are a number of methods for dealing with the field properties objects. We might want to
+sort them by some particular attribute or filter them similarly. As each FieldProps object will 
+have a list of RunProps associated with it it's likely that not all of these runs will have spikes
+associated with them for example. We may also want to filter out small fields that are unlikely
+to contain enough data.</p>
+<div class="language-python highlight"><span class="filename">Sort fields by field size</span><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ephysiopy.common.fieldcalcs</span><span class="w"> </span><span class="kn">import</span> <span class="n">sort_fields_by_attr</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="n">sorted_fields</span> <span class="o">=</span> <span class="n">sort_fields_by_attr</span><span class="p">(</span><span class="n">field_props</span><span class="p">,</span> <span class="s2">&quot;area&quot;</span><span class="p">)</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">sorted_fields</span><span class="p">:</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">field</span><span class="o">.</span><span class="n">area</span><span class="p">)</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="mf">157.0</span>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="mf">132.0</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="mf">130.0</span>
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="mf">123.0</span>
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="mf">100.0</span>
+</span><span id="__span-19-10"><a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a><span class="mf">83.0</span>
+</span><span id="__span-19-11"><a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a><span class="mf">5.0</span>
+</span></code></pre></div>
+<p>We can also filter the runs by some attribute but we need to give a bit more information this time.
+<div class="language-python highlight"><span class="filename">Filter runs by number of spikes</span><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ephysiopy.common.fieldcalcs</span><span class="w"> </span><span class="kn">import</span> <span class="n">filter_runs</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="n">filter_runs</span><span class="p">(</span><span class="n">field_props</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;num_spikes&quot;</span><span class="p">],</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">greater</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="n">Filtering</span> <span class="n">runs</span> <span class="k">for</span> <span class="n">n_spikes</span> <span class="n">greater</span> <span class="n">than</span> <span class="mf">3.</span><span class="o">..</span>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="n">Field</span> <span class="mi">1</span> <span class="n">has</span> <span class="mi">18</span> <span class="n">potential</span> <span class="n">runs</span>
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="n">Filtering</span> <span class="n">runs</span> <span class="k">for</span> <span class="n">n_spikes</span> <span class="n">greater</span> <span class="n">than</span> <span class="mf">3.</span><span class="o">..</span>
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="n">Field</span> <span class="mi">2</span> <span class="n">has</span> <span class="mi">37</span> <span class="n">potential</span> <span class="n">runs</span>
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="n">Filtering</span> <span class="n">runs</span> <span class="k">for</span> <span class="n">n_spikes</span> <span class="n">greater</span> <span class="n">than</span> <span class="mf">3.</span><span class="o">..</span>
+</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="n">Field</span> <span class="mi">3</span> <span class="n">has</span> <span class="mi">39</span> <span class="n">potential</span> <span class="n">runs</span>
+</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="o">...</span>    
+</span></code></pre></div></p>
+<p>Notice how the filtering occurs in place so the field_props object is updated with the filtered runs. In this example we have filtered out all runs that had 3 or fewer spikes in them.</p>
+<p>There are two important options we can use to change how the segmentation of fields from the rate map occurs.
+The partitioning of the rate map can be done in either a 'simple' or a 'fancy' way.</p>
+<p>The <a href="">simple_parition</a> method essentially just returns the areas of the ratemap that are greater than some threshold
+percentage4  of the <strong>mean</strong> firing rate. This was done mostly to deal with one-dimensional linear track
+data</p>
 <div class="footnote">
 <hr />
 <ol>
