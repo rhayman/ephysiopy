@@ -4,7 +4,7 @@ from scipy import ndimage
 from scipy.signal import argrelextrema
 from skimage.segmentation import watershed
 from ephysiopy.io.recording import AxonaTrial
-from ephysiopy.common.rhythmicity import LFPOscillations
+from ephysiopy.common.phasecoding import LFPOscillations
 from ephysiopy.common.phasecoding import get_bad_cycles
 from ephysiopy.common.statscalcs import (
     CircStatsResults,

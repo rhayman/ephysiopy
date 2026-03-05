@@ -248,6 +248,22 @@ firing fields peak and the central heatmap part of each field shows the distance
 each bin the field to the firing field centre. The bottom right-hand part of the figure
 shows the firing rate map numbered with the firing field identity.
 
+There are two important options we can use to change how the extraction of fields from the rate map occurs.
+The partitioning of the rate map can be done in either a 'simple' or a 'fancy' way.
+
+```python
+field_props = trial.get_field_properties(2, 3, partition='simple')
+```
+
+The [simple_parition](./field_analysis.md#ephysiopy.common.fieldcalcs.simple_partition) method essentially just returns the areas of the ratemap that are greater than some threshold
+percentage of the **mean** firing rate. This was done mostly to deal with one-dimensional linear track
+data
+
+The [fancy_partition](./field_analysis.md#ephysiopy.common.fieldcalcs.fancy_partition) method is more complicated in that it will do more image processing under the hood to extract out the relevant areas
+of the firing rate map. As with the simple method this one only examines areas above some threshold 
+(field_threshold_percent); a local threshold is then applies to each detected sub-field (using skimage.filters.threshold_local).
+Various metrics are hen extracted and returned to the user.
+
 Each item in field_props in the example above is of type [FieldProps](./field_analysis.md#ephysiopy.common.fieldproperties.FieldProps) 
 and has a large number of attributes availabale. You can also add LFP data for each run through
 the field(s) which should make phase precession type anaylses easier.
@@ -260,8 +276,14 @@ object associated with it which contains the LFP data for that run.
 
 ### Dealing with field properties
 
-There are a number of methods for dealing with the field properties objects. We might want to
-sort them by some particular attribute or filter them similarly. As each FieldProps object will 
+There are a number of methods for dealing with the field properties objects and their attributes. Because each FieldProps
+object inherits from the RegionProperties within skimage there is a huge range of attributes available; see
+https://scikit-image.org/docs/stable/api/skimage.measure.html#skimage.measure.regionprops for a full list.
+
+There are also neuro-specific attrbiutes that are added such as the number of spikes within a field, the phase of theta at which
+a spike was emitted etc.
+
+It's possible you might want to sort fields by some particular attribute or filter them somehow. As each FieldProps object will 
 have a list of RunProps associated with it it's likely that not all of these runs will have spikes
 associated with them for example. We may also want to filter out small fields that are unlikely
 to contain enough data.
@@ -295,15 +317,6 @@ Field 3 has 39 potential runs
 ```
 
 Notice how the filtering occurs in place so the field_props object is updated with the filtered runs. In this example we have filtered out all runs that had 3 or fewer spikes in them.
-
-There are two important options we can use to change how the segmentation of fields from the rate map occurs.
-The partitioning of the rate map can be done in either a 'simple' or a 'fancy' way.
-
-The [simple_parition]() method essentially just returns the areas of the ratemap that are greater than some threshold
-percentage4  of the **mean** firing rate. This was done mostly to deal with one-dimensional linear track
-data
-
-
 
 
 [^1]: Jeewajee A, Barry C, Douchamps V, Manson D, Lever C, Burgess N.

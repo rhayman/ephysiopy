@@ -272,7 +272,7 @@ class BinnedData:
             cluster_id=self.cluster_id,
         )
 
-    def correlate(self, other=None, as_matrix=False) -> list[float] | np.ndarray:
+    def correlate(self, other=None, as_matrix=False) -> np.ndarray:
         """
         This method is used to correlate the binned data of this BinnedData
         instance with the binned data of another BinnedData instance.
@@ -291,9 +291,9 @@ class BinnedData:
 
         Returns
         -------
-        BinnedData
-            A new BinnedData instance with the correlation of the
-            binned data of this instance and the other instance.
+        np.ndarray
+            The result of the correlations
+
         """
         if other is not None:
             assert isinstance(other, BinnedData)

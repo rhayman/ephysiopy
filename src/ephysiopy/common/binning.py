@@ -292,6 +292,7 @@ class RateMap(object):
         Gets the min/max of the x/y data
         """
         xy = self.PosCalcs.xy
+        xy = np.ma.masked_invalid(xy)
         x_lims = (np.ma.min(xy[0]), np.ma.max(xy[0]))
         y_lims = (np.ma.min(xy[1]), np.ma.max(xy[1]))
         self.x_lims = x_lims
@@ -345,7 +346,10 @@ class RateMap(object):
         def xy_edges():
             x_lims = self.x_lims or self._getXYLimits()[0]
             y_lims = self.y_lims or self._getXYLimits()[1]
-            nxbins = int(np.ceil((x_lims[1] - x_lims[0]) / binsize))
+            try:
+                nxbins = int(np.ceil((x_lims[1] - x_lims[0]) / binsize))
+            except ValueError:
+                breakpoint()
             nybins = int(np.ceil((y_lims[1] - y_lims[0]) / binsize))
             _x = np.linspace(x_lims[0], x_lims[1], nxbins)
             _y = np.linspace(y_lims[0], y_lims[1], nybins)

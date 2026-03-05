@@ -151,6 +151,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self._filter: list = []
         self._mask_array = None
         self._concatenated = False  # whether this is a concatenated trial
+        self._concatenated_trials = None  # list of trials if a concatenated trial
 
     @classmethod
     def __subclasshook__(cls, subclass):
@@ -302,6 +303,16 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self._concatenated = val
 
     @property
+    def concatenated_trials(self):
+        return self._concatenated_trials
+
+    @concatenated_trials.setter
+    def concatenated_trials(self, val: list):
+        if not isinstance(val, list):
+            raise TypeError("concatenated_trials must be a list")
+        self._concatenated_trials = val
+
+    @property
     def filter(self):
         return self._filter
 
@@ -440,6 +451,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             _, _, labels, _ = simple_partition(rmap)
         elif partition == "fancy":
             _, _, labels, _ = fancy_partition(rmap)
+
+        breakpoint()
 
         spike_times = self.get_spike_times(cluster, channel)
         xy = getattr(self.PosCalcs, "xy")
@@ -740,6 +753,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         **kwargs : dict, optional
             Additional keyword arguments for the _get_spike_pos_idx function.
             - do_shuffle (bool): If True, the rate map will be shuffled by
+                        n_shuffles
             - map_type (MapType): the type of map to generate, default
                         is MapType.POS but can be any of the options
                         in MapType
@@ -1158,6 +1172,7 @@ class AxonaTrial(TrialInterface):
 
                 print("Done merging tetrode data.")
 
+                new_AxonaTrial.concatenated_trials = [self.pname, other.pname]
                 new_AxonaTrial.concatenated = True
                 return new_AxonaTrial
 
@@ -1207,7 +1222,7 @@ class AxonaTrial(TrialInterface):
         will load the waveforms as well as everything else
         """
         clust_chans = {}
-        pattern = re.compile(str(self.pname.name).replace(".set", ".[0-9]\.cut"))
+        pattern = re.compile(str(self.pname.name).replace(".set", ".[0-9].cut"))
         cuts = sorted(
             [Path(f) for f in os.listdir(self.pname.parent) if pattern.match(f)]
         )
