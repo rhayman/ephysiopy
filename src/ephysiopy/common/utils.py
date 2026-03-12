@@ -42,8 +42,42 @@ class MapType(Enum):
     CROSS_CORR = 6
 
 
+class RecordingKind(Enum):
+    FPGA = 1
+    NEUROPIXELS = 2
+    ACQUISITIONBOARD = 3
+    NWB = 4
+
+
+Xml2RecordingKind = {
+    "Acquisition Board": RecordingKind.ACQUISITIONBOARD,
+    "Neuropix-PXI": RecordingKind.NEUROPIXELS,
+    "Rhythm FPGA": RecordingKind.FPGA,
+    "Rhythm": RecordingKind.FPGA,
+    "Acquistion": RecordingKind.ACQUISITIONBOARD,
+    "Neuropix": RecordingKind.NEUROPIXELS,
+}
+
+
 # A named tuple used in BinnedData for uniquely identifying a cluster/ channel
 ClusterID = namedtuple("ClusterID", ["Cluster", "Channel"])
+
+
+def make_cluster_ids(cluster: int | list, channel: int | list) -> list:
+    # add the cluster and channel id to the rate map
+    # I assume this will be in the same order as they are added...
+    ids = []
+    if cluster is None:
+        return [None, None]
+    if isinstance(channel, int) and isinstance(cluster, list):
+        channel = [channel for c in cluster]
+    if isinstance(cluster, int):
+        cluster = [cluster]
+    if isinstance(channel, int):
+        channel = [channel]
+    for cl_ch in zip(cluster, channel):
+        ids.append(ClusterID(cl_ch[1], cl_ch[0]))
+    return ids
 
 
 @dataclass

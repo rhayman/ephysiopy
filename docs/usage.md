@@ -166,7 +166,7 @@ trial.LFP.butterFilter(6, 12)
 
 ## Filtering a trial
 
-There is an [apply_filter()](./io.md#ephysiopy.io.recording.TrialInterface.apply_filter) method of the trial object that takes a list of
+There is an [apply_filter()](./io.md#ephysiopy.io.bases.TrialInterface.apply_filter) method of the trial object that takes a list of
 TrialFilter and applies those filters to the underlying data of the trial.
 
 Specify a TrialFilter like so:

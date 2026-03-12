@@ -32,6 +32,7 @@ from ephysiopy.common.utils import (
 )
 from ephysiopy.common import fieldcalcs as fc
 
+
 """
 This one allows us to save the
 returned matplotlib Axis object to a location and name specified by the
@@ -1322,7 +1323,7 @@ class FigureMaker(object):
             The axes containing the theta phase plot.
         """
 
-        from ephysiopy.common.rhythmicity import LFPOscillations
+        from ephysiopy.common.phasecoding import LFPOscillations
 
         ax = kwargs.pop("ax", None)
         if ax is None:
@@ -1360,21 +1361,103 @@ class FigureMaker(object):
 
         return ax
 
+    def plot_phase_precession(
+        self,
+        cluster: int,
+        channel: int,
+        run_direction: str = "e",
+        field_threshold: float = 1.0,
+        field_threshold_percent: float = 150,
+        min_run_speed: float = 0.5,
+        track_end_size: float = 6.0,
+        partition_method: str = "simple",
+        return_pp: bool = False,
+        **kwargs,
+    ) -> plt.Axes:
+        """
+        Plots the phase precession for the specified cluster and channel.
+
+        Parameters
+        ----------
+        cluster : int
+            The cluster to get the phase precession for.
+        channel : int
+            The channel number.
+        run_direction : str
+            Either 'e' or 'w' for east or westbound runs. Defaults to 'e'.
+        field_threshold : float
+            firing rates below this value in Hz will be considered outside
+            the place field. Defaults to 1.0 Hz.
+        field_threshold_percent : float
+            firing rates below this percentage of the mean firing rate
+            will be considered outside the place field.
+            Defaults to 150.
+        min_run_speed : float
+            running speeds below this value in cm/s will be excluded from the
+            analysis. Defaults to 0.5 cm/s.
+        track_end_size : float
+            the size of the track ends in cm. Defaults to 6.0 cm.
+        partition_method : str
+            the method to use for partitioning the data. Either 'simple' or
+            'fancy'. Defaults to 'simple'.
+        return_pp: bool
+            whether to return the phase precession object. Defaults to False.
+        **kwargs : dict
+            Additional keyword arguments for the function.
+
+        Returns
+        -------
+        plt.Axes
+            The axes containing the phase precession plot.
+
+        Notes
+        -----
+        Assumes linear track data
+
+        See Also
+        --------
+        ephysiopy.common.fieldcalcs.simple_partition
+        ephysiopy.common.fieldcalcs.fancy_partition
+        """
+
+        from ephysiopy.phase_precession.linear_track import run_phase_analysis
+
+        run_phase_analysis(
+            self,
+            cluster,
+            channel,
+            run_direction=run_direction,
+            field_threshold=field_threshold,
+            field_threshold_percent=field_threshold_percent,
+            min_run_speed=min_run_speed,
+            track_end_size=track_end_size,
+            partition_method=partition_method,
+            return_pp=return_pp,
+            plot=True,
+            **kwargs,
+        )
+
+        ax = plt.gca()
+        return ax
+
     # @saveFigure
     # @stripAxes
+
     def plot_waveforms(self, cluster: int, channel: int, **kws) -> list[plt.Axes]:
         """
         Plot the waveforms for the selected cluster on the channel (tetrode)
 
         Parameters
         ----------
-        cluster (int) - the cluster
-
-        channel (int) - the channel(s) / tetrode
+        cluster : int
+            the cluster
+        channel : int
+            the channel(s) / tetrode
 
         Returns
         -------
-        plt.Axes - the axes holding the plot
+        plt.Axes
+            the axes holding the plot
         """
         # waves should be n_spikes x n_channels x n_samples
         # units are volts so x 1e6 to get microvolts

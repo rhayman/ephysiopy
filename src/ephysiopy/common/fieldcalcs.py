@@ -23,7 +23,6 @@ from ephysiopy.common.utils import (
     blur_image,
     bwperim,
 )
-from ephysiopy.visualise.plotting import _stripAx
 
 
 # Some functions to extract and filter runs from field properties
@@ -788,6 +787,8 @@ def plot_field_props(field_props: list[FieldProps]):
     field_props : list of FieldProps
         The field properties to plot
     """
+    from ephysiopy.visualise.plotting import _stripAx
+
     fig = plt.figure()
     subfigs = fig.subfigures(
         2,
@@ -1595,7 +1596,7 @@ def __get_circular_regions(A: np.ndarray, **kwargs) -> tuple:
     return result, radii
 
 
-def get_basic_gridscore(A: np.ndarray, **kwargs) -> float:
+def basic_gridscore(A: np.ndarray, **kwargs) -> float:
     """
     Calculates the grid score of a spatial autocorrelogram
 
@@ -1613,7 +1614,7 @@ def get_basic_gridscore(A: np.ndarray, **kwargs) -> float:
     return gridness(A, **kwargs)[0]
 
 
-def get_expanding_circle_gridscore(A: np.ndarray, **kwargs):
+def expanding_circle_gridscore(A: np.ndarray, **kwargs):
     """
     Calculates the gridscore for each circular sub-region of image A
     where the circles are centred on the image centre and expanded to
@@ -1637,7 +1638,7 @@ def get_expanding_circle_gridscore(A: np.ndarray, **kwargs):
     return max(gridscores)
 
 
-def get_deformed_sac_gridscore(A: np.ndarray) -> float:
+def deformed_sac_gridscore(A: np.ndarray) -> float:
     """
     Deforms a non-circular SAC into a circular SAC (circular meaning
     the ellipse drawn around the edges of the 6 nearest peaks to the
@@ -1658,7 +1659,7 @@ def get_deformed_sac_gridscore(A: np.ndarray) -> float:
     return gridness(deformed_SAC)[0]
 
 
-def get_thigmotaxis_score(xy: np.ndarray, shape: str = "circle") -> float:
+def thigmotaxis_score(xy: np.ndarray, shape: str = "circle") -> float:
     """
     Returns a score which is the ratio of the time spent in the inner
     portion of an environment to the time spent in the outer portion.

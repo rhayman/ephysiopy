@@ -982,6 +982,19 @@ class SpikeCalcsGeneric(object):
             raise IndexError("No duration provided, give me one!")
         return self.n_spikes / self.duration
 
+    def shuffle_isis(self) -> np.ndarray:
+        """
+        Shuffle the spike train ISIs and return a new spike train with
+        the same number of spikes but a different ISI distributedon.
+        Useful for creating null distributions of spike metrics.
+        """
+        ts = self.spike_times
+        isis = np.diff(ts)
+        new_ts = np.cumsum(np.random.permutation(isis))
+        # TODO: make sure the start and stop time range is within
+        # the bounds of the original
+        return new_ts
+
     def mean_isi_range(self, isi_range: float) -> float:
         """
         Calculates the mean of the autocorrelation from 0 to n seconds.

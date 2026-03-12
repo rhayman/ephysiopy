@@ -14,6 +14,7 @@ from ephysiopy.common.rhythmicity import power_spectrum
 from scipy import ndimage, signal
 import pywt
 import pycwt
+from pycircstat2.utils import rotate_data
 from pactools import Comodulogram, REFERENCES
 from scipy import stats
 from scipy.special import i0
@@ -73,6 +74,7 @@ class LFPOscillations(object):
         filt_sig = signal.filtfilt(b, a, sig, padtype="odd")
         hilbert_sig = signal.hilbert(filt_sig)
         phase = np.angle(hilbert_sig)
+        phase = rotate_data(phase, np.pi)
         amplitude = np.abs(hilbert_sig)
         inst_freq = self.fs / (2 * np.pi) * np.diff(np.unwrap(phase))
         inst_freq = np.insert(inst_freq, -1, inst_freq[-1])
@@ -211,15 +213,33 @@ class LFPOscillations(object):
         ----------
         out_window_size : float, optional
             The size of the output window in seconds (default is 0.4).
+
+        FREQ_BAND : tuple, optional
+            The frequency band to look for oscillations in (default is (20, 90)).
+
+        **kwargs : dict
+            Additional keyword arguments:
+                wavelet : str
+                    The wavelet to use for the continuous wavelet transform
+                    (default is "cmor1.0-1.0").
+                sd_threshold : float
+                    the threshold in standard deviations above the band mean power
+                    to capture oscillatory epochs
+
         Returns
         -------
         dict
-            A dictionary where keys are the center time of the oscillatory
-            window and values are the LFP signal in that window.
+            A dictionary where keys are the start and stop times of the
+            oscillatory window and values are the bandpass filtered LFP
+            signal in that window.
+            The window is centred on the maximum power (amplitude ** 2)
+            in that oscillatory window.
+
         Notes
         -----
         Uses a similar method to jun et al., but expands the window
         for candidate oscillatory windows in a better way
+
 
         References
         ----------
@@ -238,6 +258,7 @@ class LFPOscillations(object):
         # so power is the square of the abs
         power = np.abs(cwtmatr[:-1, :-1]) ** 2
         # get the mean power in the frequency band
+        freqs = freqs[:-1]
         mean_band_power = np.mean(
             power[(freqs >= FREQ_BAND[0]) & (freqs <= FREQ_BAND[1]), :], axis=0
         )
@@ -246,7 +267,7 @@ class LFPOscillations(object):
         threshold = np.std(mean_band_power) * sd_threshold
         high_power_mask = mean_band_power > np.mean(mean_band_power) + threshold
         # find the runs of True's in the high_power_mask
-        # these are epochs with high gamma power
+        # these are epochs with high band power
         vals, run_starts, run_lens = find_runs(high_power_mask.astype(int))
         # calculate the maxima of the amplitude for each segment
         # of the frequency band pass version of the LFP
@@ -256,16 +277,22 @@ class LFPOscillations(object):
 
         # for each of these epochs get a window of the raw LFP signal
         # centred on the maximum band power
-        t = int(out_window_size / (1 / self.fs))
+        dt = int((out_window_size / (1 / self.fs)) / 2)
         oscillatory_windows = {}
 
-        for i, run_idx in enumerate(good_runs):
+        # TODO: due to rounding the output windows aren't always
+        # out_window_size (might be ~1 or 2 samples less)
+
+        for run_idx in good_runs:
             run_start = run_starts[run_idx]
             s = slice(run_start, run_start + run_lens[run_idx])
             run_max_idx = np.argmax(amplitude_filtered[s], 0) + run_start
-            sig_slice = slice(run_max_idx - int(t / 2), run_max_idx + int(t / 2))
+            sig_slice = slice(run_max_idx - dt, run_max_idx + dt)
+            # breakpoint()
             slice_in_seconds = sig_slice.start / self.fs, sig_slice.stop / self.fs
-            oscillatory_windows[slice_in_seconds] = self.sig[sig_slice]
+            oscillatory_windows[slice_in_seconds] = F.filt_sig[
+                run_max_idx - dt : run_max_idx + dt
+            ]
 
         return oscillatory_windows
 

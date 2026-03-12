@@ -1,6 +1,6 @@
 # Data input/ output
 
-::: ephysiopy.io.recording.TrialInterface
+::: ephysiopy.io.bases.TrialInterface
     handler: python
     options:
       members:
