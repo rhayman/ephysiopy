@@ -7,13 +7,12 @@ All test data is generated synthetically; no file I/O.
 """
 
 import warnings
-from collections import namedtuple
 from unittest.mock import patch, MagicMock
 
 import numpy as np
 import pytest
 
-from ephysiopy.common.spikecalcs import (
+from ephysiopy.common.spikingcalcs import (
     KSMetaTuple,
     SpikeCalcsGeneric,
     cluster_quality,

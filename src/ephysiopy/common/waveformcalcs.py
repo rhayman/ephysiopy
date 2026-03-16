@@ -541,6 +541,10 @@ class WaveformCalcsGeneric(object):
             or None if no waveforms are available.
         """
         best_chan = self.get_best_channel()
+
+        if not best_chan:
+            return None
+
         waveform, _ = self.mean_waveform(best_chan)
 
         if waveform is None:

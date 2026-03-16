@@ -325,6 +325,8 @@ def cluster_quality(
     E = np.sqrt(np.nansum(waveforms**2, axis=2))
     zeroIdx = np.sum(E, 0) == [0, 0, 0, 0]
     E = E[:, ~zeroIdx]
+    if not np.any(E):
+        return None
     wvs = wvs[:, ~zeroIdx, :]
     normdWaves = (wvs.T / E.T).T
     PCA_m = get_param(normdWaves, "PCA", fet=fet)
@@ -563,6 +565,14 @@ class SpikeCalcsGeneric:
     def duration(self) -> float | int | None:
         return self._duration
 
+    @property
+    def event_ts(self) -> np.ndarray | None:
+        return self._event_ts
+
+    @event_ts.setter
+    def event_ts(self, value: np.ndarray | None):
+        self._event_ts = value
+
     @duration.setter
     def duration(self, value: float | int | None):
         self._duration = value
@@ -695,7 +705,7 @@ class SpikeCalcsGeneric:
             tmp = self.spike_times[t[0] : t[1]] - event_ts[i]
             indices = np.digitize(tmp, bins=bins)
             counts = np.bincount(indices, minlength=len(bins))
-            result[:, i] = counts[1:len(bins)]
+            result[:, i] = counts[1 : len(bins)]
         return result
 
     def get_shuffled_ifr_sp_corr(
