@@ -66,13 +66,13 @@ the [get_field_properties()](./io.md#ephysiopy.io.recording.TrialInterface.get_f
 
 ::: ephysiopy.common.fieldcalcs.gridness
 
-::: ephysiopy.common.fieldcalcs.get_basic_gridscore
+::: ephysiopy.common.fieldcalcs.basic_gridscore
 
-::: ephysiopy.common.fieldcalcs.get_expanding_circle_gridscore
+::: ephysiopy.common.fieldcalcs.expanding_circle_gridscore
 
-::: ephysiopy.common.fieldcalcs.get_deformed_sac_gridscore
+::: ephysiopy.common.fieldcalcs.deformed_sac_gridscore
 
-::: ephysiopy.common.fieldcalcs.get_thigmotaxis_score
+::: ephysiopy.common.fieldcalcs.thigmotaxis_score
 
 
 

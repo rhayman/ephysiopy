@@ -139,25 +139,6 @@ def get_param(waveforms, param="Amp", t=200, fet=1, **kws) -> np.ndarray:
             return np.concatenate(out, axis=1)
 
 
-def get_peak_to_trough_time(waveforms: np.ndarray, spike_window=1000) -> np.ndarray:
-    """
-    Returns the time in seconds of the peak to trough in a waveform.
-
-    Parameters
-    ----------
-    waveforms : np.ndarray
-        The waveforms to calculate the peak to trough time for.
-
-    Returns
-    -------
-    np.ndarray
-        The time of the peak to trough in seconds.
-    """
-    peak_times = get_param(waveforms, "tP", spike_window=spike_window)
-    trough_times = get_param(waveforms, "tT", spike_window=spike_window)
-    return np.mean(trough_times - peak_times)
-
-
 class WaveformCalcsGeneric(object):
     """
     Deals with the processing and analysis of spike data.

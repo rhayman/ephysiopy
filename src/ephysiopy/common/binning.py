@@ -1,5 +1,4 @@
 import warnings
-
 import numpy as np
 from numpy.fft import ifft
 from numpy.fft import fft
@@ -283,7 +282,7 @@ class RateMap(object):
         if self.spike_weights is None:
             raise ValueError("Spike weights not set.")
 
-        idx = repeat_ind(self.spike_weights)
+        idx = repeat_ind(self.spike_weights.astype(int))
         spk_samples = np.take(self.sample, idx, axis=-1)
         return spk_samples
 
@@ -740,19 +739,24 @@ class RateMap(object):
         BinnedData
             The data in A with the maps replaced by autocorrelograms
         """
-        result = BinnedData(A.variable, MapType.AUTO_CORR)
-        result.cluster_id = kwargs.get("cluster_id", [])
+        xlen = len(A.bin_edges[0]) - 1
+        ylen = len(A.bin_edges[1]) - 1
+
+        result = BinnedData(
+            A.variable,
+            MapType.AUTO_CORR,
+            [],
+            [
+                np.arange(-xlen + 1, xlen + 1),
+                np.arange(-ylen + 1, ylen + 1),
+            ],
+        )
+
         for rmap in A.binned_data:
             if nodwell is None:
                 nodwell = np.isnan(rmap)
             rr = self._autoCorr2D(rmap, nodwell, tol)
             result.binned_data += [rr]
-        xlen = len(A.bin_edges[0]) - 1
-        ylen = len(A.bin_edges[1]) - 1
-        result.bin_edges = [
-            np.arange(-xlen + 1, xlen + 1),
-            np.arange(-ylen + 1, ylen + 1),
-        ]
         return result
 
     def _autoCorr2D(self, A: np.ndarray, nodwell: np.ndarray, tol: float = 1e-10):
@@ -1163,49 +1167,3 @@ class RateMap(object):
         # ego_angles in range [0-2PI]
         # and with size arena_xy_ncoords x npos
         return ego_angles, arena_xy
-
-    # def get_dispersion_map(
-    #     self, spk_times: np.ndarray, pos_times: np.ndarray
-    # ) -> BinnedData | None:
-    #     """
-    #     Attempt to write a faster version of creating an overdispersion
-    #     map. A cell will sometimes fire too much or too little on a given
-    #     run through its receptive field. This function quantifies that.
-    #
-    #     This shows the amount of 'observed' variance in spiking around
-    #     the mean spiking in a bin...
-    #
-    #     Parameters
-    #     ----------
-    #     spk_times : np.ndarray
-    #         a vector of spike times (in seconds)
-    #     pos_times : np.ndarray
-    #         vector of position times (in seconds)
-    #
-    #     Returns
-    #     -------
-    #     BinnedData
-    #         the overdispersion map in an instance of BinnedData
-    #
-    #     """
-    #     idx = np.searchsorted(pos_times, spk_times, side="right")
-    #     spike_weights = np.bincount(idx, minlength=len(pos_times))
-    #     expected_spikes = self.get_map(spike_weights, map_type=MapType.SPK)
-    #     # bin_edges[1] is x, bin_edges[0] is y
-    #     x_bins = np.digitize(self.xy[0],
-    #                          expected_spikes.bin_edges[1][:-1]) - 1
-    #     y_bins = np.digitize(self.xy[1],
-    #                          expected_spikes.bin_edges[0][:-1]) - 1
-    #     map_shape = np.shape(expected_spikes.binned_data[0])
-    #     pos_bins_linear_idx = np.ravel_multi_index([y_bins, x_bins],
-    #                                                map_shape)
-    #     expected_spikes_xy = expected_spikes.binned_data[0][y_bins, x_bins]
-    #     min_rate_threshold = np.nanmax(expected_spikes.binned_data[0]) * 0.25
-    #     x_bins_with_firing = x_bins[spike_weights > 0]
-    #     y_bins_with_firing = y_bins[spike_weights > 0]
-    #     bins_with_firing_linear_idx = np.ravel_multi_index(
-    #         [y_bins_with_firing, x_bins_with_firing], map_shape
-    #     )
-    #
-    #     observed_spikes = expected_spikes
-    #     return observed_spikes

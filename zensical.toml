@@ -62,6 +62,7 @@ nav = [
     "plotting.md",
     "field_analysis.md",
     "spike_train_analysis.md",
+    "waveform_analysis.md",
     "misc_stats.md",
     "phase_precession.md"
   ]}
