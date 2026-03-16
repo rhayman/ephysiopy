@@ -1184,7 +1184,7 @@ class SpikeCalcsGeneric(object):
             tmp = self.spike_times[t[0] : t[1]] - event_ts[i]
             indices = np.digitize(tmp, bins=bins)
             counts = np.bincount(indices, minlength=len(bins))
-            result[:, i] = counts[1:]
+            result[:, i] = counts[1:len(bins)]
         return result
 
     def get_shuffled_ifr_sp_corr(
