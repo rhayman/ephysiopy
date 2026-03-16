@@ -1,20 +1,12 @@
-import os
 import warnings
-from pathlib import Path
 from collections import namedtuple
 from astropy.convolution import convolve, Box1DKernel, Gaussian1DKernel
-from collections.abc import Sequence
-import h5py
 import seaborn as sns
 import pandas as pd
 import matplotlib.pylab as plt
 import matplotlib.transforms as transforms
 import numpy as np
 from scipy.special import erf
-from scipy import interpolate
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import PolynomialFeatures
-from phylib.io.model import TemplateModel
 from scipy import signal, stats
 from ephysiopy.common.utils import (
     min_max_norm,
@@ -22,106 +14,7 @@ from ephysiopy.common.utils import (
     BinnedData,
     VariableToBin,
     MapType,
-    TrialFilter,
 )
-
-# from ephysiopy.common.rhythmicity import LFPOscillations
-from ephysiopy.openephys2py.KiloSort import KiloSortSession
-
-# from ephysiopy.common.statscalcs import mean_resultant_vector
-
-
-def get_param(waveforms, param="Amp", t=200, fet=1) -> np.ndarray:
-    """
-    Returns the requested parameter from a spike train as a numpy array.
-
-    Parameters
-    ----------
-    waveforms : np.ndarray
-        Shape of array can be nSpikes x nSamples OR nSpikes x nElectrodes x nSamples.
-    param : str, default='Amp'
-        Valid values are:
-        - 'Amp': peak-to-trough amplitude
-        - 'P': height of peak
-        - 'T': depth of trough
-        - 'Vt': height at time t
-        - 'tP': time of peak (in seconds)
-        - 'tT': time of trough (in seconds)
-        - 'PCA': first n fet principal components (defaults to 1)
-    t : int, default=200
-        The time used for Vt
-    fet : int, default=1
-        The number of principal components (use with param 'PCA').
-
-    Returns
-    -------
-    np.ndarray
-        The requested parameter as a numpy array.
-
-    """
-    from sklearn.decomposition import PCA
-
-    if param == "Amp":
-        return np.ptp(waveforms, axis=-1)
-    elif param == "P":
-        return np.max(waveforms, axis=-1)
-    elif param == "T":
-        return np.min(waveforms, axis=-1)
-    elif param == "Vt":
-        times = np.arange(0, 1000, 20)
-        f = interpolate.interp1d(times, range(50), "nearest")
-        if waveforms.ndim == 2:
-            return waveforms[:, int(f(t))]
-        elif waveforms.ndim == 3:
-            return waveforms[:, :, int(f(t))]
-    elif param == "tP":
-        idx = np.argmax(waveforms, axis=-1)
-        m = interpolate.interp1d([0, waveforms.shape[-1] - 1], [0, 1 / 1000.0])
-        return m(idx)
-    elif param == "tT":
-        idx = np.argmin(waveforms, axis=-1)
-        m = interpolate.interp1d([0, waveforms.shape[-1] - 1], [0, 1 / 1000.0])
-        return m(idx)
-    elif param == "PCA":
-        pca = PCA(n_components=fet)
-        if waveforms.ndim == 2:
-            return pca.fit(waveforms).transform(waveforms).squeeze()
-        elif waveforms.ndim == 3:
-            out = np.zeros((waveforms.shape[0], waveforms.shape[1] * fet))
-            st = np.arange(0, waveforms.shape[1] * fet, fet)
-            en = np.arange(fet, fet + (waveforms.shape[1] * fet), fet)
-            rng = np.vstack((st, en))
-            for i in range(waveforms.shape[1]):
-                if ~np.any(np.isnan(waveforms[:, i, :])):
-                    A = np.squeeze(
-                        pca.fit(waveforms[:, i, :].squeeze()).transform(
-                            waveforms[:, i, :].squeeze()
-                        )
-                    )
-                    if A.ndim < 2:
-                        out[:, rng[0, i] : rng[1, i]] = np.atleast_2d(A).T
-                    else:
-                        out[:, rng[0, i] : rng[1, i]] = A
-            return out
-
-
-def get_peak_to_trough_time(waveforms: np.ndarray) -> np.ndarray:
-    """
-    Returns the time in seconds of the peak to trough in a waveform.
-
-    Parameters
-    ----------
-    waveforms : np.ndarray
-        The waveforms to calculate the peak to trough time for.
-
-    Returns
-    -------
-    np.ndarray
-        The time of the peak to trough in seconds.
-    """
-    peak_times = get_param(waveforms, "tP")
-    trough_times = get_param(waveforms, "tT")
-    return np.mean(trough_times - peak_times)
 
 
 def get_burstiness(
@@ -422,6 +315,9 @@ def cluster_quality(
         If an error occurs during the calculation of the L-ratio or Isolation Distance.
 
     """
+
+    from ephysiopy.common.waveformcalcs import get_param
+
     if waveforms is None:
         return None
     nSpikes, nElectrodes, _ = waveforms.shape
@@ -631,190 +527,25 @@ def contamination_percent(
 KSMetaTuple = namedtuple("KSMeta", "Amplitude group KSLabel ContamPct ")
 
 
-class SpikeCalcsGeneric(object):
-    """
-    Deals with the processing and analysis of spike data.
-    There should be one instance of this class per cluster in the
-    recording session. NB this differs from previous versions of this
-    class where there was one instance per recording session and clusters
-    were selected by passing in the cluster id to the methods.
-
-    NB Axona waveforms are nSpikes x nChannels x nSamples - this boils
-    down to nSpikes x 4 x 50
-    NB KiloSort waveforms are nSpikes x nSamples x nChannels - these are ordered
-    by 'best' channel first and then the rest of the channels. This boils
-    down to nSpikes x 61 x 12 SO THIS NEEDS TO BE CHANGED to
-    nSpikes x nChannels x nSamples
-
-    Parameters
-    ----------
-    spike_times : np.ndarray
-        The times of spikes in the trial in seconds.
-    cluster : int
-        The cluster ID.
-    waveforms : np.ndarray, optional
-        An nSpikes x nChannels x nSamples array.
-    **kwargs : dict
-        Additional keyword arguments.
-
-    Attributes
-    ----------
-    spike_times : np.ma.MaskedArray
-        The times of spikes in the trial in seconds.
-    _waves : np.ma.MaskedArray or None
-        The waveforms of the spikes.
-    cluster : int
-        The cluster ID.
-    n_spikes : int
-        the total number of spikes for the current cluster
-    duration : float, int
-        total duration of the trial in seconds
-    event_ts : np.ndarray or None
-        The times that events occurred in seconds.
-    event_window : np.ndarray
-        The window, in seconds, either side of the stimulus, to examine.
-    stim_width : float or None
-        The width, in ms, of the stimulus.
-    secs_per_bin : float
-        The size of bins in PSTH.
-    sample_rate : int
-        The sample rate of the recording.
-    pos_sample_rate : int
-        The sample rate of the position data.
-    pre_spike_samples : int
-        The number of samples before the spike.
-    post_spike_samples : int
-        The number of samples after the spike.
-    KSMeta : KSMetaTuple
-        The metadata from KiloSort.
-    """
-
+class SpikeCalcsGeneric:
     def __init__(
         self,
         spike_times: np.ndarray,
-        cluster: int,
-        waveforms: np.ndarray = None,
-        **kwargs,
+        cluster: int | None = None,
+        event_ts: np.ndarray | None = None,
+        event_window: np.ndarray = np.array([-0.5, 0.5]),
+        pos_sample_rate: float = 50.0,
+        sample_rate: float = 30000.0,
     ):
-        self.spike_times = np.ma.MaskedArray(spike_times)  # IN SECONDS
-        if waveforms is not None:
-            # if waveforms.shape[-1] > 50:
-            # this is a hack to deal with the fact that KiloSort waveforms are 82 samples long
-            # and I want them comparable with Axona which is 50
-            # waveforms = waveforms[:, :, 16:66]
-            n_spikes, n_channels, n_samples = waveforms.shape
-            assert self.n_spikes == n_spikes, (
-                "Number of spike times does not match number of waveforms"
-            )
-            self._waves = np.ma.MaskedArray(waveforms)
-        else:
-            self._waves = None
+        self.spike_times = spike_times
+        self._event_ts = event_ts
         self.cluster = cluster
-        self._event_ts = None  # the times that events occured IN SECONDS
-        # window, in seconds, either side of the stimulus, to examine
-        self._event_window = np.array((-0.050, 0.100))
-        self._stim_width = None  # the width, in ms, of the stimulus
-        # used to increase / decrease size of bins in psth
-        self._secs_per_bin = 0.001
-        self._sample_rate = 50000
-        self._pos_sample_rate = 50
+        self.event_window = event_window
+        self.pos_sample_rate = pos_sample_rate
+        self.sample_rate = sample_rate
+        self.pos_sample_rate = pos_sample_rate
+        self._secs_per_bin = None
         self._duration = None
-        self._invert_waveforms = False
-        # these values should be specific to Axona data
-        # this I think is wrong as the pre capture buffer
-        # should be 200ms and 800ms post trigger
-        # whereas these values are equal to 330 microseconds
-        # and 708 microseconds if sampling is at 48kHz
-        self._pre_spike_samples = 10
-        self._post_spike_samples = 40
-        # if waveforms is not None:
-        #     if self.n_samples > 50:
-        # self.pre_spike_samples = 41
-        # self.post_spike_samples = 41
-        # self.sample_rate = 30000
-        # these values are specific to OE data
-        # if sample rate is 3kHz and the number of samples
-        # captured per waveform is 82 then it looks from
-        # plotting the waveforms that the pre spike samples is
-        # 40 so 1.33 milliseconds and the pos spike samples is
-        # 1.40 milliseconds
-        # values from running KS
-        self._ksmeta = KSMetaTuple(None, None, None, None)
-        # update the __dict__ attribute with the kwargs
-        self.__dict__.update(kwargs)
-
-    @property
-    def sample_rate(self) -> int | float:
-        return self._sample_rate
-
-    @sample_rate.setter
-    def sample_rate(self, value: int | float) -> None:
-        self._sample_rate = value
-
-    @property
-    def pos_sample_rate(self) -> int | float:
-        return self._pos_sample_rate
-
-    @pos_sample_rate.setter
-    def pos_sample_rate(self, value: int | float) -> None:
-        self._pos_sample_rate = value
-
-    @property
-    def pre_spike_samples(self) -> int:
-        return self._pre_spike_samples
-
-    @pre_spike_samples.setter
-    def pre_spike_samples(self, value: int) -> None:
-        self._pre_spike_samples = int(value)
-
-    @property
-    def post_spike_samples(self) -> int:
-        return self._post_spike_samples
-
-    @post_spike_samples.setter
-    def post_spike_samples(self, value: int) -> None:
-        self._post_spike_samples = int(value)
-
-    # its possible due to referencing that waveforms are inverted
-    # so add the option to correct that here
-    @property
-    def invert_waveforms(self) -> bool:
-        return self._invert_waveforms
-
-    @invert_waveforms.setter
-    def invert_waveforms(self, val: bool) -> None:
-        self._invert_waveforms = val
-
-    def waveforms(self, channel_id: Sequence = None) -> np.ndarray | None:
-        """
-        Returns the waveforms of the cluster.
-
-        Parameters
-        ----------
-        channel_id : Sequence, optional
-            The channel IDs to return the waveforms for.
-            If None, returns waveforms for all channels.
-
-        Returns
-        -------
-        np.ndarray | None
-            The waveforms of the cluster,
-            or None if no waveforms are available.
-
-
-        """
-        if self._waves is not None:
-            scaling = 1
-            if self.invert_waveforms:
-                scaling = -1
-            if channel_id is None:
-                return self._waves[:, :, :] * scaling
-            else:
-                if isinstance(channel_id, int):
-                    channel_id = [channel_id]
-                return self._waves[:, channel_id, :] * scaling
-        else:
-            return None
 
     @property
     def n_spikes(self):
@@ -829,95 +560,12 @@ class SpikeCalcsGeneric(object):
         return np.ma.count(self.spike_times)
 
     @property
-    def n_channels(self) -> int | None:
-        """
-        Returns the number of channels in the waveforms.
-
-        Returns
-        -------
-        int | None
-            The number of channels in the waveforms,
-            or None if no waveforms are available.
-        """
-        if self._waves is not None:
-            return self._waves.shape[1]
-        else:
-            return None
-
-    @property
-    def n_samples(self) -> int | None:
-        """
-        Returns the number of samples in the waveforms.
-
-        Returns
-        -------
-        int | None
-            The number of samples in the waveforms,
-            or None if no waveforms are available.
-        """
-        if self._waves is not None:
-            return self._waves.shape[2]
-        else:
-            return None
-
-    @property
-    def event_ts(self) -> np.ndarray:
-        return self._event_ts
-
-    @event_ts.setter
-    def event_ts(self, value: np.ndarray) -> None:
-        self._event_ts = value
-
-    @property
     def duration(self) -> float | int | None:
         return self._duration
 
     @duration.setter
     def duration(self, value: float | int | None):
         self._duration = value
-
-    @property
-    def KSMeta(self) -> KSMetaTuple:
-        return self._ksmeta
-
-    def update_KSMeta(self, value: dict) -> None:
-        """
-        Takes in a TemplateModel instance from a phy session and
-        parses out the relevant metrics for the cluster and places
-        into the namedtuple KSMeta.
-
-        Parameters
-        ----------
-        value : dict
-            A dictionary containing the relevant metrics for the cluster.
-
-        """
-        metavals = []
-        for f in KSMetaTuple._fields:
-            if f in value.keys():
-                if self.cluster in value[f].keys():
-                    metavals.append(value[f][self.cluster])
-                else:
-                    metavals.append(None)
-            else:
-                metavals.append(None)
-        self._ksmeta = KSMetaTuple(*metavals)
-
-    @property
-    def event_window(self) -> np.ndarray:
-        return self._event_window
-
-    @event_window.setter
-    def event_window(self, value: np.ndarray):
-        self._event_window = value
-
-    @property
-    def stim_width(self) -> int | float | None:
-        return self._stim_width
-
-    @stim_width.setter
-    def stim_width(self, value: int | float | None):
-        self._stim_width = value
 
     @property
     def secs_per_bin(self) -> float | int:
@@ -927,36 +575,11 @@ class SpikeCalcsGeneric(object):
     def secs_per_bin(self, value: float | int):
         self._secs_per_bin = value
 
-    def apply_filter(self, *trial_filter: TrialFilter) -> None:
-        """
-        Applies a mask to the spike times.
-
-        Parameters
-        ----------
-        trial_filter : TrialFilter
-            The filter
-        """
-        if trial_filter:
-            for i_filter in trial_filter:
-                assert isinstance(i_filter, TrialFilter), "Filter must be a TrialFilter"
-                assert i_filter.name == "time", "Only time filters are supported"
-        self.spike_times.mask = False
-        if self._waves and self._waves is not None:
-            self._waves.mask = False
-        if not trial_filter or len(trial_filter) == 0:
-            if self._waves and self._waves is not None:
-                self._waves.mask = False
-            self.spike_times.mask = False
-        else:
-            mask = np.zeros_like(self.spike_times, dtype=bool)
-            for i_filter in trial_filter:
-                i_mask = np.logical_and(
-                    self.spike_times > i_filter.start, self.spike_times < i_filter.end
-                )
-                mask = np.logical_or(mask, i_mask)
-            self.spike_times.mask = mask
-            if self._waves is not None:
-                self._waves.mask = mask
+    def trial_mean_fr(self) -> float:
+        # Returns the trial mean firing rate for the cluster
+        if self.duration is None:
+            raise IndexError("No duration provided, give me one!")
+        return self.n_spikes / self.duration
 
     def acorr(self, Trange: np.ndarray = np.array([-0.5, 0.5]), **kwargs) -> BinnedData:
         """
@@ -975,12 +598,6 @@ class SpikeCalcsGeneric(object):
             Container for the binned data.
         """
         return xcorr(self.spike_times, Trange=Trange, **kwargs)
-
-    def trial_mean_fr(self) -> float:
-        # Returns the trial mean firing rate for the cluster
-        if self.duration is None:
-            raise IndexError("No duration provided, give me one!")
-        return self.n_spikes / self.duration
 
     def shuffle_isis(self) -> np.ndarray:
         """
@@ -1016,112 +633,6 @@ class SpikeCalcsGeneric(object):
         counts = ac.binned_data[0]
         mask = np.logical_and(bins > 0, bins < isi_range)
         return np.mean(counts[mask[1:]])
-
-    def mean_waveform(self, channel_id: Sequence = None):
-        """
-        Returns the mean waveform and standard error of the mean (SEM) for a
-        given spike train on a particular channel.
-
-        Parameters
-        ----------
-        channel_id : Sequence, optional
-            The channel IDs to return the mean waveform for. If None, returns
-            mean waveforms for all channels.
-
-        Returns
-        -------
-        tuple
-            A tuple containing:
-            - mn_wvs (np.ndarray): The mean waveforms, usually 4x50 for tetrode recordings.
-            - std_wvs (np.ndarray): The standard deviations of the waveforms, usually 4x50 for tetrode recordings.
-        """
-        x = self.waveforms(channel_id)
-        if x is not None:
-            return np.mean(x, axis=0), np.std(x, axis=0)
-        else:
-            return None
-
-    def get_best_channel(self) -> int | None:
-        """
-        Returns the channel with the highest mean amplitude of the waveforms.
-
-        Returns
-        -------
-        int | None
-            The index of the channel with the highest mean amplitude,
-            or None if no waveforms are available.
-        """
-        wvs = self.waveforms()
-        if wvs is not None:
-            amps = np.mean(np.ptp(wvs, axis=-1), axis=0)
-            return np.argmax(amps)
-        else:
-            return None
-
-    def estimate_AHP(self) -> float | None:
-        """
-        Estimate the decay time for the AHP of the waveform of the
-        best channel for the current cluster.
-
-        Returns
-        -------
-        float | None
-            The estimated AHP decay time in microseconds,
-            or None if no waveforms are available.
-        """
-        best_chan = self.get_best_channel()
-        waveform, _ = self.mean_waveform(best_chan)
-
-        if waveform is None:
-            return None
-
-        # get the times
-        times = np.linspace(0, 1000, self.n_samples)  # in microseconds
-        pre_spike = int(self.pre_spike_samples * (1000000 / self.sample_rate))
-        post_spike = int(self.post_spike_samples * (1000000 / self.sample_rate))
-
-        f = interpolate.interp1d(
-            times, np.linspace(-(pre_spike), post_spike, self.n_samples), "nearest"
-        )
-        f_t = f(times)
-
-        # get the baseline voltage (for Axona this should be the
-        # 200 microseconds before the spike)
-        baseline_voltage = np.mean(waveform[f_t < 0])
-        # make sure this min measure isafter the spike would
-        # have triggered the capture of the buffer i.e. after t=0
-        min_voltage = np.min(waveform[f_t >= 0])
-        half_voltage = (baseline_voltage + min_voltage) / 2
-
-        # get the index of the minima of the waveform
-        t_thresh = np.nonzero(f_t > 0)[0][0]
-        idx = np.argmin(waveform[f_t > 0]) + t_thresh
-
-        # find the time it takes to return to baseline voltage
-        X = np.atleast_2d(f_t[idx:]).T
-        y = np.atleast_2d(waveform[idx:]).T
-
-        poly = PolynomialFeatures(degree=3)
-        X_poly = poly.fit_transform(X)
-
-        poly.fit(X_poly, y)
-        lin2 = LinearRegression()
-        lin2.fit(X_poly, y)
-
-        tn = np.linspace(f_t[idx], 1500, 1000).reshape(-1, 1)
-        yn = lin2.predict(poly.fit_transform(tn))
-
-        # predict the time it takes to return to half voltage
-        ahp_time = None
-        for i, v in enumerate(yn):
-            if v >= half_voltage:
-                ahp_time = tn[i][0]
-                break
-
-        try:
-            return ahp_time - f_t[idx]
-        except Exception:
-            return None
 
     def psth(self) -> tuple[list, ...]:
         """
@@ -1661,356 +1172,3 @@ class SpikeCalcsGeneric(object):
         # firing rates)
         R = np.nanmin(Ri)
         return Q, R
-
-    def plot_waveforms(self, n_waveforms: int = 2000, n_channels: int = 4):
-        """
-        Plots the waveforms of the cluster.
-
-        Parameters
-        ----------
-        n_waveforms : int, optional
-            The number of waveforms to plot.
-        n_channels : int, optional
-            The number of channels to plot.
-
-        Returns
-        -------
-        None
-        """
-        if self._waves is None:
-            raise ValueError("No waveforms available for this cluster.")
-
-        from matplotlib import pyplot as plt
-
-        fig, axes = plt.subplots(n_channels, 1, figsize=(5, 10))
-        for i in range(n_channels):
-            axes[i].plot(self.waveforms()[:n_waveforms, i, :].T, c="gray")
-            # plot mean waveform on top
-            axes[i].plot(np.mean(self.waveforms()[:n_waveforms, i, :], axis=0), c="red")
-            axes[i].set_title(f"Channel {i}")
-            axes[i].set_xlabel("Time (ms)")
-            axes[i].set_ylabel("Amplitude (uV)")
-        plt.tight_layout()
-        plt.show()
-
-
-class SpikeCalcsAxona(SpikeCalcsGeneric):
-    """
-    Replaces SpikeCalcs from ephysiopy.axona.spikecalcs
-    """
-
-    def __init__(
-        self,
-        spike_times: np.ndarray,
-        cluster: int,
-        waveforms: np.ndarray = None,
-        *args,
-        **kwargs,
-    ):
-        super().__init__(spike_times, cluster, waveforms, *args, **kwargs)
-
-    def half_amp_dur(self, waveforms) -> float:
-        """
-        Calculates the half amplitude duration of a spike.
-
-        Parameters
-        ----------
-        A : np.ndarray
-            An nSpikes x nElectrodes x nSamples array.
-
-        Returns
-        -------
-        float
-            The half-amplitude duration for the channel
-            (electrode) that has the strongest (highest amplitude)
-            signal. Units are ms.
-        """
-        from scipy import optimize
-
-        best_chan = np.argmax(np.max(np.mean(waveforms, 0), 1))
-        mn_wvs = np.mean(waveforms, 0)
-        wvs = mn_wvs[best_chan, :]
-        half_amp = np.max(wvs) / 2
-        half_amp = np.zeros_like(wvs) + half_amp
-        t = np.linspace(0, 1 / 1000.0, 50)
-        # create functions from the data using PiecewisePolynomial
-        from scipy.interpolate import BPoly
-
-        p1 = BPoly.from_derivatives(t, wvs[:, np.newaxis])
-        p2 = BPoly.from_derivatives(t, half_amp[:, np.newaxis])
-        xs = np.r_[t, t]
-        xs.sort()
-        x_min = xs.min()
-        x_max = xs.max()
-        x_mid = xs[:-1] + np.diff(xs) / 2
-        roots = set()
-        for val in x_mid:
-            root, infodict, ier, mesg = optimize.fsolve(
-                lambda x: p1(x) - p2(x), val, full_output=True
-            )
-            if ier == 1 and x_min < root < x_max:
-                roots.add(root[0])
-        roots = list(roots)
-        if len(roots) > 1:
-            r = np.abs(np.diff(roots[0:2]))[0]
-        else:
-            r = np.nan
-        return r
-
-    def p2t_time(self, waveforms) -> float:
-        """
-        The peak to trough time of a spike in ms
-
-        Parameters
-        ----------
-        cluster : int
-            The cluster whose waveforms are to be analysed
-
-        Returns
-        -------
-        float
-            The mean peak-to-trough time for the channel
-            (electrode) that has the strongest (highest amplitude) signal.
-            Units are ms.
-        """
-        best_chan = np.argmax(np.max(np.mean(waveforms, 0), 1))
-        tP = get_param(waveforms, param="tP")
-        tT = get_param(waveforms, param="tT")
-        mn_tP = np.mean(tP, 0)
-        mn_tT = np.mean(tT, 0)
-        p2t = np.abs(mn_tP[best_chan] - mn_tT[best_chan])
-        return p2t * 1000
-
-    def plotClusterSpace(
-        self,
-        waveforms,
-        param="Amp",
-        clusts: None | int | list = None,
-        cluster_vec: None | np.ndarray | list = None,
-        **kwargs,
-    ) -> plt.Figure:
-        """
-        Assumes the waveform data is signed 8-bit ints
-
-        NB THe above assumption is mostly broken as waveforms by default are now
-        in volts so you need to construct the trial object (AxonaTrial, OpenEphysBase
-        etc) with volts=False (works for Axona, less sure about OE)
-        TODO: aspect of plot boxes in ImageGrid not right as scaled by range of
-        values now
-
-        Parameters
-        ----------
-        waveforms : np.ndarray
-            the array of waveform data. For Axona recordings this
-            is nSpikes x nChannels x nSamplesPerWaveform
-        param : str
-            the parameter to plot. See get_param at the top of this file
-            for valid args
-        clusts : int, list or None, default None
-            which clusters to colour in
-        cluster_vec : np.ndarray, list or None, default None
-            the cluster identity of each spike in waveforms must be nSpikes long
-        **kwargs
-            passed into ImageGrid
-        """
-        if cluster_vec is not None:
-            assert np.shape(waveforms)[0] == len(cluster_vec)
-
-        from itertools import combinations
-
-        from mpl_toolkits.axes_grid1 import ImageGrid
-        from matplotlib.collections import RegularPolyCollection
-        from ephysiopy.axona.tintcolours import colours as tcols
-
-        try:
-            from numpy.lib.arraysetops import isin
-        except ImportError:
-            from numpy import isin as isin
-
-        c_vec = np.zeros(shape=(np.shape(waveforms)[0]))
-        if clusts is not None:
-            idx = isin(cluster_vec, clusts)
-            c_vec[idx] = cluster_vec[idx]
-        c_vec = [[np.floor(t * 255) for t in tcols[i]] for i in c_vec.astype(int)]
-
-        self.scaling = np.full(4, 15)
-
-        amps = get_param(waveforms, param=param)
-        cmb = combinations(range(4), 2)
-        if "fig" in kwargs:
-            fig = kwargs["fig"]
-        else:
-            fig = plt.figure(figsize=(8, 6))
-        grid = ImageGrid(fig, 111, nrows_ncols=(2, 3), axes_pad=0.1, aspect=False)
-        for i, c in enumerate(cmb):
-            if np.sum(amps[:, c[0]]) > 0 and np.sum(amps[:, c[1]]) > 0:
-                xy = np.array([amps[:, c[0]], amps[:, c[1]]]).T
-                rects = RegularPolyCollection(
-                    numsides=4,
-                    rotation=0,
-                    facecolors=c_vec,
-                    edgecolors=c_vec,
-                    offsets=xy,
-                    offset_transform=grid[i].transData,
-                )
-                grid[i].add_collection(rects)
-            s = str(c[0] + 1) + " v " + str(c[1] + 1)
-            grid[i].text(
-                0.05,
-                0.95,
-                s,
-                va="top",
-                ha="left",
-                size="small",
-                color="k",
-                transform=grid[i].transAxes,
-            )
-            grid[i].set_xlim(0, 256)
-            grid[i].set_ylim(0, 256)
-        plt.setp([a.get_xticklabels() for a in grid], visible=False)
-        plt.setp([a.get_yticklabels() for a in grid], visible=False)
-        return fig
-
-
-class SpikeCalcsOpenEphys(SpikeCalcsGeneric):
-    def __init__(self, spike_times, cluster, waveforms=None, **kwargs):
-        super().__init__(spike_times, cluster, waveforms, **kwargs)
-        self.n_samples = [-40, 41]
-        self.TemplateModel = None
-
-    def get_waveforms(
-        self,
-        cluster: int,
-        cluster_data: KiloSortSession,
-        n_waveforms: int = 2000,
-        n_channels: int = 64,
-        channel_range=None,
-    ) -> np.ndarray:
-        """
-        Returns waveforms for a cluster.
-
-        Parameters
-        ----------
-        cluster : int
-            The cluster to return the waveforms for.
-        cluster_data : KiloSortSession
-            The KiloSortSession object for the
-            session that contains the cluster.
-        n_waveforms : int, default=2000
-            The number of waveforms to return.
-        n_channels : int, default=64
-            The number of channels in the recording.
-
-        Returns
-        -------
-        np.ndarray
-            The waveforms for the cluster.
-        """
-        # instantiate the TemplateModel - this is used to get the waveforms
-        # for the cluster. TemplateModel encapsulates the results of KiloSort
-        if self.TemplateModel is None:
-            self.TemplateModel = TemplateModel(
-                dir_path=os.path.join(cluster_data.fname_root),
-                sample_rate=3e4,
-                dat_path=os.path.join(cluster_data.fname_root, "continuous.dat"),
-                n_channels_dat=n_channels,
-            )
-        # get the waveforms for the given cluster on the best channel only
-        waveforms = self.TemplateModel.get_cluster_spike_waveforms(cluster)
-        # get a random subset of the waveforms
-        rng = np.random.default_rng()
-        total_waves = waveforms.shape[0]
-        n_waveforms = n_waveforms if n_waveforms < total_waves else total_waves
-        waveforms_subset = rng.choice(waveforms, n_waveforms)
-        # return the waveforms
-        if channel_range is None:
-            return np.squeeze(waveforms_subset[:, :, 0])
-        else:
-            if isinstance(channel_range, Sequence):
-                return np.squeeze(waveforms_subset[:, :, channel_range])
-            else:
-                warnings.warn("Invalid channel_range sequence")
-        return np.empty(0)
-
-    def get_channel_depth_from_templates(self, pname: Path):
-        """
-        Determine depth of template as well as closest channel.
-
-        Parameters
-        ----------
-        pname : Path
-            The path to the directory containing the KiloSort results.
-
-        Returns
-        -------
-        tuple of np.ndarray
-            The depth of the template and the index of the closest channel.
-
-        Notes
-        -----
-        Adopted from
-        'templatePositionsAmplitudes' by N. Steinmetz
-        (https://github.com/cortex-lab/spikes)
-        """
-        # Load inverse whitening matrix
-        Winv = np.load(os.path.join(pname, "whitening_mat_inv.npy"))
-        # Load templates
-        templates = np.load(os.path.join(pname, "templates.npy"))
-        # Load channel_map and positions
-        channel_map = np.load(os.path.join(pname, "channel_map.npy"))
-        channel_positions = np.load(os.path.join(pname, "channel_positions.npy"))
-        map_and_pos = np.array([np.squeeze(channel_map), channel_positions[:, 1]])
-        # unwhiten all the templates
-        tempsUnW = np.zeros(np.shape(templates))
-        for i in range(np.shape(templates)[0]):
-            tempsUnW[i, :, :] = np.squeeze(templates[i, :, :]) @ Winv
-
-        tempAmp = np.squeeze(np.max(tempsUnW, 1)) - np.squeeze(np.min(tempsUnW, 1))
-        tempAmpsUnscaled = np.max(tempAmp, 1)
-        # need to zero-out the potentially-many low values on distant channels
-        threshVals = tempAmpsUnscaled * 0.3
-        tempAmp[tempAmp < threshVals[:, None]] = 0
-        # Compute the depth as a centre of mass
-        templateDepths = np.sum(tempAmp * map_and_pos[1, :], -1) / np.sum(tempAmp, 1)
-        maxChanIdx = np.argmin(
-            np.abs((templateDepths[:, None] - map_and_pos[1, :].T)), 1
-        )
-        return templateDepths, maxChanIdx
-
-    def get_template_id_for_cluster(self, pname: Path, cluster: int) -> int:
-        """
-        Determine the best channel (one with highest amplitude spikes)
-        for a given cluster.
-
-        Parameters
-        ----------
-        pname : Path
-            The path to the directory containing the KiloSort results.
-        cluster : int
-            The cluster to get the template ID for.
-
-        Returns
-        -------
-        int
-            The template ID for the cluster.
-        """
-        spike_templates = np.load(os.path.join(pname, "spike_templates.npy"))
-        spike_times = np.load(os.path.join(pname, "spike_times.npy"))
-        spike_clusters = np.load(os.path.join(pname, "spike_clusters.npy"))
-        cluster_times = spike_times[spike_clusters == cluster]
-        rez_mat = h5py.File(os.path.join(pname, "rez.mat"), "r")
-        st3 = rez_mat["rez"]["st3"]
-        st_spike_times = st3[0, :]
-        idx = np.searchsorted(st_spike_times, cluster_times)
-        template_idx, counts = np.unique(spike_templates[idx], return_counts=True)
-        ind = np.argmax(counts)
-        return template_idx[ind]
-
-
-class SpikeCalcsProbe(SpikeCalcsGeneric):
-    """
-    Encapsulates methods specific to probe-based recordings
-    """
-
-    def __init__(self):
-        pass

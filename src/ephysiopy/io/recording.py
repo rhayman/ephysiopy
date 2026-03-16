@@ -390,7 +390,7 @@ class OpenEphysBase(TrialInterface):
         try:
             self.template_model = TemplateModel(
                 dir_path=self.path2KiloSortData,
-                sample_rate=3e4,
+                sample_rate=self.sample_rate,
                 dat_path=Path(self.path2KiloSortData).joinpath("continuous.dat"),
                 n_channels_dat=int(n_channels),
             )

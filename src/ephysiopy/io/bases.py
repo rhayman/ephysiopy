@@ -4,7 +4,7 @@ import numpy as np
 from scipy.signal import argrelextrema
 from skimage.segmentation import watershed
 import abc
-from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
+from ephysiopy.common.spikingcalcs import SpikeCalcsGeneric
 from ephysiopy.common.fieldcalcs import (
     skaggs_info,
     fancy_partition,
@@ -961,7 +961,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         BinnedData
             The cross-correlation as a BinnedData object.
         """
-        from ephysiopy.common.spikecalcs import xcorr
+        from ephysiopy.common.spikingcalcs import xcorr
 
         ts = self.get_spike_times(cluster, channel)
         ids = make_cluster_ids(cluster, channel)
@@ -993,7 +993,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         BinnedData
             The cross-correlation as a BinnedData object.
         """
-        from ephysiopy.common.spikecalcs import xcorr
+        from ephysiopy.common.spikingcalcs import xcorr
 
         ts_a = self.get_spike_times(cluster_a, channel_a)
         ts_b = self.get_spike_times(cluster_b, channel_b)

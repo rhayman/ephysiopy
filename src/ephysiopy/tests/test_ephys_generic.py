@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 from ephysiopy.common.ephys_generic import EEGCalcsGeneric
-from ephysiopy.common.spikecalcs import SpikeCalcsGeneric
-from ephysiopy.common.utils import BinnedData, nextpow2
+from ephysiopy.common.spikingcalcs import SpikeCalcsGeneric
+from ephysiopy.common.utils import BinnedData
 
 
 @pytest.fixture
@@ -161,16 +161,6 @@ def test_ifft_filter(basic_EEGCalcs):
 # -----------------------------------------------------------------------
 # ------------ SpikeCalcsGeneric testing ----------------------
 # -----------------------------------------------------------------------
-def test_trial_mean_firing_rate(basic_SpikeCalcs):
-    fr = basic_SpikeCalcs.trial_mean_fr()
-    assert isinstance(fr, float)
-
-
-def test_count_spikes(basic_SpikeCalcs):
-    n = basic_SpikeCalcs.n_spikes
-    assert isinstance(n, int)
-
-
 def test_mean_isi_range(basic_SpikeCalcs):
     mn_count = basic_SpikeCalcs.mean_isi_range(500)
     assert isinstance(mn_count, float)

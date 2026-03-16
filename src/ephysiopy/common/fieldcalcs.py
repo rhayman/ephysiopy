@@ -1473,9 +1473,13 @@ def gridness(image, step=30) -> tuple:
     out_range = (0, 1)
     import skimage
 
-    autoCorrMiddleRescaled = skimage.exposure.rescale_intensity(
-        image, in_range=in_range, out_range=out_range
-    )
+    try:
+        autoCorrMiddleRescaled = skimage.exposure.rescale_intensity(
+            image, in_range=in_range, out_range=out_range
+        )
+    except Exception:
+        return np.nan, np.nan, np.nan
+
     origNanIdx = np.isnan(autoCorrMiddleRescaled.ravel())
     gridscore = np.nan
     try:
