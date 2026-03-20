@@ -1,4 +1,4 @@
-# Further usage
+# Extended guide
 
 First, load some data:
 

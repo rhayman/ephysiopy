@@ -21,7 +21,8 @@ def peak_to_trough_time(
     search_window_ms: float = 2.0,
 ) -> dict:
     """
-    Calculate the peak-to-trough time of a single action potential waveform.
+    Calculate the peak-to-trough time of a single action potential waveform,
+    accounting for possibly inverted waveforms.
 
     Parameters
     ----------
@@ -36,42 +37,64 @@ def peak_to_trough_time(
     Returns
     -------
     dict with keys:
-        peak_idx        – sample index of the peak
-        trough_idx      – sample index of the trough
+        peak_idx        – sample index of the peak (or trough if inverted)
+        trough_idx      – sample index of the trough (or peak if inverted)
         peak_to_trough_samples  – difference in samples
         peak_to_trough_ms       – difference in milliseconds
-        peak_value      – voltage at the peak
-        trough_value    – voltage at the trough
+        peak_value      – voltage at the peak (or trough if inverted)
+        trough_value    – voltage at the trough (or peak if inverted)
+        inverted       – True if waveform is inverted
     """
     samples_per_ms = fs / 1_000.0
     search_window_samples = int(np.round(search_window_ms * samples_per_ms))
 
-    # ── Peak: global maximum within the waveform ────────────────────────────
-    peak_idx = int(np.argmax(ap))
+    # Determine if waveform is inverted (trough comes before peak)
+    is_inverted = np.abs(np.min(ap)) > np.abs(np.max(ap))
 
-    # ── Trough: minimum AFTER the peak, within the search window ────────────
-    search_end = min(peak_idx + search_window_samples, len(ap))
-    if peak_idx >= search_end:
-        raise ValueError(
-            f"Peak is at the very end of the snippet (idx={peak_idx}); "
-            "extend the waveform or reduce search_window_ms."
-        )
-
-    post_peak = ap[peak_idx:search_end]
-    trough_idx = peak_idx + int(np.argmin(post_peak))
-
-    # ── Timing ───────────────────────────────────────────────────────────────
-    delta_samples = trough_idx - peak_idx
-    delta_ms = delta_samples / samples_per_ms
-
-    return {
-        "peak_idx": peak_idx,
-        "trough_idx": trough_idx,
-        "peak_to_trough_samples": delta_samples,
-        "peak_to_trough_ms": delta_ms,
-        "peak_value": ap[peak_idx],
-        "trough_value": ap[trough_idx],
-    }
+    if is_inverted:
+        # Inverted: trough (min) is the main event, search for peak after
+        trough_idx = int(np.argmin(ap))
+        search_end = min(trough_idx + search_window_samples, len(ap))
+        if trough_idx >= search_end:
+            raise ValueError(
+                f"Trough is at the very end of the snippet (idx={trough_idx}); "
+                "extend the waveform or reduce search_window_ms."
+            )
+        post_trough = ap[trough_idx:search_end]
+        peak_idx = trough_idx + int(np.argmax(post_trough))
+        delta_samples = peak_idx - trough_idx
+        delta_ms = delta_samples / samples_per_ms
+        return {
+            "peak_idx": trough_idx,
+            "trough_idx": peak_idx,
+            "peak_to_trough_samples": delta_samples,
+            "peak_to_trough_ms": delta_ms,
+            "peak_value": ap[trough_idx],
+            "trough_value": ap[peak_idx],
+            "inverted": True,
+        }
+    else:
+        # Normal: peak (max) is the main event, search for trough after
+        peak_idx = int(np.argmax(ap))
+        search_end = min(peak_idx + search_window_samples, len(ap))
+        if peak_idx >= search_end:
+            raise ValueError(
+                f"Peak is at the very end of the snippet (idx={peak_idx}); "
+                "extend the waveform or reduce search_window_ms."
+            )
+        post_peak = ap[peak_idx:search_end]
+        trough_idx = peak_idx + int(np.argmin(post_peak))
+        delta_samples = trough_idx - peak_idx
+        delta_ms = delta_samples / samples_per_ms
+        return {
+            "peak_idx": peak_idx,
+            "trough_idx": trough_idx,
+            "peak_to_trough_samples": delta_samples,
+            "peak_to_trough_ms": delta_ms,
+            "peak_value": ap[peak_idx],
+            "trough_value": ap[trough_idx],
+            "inverted": False,
+        }
 
 
 def get_param(waveforms, param="Amp", t=200, fet=1, **kws) -> np.ndarray:

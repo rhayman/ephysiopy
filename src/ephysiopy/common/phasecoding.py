@@ -578,7 +578,9 @@ class LFPOscillations(object):
         Returns
         -------
         tuple[np.ma.MaskedArray, ...]
-            A tuple containing masked arrays for speed and theta frequency.
+            A tuple containing the results of the linear regression of
+            running speed and theta frequency and masked arrays for
+            speed and theta frequency.
 
         Notes
         -----
@@ -588,6 +590,10 @@ class LFPOscillations(object):
         overlays the mean points for each speed bin. The function also
         performs a linear regression to find the correlation between
         speed and theta frequency.
+
+        See Also
+        --------
+        scipy.stats.linregress
 
         """
         low_theta = kwargs.pop("low_theta", 6)

@@ -14,7 +14,9 @@ are concerned with plotting linear track data **not** open-field 2D data.
 
 The 2D phase precession analysis is heavily indebted to the following paper:
 
-  Jeewajee A, Barry C, Douchamps V, Manson D, Lever C, Burgess N.
+!!! reference
+
+    Jeewajee A, Barry C, Douchamps V, Manson D, Lever C, Burgess N.
     Theta phase precession of grid and place cell firing in open
     environments.
     Philos Trans R Soc Lond B Biol Sci. 2013 Dec 23;369(1635):20120532.
