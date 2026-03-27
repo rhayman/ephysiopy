@@ -82,6 +82,13 @@ class phasePrecessionND(object):
         The spike times in position samples (vector with length = npos)
     spk_weights : np.ndarray
         The spike weights (vector with length = npos)
+
+    **kwargs
+        Most important kwarg here is run_aggregation which determines
+        how runs are pulled out of the data. It has two options, "field"
+        and "clump_runs" - see ephysiopy.common.fieldproperties.fieldprops
+        for more details but essentially field is best for 2D open-field
+        data and clump_runs is better on linear track data
     """
 
     def __init__(
@@ -297,7 +304,7 @@ class phasePrecessionND(object):
         # This is the main call to get the field properties
         # for each field found in the ratemap
 
-        method = kwargs.pop("method", "field")
+        run_aggregation = kwargs.pop("run_aggregation", "field")
 
         field_props = fieldprops(
             labels,
@@ -305,7 +312,7 @@ class phasePrecessionND(object):
             self.trial.get_spike_times(self.cluster, self.channel),
             posdata,
             sample_rate=self.trial.PosCalcs.sample_rate,
-            method=method,
+            run_aggregation=run_aggregation,
             **kwargs,
         )
 

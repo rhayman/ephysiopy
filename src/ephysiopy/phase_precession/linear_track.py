@@ -10,6 +10,7 @@ the euclidean distance along the linear track
 
 import numpy as np
 import matplotlib.pyplot as plt
+import copy
 import matplotlib.transforms as transforms
 from matplotlib.patches import Rectangle
 from ephysiopy.common.utils import (
@@ -188,15 +189,19 @@ def get_field_props_for_linear_track(
 
 def apply_linear_track_filter(
     T: AxonaTrial,
-    run_direction=None,
-    var_type=VariableToBin.X,
-    track_end_size=6,
+    run_direction: str,
+    var_type: VariableToBin = VariableToBin.X,
+    **kws,
 ):
+    # pull out all the keyword arguments
+    exclude_speeds = kws.get("exclude_speeds", (0, 0.5))
+    track_end_size = kws.get("track_end_size", 6)
+
     # filter the data for speed, direction and position
     # position filter is there to remove the start and end of the track
     # remove the filters first
     T.apply_filter()
-    speed_filter = TrialFilter("speed", EXCLUDE_SPEEDS[0], EXCLUDE_SPEEDS[1])
+    speed_filter = TrialFilter("speed", exclude_speeds[0], exclude_speeds[1])
     if var_type.value == VariableToBin.PHI.value:
         min_pos = np.nanmin(T.PosCalcs.phi.data)
         max_pos = np.nanmax(T.PosCalcs.phi.data)
@@ -226,7 +231,7 @@ def apply_linear_track_filter(
             pos_filt1,
             speed_filter,
         )
-    return T
+    return copy.deepcopy(T)
 
 
 def get_run_direction(run: RunProps):

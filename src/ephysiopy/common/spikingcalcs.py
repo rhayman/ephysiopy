@@ -14,6 +14,7 @@ from ephysiopy.common.utils import (
     BinnedData,
     VariableToBin,
     MapType,
+    clean_kwargs,
 )
 
 
@@ -1062,18 +1063,26 @@ class SpikeCalcsGeneric:
             and trough of the autocorrelogram.
 
         """
-        freqs, power = self.get_ifr_power_spectrum(**kwargs)
+        low_band = kwargs.get("low_band", (0, 0.5))
+        theta_band = kwargs.get("theta_band", (6, 10))
+        kws = clean_kwargs(self.get_ifr_power_spectrum, kwargs)
+
+        freqs, power = self.get_ifr_power_spectrum(**kws)
         # smooth with a boxcar filter with a 0.5Hz window
-        win_len = np.count_nonzero(np.logical_and(freqs >= 0, freqs <= 0.5))
+        win_len = np.count_nonzero(
+            np.logical_and(freqs >= low_band[0], freqs <= low_band[1])
+        )
         w = signal.windows.boxcar(win_len)
         b = signal.filtfilt(w, 1, power)
         sqd_amp = b**2
-        mtbp = np.mean(sqd_amp[np.logical_and(freqs >= 6, freqs <= 10)])
+        mtbp = np.mean(
+            sqd_amp[np.logical_and(freqs >= theta_band[0], freqs <= theta_band[1])]
+        )
         mobp = np.mean(
             sqd_amp[
                 np.logical_or(
-                    np.logical_and(freqs > 3, freqs < 5),
-                    np.logical_and(freqs > 11, freqs < 13),
+                    np.logical_and(freqs > theta_band[0] - 3, freqs < theta_band[0]),
+                    np.logical_and(freqs > theta_band[1], freqs < theta_band[1] + 3),
                 )
             ]
         )

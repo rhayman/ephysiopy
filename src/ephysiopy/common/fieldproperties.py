@@ -1473,7 +1473,7 @@ def fieldprops(
     binned_data,
     spike_times,
     xy,
-    method="field",
+    run_aggregation="field",
     cache=True,
     *,
     extra_properties=None,
@@ -1821,7 +1821,7 @@ def fieldprops(
 
     min_run = kwargs.get("min_run_length", 2)
 
-    if method == "field":
+    if run_aggregation == "field":
         labelled_runs = labelContigNonZeroRuns(xy_field_label)
         run_starts = getLabelStarts(labelled_runs)
         run_stops = getLabelEnds(labelled_runs)
@@ -1831,7 +1831,7 @@ def fieldprops(
             if (run_stops[i] + 1 - run_starts[i]) >= min_run
         ]
 
-    elif method == "clump_runs":
+    elif run_aggregation == "clump_runs":
         # still need xy_field_label to get which field each
         # run belongs to
         if xy.ndim == 1:

@@ -348,7 +348,7 @@ class RateMap(object):
             try:
                 nxbins = int(np.ceil((x_lims[1] - x_lims[0]) / binsize))
             except ValueError:
-                breakpoint()
+                pass
             nybins = int(np.ceil((y_lims[1] - y_lims[0]) / binsize))
             _x = np.linspace(x_lims[0], x_lims[1], nxbins)
             _y = np.linspace(y_lims[0], y_lims[1], nybins)

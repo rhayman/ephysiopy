@@ -22,6 +22,7 @@ from ephysiopy.common.utils import (
     RecordingKind,
 )
 from ephysiopy.io.bases import TrialInterface
+from ephysiopy.io.raw_data import get_raw_cluster_spikes
 
 
 class AxonaTrial(TrialInterface):
@@ -626,8 +627,13 @@ class OpenEphysBase(TrialInterface):
         and instead returns the waveforms for the four "best" channels for the cluster.
         """
         self.bit_volts = 0.1949999928474426  # hard-coded for now
+
         if not self.template_model:
             self.load_neural_data()
+
+        if "from_raw" in kwargs.keys() and kwargs["from_raw"]:
+            return get_raw_cluster_spikes(self, cluster, **kwargs)
+
         if isinstance(cluster, int):
             spike_ids = self.template_model.get_cluster_spikes(int(cluster))
             channels = self.template_model.get_cluster_channels(int(cluster))
