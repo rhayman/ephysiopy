@@ -22,7 +22,7 @@ from ephysiopy.common.utils import (
     RecordingKind,
 )
 from ephysiopy.io.bases import TrialInterface
-from ephysiopy.io.raw_data import get_raw_cluster_spikes
+from ephysiopy.openephys2py.raw_data import get_raw_cluster_spikes
 
 
 class AxonaTrial(TrialInterface):
