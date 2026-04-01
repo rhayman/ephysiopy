@@ -621,10 +621,13 @@ class OpenEphysBase(TrialInterface):
             warnings.warn("No AUX data found in structure.oebin file, so not loaded")
         return False
 
-    def get_waveforms(self, cluster: int | list, channel: int | list, *args, **kwargs):
+    def get_waveforms(
+        self, cluster: int | list, channel: int | list, *args, **kwargs
+    ) -> np.ndarray | list:
         """
-        Gets the waveforms for the specified cluster(s). Ignores the channel input
-        and instead returns the waveforms for the four "best" channels for the cluster.
+        Gets the waveforms for the specified cluster(s).
+        Ignores the channel input and instead returns the waveforms
+        for the four "best" channels for the cluster.
         """
         self.bit_volts = 0.1949999928474426  # hard-coded for now
 
@@ -632,7 +635,10 @@ class OpenEphysBase(TrialInterface):
             self.load_neural_data()
 
         if "from_raw" in kwargs.keys() and kwargs["from_raw"]:
-            return get_raw_cluster_spikes(self, cluster, **kwargs)
+            waveforms = get_raw_cluster_spikes(self, cluster, **kwargs)
+            # axis 0 and 1 need swapping to get into
+            # (n_spikes, n_channel, n_samples) format
+            return np.swapaxes(waveforms, 0, 1)
 
         if isinstance(cluster, int):
             spike_ids = self.template_model.get_cluster_spikes(int(cluster))

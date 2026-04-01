@@ -592,7 +592,7 @@ def test_get_ifr_output_length(spike_calcs, spike_times):
     get_ifr output length should equal n_samples.
     """
     n_samples = 3000
-    result = spike_calcs.get_ifr(spike_times, n_samples)
+    result = spike_calcs.get_ifr(spike_times)
     assert len(result) == n_samples
 
 
@@ -601,7 +601,7 @@ def test_get_ifr_nonnegative(spike_calcs, spike_times):
     All values from get_ifr should be >= 0 (instantaneous firing rate).
     """
     n_samples = 3000
-    result = spike_calcs.get_ifr(spike_times, n_samples)
+    result = spike_calcs.get_ifr(spike_times)
     assert np.all(result >= 0)
 
 

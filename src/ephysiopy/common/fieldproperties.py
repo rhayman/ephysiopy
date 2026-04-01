@@ -1842,6 +1842,7 @@ def fieldprops(
         all_run_slices = [
             slice(c.start, c.stop) for c in clumps if (c.stop - c.start) >= min_run
         ]
+
     # remove runs that aren't in any field
     run_slices = [rs for rs in all_run_slices if np.any(xy_field_label[rs] != 0)]
     # TODO: try getting run starts and stops via np.ma.clump_unmasked

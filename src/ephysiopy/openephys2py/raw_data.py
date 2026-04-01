@@ -43,9 +43,9 @@ def get_raw_cluster_spikes(trial: Trial, cluster: int, **kws) -> np.ndarray:
     raw_cluster_spikes = _extract_centered_slices(
         mapped_data, channels, spike_times_samples, width=int(dt * sample_rate)
     )
-    raw_cluster_spikes = (
-        raw_cluster_spikes.astype(float) * bit_volts
-    )  # convert to microvolts
+    # raw_cluster_spikes = (
+    #     raw_cluster_spikes.astype(float) * bit_volts
+    # )  # convert to microvolts
     filtered_spikes = np.array(
         [
             bandpass_filter(raw_cluster_spikes[i], sample_rate)

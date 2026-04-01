@@ -1,5 +1,6 @@
 from collections import namedtuple
 from collections.abc import Sequence
+import warnings
 from scipy import interpolate
 import numpy as np
 from sklearn.linear_model import LinearRegression
@@ -95,6 +96,79 @@ def peak_to_trough_time(
             "trough_value": ap[trough_idx],
             "inverted": False,
         }
+
+
+def peak_local_max_time(
+    ap: np.ndarray,
+    fs: int,
+) -> dict:
+    """
+    Calculate the time of the peak of a single action potential waveform,
+    using skimage.feature.peak_local_max to find the peak, which can handle inverted waveforms.
+
+    Parameters
+    ----------
+    ap : np.ndarray
+        1-D array containing one action potential waveform (voltage, µV or mV).
+    fs : int
+        Sampling frequency in Hz (e.g. 50_000 or 30_000).
+
+    Returns
+    -------
+    dict with keys:
+        peak_idx        – sample index of the peak
+        peak_time_ms    – time of the peak in milliseconds
+        peak_value      – voltage at the peak
+    """
+    from skimage.feature import peak_local_max
+
+    # Find peaks (both positive and negative)
+    peaks = peak_local_max(np.abs(ap), min_distance=1, num_peaks=2).flatten()
+
+    if len(peaks) != 2:
+        warnings.warn(
+            f"Expected to find 2 peaks (one positive, one negative), but found {
+                len(peaks)
+            }. "
+            "Results may be unreliable."
+        )
+        return {
+            "peak_idx": np.nan,
+            "trough_idx": np.nan,
+            "peak_to_trough_samples": np.nan,
+            "peak_to_trough_ms": np.nan,
+            "peak_value": np.nan,
+            "trough_value": np.nan,
+            "inverted": np.nan,
+        }
+
+    if len(peaks) == 0:
+        warnings.warn("No peaks found in the waveform.")
+        return {
+            "peak_idx": None,
+            "peak_time_ms": None,
+            "peak_value": None,
+        }
+
+    sorted_peaks = np.argsort(peaks)
+    samples_per_ms = fs / 1000.0
+    peak_idx = peaks[sorted_peaks[0]]
+    trough_idx = peaks[sorted_peaks[1]]
+    peak_value = ap[peak_idx]
+    trough_value = ap[trough_idx]
+    delta_samples = np.abs(np.diff([trough_idx, peak_idx]))[0]
+    delta_ms = delta_samples / samples_per_ms
+    inverted = trough_value is not None and abs(trough_value) > abs(peak_value)
+
+    return {
+        "peak_idx": peak_idx,
+        "trough_idx": trough_idx,
+        "peak_to_trough_samples": delta_samples,
+        "peak_to_trough_ms": delta_ms,
+        "peak_value": peak_value,
+        "trough_value": trough_value,
+        "inverted": inverted,
+    }
 
 
 def get_param(waveforms, param="Amp", t=200, fet=1, **kws) -> np.ndarray:

@@ -473,6 +473,7 @@ class RateMap(object):
         self.var2Bin = var_type
         binsize = kwargs.pop("binsize", self.binsize)
         hist_range = kwargs.pop("range", None)
+        self.smooth_sz = kwargs.get("map_smooth_size", self.smooth_sz)
 
         bin_edges = self._calc_bin_edges(binsize) if hist_range is None else None
         bin_edges = kwargs.get("bin_edges", bin_edges)

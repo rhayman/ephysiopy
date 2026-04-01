@@ -1115,13 +1115,16 @@ class FigureMaker(object):
             the axes holding the plot
         """
         # waves should be n_spikes x n_channels x n_samples
-        # units are volts so x 1e6 to get microvolts
-        waves = self.get_waveforms(cluster, channel) * 1e6
+        waves = self.get_waveforms(cluster, channel, **kws)
         n_spikes, n_channels, n_samples = waves.shape
-        # if n_samples == 82:
+        if n_samples == 50:
+            waves *= 1e6  # to get microvolts
+            time = np.linspace(-200, 800, n_samples)  # Axona
+        else:  # OE data - spikes are centred on their ts
+            dt = kws.get("dt", 0.002) * 1e6  # to get microseconds
+            time = np.linspace(-dt, dt, n_samples)
         # waves = waves[:, :, 16:66]
         # n_samples = 50
-        time = np.linspace(-200, 800, n_samples)
 
         axs = kws.get("ax", None)
         axes_labels = kws.get("axes_labels", False)
@@ -1163,12 +1166,20 @@ class FigureMaker(object):
             )
             ax.plot(time, mean_waves[i], c=mn_cols[i], linewidth=2)
             if axes_labels:
-                ax.set_xlim(-250, 850)
-                ax.set_xticks([-200, 0, 800])
-                ax.set_xticklabels(["-200μs", "0", "800μs"])
-                ylim = ax.get_ylim()
-                ax.set_yticks([ylim[0], 0, ylim[1]])
-                ax.set_yticklabels([f"{int(ylim[0])}μV", "0", f"{int(ylim[1])}μV"])
+                if n_samples == 50:
+                    ax.set_xlim(-250, 850)
+                    ax.set_xticks([-200, 0, 800])
+                    ax.set_xticklabels(["-200μs", "0", "800μs"])
+                    ylim = ax.get_ylim()
+                    ax.set_yticks([ylim[0], 0, ylim[1]])
+                    ax.set_yticklabels([f"{int(ylim[0])}μV", "0", f"{int(ylim[1])}μV"])
+                else:
+                    ax.set_xlim(-dt, dt)
+                    ax.set_xticks([-dt, 0, dt])
+                    ax.set_xticklabels([f"{int(-dt)}μs", "0", f"{int(dt)}μs"])
+                    ylim = ax.get_ylim()
+                    ax.set_yticks([ylim[0], 0, ylim[1]])
+                    ax.set_yticklabels([f"{int(ylim[0])}μV", "0", f"{int(ylim[1])}μV"])
             else:
                 plt.setp(ax.get_xticklabels(), visible=False)
                 plt.setp(ax.get_yticklabels(), visible=False)

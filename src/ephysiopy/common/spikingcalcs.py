@@ -567,6 +567,12 @@ class SpikeCalcsGeneric:
         return self._duration
 
     @property
+    def n_pos_samples(self) -> int | None:
+        if self.duration is None:
+            raise IndexError("No duration provided, give me one!")
+        return int(self.duration * self.pos_sample_rate)
+
+    @property
     def event_ts(self) -> np.ndarray | None:
         return self._event_ts
 
@@ -826,7 +832,7 @@ class SpikeCalcsGeneric:
         )
         return res
 
-    def get_ifr(self, spike_times: np.array, n_samples: int, **kwargs) -> np.ndarray:
+    def get_ifr(self, spike_times: np.array, **kwargs) -> np.ndarray:
         """
         Returns the instantaneous firing rate of the cluster
 
@@ -846,7 +852,7 @@ class SpikeCalcsGeneric:
         """
         posSampRate = self.pos_sample_rate
         x1 = np.floor(spike_times * posSampRate).astype(int)
-        spk_hist = np.bincount(x1, minlength=n_samples)
+        spk_hist = np.bincount(x1, minlength=self.n_pos_samples)
         sigma = kwargs.get("sigma", 3)
         h = signal.windows.gaussian(13, sigma)
         h = h / float(np.sum(h))
