@@ -179,7 +179,7 @@ pycwt==0.5.0b0
     # via ephysiopy (pyproject.toml)
 pyerfa==2.0.1.5
     # via astropy
-pygments==2.19.2
+pygments==2.20.0
     # via
     #   pytest
     #   zensical
