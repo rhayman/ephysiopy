@@ -15,7 +15,8 @@ from scipy import ndimage, signal
 import pywt
 import pycwt
 from pycircstat2.utils import rotate_data
-from pactools import Comodulogram, REFERENCES
+from pactools import Comodulogram
+from pactools.dar_model import DAR
 from scipy import stats
 from scipy.special import i0
 from ephysiopy.common.statscalcs import mean_resultant_vector
@@ -165,9 +166,10 @@ class LFPOscillations(object):
         fs = self.fs
         signal = self.sig
 
-        method = kwargs.get("method", "duprelatour")
+        dar = DAR(ordar=20, ordriv=2, criterion="bic")
+        # method = kwargs.get("method", "duprelatour")
 
-        low_fq_width = 1.0  # Hz
+        low_fq_width = 3.0  # Hz
 
         low_fq_range = np.linspace(low_freq_band[0], low_freq_band[1], 50)
 
@@ -175,8 +177,11 @@ class LFPOscillations(object):
             fs=fs,
             low_fq_range=low_fq_range,
             low_fq_width=low_fq_width,
-            method=method,
-            progress_bar=False,
+            method=dar,
+            progress_bar=True,
+            random_state=0,
+            n_surrogates=200,
+            n_jobs=1,
         )
 
         estimator.fit(signal)
@@ -187,10 +192,12 @@ class LFPOscillations(object):
             else:
                 fig, ax = plt.subplots(figsize=(4, 3))
 
-            vmin = kwargs.get("vmin", None)
-            vmax = kwargs.get("vmax", None)
-
-            estimator.plot(titles=[REFERENCES[method]], axs=[ax], vmin=vmin, vmax=vmax)
+            p_value = 0.05
+            estimator.plot(
+                axs=[ax],
+                contour_method="comod_max",
+                contour_level=p_value,
+            )
             ax.set_title("Comodulogram")
             return estimator, ax
 
