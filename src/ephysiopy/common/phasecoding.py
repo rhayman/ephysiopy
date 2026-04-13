@@ -163,6 +163,10 @@ class LFPOscillations(object):
         -----
         This method is a placeholder and needs to be implemented.
         """
+
+        n_surrogates = kwargs.get("n_surrogates", 200)
+        n_jobs = kwargs.get("n_jobs", 1)
+
         fs = self.fs
         signal = self.sig
 
@@ -180,8 +184,8 @@ class LFPOscillations(object):
             method=dar,
             progress_bar=True,
             random_state=0,
-            n_surrogates=200,
-            n_jobs=1,
+            n_surrogates=n_surrogates,
+            n_jobs=n_jobs,
         )
 
         estimator.fit(signal)
