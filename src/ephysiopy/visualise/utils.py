@@ -336,7 +336,7 @@ def _plot_patch_collection(xy: np.ma.MaskedArray, ax: plt.Axes, **kws) -> plt.Ax
     # deal with possible nans
     xy = np.ma.masked_invalid(xy)
     equal_axes = kws.pop("equal_axes", False)
-    tight_axes = kws.pop("tight_axes", True)
+    tight_axes = kws.pop("tight_axes", False)
     rect_size = kws.pop("ms", 1)
     col = kws.pop("c", tcols.colours[1])
     col = np.array(col)
