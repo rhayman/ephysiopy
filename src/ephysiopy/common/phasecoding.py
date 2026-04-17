@@ -1,5 +1,4 @@
 import matplotlib
-import matplotlib.cm
 import matplotlib.pylab as plt
 import numpy as np
 from typing import Callable
@@ -71,7 +70,8 @@ class LFPOscillations(object):
             sig = self.sig
         band2filter = np.array(band2filter, dtype=float)
 
-        b, a = signal.butter(ford, band2filter / (self.fs / 2), btype="bandpass")
+        b, a = signal.butter(ford, band2filter /
+                             (self.fs / 2), btype="bandpass")
 
         filt_sig = signal.filtfilt(b, a, sig, padtype="odd")
         hilbert_sig = signal.hilbert(filt_sig)
@@ -81,7 +81,8 @@ class LFPOscillations(object):
         inst_freq = self.fs / (2 * np.pi) * np.diff(np.unwrap(phase))
         inst_freq = np.insert(inst_freq, -1, inst_freq[-1])
         amplitude_filtered = signal.filtfilt(b, a, amplitude, padtype="odd")
-        F = FreqPhase(filt_sig, phase, amplitude, amplitude_filtered, inst_freq)
+        F = FreqPhase(filt_sig, phase, amplitude,
+                      amplitude_filtered, inst_freq)
         return F
 
     def plot_cwt(
@@ -112,7 +113,7 @@ class LFPOscillations(object):
         """
         wavelet = "cmor1.0-1.0"
         scales = np.geomspace(2, 140, num=100)
-        _sig = sig[int(start * self.fs) : int(stop * self.fs)]
+        _sig = sig[int(start * self.fs): int(stop * self.fs)]
         cwtmatr, freqs = pywt.cwt(
             _sig, scales, wavelet, sampling_period=1 / self.fs, method="fft"
         )
@@ -303,7 +304,8 @@ class LFPOscillations(object):
         # Jun et al define periods of high oscillatory power as those
         # over 2 SDs of the mean power
         threshold = np.std(mean_band_power) * sd_threshold
-        high_power_mask = mean_band_power > np.mean(mean_band_power) + threshold
+        high_power_mask = mean_band_power > np.mean(
+            mean_band_power) + threshold
         # find the runs of True's in the high_power_mask
         # these are epochs with high band power
         vals, run_starts, run_lens = find_runs(high_power_mask.astype(int))
@@ -329,7 +331,7 @@ class LFPOscillations(object):
             # breakpoint()
             slice_in_seconds = sig_slice.start / self.fs, sig_slice.stop / self.fs
             oscillatory_windows[slice_in_seconds] = F.filt_sig[
-                run_max_idx - dt : run_max_idx + dt
+                run_max_idx - dt: run_max_idx + dt
             ]
 
         return oscillatory_windows
@@ -639,7 +641,8 @@ class LFPOscillations(object):
         low_speed = kwargs.pop("low_speed", 2)
         high_speed = kwargs.pop("high_speed", 35)
         nbins = kwargs.pop("nbins", 13)
-        F = self.getFreqPhase(lfp_data.sig, band2filter=[low_theta, high_theta])
+        F = self.getFreqPhase(lfp_data.sig, band2filter=[
+                              low_theta, high_theta])
         inst_freq = F.inst_freq
         # interpolate speed to match the frequency of the LFP data
         eeg_time = np.linspace(
@@ -661,7 +664,8 @@ class LFPOscillations(object):
             return [
                 fn(
                     inst_freq[
-                        np.logical_and(interpolated_speed > s1, interpolated_speed < s2)
+                        np.logical_and(interpolated_speed > s1,
+                                       interpolated_speed < s2)
                     ]
                 )
                 for s1, s2 in zip(spd_bins[:-1], spd_bins[1:])
@@ -669,7 +673,8 @@ class LFPOscillations(object):
 
         mean_freqs = __freq_calc__(np.mean)
         counts = [
-            np.count_nonzero(np.logical_and(pos_data.speed >= s1, pos_data.speed < s2))
+            np.count_nonzero(np.logical_and(
+                pos_data.speed >= s1, pos_data.speed < s2))
             for s1, s2 in zip(spd_bins[:-1], spd_bins[1:])
         ]
         std_freqs = __freq_calc__(np.std) / np.sqrt(counts)
@@ -677,7 +682,8 @@ class LFPOscillations(object):
         # mask the speed and lfp vectors so we can return these based
         # on the low/high bounds of speed & theta for doing correlations/
         # stats later
-        speed_masked = np.ma.masked_outside(interpolated_speed, low_speed, high_speed)
+        speed_masked = np.ma.masked_outside(
+            interpolated_speed, low_speed, high_speed)
         theta_masked = np.ma.masked_outside(inst_freq, low_theta, high_theta)
         # extract both masks, combine and re-apply
         mask = np.logical_or(speed_masked.mask, theta_masked.mask)
@@ -839,7 +845,8 @@ class LFPOscillations(object):
         cmap = matplotlib.colormaps["hsv"]
         fig, ax = plt.subplots()
         ax.plot(pos_data.xy[0], pos_data.xy[1], color="lightgrey", zorder=0)
-        ax.scatter(spike_xy[0], spike_xy[1], c=spike_phase, cmap=cmap, zorder=1)
+        ax.scatter(spike_xy[0], spike_xy[1],
+                   c=spike_phase, cmap=cmap, zorder=1)
         return ax
 
 
@@ -864,7 +871,8 @@ def get_cycle_labels(
     # force phase to lie between 0 and 2PI
     minSpikingPhase = get_phase_of_min_spiking(spike_phase)
     phaseAdj = fixAngle(
-        spike_phase - minSpikingPhase * (np.pi / 180) + min_allowed_min_spike_phase
+        spike_phase - minSpikingPhase *
+        (np.pi / 180) + min_allowed_min_spike_phase
     )
     isNegFreq = np.diff(np.unwrap(phaseAdj)) < 0
     isNegFreq = np.append(isNegFreq, isNegFreq[-1])
@@ -1127,7 +1135,8 @@ def detect_oscillation_episodes(lfp: np.ndarray, fs: float):
     power = np.abs(cwtmatr) ** 2
 
     freq_band = (20, 40)
-    freq_idx = np.where(np.logical_and(freqs >= freq_band[0], freqs <= freq_band[1]))[0]
+    freq_idx = np.where(np.logical_and(
+        freqs >= freq_band[0], freqs <= freq_band[1]))[0]
     mean_power = np.mean(power[freq_idx, :], axis=0)
     power_threshold = np.percentile(mean_power, 97.72)
 
@@ -1165,6 +1174,7 @@ def detect_oscillation_episodes(lfp: np.ndarray, fs: float):
     half_win = int(0.2 * fs)
     final_slices = []
     for pi in peak_indices:
-        final_slices.append(slice(max(0, pi - half_win), min(len(lfp), pi + half_win)))
+        final_slices.append(slice(max(0, pi - half_win),
+                            min(len(lfp), pi + half_win)))
 
     return final_slices, freqs
