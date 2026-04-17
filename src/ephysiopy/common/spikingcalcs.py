@@ -992,11 +992,14 @@ class SpikeCalcsGeneric:
         # Take the fft of the spike train autocorr (from -500 to +500ms)
         from scipy.signal import periodogram
 
-        fs = 1.0 / kwargs.get("binsize", 0.0001)
+        fs = 1.0 / kwargs.get("binsize", 0.001)
         freqs, power = periodogram(ac.binned_data[0], fs=fs, return_onesided=True)
-        # Smooth the power over +/- 1Hz when fs=200
-        b = signal.windows.boxcar(3)  # another filter type - blackman?
-        h = signal.filtfilt(b, 3, power)
+        # Smooth the power over +/- 1Hz
+        win_size = np.count_nonzero(freqs <= 1)
+        if win_size % 2 == 1:
+            win_size += 1
+        b = signal.windows.boxcar(win_size)  # another filter type - blackman?
+        h = signal.filtfilt(b, win_size, power)
 
         # Square the amplitude first to get power
         sqd_amp = h**2

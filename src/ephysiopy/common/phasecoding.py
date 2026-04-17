@@ -16,6 +16,7 @@ import pywt
 import pycwt
 from pycircstat2.utils import rotate_data
 from pactools import Comodulogram
+from pactools.delay_estimator import DelayEstimator
 from pactools.dar_model import DAR
 from scipy import stats
 from scipy.special import i0
@@ -196,16 +197,42 @@ class LFPOscillations(object):
             else:
                 fig, ax = plt.subplots(figsize=(4, 3))
 
-            p_value = 0.05
-            estimator.plot(
-                axs=[ax],
-                contour_method="comod_max",
-                contour_level=p_value,
-            )
+            if n_surrogates > 1:
+                p_value = 10 / n_surrogates
+                estimator.plot(
+                    axs=[ax],
+                    contour_method="comod_max",
+                    contour_level=p_value,
+                )
+            else:
+                estimator.plot(axs=[ax])
+
             ax.set_title("Comodulogram")
+
             return estimator, ax
 
         return estimator
+
+    def PAC_delay_estimate(self, low_fq=8, low_fq_width=2, random_state=0, **kws):
+        """
+        Estimate the delay in the signal frequency coupling to the driver frequency
+        """
+        dar_model = DAR(ordar=10, ordriv=2)
+        est = DelayEstimator(
+            self.fs,
+            dar_model=dar_model,
+            low_fq=low_fq,
+            low_fq_width=low_fq_width,
+            random_state=random_state,
+        )
+        est.fit(self.sig)
+
+        # plot the delay estimate
+        if kws.get("plot", False):
+            est.plot()
+            est.best_model_.plot(mode="c")
+            plt.show()
+        return est
 
     def get_oscillatory_epochs(
         self,
