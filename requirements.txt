@@ -159,7 +159,7 @@ pathspec==1.0.4
     # via mkdocs
 phylib==2.7.0
     # via ephysiopy (pyproject.toml)
-pillow==12.1.1
+pillow==12.2.0
     # via
     #   imageio
     #   matplotlib
@@ -189,7 +189,7 @@ pymdown-extensions==10.21
     #   zensical
 pyparsing==3.3.2
     # via matplotlib
-pytest==9.0.2
+pytest==9.0.3
     # via
     #   ephysiopy (pyproject.toml)
     #   pytest-mpl
