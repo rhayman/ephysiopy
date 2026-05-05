@@ -199,7 +199,8 @@ def colored_line(x, y, c, ax, **lc_kwargs):
         The generated line collection representing the colored line.
     """
     if "array" in lc_kwargs:
-        warnings.warn('The provided "array" keyword argument will be overridden')
+        warnings.warn(
+            'The provided "array" keyword argument will be overridden')
 
     # Default the capstyle to butt so that the line segments smoothly line up
     default_kwargs = {"capstyle": "butt"}
@@ -220,7 +221,8 @@ def colored_line(x, y, c, ax, **lc_kwargs):
     #   [(x2_start, y2_start), (x2_mid, y2_mid), (x2_end, y2_end)],
     #   ...
     # ]
-    coord_start = np.column_stack((x_midpts[:-1], y_midpts[:-1]))[:, np.newaxis, :]
+    coord_start = np.column_stack(
+        (x_midpts[:-1], y_midpts[:-1]))[:, np.newaxis, :]
     coord_mid = np.column_stack((x, y))[:, np.newaxis, :]
     coord_end = np.column_stack((x_midpts[1:], y_midpts[1:]))[:, np.newaxis, :]
     segments = np.concatenate((coord_start, coord_mid, coord_end), axis=1)
@@ -287,7 +289,7 @@ def _plot_multiple_clusters(
 @addClusterChannelToAxes
 @stripAxes
 def _plot_pcolormesh(rmap: BinnedData, ax: plt.Axes, **kwargs) -> plt.Axes:
-    vmax = np.nanmax(np.ravel(rmap.binned_data))
+    vmax = np.ma.max(rmap.binned_data)
     equal_axes = kwargs.pop("equal_axes", False)
     cmap = kwargs.pop("cmap", "viridis")  # matplotlib default
     kwargs = clean_kwargs(plt.pcolormesh, kwargs)

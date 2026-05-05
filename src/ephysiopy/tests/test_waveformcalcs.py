@@ -70,12 +70,14 @@ class TestInit:
 
     def test_shape_mismatch_raises(self, spike_times):
         """Passing mismatched waveform count vs spike_times must raise AssertionError."""
-        bad_waves = np.random.randn(len(spike_times) + 5, N_CHANNELS, N_SAMPLES)
+        bad_waves = np.random.randn(
+            len(spike_times) + 5, N_CHANNELS, N_SAMPLES)
         with pytest.raises(AssertionError, match="Number of spike times"):
             WaveformCalcsGeneric(bad_waves, spike_times, CLUSTER_ID)
 
     def test_kwargs_injected_into_dict(self, waveforms, spike_times):
-        obj = WaveformCalcsGeneric(waveforms, spike_times, CLUSTER_ID, custom_attr=99)
+        obj = WaveformCalcsGeneric(
+            waveforms, spike_times, CLUSTER_ID, custom_attr=99)
         assert obj.custom_attr == 99
 
     def test_default_sample_rate(self, waveform_calc):
@@ -163,7 +165,8 @@ class TestProperties:
 
     def test_event_window_setter(self, waveform_calc):
         waveform_calc.event_window = np.array((-0.1, 0.2))
-        np.testing.assert_array_equal(waveform_calc.event_window, np.array((-0.1, 0.2)))
+        np.testing.assert_array_equal(
+            waveform_calc.event_window, np.array((-0.1, 0.2)))
 
     def test_stim_width_setter(self, waveform_calc):
         waveform_calc.stim_width = 5.0
@@ -369,7 +372,8 @@ class TestApplyFilter:
         waveform_calc.apply_filter(f1, f2)
         times = waveform_calc.spike_times.data
         n_expected = int(
-            np.sum(((times > 0.0) & (times < 10.0)) | ((times > 50.0) & (times < 60.0)))
+            np.sum(((times > 0.0) & (times < 10.0)) |
+                   ((times > 50.0) & (times < 60.0)))
         )
         assert waveform_calc.n_spikes == len(times) - n_expected
 
@@ -472,7 +476,8 @@ class TestEstimateAHP:
         t = np.linspace(0, 1, N_SAMPLES)
         # spike dip at ~0.2, AHP at ~0.6
         proto = -(
-            np.exp(-((t - 0.2) ** 2) / 0.005) - 0.3 * np.exp(-((t - 0.6) ** 2) / 0.02)
+            np.exp(-((t - 0.2) ** 2) / 0.005) - 0.3 *
+            np.exp(-((t - 0.6) ** 2) / 0.02)
         )
         waves = np.tile(proto, (n, N_CHANNELS, 1)).astype(float)
         waves += np.random.normal(0, 0.01, waves.shape)

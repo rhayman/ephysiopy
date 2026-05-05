@@ -1586,11 +1586,12 @@ def __get_circular_regions(A: np.ndarray, **kwargs) -> tuple:
     max_radius = min(tuple(np.subtract(np.shape(A), centre)))
     t = np.linspace(0, 2 * np.pi, 51)
     circle = CircleModel()
+    circle.center = centre
 
     result = []
     radii = []
     for radius in range(min_radius, max_radius):
-        circle.params = [*centre, radius]
+        circle.radius = radius
         xy = circle.predict_xy(t)
         mask = grid_points_in_poly(np.shape(A), xy)
         im = A.copy()

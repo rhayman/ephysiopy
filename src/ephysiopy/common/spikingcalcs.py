@@ -73,6 +73,10 @@ def get_burstiness(
 
     """
     isi_matrix = np.asarray(isi_matrix)
+
+    if isi_matrix.ndim == 1:
+        isi_matrix = isi_matrix.reshape(1, -1)
+
     # A) check for NaN values in the isi_matrix and remove
     remove_idx = np.isnan(np.sum(isi_matrix, -1))
     if np.any(remove_idx):
@@ -95,7 +99,6 @@ def get_burstiness(
         minit="points",
         iter=20,
         missing="raise",
-        seed=np.random.default_rng(21),
     )
 
     # D) do the linear discriminant analysis
@@ -210,11 +213,13 @@ def get_burstiness(
         # Plot the distances as a histogram
         fig3 = plt.figure()
         ax3 = fig3.add_subplot(111)
-        N, bins, patches = ax3.hist(pca_distances, bins=150, density=True, color="blue")
+        _, bins, patches = ax3.hist(
+            pca_distances, bins=150, density=True, color="blue")
         for bin_patch in zip(bins[:-1], patches):
             if bin_patch[0] < lda.intercept_:
                 bin_patch[1].set_facecolor("red")
-        axtrans = transforms.blended_transform_factory(ax3.transData, ax3.transAxes)
+        axtrans = transforms.blended_transform_factory(
+            ax3.transData, ax3.transAxes)
         ax3.vlines(
             lda.intercept_, ymin=0, ymax=1, colors="black", transform=axtrans, zorder=1
         )
@@ -232,7 +237,8 @@ def get_burstiness(
             kde=True,
             ax=ax4,
         )
-        axtrans = transforms.blended_transform_factory(ax4.transData, ax4.transAxes)
+        axtrans = transforms.blended_transform_factory(
+            ax4.transData, ax4.transAxes)
         ax4.vlines(
             lda.intercept_, ymin=0, ymax=1, colors="black", transform=axtrans, zorder=1
         )
@@ -399,7 +405,7 @@ def xcorr(
     dts = np.searchsorted(x1, irange)
 
     for i, t in enumerate(dts):
-        y.extend((x1[t[0] : t[1]] - x2[i]))
+        y.extend((x1[t[0]: t[1]] - x2[i]))
     y = np.array(y, dtype=float)
 
     counts, bins = np.histogram(
@@ -472,7 +478,8 @@ def contamination_percent(
     far = [[-0.5, -0.249], [0.25, 0.501]]
 
     def get_shoulder(bins, vals):
-        all = np.array([np.logical_and(bins >= i[0], bins < i[1]) for i in vals])
+        all = np.array([np.logical_and(bins >= i[0], bins < i[1])
+                       for i in vals])
         return np.any(all, 0)
 
     inner_left = get_shoulder(b, left)
@@ -488,7 +495,8 @@ def contamination_percent(
         )
 
     Q00 = get_normd_shoulder(outer)
-    Q01 = np.nanmax([get_normd_shoulder(inner_left), get_normd_shoulder(inner_right)])
+    Q01 = np.nanmax([get_normd_shoulder(inner_left),
+                    get_normd_shoulder(inner_right)])
 
     R00 = np.nanmax(
         [
@@ -674,7 +682,7 @@ class SpikeCalcsGeneric:
         x = []
         y = []
         for i, t in enumerate(dts):
-            tmp = self.spike_times[t[0] : t[1]] - event_ts[i]
+            tmp = self.spike_times[t[0]: t[1]] - event_ts[i]
             x.extend(tmp)
             y.extend(np.repeat(i, len(tmp)))
         return x, y
@@ -697,8 +705,9 @@ class SpikeCalcsGeneric:
             self.event_window[1] with bin_width_secs steps;
             so x is count, y is "event".
         """
-        if self._event_ts is None:
+        if self.event_ts is None:
             raise Exception("Need some event timestamps! Aborting")
+
         event_ts = self.event_ts
         event_ts.sort()
         if isinstance(event_ts, list):
@@ -706,13 +715,17 @@ class SpikeCalcsGeneric:
 
         irange = event_ts[:, np.newaxis] + self.event_window[np.newaxis, :]
         dts = np.searchsorted(self.spike_times, irange)
-        bins = np.arange(self.event_window[0], self.event_window[1], bin_width_secs)
-        result = np.empty(shape=(len(bins) - 1, len(event_ts)), dtype=np.int64)
+        bins = np.arange(
+            self.event_window[0],
+            self.event_window[1] - self.secs_per_bin,
+            bin_width_secs,
+        )
+        result = np.empty(shape=(len(bins), len(event_ts)), dtype=np.int64)
         for i, t in enumerate(dts):
-            tmp = self.spike_times[t[0] : t[1]] - event_ts[i]
-            indices = np.digitize(tmp, bins=bins)
+            tmp = self.spike_times[t[0]: t[1]] - event_ts[i]
+            indices = np.digitize(tmp, bins=bins) - 1
             counts = np.bincount(indices, minlength=len(bins))
-            result[:, i] = counts[1 : len(bins)]
+            result[:, i] = counts
         return result
 
     def get_shuffled_ifr_sp_corr(
@@ -825,7 +838,8 @@ class SpikeCalcsGeneric:
         # the permutation test for significance, only perform
         # on the non-masked data
         rng = np.random.default_rng()
-        method = stats.PermutationMethod(n_resamples=nShuffles, random_state=rng)
+        method = stats.PermutationMethod(
+            n_resamples=nShuffles, random_state=rng)
         method = kwargs.get("method", method)
         res = stats.pearsonr(
             sm_spk_rate.compressed(), speed_filt.compressed(), method=method
@@ -867,7 +881,7 @@ class SpikeCalcsGeneric:
         return_activity: bool = False,
         return_magnitude: bool = False,
         **kwargs,
-    ):
+    ) -> namedtuple:
         """
         Checks whether a cluster responds to a laser stimulus.
 
@@ -907,11 +921,13 @@ class SpikeCalcsGeneric:
         do_smooth = kwargs.get("do_smooth", True)
 
         if do_smooth:
-            smoothed_binned_spikes = convolve(mean_firing_rate, kernel, boundary="wrap")
+            smoothed_binned_spikes = convolve(
+                mean_firing_rate, kernel, boundary="wrap")
         else:
             smoothed_binned_spikes = mean_firing_rate
         nbins = np.floor(np.sum(np.abs(self.event_window)) / self.secs_per_bin)
-        bins = np.linspace(self.event_window[0], self.event_window[1], int(nbins))
+        bins = np.linspace(
+            self.event_window[0], self.event_window[1], int(nbins))
         # normalize all activity by activity in the time before
         # the laser onset
         idx = bins < 0
@@ -940,7 +956,8 @@ class SpikeCalcsGeneric:
         responds_to_stim = False
         mag = 0
         Response = namedtuple(
-            "Response", ["responds", "normed_response_curve", "response_magnitude"]
+            "Response", ["responds", "normed_response_curve",
+                         "response_magnitude"]
         )
         this_response = Response(responds_to_stim, normd, mag)
         slices = np.ma.notmasked_contiguous(normd_masked)
@@ -993,7 +1010,8 @@ class SpikeCalcsGeneric:
         from scipy.signal import periodogram
 
         fs = 1.0 / kwargs.get("binsize", 0.001)
-        freqs, power = periodogram(ac.binned_data[0], fs=fs, return_onesided=True)
+        freqs, power = periodogram(
+            ac.binned_data[0], fs=fs, return_onesided=True)
         # Smooth the power over +/- 1Hz
         win_size = np.count_nonzero(freqs <= 1)
         if win_size % 2 == 1:
@@ -1085,13 +1103,16 @@ class SpikeCalcsGeneric:
         b = signal.filtfilt(w, 1, power)
         sqd_amp = b**2
         mtbp = np.mean(
-            sqd_amp[np.logical_and(freqs >= theta_band[0], freqs <= theta_band[1])]
+            sqd_amp[np.logical_and(
+                freqs >= theta_band[0], freqs <= theta_band[1])]
         )
         mobp = np.mean(
             sqd_amp[
                 np.logical_or(
-                    np.logical_and(freqs > theta_band[0] - 3, freqs < theta_band[0]),
-                    np.logical_and(freqs > theta_band[1], freqs < theta_band[1] + 3),
+                    np.logical_and(
+                        freqs > theta_band[0] - 3, freqs < theta_band[0]),
+                    np.logical_and(
+                        freqs > theta_band[1], freqs < theta_band[1] + 3),
                 )
             ]
         )
@@ -1109,16 +1130,18 @@ class SpikeCalcsGeneric:
             The frequency and power of the instantaneous firing rate
         """
         binned_spikes = np.bincount(
-            np.array(self.spike_times * self.pos_sample_rate, dtype=int).ravel(),
+            np.array(self.spike_times * self.pos_sample_rate,
+                     dtype=int).ravel(),
             minlength=int(self.pos_sample_rate * self.duration),
         )
         # possibly smooth the spike train...
-        freqs, power = signal.periodogram(binned_spikes, fs=self.pos_sample_rate)
+        freqs, power = signal.periodogram(
+            binned_spikes, fs=self.pos_sample_rate)
         freqs = freqs.ravel()
         power = power.ravel()
         return freqs, power
 
-    def theta_band_max_freq(self):
+    def theta_band_max_freq(self, **kws):
         """
         Calculates the frequency with the maximum power in the theta band (6-12Hz)
         of a spike train's autocorrelogram.
@@ -1141,8 +1164,13 @@ class SpikeCalcsGeneric:
         # Take the fft of the spike train autocorr (from -500 to +500ms)
         from scipy.signal import periodogram
 
-        freqs, power = periodogram(ac.binned_data[0], fs=200, return_onesided=True)
-        power_masked = np.ma.MaskedArray(power, np.logical_or(freqs < 6, freqs > 12))
+        theta_band = kws.get("theta_band", (6, 12))
+
+        freqs, power = periodogram(
+            ac.binned_data[0], fs=200, return_onesided=True)
+        power_masked = np.ma.MaskedArray(
+            power, np.logical_or(freqs < theta_band[0], freqs > theta_band[1])
+        )
         return freqs[np.argmax(power_masked)]
 
     def smooth_spike_train(self, npos, sigma=3.0, shuffle=None):
