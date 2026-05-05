@@ -392,7 +392,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         partition = kwargs.pop("partition", "fancy")
         min_theta = kwargs.pop("min_theta", 6)
         max_theta = kwargs.pop("max_theta", 12)
-        min_power_percent_threshold = kwargs.pop("min_power_percent_threshold", 0)
+        min_power_percent_threshold = kwargs.pop(
+            "min_power_percent_threshold", 0)
 
         if not self.RateMap:
             self.initialise()
@@ -421,7 +422,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 
         L = LFPOscillations(self.EEGCalcs.sig, self.EEGCalcs.fs)
 
-        FreqPhase = L.getFreqPhase(self.EEGCalcs.sig, [min_theta, max_theta], 2)
+        FreqPhase = L.getFreqPhase(
+            self.EEGCalcs.sig, [min_theta, max_theta], 2)
 
         phase = FreqPhase.phase
 
@@ -590,7 +592,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             sample_rate = self.EEGCalcs.fs
         binned = np.zeros((n_clusters, n_pos))
         for i, t in enumerate(ts):
-            spk_binned = np.bincount((t * sample_rate).astype(int), minlength=n_pos)
+            spk_binned = np.bincount(
+                (t * sample_rate).astype(int), minlength=n_pos)
             if len(spk_binned) > n_pos:
                 spk_binned = spk_binned[:n_pos]
             binned[i, :] = spk_binned
@@ -640,13 +643,14 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
                 _idx = np.searchsorted(pos_times, spk, side="right") - 1
                 if np.any(_idx >= self.PosCalcs.npos):
                     _idx = np.delete(
-                        _idx, np.s_[np.argmax(_idx >= self.PosCalcs.npos) :]
+                        _idx, np.s_[np.argmax(_idx >= self.PosCalcs.npos):]
                     )
                 idx.append(_idx)
         else:
             idx = np.searchsorted(pos_times, spk_times, side="right") - 1
             if np.any(idx >= self.PosCalcs.npos):
-                idx = np.delete(idx, np.s_[np.argmax(idx >= self.PosCalcs.npos) :])
+                idx = np.delete(
+                    idx, np.s_[np.argmax(idx >= self.PosCalcs.npos):])
 
         if kwargs.get("do_shuffle", False):
             n_shuffles = kwargs.get("n_shuffles", 100)
@@ -659,7 +663,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             )
             shifted_idx = []
             for shift in time_shifts:
-                shifted_idx.append(shift_vector(idx, shift, maxlen=self.PosCalcs.npos))
+                shifted_idx.append(shift_vector(
+                    idx, shift, maxlen=self.PosCalcs.npos))
             return shifted_idx
 
         if isinstance(idx, list):
@@ -727,7 +732,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         # TODO: _get_spike_pos_idx always returns a list now so this fcn needs
         # amending as will the get_map() one in binning.RateMap as it looks
         # like that expects a np.ndarray
-        spk_times_in_pos_samples = self._get_spike_pos_idx(cluster, channel, **kwargs)
+        spk_times_in_pos_samples = self._get_spike_pos_idx(
+            cluster, channel, **kwargs)
         npos = self._PosCalcs.npos
         # This conditional just picks out the right spk_weights
         # given the inputs
@@ -745,7 +751,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             # TODO: could be multiple clusters/ channels have been passed
             weights = []
             if isinstance(spk_times_in_pos_samples[0], list):
-                spk_times_in_pos_samples = flatten_list(spk_times_in_pos_samples)
+                spk_times_in_pos_samples = flatten_list(
+                    spk_times_in_pos_samples)
             for spk_idx in spk_times_in_pos_samples:
                 w = np.bincount(spk_idx, minlength=npos)
                 if len(w) > npos:
@@ -760,6 +767,34 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         ids = make_cluster_ids(channel, cluster)
         rmap.cluster_id = ids
         return rmap
+
+    def get_spike_weights(self, cluster: int, channel: int, **kwargs) -> np.ndarray:
+        """
+        Gets the spike weights for a given cluster and channel.
+
+        Parameters
+        ----------
+        cluster : int | list
+            The cluster(s) to get the spike weights for
+        channel : int | list
+            The channel(s) to get the spike weights for
+        **kwargs
+            Additional keyword arguments passed to _get_spike_pos_idx
+
+        Returns
+        np.ndarray
+            The spike weights for the cluster(s) and channel(s)
+        """
+        spk_times_in_pos_samples = self._get_spike_pos_idx(
+            cluster, channel, **kwargs)
+        npos = self._PosCalcs.npos
+
+        spk_weights = np.bincount(spk_times_in_pos_samples[0], minlength=npos)
+
+        if len(spk_weights) > npos:
+            spk_weights = np.delete(spk_weights, np.s_[npos:], 0)
+
+        return spk_weights
 
     def get_rate_map(
         self, cluster: int | list, channel: int | list, **kwargs
@@ -1061,6 +1096,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         )
         result = []
         for rm in r_map:
-            result.append(skaggs_info(rm.binned_data[0], pos_map.binned_data[0]))
+            result.append(skaggs_info(
+                rm.binned_data[0], pos_map.binned_data[0]))
 
         return result
