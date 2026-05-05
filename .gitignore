@@ -18,6 +18,7 @@ ephysiopy.egg-info/
 site/
 .vscode/
 .coverage/
+.coverage
 *.code-workspace
 
 # Python PyPi folders / files
