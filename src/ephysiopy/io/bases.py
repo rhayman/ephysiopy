@@ -10,7 +10,6 @@ from ephysiopy.common.fieldcalcs import (
     fancy_partition,
     simple_partition,
 )
-from ephysiopy.common.phasecoding import LFPOscillations, get_bad_cycles
 from ephysiopy.common.fieldproperties import FieldProps, LFPSegment, fieldprops
 from ephysiopy.common.binning import RateMap
 from ephysiopy.visualise.plotting import FigureMaker
@@ -389,6 +388,9 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         list[FieldProps]
             A list of FieldProps namedtuples containing the properties of the field
         """
+
+        from ephysiopy.common.phasecoding import LFPOscillations, get_bad_cycles
+
         partition = kwargs.pop("partition", "fancy")
         min_theta = kwargs.pop("min_theta", 6)
         max_theta = kwargs.pop("max_theta", 12)

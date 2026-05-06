@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from skimage.measure import points_in_poly, CircleModel
 import numpy as np
 import astropy.convolution as cnv
 import skimage
@@ -1514,3 +1515,38 @@ def corr_maps(map1, map2, maptype="normal") -> float:
     valid = np.logical_and(valid_map1, valid_map2)
     r = np.corrcoef(map1[valid], map2[valid])
     return r[1][0]
+
+
+def get_environment_shape(xy: np.ndarray) -> tuple:
+    """
+    Given an array of x,y coordinates, fits a circular model
+    to the points and returns "circle" if the points fit well within
+    the circle (95% of points inside), otherwise returns "square".
+
+    Parameters
+    ----------
+    xy : np.ndarray
+        An Nx2 array of x,y coordinates.
+
+    Returns
+    -------
+    np.ndarray
+        An Mx2 array of x,y coordinates representing the
+        perimeter of the fitted circle.
+    """
+    xy = np.ma.masked_where(np.isnan(xy), xy)
+    centre = np.ma.ptp(xy, axis=0) / 2 + np.ma.min(xy, axis=0)
+    radius = np.ma.mean(np.ma.ptp(xy, axis=0)) / 2
+    # Slightly increase radius to ensure all points are inside
+    # if circular environment
+    radius *= 1.05
+    model = CircleModel(centre, radius)
+    t = np.linspace(0, 2 * np.pi, 101)
+    perimeter_points = model.predict_xy(t)
+
+    inside = points_in_poly(xy, perimeter_points)
+
+    if np.sum(inside) / len(xy) >= 0.95:
+        return "circle", perimeter_points
+    else:
+        return "square", perimeter_points

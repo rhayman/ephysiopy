@@ -35,7 +35,7 @@ class LFPOscillations(object):
 
     """
 
-    def __init__(self, sig, fs, **kwargs):
+    def __init__(self, sig, fs):
         self.sig = sig
         self.fs = fs
         # these member variables are used in power_spectrum()
@@ -629,7 +629,8 @@ class LFPOscillations(object):
         creates a 2D histogram of theta frequency vs. running speed and
         overlays the mean points for each speed bin. The function also
         performs a linear regression to find the correlation between
-        speed and theta frequency.
+        speed and theta frequency. This is performed against the binned
+        (mean) frequency at each of the speed bins
 
         See Also
         --------
@@ -638,9 +639,11 @@ class LFPOscillations(object):
         """
         low_theta = kwargs.pop("low_theta", 6)
         high_theta = kwargs.pop("high_theta", 12)
-        low_speed = kwargs.pop("low_speed", 2)
-        high_speed = kwargs.pop("high_speed", 35)
+        low_speed = kwargs.pop("low_speed_threshold", 2)
+        high_speed = kwargs.pop("high_speed_threshold", 35)
         nbins = kwargs.pop("nbins", 13)
+        # extract the mask from the eeg data
+        mask = np.ma.getmask(lfp_data.sig)
         F = self.getFreqPhase(lfp_data.sig, band2filter=[
                               low_theta, high_theta])
         inst_freq = F.inst_freq
@@ -650,8 +653,15 @@ class LFPOscillations(object):
         )
         pos_time = np.linspace(0, pos_data.duration, pos_data.npos)
         interpolated_speed = np.interp(eeg_time, pos_time, pos_data.speed)
+        # do the binning usnig only the unmasked data
+        inst_freq = np.ma.array(inst_freq, mask=mask)
+        interpolated_speed = np.ma.array(interpolated_speed, mask=mask)
+
         h, e = np.histogramdd(
-            [inst_freq, interpolated_speed],
+            [
+                inst_freq.compressed(),
+                interpolated_speed.compressed(),
+            ],
             bins=(
                 np.linspace(low_theta, high_theta, nbins),
                 np.linspace(low_speed, high_speed, nbins),
@@ -664,8 +674,9 @@ class LFPOscillations(object):
             return [
                 fn(
                     inst_freq[
-                        np.logical_and(interpolated_speed > s1,
-                                       interpolated_speed < s2)
+                        np.ma.logical_and(
+                            interpolated_speed > s1, interpolated_speed < s2
+                        )
                     ]
                 )
                 for s1, s2 in zip(spd_bins[:-1], spd_bins[1:])
@@ -673,8 +684,9 @@ class LFPOscillations(object):
 
         mean_freqs = __freq_calc__(np.mean)
         counts = [
-            np.count_nonzero(np.logical_and(
-                pos_data.speed >= s1, pos_data.speed < s2))
+            np.count_nonzero(
+                np.ma.logical_and(pos_data.speed >= s1, pos_data.speed < s2)
+            )
             for s1, s2 in zip(spd_bins[:-1], spd_bins[1:])
         ]
         std_freqs = __freq_calc__(np.std) / np.sqrt(counts)
@@ -693,23 +705,28 @@ class LFPOscillations(object):
         # alternative argument here says we expect the correlation
         # to be positive
         res = stats.linregress(
-            speed_masked.compressed(), theta_masked.compressed(), alternative="greater"
+            np.array(spd_bins)[0:-1], mean_freqs, alternative="greater"
         )
 
         if plot:
-            plt.pcolormesh(
+            ax = kwargs.pop("ax", None)
+            if ax is None:
+                fig = plt.figure()
+                ax = fig.add_subplot(111)
+
+            pcm = ax.pcolormesh(
                 e[1],
                 e[0],
                 h,
                 cmap=matplotlib.colormaps["bone_r"],
                 norm=matplotlib.colors.LogNorm(),
             )
-            plt.colorbar()
-            plt.errorbar(
+            plt.colorbar(pcm, ax=ax)
+            ax.errorbar(
                 x=spd_bins[1:] - low_speed, y=mean_freqs, yerr=std_freqs, fmt="r."
             )
-            ax = plt.gca()
             ax.set_ylim((low_theta, high_theta))
+            ax.set_xlim((low_speed, high_speed))
             ax.set_ylabel("Frequency (Hz)")
             ax.set_xlabel("Running speed (cm/s)")
             ax.plot(

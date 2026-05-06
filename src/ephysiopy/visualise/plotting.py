@@ -6,9 +6,7 @@ from pycircstat2 import Circular
 from pycircstat2.utils import rotate_data
 from pycircstat2.descriptive import circ_mean_and_r
 import numpy as np
-from scipy.signal import hilbert
 from matplotlib.patches import Rectangle
-from matplotlib.collections import QuadMesh
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import seaborn as sns
@@ -21,8 +19,10 @@ from ephysiopy.common.utils import (
     VariableToBin,
     rect,
     flatten_list,
+    repeat_ind,
 )
 from ephysiopy.common import fieldcalcs as fc
+from ephysiopy.common.directionalcalcs import HeadDirectionCalcs
 from ephysiopy.visualise.utils import (
     saveFigure,
     stripAxes,
@@ -194,6 +194,33 @@ class FigureMaker(object):
             ax = fig.add_subplot(111)
 
         return _plot_map(rmap, ax, **kwargs)
+
+    @saveFigure
+    def plot_pycircstat_hd(self, cluster: int, channel: int, **kws) -> plt.Axes:
+        """
+        Plot the head direction response using pycircstat2 which
+        has more informative plots than the standard polar plot
+
+        Parameters
+        ----------
+        cluster : int
+            The cluster(s) to get the head direction map for.
+        channel : int
+            The channel number.
+        **kwargs : dict
+            Additional keyword arguments for the function.
+
+        Returns
+        -------
+        plt.Axes
+            The axes containing the head direction map plot.
+
+        """
+        spk_weights = self.get_spike_weights(cluster, channel)
+        idx = np.take(self.PosCalcs.dir, repeat_ind(spk_weights))
+
+        hd = HeadDirectionCalcs(idx)
+        return hd.plot()
 
     @saveFigure
     def plot_hd_map(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
@@ -919,7 +946,7 @@ class FigureMaker(object):
         return ax
 
     @saveFigure
-    def plot_theta_vs_running_speed(self, **kwargs) -> QuadMesh:
+    def plot_theta_vs_running_speed(self, **kwargs) -> plt.Axes:
         """
         Plots theta frequency versus running speed.
 
@@ -941,32 +968,15 @@ class FigureMaker(object):
         QuadMesh
             The QuadMesh object containing the plot.
         """
-        low_theta = kwargs.pop("low_theta", 6)
-        high_theta = kwargs.pop("high_theta", 12)
-        low_speed = kwargs.pop("low_speed", 2)
-        high_speed = kwargs.pop("high_speed", 50)
-        theta_filtered_eeg = self.EEGCalcs.butterFilter(low_theta, high_theta)
-        hilbert_eeg = hilbert(theta_filtered_eeg)
-        inst_freq = (
-            self.EEGCalcs.fs / (2 * np.pi) *
-            np.diff(np.unwrap(np.angle(hilbert_eeg)))
-        )
-        inst_freq = np.insert(inst_freq, -1, inst_freq[-1])
-        eeg_times = np.arange(0, len(self.EEGCalcs.sig)) / self.EEGCalcs.fs
-        pos_times = self.PosCalcs.xyTS
-        idx = np.searchsorted(pos_times, eeg_times)
-        idx[idx >= len(pos_times)] = len(pos_times) - 1
-        eeg_speed = self.PosCalcs.speed[idx]
-        h, edges = np.histogramdd(
-            [inst_freq, eeg_speed],
-            bins=(
-                np.arange(low_theta, high_theta, 0.5),
-                np.arange(low_speed, high_speed, 2),
-            ),
-        )
-        hm = np.ma.masked_where(h == 0, h)
-        ax = plt.pcolormesh(edges[1], edges[0], hm,
-                            cmap=jet_cmap, edgecolors="face")
+        from ephysiopy.common.phasecoding import LFPOscillations
+
+        LFP = LFPOscillations(self.EEGCalcs.sig, self.EEGCalcs.fs)
+
+        _, _, _ = LFP.theta_running(
+            self.PosCalcs, self.EEGCalcs, plot=True, **kwargs)
+
+        ax = plt.gca()
+
         return ax
 
     @addClusterChannelToAxes
