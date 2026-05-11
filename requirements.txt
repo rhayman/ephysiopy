@@ -258,7 +258,7 @@ tqdm==4.67.3
     #   mne
     #   phylib
     #   pycwt
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   requests
     #   responses
