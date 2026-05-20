@@ -1,4 +1,5 @@
 import numpy as np
+from pathlib import Path
 from scipy.signal import butter, filtfilt
 from ephysiopy.common.utils import memmapBinaryFile
 from ephysiopy.io.recording import TrialInterface as Trial

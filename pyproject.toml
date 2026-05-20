@@ -37,3 +37,9 @@ build-backend = "uv_build"
 dev = [
     "zensical>=0.0.23",
 ]
+[tool.pyright]
+include =["src", "src/ephysiopy/**"]
+reportOptionalIterable = "none"
+reportOptionalSubscript = "none"
+reportOperatorIssue = "none"
+reportUnusedVariable = "none"

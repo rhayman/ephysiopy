@@ -1,6 +1,10 @@
 import os
 import warnings
 import numpy as np
+from collections import OrderedDict
+from pathlib import Path
+from phylib.utils import Bunch
+from phylib.io.model import get_closest_channels
 
 
 def fileExists(pname, fname) -> bool:
@@ -21,7 +25,11 @@ class KiloSortSession(object):
     whatever as the phy user can define their own labels.
     """
 
-    def __init__(self, fname_root):
+    # this mirrors TemplateModel
+    amplitude_threshold = 0
+    n_closest_channels = 12
+
+    def __init__(self, src_dir):
         """
         Initialize the KiloSortSession.
 
@@ -30,16 +38,16 @@ class KiloSortSession(object):
 
         Parameters
         ----------
-        fname_root : str
+        src_dir : str
             The top-level directory containing the Kilosort session files.
         """
-        self.fname_root = fname_root
+        self.src_dir = src_dir
 
-        for d, c, f in os.walk(fname_root):
+        for d, c, f in os.walk(src_dir):
             for ff in f:
                 if "." not in c:  # ignore hidden directories
                     if "spike_times.npy" in ff:
-                        self.fname_root = d
+                        self.src_dir = d
         self.cluster_id = None
         self.spk_clusters = None
         self.spike_times = None
@@ -47,6 +55,13 @@ class KiloSortSession(object):
         self.contamPct = None
         self.good_clusters = []
         self.mua_clusters = []
+        self.wm = None
+        self.wmi = None
+        self.channel_positions = None
+        self.templates = None
+        self.templates_ind = None
+        self.sparse_templates = None
+        self.cluster_info = None
 
     def load(self):
         """
@@ -76,16 +91,16 @@ class KiloSortSession(object):
         # kilosort and the other from kilosort2
         # and is updated by the user when doing cluster assignment in phy
         # See comments above this class definition for a bit more info
-        if fileExists(self.fname_root, "cluster_groups.csv"):
+        if fileExists(self.src_dir, "cluster_groups.csv"):
             self.cluster_id, self.group = np.loadtxt(
-                os.path.join(self.fname_root, "cluster_groups.csv"),
+                os.path.join(self.src_dir, "cluster_groups.csv"),
                 unpack=True,
                 skiprows=1,
                 dtype=dtype,
             )
-        if fileExists(self.fname_root, "cluster_group.tsv"):
+        if fileExists(self.src_dir, "cluster_group.tsv"):
             self.cluster_id, self.group = np.loadtxt(
-                os.path.join(self.fname_root, "cluster_group.tsv"),
+                os.path.join(self.src_dir, "cluster_group.tsv"),
                 unpack=True,
                 skiprows=1,
                 dtype=dtype,
@@ -96,61 +111,72 @@ class KiloSortSession(object):
         it implies that data has not been sorted / curated
         """
         # if self.cluster_id is None:
-        #     print(f"Searching {os.path.join(self.fname_root)} and...")
+        #     print(f"Searching {os.path.join(self.src_dir)} and...")
         #     warnings.warn("No cluster_groups.tsv or cluster_group.csv file
         # was found.\
         #         Have you manually curated the data (e.g with phy?")
 
         # HWPD 20200527
         # load cluster_info file and add X co-ordinate to it
-        if fileExists(self.fname_root, "cluster_info.tsv"):
+        if fileExists(self.src_dir, "cluster_info.tsv"):
             self.cluster_info = pd.read_csv(
-                os.path.join(self.fname_root, "cluster_info.tsv"), sep="\t"
+                os.path.join(self.src_dir, "cluster_info.tsv"), sep="\t"
             )
-            if fileExists(self.fname_root, "channel_positions.npy") and fileExists(
-                self.fname_root, "channel_map.npy"
+            if fileExists(self.src_dir, "channel_positions.npy") and fileExists(
+                self.src_dir, "channel_map.npy"
             ):
-                chXZ = np.load(os.path.join(self.fname_root, "channel_positions.npy"))
-                chMap = np.load(os.path.join(self.fname_root, "channel_map.npy"))
+                chXZ = np.load(os.path.join(
+                    self.src_dir, "channel_positions.npy"))
+                chMap = np.load(os.path.join(self.src_dir, "channel_map.npy"))
                 chID = np.asarray(
-                    [np.argmax(chMap == x) for x in self.cluster_info.ch.values]
+                    [np.argmax(chMap == x)
+                     for x in self.cluster_info.ch.values]
                 )
                 self.cluster_info["chanX"] = chXZ[chID, 0]
                 self.cluster_info["chanY"] = chXZ[chID, 1]
 
         dtype = {"names": ("cluster_id", "KSLabel"), "formats": ("i4", "<U10")}
         # 'Raw' labels from a kilosort session
-        if fileExists(self.fname_root, "cluster_KSLabel.tsv"):
+        if fileExists(self.src_dir, "cluster_KSLabel.tsv"):
             self.ks_cluster_id, self.ks_group = np.loadtxt(
-                os.path.join(self.fname_root, "cluster_KSLabel.tsv"),
+                os.path.join(self.src_dir, "cluster_KSLabel.tsv"),
                 unpack=True,
                 skiprows=1,
                 dtype=dtype,
             )
-        if fileExists(self.fname_root, "cluster_ContamPct.tsv"):
+        if fileExists(self.src_dir, "cluster_ContamPct.tsv"):
             _, self.contamPct = np.loadtxt(
-                os.path.join(self.fname_root, "cluster_ContamPct.tsv"),
+                os.path.join(self.src_dir, "cluster_ContamPct.tsv"),
                 unpack=True,
                 skiprows=1,
                 dtype=dtype,
             )
-        if fileExists(self.fname_root, "spike_clusters.npy"):
-            self.spk_clusters = np.ma.MaskedArray(
-                np.squeeze(np.load(os.path.join(self.fname_root, "spike_clusters.npy")))
+        if fileExists(self.src_dir, "spike_clusters.npy"):
+            self.spike_clusters = np.ma.MaskedArray(
+                np.squeeze(np.load(os.path.join(
+                    self.src_dir, "spike_clusters.npy")))
             )
-        if fileExists(self.fname_root, "amplitudes.npy"):
+        if fileExists(self.src_dir, "amplitudes.npy"):
             self.amplitudes = np.ma.MaskedArray(
-                np.squeeze(np.load(os.path.join(self.fname_root, "amplitudes.npy")))
+                np.squeeze(np.load(os.path.join(
+                    self.src_dir, "amplitudes.npy")))
             )
-        if fileExists(self.fname_root, "spike_times.npy"):
+        if fileExists(self.src_dir, "spike_times.npy"):
             self.spike_times = np.ma.MaskedArray(
-                np.squeeze(np.load(os.path.join(self.fname_root, "spike_times.npy")))
+                np.squeeze(np.load(os.path.join(
+                    self.src_dir, "spike_times.npy")))
             )
-        if fileExists(self.fname_root, "templates.npy"):
-            self.templates = np.load(os.path.join(self.fname_root, "templates.npy"))
-        if fileExists(self.fname_root, "templates_ind.npy"):
+        if fileExists(self.src_dir, "templates.npy"):
+            self.templates = np.load(
+                os.path.join(self.src_dir, "templates.npy"))
+        if fileExists(self.src_dir, "templates_ind.npy"):
             self.templates_ind = np.load(
-                os.path.join(self.fname_root, "templates_ind.npy")
+                os.path.join(self.src_dir, "templates_ind.npy")
+            )
+
+        if fileExists(self.src_dir, "spike_templates.npy"):
+            self.spike_templates = np.load(
+                os.path.join(self.src_dir, "spike_templates.npy")
             )
 
             return True
@@ -213,7 +239,7 @@ class KiloSortSession(object):
             The channels for the specified cluster.
         """
         spike_ids = self.get_cluster_spikes(cluster)
-        return self._get_template_from_spikes(spike_ids).channel_ids
+        return self._get_template_from_spikes(spike_ids).channel_ids.astype(int)
 
     def _get_template_from_spikes(self, spike_ids):
         """
@@ -236,25 +262,6 @@ class KiloSortSession(object):
         template = self.get_template(template_id)
         return template
 
-    def get_template(self, template_id: int):
-        """
-        Returns the template for a given template ID.
-
-        Parameters
-        ----------
-        template_id : int
-            The template ID.
-
-        Returns
-        -------
-        np.ndarray
-            The template for the specified ID.
-        """
-        pass
-        # data, cols = self.templates, self.templates_ind
-        # template_w, channel_ids = data[template_id], cols[template_id]
-        # template_w is (n_samples, n_channels):
-
     def get_cluster_spikes(self, cluster: int) -> np.ndarray:
         """
         Returns the spike ids that belong to a given template.
@@ -269,6 +276,9 @@ class KiloSortSession(object):
         np.ndarray
             The spike indices for the specified cluster.
         """
+        if not np.any(self.spike_clusters):
+            self._load_spike_clusters()
+
         return self._spikes_in_clusters(self.spike_clusters, [cluster])
 
     def _spikes_in_clusters(self, clusters, cluster_ids):
@@ -314,7 +324,8 @@ class KiloSortSession(object):
         spike_pos_samples = np.ma.MaskedArray(
             self.spike_times / 30000 * sample_rate, dtype=int
         )
-        pos_times_in_samples = np.ma.MaskedArray(xy_ts * sample_rate, dtype=int)
+        pos_times_in_samples = np.ma.MaskedArray(
+            xy_ts * sample_rate, dtype=int)
         mask = np.isin(spike_pos_samples, pos_times_in_samples)
         if isinstance(self.spike_times, np.ma.MaskedArray):
             self.spike_times.mask = mask
@@ -328,3 +339,284 @@ class KiloSortSession(object):
             self.amplitudes.mask = mask
         else:
             self.amplitudes = np.ma.MaskedArray(self.amplitudes, mask)
+
+    def _load_channel_positions(self):
+        """
+        Load the channel positions
+        """
+        self.channel_positions = np.load(
+            self.src_dir / Path("channel_positions.npy"))
+
+    def _load_spike_clusters(self):
+        """
+        Load the spike clusters
+        """
+        self.spike_clusters = np.load(
+            self.src_dir / Path("spike_clusters.npy"))
+
+    def _load_wmi(self):
+        """
+        Load the inverse whitening matrix
+        """
+        self.wmi = np.load(self.src_dir / Path("whitening_mat_inv.npy"))
+
+    def _load_wm(self):
+        """
+        Load the whitening matrix
+        """
+        self.wm = np.load(self.src_dir / Path("whitening_mat.npy"))
+
+    def _load_templates(self) -> tuple | None:
+        """
+        Read the templates.npy file
+
+        Parameters
+        ----------
+        src_dir - Path
+            The location of all the KiloSort files
+
+        Returns
+        -------
+        np.ndarray - the result
+
+        """
+        fpath = self.src_dir / Path("templates.npy")
+        assert fpath.exists(), f"{fpath} does not exist"
+
+        try:
+            data = np.load(fpath, mmap_mode="r+")
+            data = np.atleast_3d(data)
+
+            empty_templates = np.all(np.all(np.isnan(data), axis=1), axis=1)
+            data[empty_templates, ...] = 0
+            self.n_templates, _, self.n_channels_loc = data.shape
+
+        except IOError:
+            return
+
+        try:
+            cols = np.load(
+                self.src_dir / Path("template_ind.npy"), mmap_mode="r+")
+            cols = np.atleast_2d(cols)
+
+            assert cols.shape == (
+                self.n_templates,
+                self.n_channels_loc,
+            ), f"Expected shape {(self.n_templates, self.n_channels_loc)}, got {
+                cols.shape
+            }"
+
+        except IOError:
+            cols = None
+
+        B = Bunch(data=data, cols=cols)
+
+        self.sparse_templates = B
+
+        return data, cols
+
+    def _get_dense_templates(
+        self,
+        template_id,
+        channel_ids=None,
+        amplitude_threshold=None,
+        unwhiten=True,
+    ):
+        """
+        Get the dense template for a given template ID.
+
+        Parameters
+        ----------
+        template_id : int
+            The ID of the template to retrieve.
+        channel_ids : list of int, optional
+            The channel IDs to include in the template. If None, all channels are included.
+
+        amplitude_threshold : float, optional
+            The minimum amplitude threshold for including a channel in the template. If None, no threshold is
+             applied.
+        unwhiten : bool, optional
+            Whether to unwhiten the template using the whitening matrix. Default is True.
+
+        """
+        if not self.sparse_templates:
+            self._load_templates()
+
+        template_w = self.sparse_templates.data[template_id, ...]
+        template = (
+            self._unwhiten(template_w.astype(np.float32)
+                           ) if unwhiten else template_w
+        )
+        channel_ids, amplitude, best_channel = self._find_best_channels(
+            template, amplitude_threshold
+        )
+
+        assert template.ndim == 2
+
+        return Bunch(
+            template=template,
+            amplitude=amplitude,
+            channel_ids=channel_ids,
+            best_channel=best_channel,
+        )
+
+    def get_template(
+        self,
+        template_id,
+        channel_ids=None,
+        amplitude_threshold=None,
+        unwhiten=True,
+    ):
+        """
+        Get the template for a given template ID.
+
+        Parameters
+        ----------
+        template_id : int
+            The ID of the template to retrieve.
+        channel_ids : list of int, optional
+            The channel IDs to include in the template. If None, all channels are included.
+        amplitude_threshold : float, optional
+            The minimum amplitude threshold for including a channel in the template. If None, no threshold is applied.
+        unwhiten : bool, optional
+            Whether to unwhiten the template using the whitening matrix. Default is True.
+
+        Returns
+        -------
+        np.ndarray
+            The template for the given template ID.
+        """
+        _, cols = self._load_templates()
+
+        if cols is None:
+            return self._get_dense_templates(
+                template_id, channel_ids, amplitude_threshold, unwhiten
+            )
+
+    def _load_sparse_templates(self):
+        """
+        This is a misnomer for the recordings I've done as the templates
+        aren't sparse but dense and so in the _load_templates function above
+        the cols part of the returned parameters is None. Anyway a few shape/
+        dimension parameters are set Anyway
+        """
+        if not self.templates:
+            self._load_templates()
+        n_templates, n_samples_waveforms, n_channels_loc = self.templates.shape
+
+    def _unwhiten(self, data: np.ndarray, channel_ids=None) -> np.ndarray:
+        """
+        Unwhiten some data
+
+        Parameters
+        ----------
+        data : np.ndarray
+            The data to unwhiten.
+        channel_ids : list of int, optional
+            The channel IDs to include in the unwhitening process. If None, all channels are included.
+
+        Returns
+        -------
+        np.ndarray
+            The unwhitened data.
+
+        """
+        if not np.any(self.wmi):
+            self._load_wmi()
+
+        wmi = self.wmi
+
+        if channel_ids is not None:
+            wmi = wmi[np.ix_(channel_ids, channel_ids)]
+            assert wmi.shape == (len(channel_ids),) * 2
+
+        assert data.shape[1] == wmi.shape[0]
+
+        out = np.dot(data, wmi) * getattr(self, "template_scaling", 1.0)
+
+        return out
+
+    def _find_best_channels(self, template, amplitude_threshold=0):
+        """
+        Find the best channels for a given template
+
+        Parameters
+        ----------
+        template
+        amplitude_threshold - this is set at the class level in TemplateModel
+            and is 0 by default
+
+        Notes
+        -----
+        n_closest_channels set at the class level
+        """
+
+        amplitude = np.ptp(template, axis=0)
+        assert not np.all(np.isnan(amplitude)), "Template is all NaNs!"
+
+        best_channel = np.argmax(amplitude)
+        max_amp = amplitude[best_channel]
+
+        amplitude_threshold = getattr(
+            self, "amplitude_threshold", amplitude_threshold)
+
+        peak_channels = np.nonzero(
+            amplitude >= amplitude_threshold * max_amp)[0]
+
+        if not np.any(self.channel_positions):
+            self._load_channel_positions()
+
+        close_channels = get_closest_channels(
+            self.channel_positions, best_channel, self.n_closest_channels
+        )
+
+        assert best_channel in close_channels
+
+        channel_ids = np.intersect1d(peak_channels, close_channels).astype(int)
+        # for some fucking annoying reason the channel_ids are floats
+        # convert to int here - doing this using astype(int) doesn't work
+        # for some reason
+        channel_ids = np.array([int(i) for i in channel_ids])
+        order = np.argsort(amplitude[channel_ids])[::-1]
+        channel_ids = channel_ids[order]
+        amplitude = amplitude[order]
+
+        return channel_ids, amplitude, best_channel
+
+    def get_all_channels_clusters(self) -> dict:
+        """
+        Get the best channel(s) for all the clusters
+
+        Returns
+        -------
+        dict
+            A dictionary where the keys are the best channel(s) and the values
+            are the clusters for the best channel
+
+        Notes
+        -----
+        To maintain consistency with the way the Axona cut data is handled
+        only a single channel is returned for each cluster, even if multiple channels are above the amplitude threshold. This is done by taking the best channel (the one with the highest amplitude) and then finding the closest channels to it. The intersection of these two sets of channels is then taken as the final set of channels for that cluster.
+        If there are multiple channels in this intersection, only the best channel
+        is returned.
+
+        To retrieve the n best channels for each cluster, the get_cluster_channels function can be used directly for each cluster ID.
+
+        """
+        all_channels = {}
+
+        for cluster in self.cluster_id:
+            channel = int(self.get_cluster_channels(cluster)[0])
+
+            if channel in all_channels:
+                all_channels[channel].append(int(cluster))
+            else:
+                all_channels[channel] = [int(cluster)]
+
+        # remove any empty channels
+        {ky: va for ky, va in all_channels.items() if va}
+
+        # sort by channel number
+        all_channels = OrderedDict(sorted(all_channels.items()))
+
+        return all_channels

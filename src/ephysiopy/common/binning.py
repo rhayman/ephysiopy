@@ -19,11 +19,16 @@ from ephysiopy.common.utils import (
 # Suppress warnings generated from doing the ffts for the spatial
 # autocorrelogram
 warnings.filterwarnings("ignore", message="invalid value encountered in sqrt")
-warnings.filterwarnings("ignore", message="invalid value encountered in subtract")
-warnings.filterwarnings("ignore", message="invalid value encountered in greater")
-warnings.filterwarnings("ignore", message="invalid value encountered in true_divide")
-warnings.filterwarnings("ignore", message="invalid value encountered in divide")
-warnings.filterwarnings("ignore", message="divide by zero encountered in true_divide")
+warnings.filterwarnings(
+    "ignore", message="invalid value encountered in subtract")
+warnings.filterwarnings(
+    "ignore", message="invalid value encountered in greater")
+warnings.filterwarnings(
+    "ignore", message="invalid value encountered in true_divide")
+warnings.filterwarnings(
+    "ignore", message="invalid value encountered in divide")
+warnings.filterwarnings(
+    "ignore", message="divide by zero encountered in true_divide")
 np.seterr(divide="ignore", invalid="ignore")
 
 
@@ -324,7 +329,8 @@ class RateMap(object):
             return np.linspace(0, 360, int(360 / binsize)).tolist()
 
         def speed_edges():
-            maxspeed = np.nanmax(self.speed)
+            speed = np.ma.masked_invalid(self.speed)
+            maxspeed = np.ma.max(speed)
             return np.linspace(0, maxspeed, int(maxspeed / binsize)).tolist()
 
         def x_edges():
@@ -449,9 +455,11 @@ class RateMap(object):
                 binsize = kwargs.get("binsize", 5)
                 if isinstance(binsize, tuple):
                     binsize = binsize[0]
-                ego_angles, arena_xy = self._calc_ego_angles(arena_shape, binsize)
+                ego_angles, arena_xy = self._calc_ego_angles(
+                    arena_shape, binsize)
                 ego_dists = distance.cdist(arena_xy, self.xy.T, "euclidean")
-                sample = np.stack((np.ravel(ego_angles.T), np.ravel(ego_dists.T)))
+                sample = np.stack(
+                    (np.ravel(ego_angles.T), np.ravel(ego_dists.T)))
                 sw = np.atleast_2d(spk_weights)
                 sw = np.tile(sw, arena_xy.shape[0])
                 pw = np.tile(self.pos_weights, arena_xy.shape[0])
@@ -475,11 +483,13 @@ class RateMap(object):
         hist_range = kwargs.pop("range", None)
         self.smooth_sz = kwargs.get("map_smooth_size", self.smooth_sz)
 
-        bin_edges = self._calc_bin_edges(binsize) if hist_range is None else None
+        bin_edges = self._calc_bin_edges(
+            binsize) if hist_range is None else None
         bin_edges = kwargs.get("bin_edges", bin_edges)
 
         # Bin the position data
-        binned_pos, binned_pos_edges = self._bin_data(sample, bin_edges, pos_weights)
+        binned_pos, binned_pos_edges = self._bin_data(
+            sample, bin_edges, pos_weights)
         binned_pos = binned_pos / self.PosCalcs.sample_rate
         nanIdx = binned_pos == 0
         pos = BinnedData(var_type, MapType.POS, [binned_pos], binned_pos_edges)
@@ -601,12 +611,15 @@ class RateMap(object):
             bin_edges = self.binedges
         if len(bin_edges) == 1:
             hist = bh.Histogram(
-                bh.axis.Regular(len(bin_edges[0]), bin_edges[0][0], bin_edges[0][-1])
+                bh.axis.Regular(len(bin_edges[0]),
+                                bin_edges[0][0], bin_edges[0][-1])
             )
         else:
             hist = bh.Histogram(
-                bh.axis.Regular(len(bin_edges[0]), bin_edges[0][0], bin_edges[0][-1]),
-                bh.axis.Regular(len(bin_edges[1]), bin_edges[1][0], bin_edges[1][-1]),
+                bh.axis.Regular(
+                    len(bin_edges[0]), bin_edges[0][0], bin_edges[0][-1]),
+                bh.axis.Regular(
+                    len(bin_edges[1]), bin_edges[1][0], bin_edges[1][-1]),
             )
         ndhist = []
         for w in weights:
@@ -797,7 +810,8 @@ class RateMap(object):
         x[nodwell] = 0
         # [Step 1] Obtain FFTs of x, the sum of squares and bins visited
         Fx = fft(fft(x, 2 * m - 1, axis=0), 2 * n - 1, axis=1)
-        FsumOfSquares_x = fft(fft(np.power(x, 2), 2 * m - 1, axis=0), 2 * n - 1, axis=1)
+        FsumOfSquares_x = fft(
+            fft(np.power(x, 2), 2 * m - 1, axis=0), 2 * n - 1, axis=1)
         Fn = fft(
             fft(np.invert(nodwell).astype(int), 2 * m - 1, axis=0),
             2 * n - 1,
@@ -829,7 +843,8 @@ class RateMap(object):
         N[N <= 1] = np.nan
         # [Step 4] Compute correlation matrix
         mapStd = np.sqrt((sumOfSquares_x * N) - sums_x**2)
-        mapCovar = (rawCorr * N) - sums_x * sums_x[::-1, :, :][:, ::-1, :][:, :, :]
+        mapCovar = (rawCorr * N) - sums_x * \
+            sums_x[::-1, :, :][:, ::-1, :][:, :, :]
 
         return np.squeeze(mapCovar / mapStd / mapStd[::-1, :, :][:, ::-1, :][:, :, :])
 
@@ -945,7 +960,8 @@ class RateMap(object):
         )
         # [Step 2] Multiply the relevant transforms and invert to obtain the
         # equivalent convolutions
-        rawCorr = np.fft.fftshift(np.real(ifft(ifft(Fa * np.conj(Fb), axis=1), axis=0)))
+        rawCorr = np.fft.fftshift(
+            np.real(ifft(ifft(Fa * np.conj(Fb), axis=1), axis=0)))
         sums_a = np.fft.fftshift(
             np.real(ifft(ifft(Fa * np.conj(Fn_b), axis=1), axis=0))
         )
@@ -958,7 +974,8 @@ class RateMap(object):
         sumOfSquares_b = np.fft.fftshift(
             np.real(ifft(ifft(Fn_a * np.conj(FsumOfSquares_b), axis=1), axis=0))
         )
-        N = np.fft.fftshift(np.real(ifft(ifft(Fn_a * np.conj(Fn_b), axis=1), axis=0)))
+        N = np.fft.fftshift(
+            np.real(ifft(ifft(Fn_a * np.conj(Fn_b), axis=1), axis=0)))
         # [Step 3] Account for rounding errors.
         rawCorr[np.abs(rawCorr) < tol] = 0
         sums_a[np.abs(sums_a) < tol] = 0
@@ -1036,7 +1053,7 @@ class RateMap(object):
         # 1b. Keep looping until we have dealt with all spikes
         for i, s in enumerate(spkIdx):
             t = np.searchsorted(spkIdx, (s, s + winSizeBins))
-            nSpikesInWin[i] = len(spkIdx[t[0] : t[1]]) - 1  # ignore ith spike
+            nSpikesInWin[i] = len(spkIdx[t[0]: t[1]]) - 1  # ignore ith spike
 
         # [Stage 2] Prepare for main loop
         # 2a. Work out offset inidices to be used when storing spike data
@@ -1067,17 +1084,19 @@ class RateMap(object):
                 dtype=int,
             )
             WL = len(winInd_dwell)
-            dwell[:, filled_pvals : filled_pvals + WL] = np.rot90(
+            dwell[:, filled_pvals: filled_pvals + WL] = np.rot90(
                 np.array(np.rot90(xy[:, winInd_dwell]) - xy[:, spkIdx[i]])
             )
             filled_pvals = filled_pvals + WL
             # calculate spike displacements
             winInd_spks = (
-                i + np.nonzero(spkIdx[i + 1 : n_spks] < spkIdx[i] + winSizeBins)[0]
+                i + np.nonzero(spkIdx[i + 1: n_spks] <
+                               spkIdx[i] + winSizeBins)[0]
             )
             WL = len(winInd_spks)
-            spike[:, filled_svals : filled_svals + WL] = np.rot90(
-                np.array(np.rot90(xy[:, spkIdx[winInd_spks]]) - xy[:, spkIdx[i]])
+            spike[:, filled_svals: filled_svals + WL] = np.rot90(
+                np.array(
+                    np.rot90(xy[:, spkIdx[winInd_spks]]) - xy[:, spkIdx[i]])
             )
             filled_svals = filled_svals + WL
 
@@ -1147,7 +1166,8 @@ class RateMap(object):
         Angles are in radians.
         """
         arena_width = np.ceil(
-            np.nanmean((np.nanmax(self.xy.data, 1) - np.nanmin(self.xy.data, 1)) / 2)
+            np.nanmean((np.nanmax(self.xy.data, 1) -
+                       np.nanmin(self.xy.data, 1)) / 2)
         )
         arena_width = arena_width.tolist()
         arena_centre = Point(np.nanmin(self.xy.data, 1) + arena_width)
@@ -1155,8 +1175,10 @@ class RateMap(object):
         if "circle" in arena_shape:
             arena_boundary = arena_centre.buffer(arena_width).boundary
         elif "square" in arena_shape:
-            arena_boundary = arena_centre.buffer(arena_width, cap_style=3).boundary
-        arena_boundary = arena_boundary.segmentize(max_segment_length=xy_binsize)
+            arena_boundary = arena_centre.buffer(
+                arena_width, cap_style=3).boundary
+        arena_boundary = arena_boundary.segmentize(
+            max_segment_length=xy_binsize)
         arena_xy = np.array(arena_boundary.xy).T
         animal_xy = self.xy
         dx = np.atleast_2d(animal_xy[0]) - np.atleast_2d(arena_xy[:, 0]).T

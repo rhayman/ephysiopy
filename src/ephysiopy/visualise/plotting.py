@@ -17,6 +17,7 @@ from ephysiopy.common.utils import (
     clean_kwargs,
     BinnedData,
     VariableToBin,
+    MapType,
     rect,
     flatten_list,
     repeat_ind,
@@ -599,6 +600,14 @@ class FigureMaker(object):
         """
         add_speed_hist = kwargs.pop("add_speed_hist", True)
         rmap = self.get_speed_v_rate_map(cluster, channel, **kwargs)
+        # speed histogram is added as a twin axis to the speed v rate plot as the
+        # x-axis is shared and the speed distribution is often informative when interpreting
+        # the speed v rate plot, particularly for cells with non-linear speed tuning where the
+        # cell may only fire at a narrow range of speeds
+        # the units of binned_data in speed_hist is seconds
+        speed_hist = self.get_speed_v_rate_map(
+            None, None, map_type=MapType.POS, **kwargs
+        )
         # rmap is linear
         ax = kwargs.get("ax", None)
         if ax is None:
@@ -616,19 +625,11 @@ class FigureMaker(object):
             ax.yaxis.label.set_color(ax_colour)
             ax2 = ax.twinx()
             ax2_colour = "grey"
-            pos_weights = np.ones_like(self.PosCalcs.speed) * (
-                1 / self.PosCalcs.sample_rate
-            )
-            speed_bincounts = np.bincount(
-                np.digitize(self.PosCalcs.speed,
-                            rmap.bin_edges[0], right=True),
-                weights=pos_weights,
-            )
             ax2.bar(
-                rmap.bin_edges[0],
-                speed_bincounts,
+                speed_hist.bin_edges[0][:-1],
+                speed_hist.binned_data[0],
                 alpha=0.5,
-                width=np.mean(np.diff(rmap.bin_edges[0])),
+                width=np.mean(np.diff(speed_hist.bin_edges[0])),
                 ec="grey",
                 fc="grey",
             )
