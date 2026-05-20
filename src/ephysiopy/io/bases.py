@@ -409,8 +409,6 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         elif partition == "fancy":
             _, _, labels, _ = fancy_partition(rmap)
 
-        breakpoint()
-
         spike_times = self.get_spike_times(cluster, channel)
         xy = getattr(self.PosCalcs, "xy")
 
