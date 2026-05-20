@@ -115,7 +115,7 @@ class BinnedData:
         map_type: MapType,
         binned_data: list[np.ma.MaskedArray],
         bin_edges: list[np.ndarray],
-        cluster_id: list[ClusterID] = ClusterID(0, 0),
+        cluster_id: list[ClusterID] = [ClusterID(0, 0)],
     ):
         if isinstance(binned_data, np.ndarray) or isinstance(
             binned_data, np.ma.MaskedArray
