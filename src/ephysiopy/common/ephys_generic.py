@@ -108,7 +108,8 @@ class EventsGeneric(object):
         self._event_dict = dict.fromkeys(level_one_keys)
         self._event_dict["stim_params"] = OrderedDict.fromkeys(level_two_keys)
         for k in self._event_dict["stim_params"].keys():
-            self._event_dict["stim_params"][k] = dict.fromkeys(level_three_keys)
+            self._event_dict["stim_params"][k] = dict.fromkeys(
+                level_three_keys)
 
 
 class EEGCalcsGeneric(object):
@@ -292,7 +293,8 @@ class EEGCalcsGeneric(object):
         idx = np.zeros([len(freqs), len(f)]).astype(bool)
 
         for i, freq in enumerate(freqs):
-            idx[i, :] = np.logical_and(np.abs(f) < freq + band, np.abs(f) > freq - band)
+            idx[i, :] = np.logical_and(
+                np.abs(f) < freq + band, np.abs(f) > freq - band)
 
         pollutedIdx = np.sum(idx, 0)
         fftRes[pollutedIdx] = np.mean(fftRes)
@@ -331,7 +333,7 @@ class PosCalcsGeneric(object):
         whether to convert the xy position data to cms or not
     duration : float
         the trial duration in seconds
-    xyTS : np.ndarray
+    time : np.ndarray
         the timestamps the position data was recorded at. npos long vector
     dir : np.ndarray
         the directional data. In degrees
@@ -362,9 +364,11 @@ class PosCalcsGeneric(object):
         **kwargs,
     ):
         assert np.shape(x) == np.shape(y)
+        self._x = np.ma.MaskedArray(x)
+        self._y = np.ma.MaskedArray(y)
         self.orig_xy: np.ma.MaskedArray = np.ma.MaskedArray([x, y])
         self._xy = np.ma.MaskedArray(np.zeros(shape=[2, len(x)]))
-        self._xyTS = None
+        self._time = None
         self._dir = np.ma.MaskedArray(np.zeros_like(x))
         self._phi = np.ma.MaskedArray(np.zeros_like(x))
         self._speed = np.ma.MaskedArray(np.zeros_like(x))
@@ -396,9 +400,9 @@ class PosCalcsGeneric(object):
             raise TypeError("Can only add another PosCalcsGeneric object")
         new_xy = np.ma.concatenate((self.orig_xy, other.orig_xy), axis=1)
         P = PosCalcsGeneric(new_xy[0], new_xy[1], self.ppm, self.convert2cm)
-        P._xyTS = (
-            np.ma.concatenate((self.xyTS, other.xyTS + self.duration), axis=0)
-            if self.xyTS is not None
+        P._time = (
+            np.ma.concatenate((self.time, other.time + self.duration), axis=0)
+            if self.time is not None
             else None
         )
         return P
@@ -408,8 +412,24 @@ class PosCalcsGeneric(object):
         return len(self.orig_xy.T)
 
     @property
+    def x(self) -> np.ma.MaskedArray:
+        return self._x
+
+    @x.setter
+    def x(self, value) -> None:
+        self._x = np.ma.MaskedArray(value)
+
+    @property
+    def y(self) -> np.ma.MaskedArray:
+        return self._y
+
+    @y.setter
+    def y(self, value) -> None:
+        self._y = np.ma.MaskedArray(value)
+
+    @property
     def xy(self) -> np.ma.MaskedArray:
-        return self._xy
+        return np.ma.MaskedArray([self._x, self._y])
 
     @xy.setter
     def xy(self, value) -> None:
@@ -429,12 +449,12 @@ class PosCalcsGeneric(object):
         return self.npos / self.sample_rate
 
     @property
-    def xyTS(self) -> np.ma.MaskedArray | None:
-        return self._xyTS
+    def time(self) -> np.ma.MaskedArray | None:
+        return self._time
 
-    @xyTS.setter
-    def xyTS(self, val) -> None:
-        self._xyTS = np.ma.MaskedArray(val)
+    @time.setter
+    def time(self, val) -> None:
+        self._time = np.ma.MaskedArray(val)
 
     @property
     def dir(self) -> np.ma.MaskedArray:
@@ -538,7 +558,8 @@ class PosCalcsGeneric(object):
         self.calcSpeed(xy)
         self.smooth_speed(self.speed)
         self.calcPhi(xy)
-        self._xy = xy
+        self._x = xy[0]
+        self._y = xy[1]
         self._dir = self.calcHeadDirection(xy)
 
     def calcHeadDirection(self, xy: np.ma.MaskedArray) -> np.ma.MaskedArray:
@@ -562,7 +583,8 @@ class PosCalcsGeneric(object):
         # self.dir = np.mod(
         #     np.arctan2(np.diff(xy_f[1]), np.diff(xy_f[0])) * (180 / np.pi), 360
         # )
-        self.dir = np.rad2deg(np.arctan2(np.diff(xy_f[1]), np.diff(xy_f[0]))) + 180
+        self.dir = np.rad2deg(np.arctan2(
+            np.diff(xy_f[1]), np.diff(xy_f[0]))) + 180
         self.dir = np.append(self.dir, self.dir[-1])
         self.dir[~good] = np.ma.masked
         return self.dir
@@ -673,7 +695,8 @@ class PosCalcsGeneric(object):
             The xy positional data
 
         """
-        speed = np.ma.MaskedArray(np.abs(np.ma.ediff1d(np.hypot(xy[0], xy[1]))))
+        speed = np.ma.MaskedArray(
+            np.abs(np.ma.ediff1d(np.hypot(xy[0], xy[1]))))
         self.speed = np.append(speed, speed[-1])
         self.speed = self.speed * self.sample_rate
 
@@ -717,8 +740,10 @@ class PosCalcsGeneric(object):
 
         denom = np.gcd(upsample_rate, 30)
 
-        new_x = signal.resample_poly(xy[0, :], upsample_rate / denom, 30 / denom)
-        new_y = signal.resample_poly(xy[1, :], upsample_rate / denom, 30 / denom)
+        new_x = signal.resample_poly(
+            xy[0, :], upsample_rate / denom, 30 / denom)
+        new_y = signal.resample_poly(
+            xy[1, :], upsample_rate / denom, 30 / denom)
         return np.array([new_x, new_y])
 
     def apply_mask(self, mask: np.ndarray):
@@ -734,11 +759,13 @@ class PosCalcsGeneric(object):
         -----
         If mask is empty, the mask is removed
         The mask should be a list of tuples, each tuple containing
-        the start and end times of the mask i.e. [(start1, end1), (start2, end2)]
+        the start and end times of the mask
+        i.e. [(start1, end1), (start2, end2)]
         everything inside of these times is masked
         """
-        self.xy.mask = mask
-        self.xyTS.mask = mask
+        self.x.mask = mask
+        self.y.mask = mask
+        self.time.mask = mask
         self.dir.mask = mask
         self.speed.mask = mask
 
@@ -805,10 +832,12 @@ def calculate_rms_and_std(
         the RMS and standard deviation of the signal
     """
     rms = np.nanmean(
-        np.sqrt(np.power(sig[int(time_window[0] * fs) : int(time_window[1] * fs)], 2))
+        np.sqrt(
+            np.power(sig[int(time_window[0] * fs): int(time_window[1] * fs)], 2))
     )
     std = np.nanstd(
-        np.sqrt(np.power(sig[int(time_window[0] * fs) : int(time_window[1] * fs)], 2))
+        np.sqrt(
+            np.power(sig[int(time_window[0] * fs): int(time_window[1] * fs)], 2))
     )
     return rms, std
 

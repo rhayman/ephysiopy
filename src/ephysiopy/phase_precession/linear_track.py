@@ -205,13 +205,13 @@ def apply_linear_track_filter(
     if var_type.value == VariableToBin.PHI.value:
         min_pos = np.nanmin(T.PosCalcs.phi.data)
         max_pos = np.nanmax(T.PosCalcs.phi.data)
-        pos_filt0 = TrialFilter("xrange", min_pos, min_pos + track_end_size)
-        pos_filt1 = TrialFilter("xrange", max_pos - track_end_size, max_pos)
+        pos_filt0 = TrialFilter("x", min_pos, min_pos + track_end_size)
+        pos_filt1 = TrialFilter("x", max_pos - track_end_size, max_pos)
     if var_type.value == VariableToBin.X.value:
         min_pos = np.nanmin(T.PosCalcs.xy[0].data)
         max_pos = np.nanmax(T.PosCalcs.xy[0].data)
-        pos_filt0 = TrialFilter("xrange", min_pos, min_pos + track_end_size)
-        pos_filt1 = TrialFilter("xrange", max_pos - track_end_size, max_pos)
+        pos_filt0 = TrialFilter("x", min_pos, min_pos + track_end_size)
+        pos_filt1 = TrialFilter("x", max_pos - track_end_size, max_pos)
     if run_direction:
         # broaden the directional filters to 180 degrees
         # as runs are getting broken up

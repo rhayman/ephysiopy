@@ -86,8 +86,8 @@ def test_calcSpeed(basic_PosCalcs, basic_xy):
 #         "dir3": "s",
 #         "speed": [1, 10],
 #         "time": [0, 3],
-#         "xrange": [x_min + 10, x_max - 10],
-#         "yrange": [y_min + 10, y_max - 10],
+#         "x": [x_min + 10, x_max - 10],
+#         "x": [y_min + 10, y_max - 10],
 #     }
 #     this_filt = {}
 #     for k in pos_filter.keys():
@@ -154,7 +154,8 @@ def test_calc_power_spectrum(basic_EEGCalcs):
 
 
 def test_ifft_filter(basic_EEGCalcs):
-    val = basic_EEGCalcs.ifftFilter(basic_EEGCalcs.sig, [50, 60], basic_EEGCalcs.fs)
+    val = basic_EEGCalcs.ifftFilter(
+        basic_EEGCalcs.sig, [50, 60], basic_EEGCalcs.fs)
     assert isinstance(val, np.ndarray)
 
 

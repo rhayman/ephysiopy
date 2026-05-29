@@ -4,7 +4,7 @@ Comprehensive pytest test suite for the RateMap class
 
 Relies on fixtures defined in conftest.py:
   - basic_xy        : (x, y) random-walk tuple
-  - basic_PosCalcs  : PosCalcsGeneric instance (xyTS set, postprocesspos NOT yet called)
+  - basic_PosCalcs  : PosCalcsGeneric instance (time set, postprocesspos NOT yet called)
   - basic_BinnedData: BinnedData(XY, RATE, [100x100 array], [x_edges, y_edges])
 """
 

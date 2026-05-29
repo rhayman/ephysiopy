@@ -107,5 +107,5 @@ def basic_PosCalcs(basic_xy):
     y = basic_xy[1]
     ppm = 300  # pixels per metre value
     P = PosCalcsGeneric(x, y, ppm)
-    P.xyTS = np.linspace(0, len(x)/50, len(x))
+    P.time = np.linspace(0, len(x) / 50, len(x))
     return P

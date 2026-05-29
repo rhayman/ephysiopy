@@ -1,6 +1,12 @@
+# pyright: reportOverlappingOverload=false
+# pyright:  reportInconsistentOverload=false
+# pyright:  reportNoOverloadImplementation=false
+# pyright:  reportOverlappingOverload=false
+
 import os
 import warnings
 import numpy as np
+import pandas as pd
 from collections import OrderedDict
 from pathlib import Path
 from phylib.utils import Bunch
@@ -84,37 +90,60 @@ class KiloSortSession(object):
         """
         import os
 
-        import pandas as pd
+        # read in params.py and get the sample rate from there
+        params_path = self.src_dir / Path("params.py")
+        if params_path.exists():
+            with open(params_path, "r") as f:
+                for line in f:
+                    if line.startswith("sample_rate"):
+                        self.sample_rate = float(line.split("=")[1].strip())
+                    elif line.startswith("n_channels_dat"):
+                        self.n_channels_dat = int(line.split("=")[1].strip())
+                    elif line.startswith("dtype"):
+                        self.dtype = line.split(
+                            "=")[1].strip().strip('"').strip("'")
 
-        dtype = {"names": ("cluster_id", "group"), "formats": ("i4", "<U10")}
+        dtype = [("cluster_id", "i4"), ("group", "U20")]
         # One of these (cluster_groups.csv or cluster_group.tsv) is from
         # kilosort and the other from kilosort2
         # and is updated by the user when doing cluster assignment in phy
         # See comments above this class definition for a bit more info
-        if fileExists(self.src_dir, "cluster_groups.csv"):
-            self.cluster_id, self.group = np.loadtxt(
-                os.path.join(self.src_dir, "cluster_groups.csv"),
+
+        def __load_KS_tsv__(s):
+            self.cluster_id, self.group = np.genfromtxt(
+                self.src_dir / Path(s),
                 unpack=True,
-                skiprows=1,
+                skip_header=1,
+                delimiter="\t",
                 dtype=dtype,
-            )
-        if fileExists(self.src_dir, "cluster_group.tsv"):
-            self.cluster_id, self.group = np.loadtxt(
-                os.path.join(self.src_dir, "cluster_group.tsv"),
-                unpack=True,
-                skiprows=1,
-                dtype=dtype,
+                encoding="utf-8",
             )
 
+        if fileExists(self.src_dir, "cluster_groups.csv"):
+            __load_KS_tsv__("cluster_groups.tsv")
+
+        elif fileExists(self.src_dir, "cluster_group.tsv"):
+            __load_KS_tsv__("cluster_group.tsv")
+
+        else:
+            warnings.warn(
+                f"\nNo cluster_groups.csv or cluster_group.tsv file found.\n\
+                Falling back to KiloSort labels\nCheck directory: {
+                    self.src_dir
+                } for cluster_groups.csv or cluster_group.tsv files."
+            )
+            # 'Raw' labels from a kilosort session
+            if fileExists(self.src_dir, "cluster_KSLabel.tsv"):
+                __load_KS_tsv__("cluster_KSLabel.tsv")
+            else:
+                warnings.warn(
+                    "No cluster_KSLabel.tsv file was found.\
+                    Run KiloSort and make sure this file is saved."
+                )
         """
         Output some information to the user if self.cluster_id is still None
         it implies that data has not been sorted / curated
         """
-        # if self.cluster_id is None:
-        #     print(f"Searching {os.path.join(self.src_dir)} and...")
-        #     warnings.warn("No cluster_groups.tsv or cluster_group.csv file
-        # was found.\
-        #         Have you manually curated the data (e.g with phy?")
 
         # HWPD 20200527
         # load cluster_info file and add X co-ordinate to it
@@ -122,70 +151,44 @@ class KiloSortSession(object):
             self.cluster_info = pd.read_csv(
                 os.path.join(self.src_dir, "cluster_info.tsv"), sep="\t"
             )
-            if fileExists(self.src_dir, "channel_positions.npy") and fileExists(
-                self.src_dir, "channel_map.npy"
-            ):
-                chXZ = np.load(os.path.join(
-                    self.src_dir, "channel_positions.npy"))
-                chMap = np.load(os.path.join(self.src_dir, "channel_map.npy"))
-                chID = np.asarray(
-                    [np.argmax(chMap == x)
-                     for x in self.cluster_info.ch.values]
-                )
-                self.cluster_info["chanX"] = chXZ[chID, 0]
-                self.cluster_info["chanY"] = chXZ[chID, 1]
 
-        dtype = {"names": ("cluster_id", "KSLabel"), "formats": ("i4", "<U10")}
-        # 'Raw' labels from a kilosort session
-        if fileExists(self.src_dir, "cluster_KSLabel.tsv"):
-            self.ks_cluster_id, self.ks_group = np.loadtxt(
-                os.path.join(self.src_dir, "cluster_KSLabel.tsv"),
-                unpack=True,
-                skiprows=1,
-                dtype=dtype,
-            )
         if fileExists(self.src_dir, "cluster_ContamPct.tsv"):
-            _, self.contamPct = np.loadtxt(
-                os.path.join(self.src_dir, "cluster_ContamPct.tsv"),
-                unpack=True,
-                skiprows=1,
-                dtype=dtype,
-            )
-        if fileExists(self.src_dir, "spike_clusters.npy"):
-            self.spike_clusters = np.ma.MaskedArray(
-                np.squeeze(np.load(os.path.join(
-                    self.src_dir, "spike_clusters.npy")))
-            )
-        if fileExists(self.src_dir, "amplitudes.npy"):
-            self.amplitudes = np.ma.MaskedArray(
-                np.squeeze(np.load(os.path.join(
-                    self.src_dir, "amplitudes.npy")))
-            )
-        if fileExists(self.src_dir, "spike_times.npy"):
-            self.spike_times = np.ma.MaskedArray(
-                np.squeeze(np.load(os.path.join(
-                    self.src_dir, "spike_times.npy")))
-            )
-        if fileExists(self.src_dir, "templates.npy"):
-            self.templates = np.load(
-                os.path.join(self.src_dir, "templates.npy"))
-        if fileExists(self.src_dir, "templates_ind.npy"):
-            self.templates_ind = np.load(
-                os.path.join(self.src_dir, "templates_ind.npy")
+            self.contamPct = pd.read_csv(
+                os.path.join(self.src_dir, "cluster_ContamPct.tsv"), sep="\t"
             )
 
-        if fileExists(self.src_dir, "spike_templates.npy"):
-            self.spike_templates = np.load(
-                os.path.join(self.src_dir, "spike_templates.npy")
-            )
+        files_to_load = [
+            "spike_clusters.npy",
+            "amplitudes.npy",
+            "spike_times.npy",
+            "templates.npy",
+            "templates_ind.npy",
+            "spike_templates.npy",
+            "channel_positions.npy",
+        ]
 
-            return True
-        warnings.warn(
-            "No spike times or clusters were found \
-            (spike_times.npy or spike_clusters.npy).\
-                You should run KiloSort"
-        )
-        return False
+        def __get_KS_npy__(s):
+            a = np.ma.MaskedArray(np.load(self.src_dir / Path(s)))
+            return np.squeeze(a)
+
+        [
+            setattr(
+                self,
+                s.split(".")[0],
+                __get_KS_npy__(s) if fileExists(self.src_dir, s) else None,
+            )
+            for s in files_to_load
+        ]
+        # iterate over self.cluster_id and self.group and make sure
+        # self.cluster_id has spikes
+        # not sure why but some are of 0 length when loading
+        # the KSLabel based stuff...
+        has_spikes = [len(self.get_cluster_spikes(c))
+                      > 0 for c in self.cluster_id]
+        self.cluster_id = self.cluster_id[has_spikes]
+        self.group = self.group[has_spikes]
+
+        return True
 
     def removeNoiseClusters(self):
         """
@@ -196,16 +199,6 @@ class KiloSortSession(object):
             for id_group in zip(self.cluster_id, self.group):
                 if "noise" not in id_group[1] and "mua" not in id_group[1]:
                     self.good_clusters.append(id_group[0])
-
-    def removeKSNoiseClusters(self):
-        """
-        Removes "noise" and "mua" clusters from the kilosort labelled stuff
-        """
-        for cluster_id, kslabel in zip(self.ks_cluster_id, self.ks_group):
-            if "good" in kslabel:
-                self.good_clusters.append(cluster_id)
-            if "mua" in kslabel:
-                self.mua_clusters.append(cluster_id)
 
     def get_cluster_spike_times(self, cluster: int) -> np.ndarray:
         """
@@ -221,7 +214,7 @@ class KiloSortSession(object):
         np.ndarray
             The spike times for the specified cluster.
         """
-        if cluster in self.ks_cluster_id:
+        if cluster in self.cluster_id:
             return self.spike_times[self.spk_clusters == cluster]
 
     def get_cluster_channels(self, cluster: int) -> np.ndarray:
@@ -301,40 +294,42 @@ class KiloSortSession(object):
             return np.array([], dtype=int)
         return np.nonzero(np.isin(clusters, cluster_ids))[0]
 
-    def apply_mask(self, mask, **kwargs):
+    def apply_mask(self, mask: np.ma.MaskedArray | bool, **kwargs):
         """
         Apply a mask to the data.
 
         Parameters
         ----------
-        mask : tuple
-            A tuple (start, end) in seconds specifying the mask range.
-
-        Notes
-        -----
-        The times inside the bounds are masked, i.e., the mask is set to True.
-        The mask can be a list of tuples, in which case the mask is applied
-        for each tuple in the list. The mask can be an empty tuple, in which
-        case the mask is removed.
+        mask :bool or array of mask values
 
         """
-        # get spike and pos times into position sample units
-        xy_ts = kwargs.get("xy_ts", None)
-        sample_rate = kwargs.get("sample_rate", 50)
-        spike_pos_samples = np.ma.MaskedArray(
-            self.spike_times / 30000 * sample_rate, dtype=int
-        )
-        pos_times_in_samples = np.ma.MaskedArray(
-            xy_ts * sample_rate, dtype=int)
-        mask = np.isin(spike_pos_samples, pos_times_in_samples)
+        # this is slightly annoying as we need to bin up spikes in time
+        # so that the length of that vector is the same as the position mask
+        # then select the spikes that fall within the position mask and mask those
+        # the xy times might not be equally sampled (indeed likely arent)
+        # mask might be a single bool (False) to remove the masking
+        # or an array of mask values to apply to the spike times and clusters
+        if isinstance(mask, np.ma.MaskedArray):
+            xy_ts = kwargs.get("xy_ts", None)  # in seconds to 2 decimal places
+            # extract the masked times
+            xy_ts = xy_ts.data[~xy_ts.mask]
+            sample_rate = kwargs.get("sample_rate", None)
+            spike_times = np.round(
+                self.spike_times / self.sample_rate, 2
+            )  # in seconds to 2 decimal places
+            indices = np.digitize(spike_times, xy_ts)
+            indices_seconds = np.round(indices / sample_rate, 2)
+
+            mask = np.ma.isin(indices_seconds, xy_ts, assume_unique=True)
+
         if isinstance(self.spike_times, np.ma.MaskedArray):
             self.spike_times.mask = mask
         else:
             self.spike_times = np.ma.MaskedArray(self.spike_times, mask)
-        if isinstance(self.spk_clusters, np.ma.MaskedArray):
-            self.spk_clusters.mask = mask
+        if isinstance(self.spike_clusters, np.ma.MaskedArray):
+            self.spike_clusters.mask = mask
         else:
-            self.spk_clusters = np.ma.MaskedArray(self.spk_clusters, mask)
+            self.spike_clusters = np.ma.MaskedArray(self.spike_clusters, mask)
         if isinstance(self.amplitudes, np.ma.MaskedArray):
             self.amplitudes.mask = mask
         else:

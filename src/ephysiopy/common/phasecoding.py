@@ -720,6 +720,7 @@ class LFPOscillations(object):
                 h,
                 cmap=matplotlib.colormaps["bone_r"],
                 norm=matplotlib.colors.LogNorm(),
+                alpha=0.7,
             )
             plt.colorbar(pcm, ax=ax)
             ax.errorbar(
@@ -852,8 +853,8 @@ class LFPOscillations(object):
         phase_idx[bad_idx] = len(phase) - 1
         # get indices into the position data
         pos_idx = np.array(cluster_times * pos_data.sample_rate, dtype=int)
-        bad_idx = np.nonzero(pos_idx >= len(pos_data.xyTS))[0]
-        pos_idx[bad_idx] = len(pos_data.xyTS) - 1
+        bad_idx = np.nonzero(pos_idx >= len(pos_data.time))[0]
+        pos_idx[bad_idx] = len(pos_data.time) - 1
         # add PI to phases to remove negativity
         # cluster_phases = phase[phase_idx]
         # TODO: create the colour map for phase and plot

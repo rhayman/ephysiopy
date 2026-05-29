@@ -30,7 +30,7 @@ P = phasePrecession2D(
     T.EEGCalcs.fs,
     T.PosCalcs.orig_xy,
     T.get_spike_times(5, 3),
-    T.PosCalcs.xyTS,
+    T.PosCalcs.time,
     pp_config,
 )
 binned_data = P.RateMap.get_map(P.spk_weights)

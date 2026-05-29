@@ -413,7 +413,7 @@ class TrialFilter:
         time: seconds
         dir: degrees
         speed: cm/s
-        xrange/ yrange: cm
+        x/ x: cm
 
     """
 
@@ -436,22 +436,22 @@ class TrialFilter:
             "time",
             "dir",
             "speed",
-            "xrange",
-            "yrange",
+            "x",
+            "x",
             "phi",
-        ], "name must be one of 'time', 'dir', 'speed', 'xrange', 'yrange', 'phi'"
+        ], "name must be one of 'time', 'dir', 'speed', 'x', 'x', 'phi'"
         self.name = name
         self.start = start
         self.end = end
 
 
-def filter_data(data: np.ndarray, f: TrialFilter) -> np.ndarray:
+def filter_data(data: np.ma.ndarray, f: TrialFilter) -> np.ndarray:
     """
     Filters the input data based on the specified TrialFilter.
 
     Parameters
     ----------
-    data : np.ndarray
+    data : np.ma.ndarray
         The data to filter.
     f : TrialFilter
         The filter to apply.
@@ -488,12 +488,12 @@ def filter_data(data: np.ndarray, f: TrialFilter) -> np.ndarray:
                 raise ValueError("Invalid direction")
 
         if f.start < f.end:
-            return np.logical_and(data >= f.start, data <= f.end)
+            return np.ma.logical_and(data >= f.start, data <= f.end)
         else:
             # Handle the case where the direction wraps around
-            return np.logical_or(data >= f.start, data <= f.end)
+            return np.ma.logical_or(data >= f.start, data <= f.end)
     else:
-        return np.logical_and(data >= f.start, data <= f.end)
+        return np.ma.logical_and(data >= f.start, data <= f.end)
 
 
 def filter_trial_by_time(

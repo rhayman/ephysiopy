@@ -492,8 +492,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
                     3 o'clock, 90 degrees is 12 o'clock, 180 degrees is
                     9 o'clock and 270 degrees
                 'speed' - min and max speed to filter for
-                'xrange' - min and max values to filter x pos values
-                'yrange' - same as xrange but for y pos
+                'x' - min and max values to filter x pos values
+                'x' - same as x but for y pos
                 'time' - the times to keep / remove specified in ms
 
             Values are pairs specifying the range of values to filter for
@@ -507,26 +507,19 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         # Remove any previously applied filter
         mask = False
-        self.__apply_mask_to_subcls__(mask)
         self.mask_array = False
+        self.__apply_mask_to_subcls__(mask)
         self._update_filter(None)
+
+        legal_filters = ["dir", "time", "speed", "x", "y", "phi"]
+        assert all([f.name in legal_filters for f in trial_filter]), (
+            f"Invalid filter name, must be one of {legal_filters}"
+        )
 
         for i_filter in trial_filter:
             self._update_filter(i_filter)
-            if "dir" in i_filter.name:
-                mask = filter_data(self.PosCalcs.dir, i_filter)
-            elif "time" in i_filter.name:
-                mask = filter_data(self.PosCalcs.xyTS, i_filter)
-            elif "speed" in i_filter.name:
-                mask = filter_data(self.PosCalcs.speed, i_filter)
-            elif "xrange" in i_filter.name:
-                mask = filter_data(self.PosCalcs.xy[0, :], i_filter)
-            elif "yrange" in i_filter.name:
-                mask = filter_data(self.PosCalcs.xy[1, :], i_filter)
-            elif "phi" in i_filter.name:
-                mask = filter_data(self.PosCalcs.phi, i_filter)
-            else:
-                raise KeyError("Unrecognised key")
+            data = getattr(self.PosCalcs, i_filter.name)
+            mask = filter_data(data, i_filter)
             self.mask_array = np.logical_or(self.mask_array, mask)
 
         mask = np.expand_dims(np.any(self.mask_array, axis=0), 0)
@@ -534,7 +527,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self.__apply_mask_to_subcls__(mask)
         return mask
 
-    def __apply_mask_to_subcls__(self, mask: np.ndarray):
+    def __apply_mask_to_subcls__(self, mask: np.ndarray | bool):
         """
         Applies a mask to the sub-class specific data
         """
@@ -547,7 +540,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         if self.clusterData:
             self.clusterData.apply_mask(
                 mask,
-                xy_ts=self.PosCalcs.xyTS,
+                xy_ts=self.PosCalcs.time,
                 sample_rate=self.PosCalcs.sample_rate,
             )
 
@@ -623,9 +616,9 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             The indices into the position data at which the spikes
             occurred.
         """
-        pos_times = getattr(self.PosCalcs, "xyTS")
+        pos_times = getattr(self.PosCalcs, "time")
         if cluster is None:
-            spk_times = getattr(self.PosCalcs, "xyTS")
+            spk_times = getattr(self.PosCalcs, "time")
         elif isinstance(cluster, int):
             spk_times = self.get_spike_times(cluster, channel)
         elif isinstance(cluster, list) and len(cluster) == 1:

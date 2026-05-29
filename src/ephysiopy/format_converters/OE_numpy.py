@@ -47,7 +47,8 @@ class OE2Numpy(object):
             The resampled data.
         """
         denom = np.gcd(dst_rate, src_rate)
-        new_data = signal.resample_poly(data, dst_rate / denom, src_rate / denom, axis)
+        new_data = signal.resample_poly(
+            data, dst_rate / denom, src_rate / denom, axis)
         return new_data
 
     @property
@@ -112,8 +113,8 @@ class OE2Numpy(object):
             # (including the spike data)
             # and figuring out what to keep later
             try:  # pos might not be present
-                first_pos_ts = OE_data.xyTS[0]
-                last_pos_ts = OE_data.xyTS[-1]
+                first_pos_ts = OE_data.time[0]
+                last_pos_ts = OE_data.time[-1]
                 self.first_pos_ts = first_pos_ts
                 self.last_pos_ts = last_pos_ts
             except Exception:
@@ -165,7 +166,7 @@ class OE2Numpy(object):
                 )
             )
             new_data = self.resample(
-                self.OE_data.rawData[:, channels[0] : channels[-1]],
+                self.OE_data.rawData[:, channels[0]: channels[-1]],
                 self.settings.fpga_sample_rate,
                 output_freq,
             )

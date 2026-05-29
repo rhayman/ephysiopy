@@ -14,7 +14,7 @@
 #         250.,
 #         T.PosCalcs.xy,
 #         spike_ts,
-#         T.PosCalcs.xyTS,
+#         T.PosCalcs.time,
 #         ppc)
 #     # test setting some properties
 #     pp2d.ts = range(10)
@@ -29,7 +29,7 @@
 #                              250.,
 #                              T.PosCalcs.xy,
 #                              spike_ts,
-#                              T.PosCalcs.xyTS,
+#                              T.PosCalcs.time,
 #                              ppc)
 #     pp2d.performRegression()
 #     # do the regression with different options
@@ -54,7 +54,7 @@
 #                              250.,
 #                              T.PosCalcs.xy,
 #                              spike_ts,
-#                              T.PosCalcs.xyTS,
+#                              T.PosCalcs.time,
 #                              ppc)
 #     laser_events = np.array(
 #         np.ceil(T.ttl_data['on'] /
@@ -74,7 +74,7 @@
 #                              250.,
 #                              T.PosCalcs.xy,
 #                              spike_ts,
-#                              T.PosCalcs.xyTS,
+#                              T.PosCalcs.time,
 #                              ppc)
 #     pp2d._circCircCorrTLinear(
 #         theta=T.PosCalcs.dir[0:10].data,
