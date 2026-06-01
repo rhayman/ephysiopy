@@ -506,12 +506,17 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             An array of bools that is True where the mask is applied
         """
         # Remove any previously applied filter
+        if isinstance(self.mask_array, np.ma.MaskedArray):
+            self.mask_array.mask = False
+        else:
+            self.mask_array = False
+
         mask = False
-        self.mask_array = False
         self.__apply_mask_to_subcls__(mask)
         self._update_filter(None)
 
         legal_filters = ["dir", "time", "speed", "x", "y", "phi"]
+
         assert all([f.name in legal_filters for f in trial_filter]), (
             f"Invalid filter name, must be one of {legal_filters}"
         )
@@ -520,7 +525,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             self._update_filter(i_filter)
             data = getattr(self.PosCalcs, i_filter.name)
             mask = filter_data(data, i_filter)
-            self.mask_array = np.logical_or(self.mask_array, mask)
+            self.mask_array = np.ma.logical_or(self.mask_array, mask)
 
         mask = np.expand_dims(np.any(self.mask_array, axis=0), 0)
         self.mask_array = mask
