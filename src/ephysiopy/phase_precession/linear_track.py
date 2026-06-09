@@ -103,6 +103,9 @@ def run_phase_analysis(
     if kwargs.get("return_pp", False):
         return results, PP
 
+    if kwargs.get("return_all", False):
+        return results, PP, phase_pos, f_props
+
     return results
 
 
@@ -307,3 +310,21 @@ def plot_linear_runs(f_props: list[FieldProps], var: str = "speed", **kwargs):
                 # colors="k",
                 transform=axTrans,
             )
+
+
+def normalise_phase(phase: np.ndarray, intercept: float) -> np.ndarray:
+    """
+    Normalise phase with respect to the centre of the firing field
+    so that cells can be combined for population level analysis
+
+    Notes
+    -----
+    Assume that the centre of the firing field is at position 0
+    """
+    from pycircstat2.utils import rotate_data
+
+    # pos should lie between -1 and +1
+    # phase should lie between -pi and +pi
+    phase_at_0 = intercept
+    phase_df = np.pi - phase_at_0
+    return rotate_data(phase, phase_df)

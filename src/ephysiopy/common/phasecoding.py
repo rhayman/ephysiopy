@@ -210,6 +210,8 @@ class LFPOscillations(object):
 
             ax.set_title("Comodulogram")
 
+            ax.set_aspect(0.25)
+
             return estimator, ax
 
         return estimator

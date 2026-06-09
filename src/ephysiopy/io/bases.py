@@ -508,6 +508,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         # Remove any previously applied filter
         if isinstance(self.mask_array, np.ma.MaskedArray):
             self.mask_array.mask = False
+            self.mask_array.fill(False)
         else:
             self.mask_array = False
 
@@ -550,6 +551,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             )
 
     def initialise(self):
+        if not self.PosCalcs:
+            self.load_pos_data()
         self.RateMap = RateMap(self.PosCalcs)
         self.npos = self.PosCalcs.xy.shape[1]
 

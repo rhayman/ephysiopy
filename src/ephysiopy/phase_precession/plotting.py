@@ -4,7 +4,7 @@ import matplotlib
 import numpy as np
 from ephysiopy.common.utils import flatten_list, BinnedData, repeat_ind
 from ephysiopy.visualise.plotting import _add_colour_wheel
-from ephysiopy.visualise.plotting import colored_line
+from ephysiopy.visualise.utils import colored_line
 from ephysiopy.io.recording import AxonaTrial
 from ephysiopy.common.fieldcalcs import (
     FieldProps,
@@ -52,7 +52,8 @@ def plot_phase_precession(
     # repeat the y-axis values for clarity
     mm = (0, -4 * np.pi, -2 * np.pi, 2 * np.pi, 4 * np.pi)
     for m in mm:
-        ax.plot((-1, 1), (-slope + intercept + m, slope + intercept + m), "r", lw=3)
+        ax.plot((-1, 1), (-slope + intercept + m,
+                slope + intercept + m), "r", lw=3)
         ax.scatter(normalised_position, phase + m, s=6, c="k", **kwargs)
 
     ax.set_xlim(-1, 1)
@@ -64,6 +65,51 @@ def plot_phase_precession(
     ax.set_ylabel("Phase", fontsize=subaxis_title_fontsize)
     ax.set_xlabel("Normalised position", fontsize=subaxis_title_fontsize)
 
+    return ax
+
+
+def imshow_phase_precession(normalised_position, normalised_phase, ax=None, **kwargs):
+    """
+    Plots a heat map type representation of phase precession.
+
+    Parameters
+    ----------
+    normalised_phase : np.ndarray
+        The normalised phase of the LFP signal at each spike time.
+    normalised_position : np.ndarray
+        The normalised position of the animal at each spike time.
+    ax : matplotlib.axes.Axes, optional
+        Axes to plot on. If None, a new figure and axes will be created.
+    **kwargs : dict
+        Additional keyword arguments for plotting.
+
+    """
+    if ax is None:
+        _, ax = plt.subplots()
+
+    n_pos_bins = kwargs.get("pos_bins", 21)
+    n_phase_bins = kwargs.get("phase_bins", 36)
+
+    X, Y = np.meshgrid(
+        np.linspace(-1, 1, n_pos_bins), np.linspace(0, 2 * np.pi, n_phase_bins)
+    )
+
+    hh = np.histogram2d(
+        np.array(normalised_position),
+        np.array(normalised_phase),
+        bins=(n_pos_bins, n_phase_bins),
+        # range=((-1, 1), (0, 2 * np.pi)),
+    )
+
+    # breakpoint()
+    plt.pcolormesh(Y, X, hh[0], shading="nearest")
+    # ax.set_xlim(-1, 1)
+    # xtick_locs = np.linspace(-1, 1, 3)
+    # ax.set_ylim(0, 2 * np.pi)
+    # ax.set_xticks(xtick_locs, list(map(str, xtick_locs)))
+    # ax.set_yticks([0, np.pi, 2 * np.pi], ["0", "π", "2π"])
+    # ax.set_xlabel("Normalised position")
+    # ax.set_ylabel("Normalised phase")
     return ax
 
 
@@ -100,18 +146,21 @@ def plot_runs_and_precession(
         method="clump_runs",
     )
     # filter out the short duration runs
-    fp = filter_runs(fp, ["min_speed", "duration"], [np.greater, np.greater], [0, 0.1])
+    fp = filter_runs(fp, ["min_speed", "duration"], [
+                     np.greater, np.greater], [0, 0.1])
     # filter for distance traversed
 
     plt.figure(constrained_layout=True)
 
-    time = np.arange(0, trial.PosCalcs.duration, 1 / trial.PosCalcs.sample_rate)
+    time = np.arange(0, trial.PosCalcs.duration,
+                     1 / trial.PosCalcs.sample_rate)
     run_labels = np.zeros_like(time)
     for i, f in enumerate(fp):
         for r in f.runs:
             run_labels[r.slice] = i
 
-    [plt.plot(r.xy[0], time[r.slice], color="lightgrey", zorder=0) for r in fp[0].runs]
+    [plt.plot(r.xy[0], time[r.slice], color="lightgrey", zorder=0)
+     for r in fp[0].runs]
 
     plt.show()
 
@@ -134,7 +183,8 @@ def plot_field_and_runs(trial: AxonaTrial, field_props: list[FieldProps]):
     """
 
     fig, ax = plt.subplots(layout="constrained")
-    time = np.arange(0, trial.PosCalcs.duration, 1 / trial.PosCalcs.sample_rate)
+    time = np.arange(0, trial.PosCalcs.duration,
+                     1 / trial.PosCalcs.sample_rate)
 
     ax.set_ylim(0, time[-1])
     ax.set_xlim(0, np.nanmax(trial.PosCalcs.xy[0].data))
@@ -152,7 +202,8 @@ def plot_field_and_runs(trial: AxonaTrial, field_props: list[FieldProps]):
     tail = (0.55, 0.025) if xy[0, -1] - xy[0, 0] < 0 else (0.45, 0.025)
     head = (0.45, 0.025) if xy[0, -1] - xy[0, 0] < 0 else (0.55, 0.025)
 
-    arrow = mpatches.FancyArrowPatch(tail, head, mutation_scale=100, color="black")
+    arrow = mpatches.FancyArrowPatch(
+        tail, head, mutation_scale=100, color="black")
     ax.add_patch(arrow)
 
     _add_colour_wheel(ax, fig, bbox=(0.05, 0.6, 0.1, 0.1))
@@ -165,7 +216,8 @@ def plot_field_and_runs(trial: AxonaTrial, field_props: list[FieldProps]):
         ax.axvspan(be[slice.start], be[slice.stop], alpha=0.3)
         for irun in f.runs:
             # annotate the run with its run number
-            run_time = np.arange(irun.slice.start, irun.slice.stop) / irun.sample_rate
+            run_time = np.arange(
+                irun.slice.start, irun.slice.stop) / irun.sample_rate
             # draw the run as a black line
             ax.plot(irun.xy[0], run_time, color="black", zorder=1)
 
@@ -240,7 +292,8 @@ def plot_phase_v_position(
         runs_phase = flatten_list(field.phase)
         runs_spikes = flatten_list(field.runs_observed_spikes)
         idx = np.nonzero(np.array(runs_spikes))[0]
-        ax.scatter(np.array(runs_pos)[idx], np.array(runs_phase)[idx], **kwargs)
+        ax.scatter(np.array(runs_pos)[idx],
+                   np.array(runs_phase)[idx], **kwargs)
 
         ax.set_xlabel("Position")
         ax.set_ylabel("Phase (radians)")
@@ -464,7 +517,8 @@ def plot_spikes_in_runs_per_field(
         assert len(spikes_in_time) == len(ttls_in_time)
     run_start_stop_idx = np.array([run_starts, run_ends]).T
     run_field_id = field_label[run_start_stop_idx[:, 0]]
-    runs_per_field = np.histogram(run_field_id, bins=range(1, max(run_field_id) + 2))[0]
+    runs_per_field = np.histogram(
+        run_field_id, bins=range(1, max(run_field_id) + 2))[0]
     max_run_len = np.max(run_start_stop_idx[:, 1] - run_start_stop_idx[:, 0])
     all_slices = np.array([slice(r[0], r[1]) for r in run_start_stop_idx])
     # create the figure window first then do the iteration through fields etc

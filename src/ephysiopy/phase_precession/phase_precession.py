@@ -3,6 +3,7 @@ import numpy as np
 from scipy import ndimage
 from scipy.signal import argrelextrema
 from skimage.segmentation import watershed
+from pycircstat2.utils import rotate_data
 from ephysiopy.io.recording import AxonaTrial
 from ephysiopy.common.phasecoding import LFPOscillations
 from ephysiopy.common.phasecoding import get_bad_cycles
@@ -107,6 +108,7 @@ class phasePrecessionND(object):
         if not T.RateMap:
             T.initialise()
 
+        self.regression_results = []
         self.trial = T
         self.cluster = cluster
         self.channel = channel
@@ -219,7 +221,7 @@ class phasePrecessionND(object):
 
         reg_results = self.get_phase_reg_per_field(field_properties)
 
-        self.do_correlation(reg_results, plot=do_plot, ax=ax)
+        return self.do_correlation(reg_results, plot=do_plot, ax=ax)
 
     def get_pos_props(
         self,
@@ -259,19 +261,6 @@ class phasePrecessionND(object):
             posdata = self.trial.PosCalcs.phi
 
         self.binning_var = var_type
-
-        if binned_data is None:
-            if var_type.value == VariableToBin.XY.value:
-                binned_data = self.trial.get_rate_map(
-                    self.cluster, self.channel)
-            elif var_type.value == VariableToBin.X.value:
-                binned_data = self.trial.get_linear_rate_map(
-                    self.cluster, self.channel, var_type=var_type
-                )
-            elif var_type.value == VariableToBin.PHI.value:
-                binned_data = self.trial.get_linear_rate_map(
-                    self.cluster, self.channel, var_type=var_type
-                )
 
         # user might want to override the values for partitioning
         # the field based on mean rate for example so add the
@@ -510,18 +499,23 @@ class phasePrecessionND(object):
         results = []
 
         for reg in regressors:
+            # i_reg is some positional measure
+            # e.g. time in run, distance in run, normed x etc
             i_reg = np.concatenate(
                 flatten_list([phase_regressors[f][reg] for f in field_ids])
             )
             slope, intercept = circRegress(i_reg, phase)
 
+            # normalise the regressor values to be between -1 and 1
             mn_reg = np.mean(i_reg)
             i_reg -= mn_reg
             mxx = np.max(np.abs(i_reg)) + np.spacing(1)
             i_reg /= mxx
 
+            # convert the regressor values into angles by multiplying by the slope
             theta = np.mod(np.abs(slope) * i_reg, 2 * np.pi)
 
+            # do the circular-linear correlation test
             result = circCircCorrTLinear(
                 theta, phase, self.nshuffles, self.alpha, self.hyp, self.conf
             )
@@ -535,6 +529,7 @@ class phasePrecessionND(object):
             if kwargs.get("plot", False):
                 self.plot_regressor(reg, i_reg, phase, result)
 
+        self.regression_results = results
         return results
 
     def plot_regressor(
@@ -586,3 +581,57 @@ class phasePrecessionND(object):
         ax.set_ylabel("Phase", fontsize=subaxis_title_fontsize)
         ax.set_xlabel("Normalised position", fontsize=subaxis_title_fontsize)
         return ax
+
+
+"""
+A result of running the phase precession analysis might be a list
+or dict of phasePrecessionND instances, one per cluster-run_direction.
+For plotting purposes we only need to extract out the phase, position and
+the slope and intercept of the regression.
+This function does that
+"""
+
+
+def get_phase_precession_results(
+    phase_precession_instances: list[phasePrecessionND], **kws
+):
+    results = []
+    for instance in phase_precession_instances:
+        for regressor in instance.regressors:
+            result = instance.regression_results
+            for r in result:
+                if r.name == regressor:
+                    results.append(
+                        {
+                            "regressor": regressor,
+                            "phase": r.phase,
+                            "position": r.regressor,
+                            "slope": r.stats.slope,
+                            "intercept": r.stats.intercept,
+                            "p_shuffled": r.stats.p_shuffled,
+                        }
+                    )
+    return results
+
+
+def normalise_phase(phase, intercept):
+    """
+    Normalises the phase values by setting the phase at position
+    0 to be 180 (pi) and then adjusting the rest of the phase values accordingly
+
+    Parameters
+    ----------
+    phase : np.ndarray
+        The phase values to normalise
+    pos : np.ndarray
+        The position values corresponding to the phase values
+    intercept : float
+        The intercept of the regression line, used to calculate the phase at
+        position 0
+    """
+    # intercept is the phase at position 0, so calculate the difference between
+    # that and pi and add that to all the phase values
+    phase_at_pos_0 = intercept
+    phase_diff = np.pi - phase_at_pos_0
+    normalised_phase = rotate_data(phase, phase_diff)
+    return normalised_phase

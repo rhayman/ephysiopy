@@ -417,7 +417,7 @@ class PosCalcsGeneric(object):
 
     @x.setter
     def x(self, value) -> None:
-        self._x = np.ma.MaskedArray(value)
+        self._x: np.ma.MaskedArray = value
 
     @property
     def y(self) -> np.ma.MaskedArray:
@@ -425,7 +425,7 @@ class PosCalcsGeneric(object):
 
     @y.setter
     def y(self, value) -> None:
-        self._y = np.ma.MaskedArray(value)
+        self._y: np.ma.MaskedArray = value
 
     @property
     def xy(self) -> np.ma.MaskedArray:
@@ -433,7 +433,7 @@ class PosCalcsGeneric(object):
 
     @xy.setter
     def xy(self, value) -> None:
-        self._xy = np.ma.MaskedArray(value)
+        self._xy: np.ma.MaskedArray = value
 
     @property
     def convert2cm(self) -> bool:
@@ -454,7 +454,7 @@ class PosCalcsGeneric(object):
 
     @time.setter
     def time(self, val) -> None:
-        self._time = np.ma.MaskedArray(val)
+        self._time: np.ma.MaskedArray = val
 
     @property
     def dir(self) -> np.ma.MaskedArray:

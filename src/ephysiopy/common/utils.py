@@ -445,7 +445,7 @@ class TrialFilter:
         self.end = end
 
 
-def filter_data(data: np.ma.ndarray, f: TrialFilter) -> np.ndarray:
+def filter_data(data: np.ma.MaskedArray, f: TrialFilter) -> np.ma.MaskedArray:
     """
     Filters the input data based on the specified TrialFilter.
 
