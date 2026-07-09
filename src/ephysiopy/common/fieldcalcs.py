@@ -508,7 +508,7 @@ def limit_to_one(A, prc=50, min_dist=5):
     Ac[np.isnan(A)] = 0
     # smooth Ac more to remove local irregularities
     n = ny = 5
-    x, y = np.mgrid[-n: n + 1, -ny: ny + 1]
+    x, y = np.mgrid[-n : n + 1, -ny : ny + 1]
     g = np.exp(-(x**2 / float(n) + y**2 / float(ny)))
     g = g / g.sum()
     Ac = signal.convolve(Ac, g, mode="same")
@@ -527,15 +527,14 @@ def limit_to_one(A, prc=50, min_dist=5):
     nFields = np.max(field_labels)
     sub_field_mask = np.zeros((nFields, Ac.shape[0], Ac.shape[1]))
     labelled_sub_field_mask = np.zeros_like(sub_field_mask)
-    sub_field_props = skimage.measure.regionprops(
-        field_labels, intensity_image=Ac)
+    sub_field_props = skimage.measure.regionprops(field_labels, intensity_image=Ac)
     sub_field_centroids = []
     sub_field_size = []
 
     for sub_field in sub_field_props:
         tmp = np.zeros(Ac.shape).astype(bool)
         tmp[sub_field.coords[:, 0], sub_field.coords[:, 1]] = True
-        tmp2 = Ac > sub_field.max_intensity * (prc / float(100))
+        tmp2 = Ac > sub_field.intensity_max * (prc / float(100))
         sub_field_mask[sub_field.label - 1, :, :] = np.logical_and(tmp2, tmp)
         labelled_sub_field_mask[sub_field.label - 1, np.logical_and(tmp2, tmp)] = (
             sub_field.label
@@ -547,8 +546,7 @@ def limit_to_one(A, prc=50, min_dist=5):
     normd_dists = sub_field_centroids - middle
     field_dists_from_middle = np.hypot(normd_dists[:, 0], normd_dists[:, 1])
     central_field_idx = np.argmin(field_dists_from_middle)
-    central_field = np.squeeze(
-        labelled_sub_field_mask[central_field_idx, :, :])
+    central_field = np.squeeze(labelled_sub_field_mask[central_field_idx, :, :])
     # collapse the labelled mask down to an 2d array
     labelled_sub_field_mask = np.sum(labelled_sub_field_mask, 0)
     # clear the border
@@ -642,15 +640,14 @@ def border_score(
         radius = np.max(np.array(np.shape(A))) / 2.0
         dist_mask = skimage.morphology.disk(radius)
         if np.shape(dist_mask) > np.shape(A):
-            dist_mask = dist_mask[1: A_rows + 1, 1: A_cols + 1]
+            dist_mask = dist_mask[1 : A_rows + 1, 1 : A_cols + 1]
         tmp = np.zeros([A_rows + 2, A_cols + 2])
         tmp[1:-1, 1:-1] = dist_mask
         dists = ndi.distance_transform_bf(tmp)
         dists = dists[1:-1, 1:-1]
         borderMask = np.logical_xor(dists <= 0, dists < 2)
         # open up the border mask a little
-        borderMask = skimage.morphology.dilation(
-            borderMask, skimage.morphology.disk(1))
+        borderMask = skimage.morphology.dilation(borderMask, skimage.morphology.disk(1))
     elif "square" in shape:
         borderMask[0:3, :] = 1
         borderMask[-3:, :] = 1
@@ -677,8 +674,7 @@ def border_score(
     labels, nFields = ndi.label(A_thresh)
     # remove small objects
     min_size = int(minArea / binSize) - 1
-    skimage.morphology.remove_small_objects(
-        labels, max_size=min_size, connectivity=2)
+    skimage.morphology.remove_small_objects(labels, max_size=min_size, connectivity=2)
     labels = skimage.segmentation.relabel_sequential(labels)[0]
     nFields = np.nanmax(labels)
     if nFields == 0:
@@ -735,8 +731,7 @@ def border_score(
         Dm = Dm / radius
     elif "square" in shape:
         Dm = Dm / (np.nanmax(np.shape(A)) / 2.0)
-    borderScore = (fractionOfPixelsOnBorder - Dm) / \
-        (fractionOfPixelsOnBorder + Dm)
+    borderScore = (fractionOfPixelsOnBorder - Dm) / (fractionOfPixelsOnBorder + Dm)
     return np.nanmax(borderScore)
 
 
@@ -815,8 +810,7 @@ def plot_field_props(field_props: list[FieldProps]):
     cmap = matplotlib.colormaps["Set1"].resampled(max_field_label)
     [
         [
-            ax.plot(r.xy[0], r.xy[1], color=cmap(
-                f.label - 1), label=f.label - 1)
+            ax.plot(r.xy[0], r.xy[1], color=cmap(f.label - 1), label=f.label - 1)
             for r in f.runs
         ]
         for f in field_props
@@ -831,8 +825,7 @@ def plot_field_props(field_props: list[FieldProps]):
         )
         for f in field_props
     ]
-    [ax.plot(f.xy_at_peak[0], f.xy_at_peak[1], "ko", ms=2)
-     for f in field_props]
+    [ax.plot(f.xy_at_peak[0], f.xy_at_peak[1], "ko", ms=2) for f in field_props]
     norm = matplotlib.colors.Normalize(1, max_field_label)
     tick_locs = np.linspace(1.5, max_field_label - 0.5, max_field_label)
     cbar = fig.colorbar(
@@ -864,8 +857,7 @@ def plot_field_props(field_props: list[FieldProps]):
     ]
     [
         a.add_artist(
-            matplotlib.patches.Circle(
-                (0, 0), 1, fc="none", ec="lightgrey", zorder=3),
+            matplotlib.patches.Circle((0, 0), 1, fc="none", ec="lightgrey", zorder=3),
         )
         for a, _ in zip(ax1, field_props)
     ]
@@ -914,8 +906,7 @@ def plot_field_props(field_props: list[FieldProps]):
         matplotlib.cm.ScalarMappable(cmap=angular_cmap, norm=degs_norm),
         ax=ax2,
     )
-    [ax2.plot(f.xy_at_peak[0], f.xy_at_peak[1], "ko", ms=2)
-     for f in field_props]
+    [ax2.plot(f.xy_at_peak[0], f.xy_at_peak[1], "ko", ms=2) for f in field_props]
     # PLOT 4
     # The smoothed ratemap - maybe make this the first sub plot
     ax3 = subfigs[1, 1].subplots(1, 1)
@@ -925,8 +916,7 @@ def plot_field_props(field_props: list[FieldProps]):
     ax3.pcolormesh(bin_edges[1], bin_edges[0], rmap_to_plot)
     # add the field labels to the ratemap plot
     [
-        ax3.text(f.xy_at_peak[0], f.xy_at_peak[1],
-                 str(f.label), ha="left", va="bottom")
+        ax3.text(f.xy_at_peak[0], f.xy_at_peak[1], str(f.label), ha="left", va="bottom")
         for f in field_props
     ]
 
@@ -1292,8 +1282,7 @@ def grid_field_props(A: BinnedData, maxima="centroid", allProps=True, **kwargs):
 
     # Get some statistics about the labeled regions
     lbl_range = np.arange(0, nLbls)
-    peak_coords = ndi.maximum_position(
-        A.binned_data[0], half_peak_labels, lbl_range)
+    peak_coords = ndi.maximum_position(A.binned_data[0], half_peak_labels, lbl_range)
     peak_coords = np.array(peak_coords)
     # Now convert the peak_coords to the image centre coordinate system
     x_peaks, y_peaks = peak_coords.T
@@ -1304,8 +1293,7 @@ def grid_field_props(A: BinnedData, maxima="centroid", allProps=True, **kwargs):
     peak_dist_to_centre = np.hypot(peak_coords[:, 0], peak_coords[:, 1])
     closest_peak_idx = np.argsort(peak_dist_to_centre)
     central_peak_label = closest_peak_idx[0]
-    closest_peak_idx = closest_peak_idx[1: np.min(
-        (7, len(closest_peak_idx) - 1))]
+    closest_peak_idx = closest_peak_idx[1 : np.min((7, len(closest_peak_idx) - 1))]
     # closest_peak_idx should now the indices of the labeled 6 peaks
     # surrounding the central peak at the image centre
     scale = np.median(peak_dist_to_centre[closest_peak_idx])
@@ -1343,8 +1331,7 @@ def grid_field_props(A: BinnedData, maxima="centroid", allProps=True, **kwargs):
     else:
         step = 30
     try:
-        gridscore, rotationCorrVals, rotationArr = gridness(
-            sac_middle, step=step)
+        gridscore, rotationCorrVals, rotationArr = gridness(sac_middle, step=step)
     except Exception:
         gridscore, rotationCorrVals, rotationArr = np.nan, np.nan, np.nan
 
@@ -1502,15 +1489,13 @@ def gridness(image, step=30) -> tuple:
             allNans = np.logical_or(origNanIdx, rotatedNanIdx)
             # get the correlation between the original and rotated images
             rotationalCorrVals[angle] = stats.pearsonr(
-                autoCorrMiddleRescaled.ravel()[~allNans], rotatedA.ravel()[
-                    ~allNans]
+                autoCorrMiddleRescaled.ravel()[~allNans], rotatedA.ravel()[~allNans]
             )[0]
             rotationArr[idx] = rotationalCorrVals[angle]
     except Exception:
         return gridscore, rotationalCorrVals, rotationArr
     gridscore = np.min((rotationalCorrVals[60], rotationalCorrVals[120])) - np.max(
-        (rotationalCorrVals[150],
-         rotationalCorrVals[30], rotationalCorrVals[90])
+        (rotationalCorrVals[150], rotationalCorrVals[30], rotationalCorrVals[90])
     )
     return gridscore, rotationalCorrVals, rotationArr
 
@@ -1705,18 +1690,15 @@ def thigmotaxis_score(xy: np.ndarray, shape: str = "circle") -> float:
     if shape == "circle":
         outer_radius = np.nanmax(np.hypot(xy[0], xy[1]))
         inner_radius = outer_radius / np.sqrt(2)
-        inner_mask = np.less(
-            np.hypot(xy[0], xy[1]), inner_radius, out=inner_mask)
+        inner_mask = np.less(np.hypot(xy[0], xy[1]), inner_radius, out=inner_mask)
     elif shape == "square":
         width, height = np.nanmax(xy, -1) - np.nanmin(xy, -1)
         inner_width = width / np.sqrt(2)
         inner_height = height / np.sqrt(2)
         x_gap = (width - inner_width) / 2
         y_gap = (height - inner_height) / 2
-        x_mask = (xy[0] > np.nanmin(xy[0]) + x_gap) & (xy[0]
-                                                       < np.nanmax(xy[0]) - x_gap)
-        y_mask = (xy[1] > np.nanmin(xy[1]) + y_gap) & (xy[1]
-                                                       < np.nanmax(xy[1]) - y_gap)
+        x_mask = (xy[0] > np.nanmin(xy[0]) + x_gap) & (xy[0] < np.nanmax(xy[0]) - x_gap)
+        y_mask = (xy[1] > np.nanmin(xy[1]) + y_gap) & (xy[1] < np.nanmax(xy[1]) - y_gap)
         inner_mask = np.logical_and(x_mask, y_mask, out=inner_mask)
     return (np.count_nonzero(inner_mask) - np.count_nonzero(~inner_mask)) / n_pos
 
