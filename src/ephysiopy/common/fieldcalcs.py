@@ -1385,7 +1385,7 @@ def grid_field_props(A: BinnedData, maxima="centroid", allProps=True, **kwargs):
             from skimage.measure import CircleModel
 
             _params = [im_centre, np.min(ellipse_axes)]
-            circleXY = CircleModel().predict_xy(
+            circleXY = CircleModel(im_centre, np.min(ellipse_axes)).predict_xy(
                 np.linspace(0, 2 * np.pi, 50), params=_params
             )
         except (TypeError, ValueError):  # non-iterable x and y
@@ -1597,7 +1597,7 @@ def __get_circular_regions(A: np.ndarray, **kwargs) -> tuple:
     centre = tuple([d // 2 for d in np.shape(A)])
     max_radius = min(tuple(np.subtract(np.shape(A), centre)))
     t = np.linspace(0, 2 * np.pi, 51)
-    circle = CircleModel()
+    circle = CircleModel(centre, max_radius)
     circle.center = centre
 
     result = []

@@ -316,6 +316,10 @@ class PosCalcsGeneric(object):
         Whether everything is converted into cms or not
     jumpmax : int
         Jumps in position (pixel coords) > than this are bad
+    bad_indices : np.ndarray
+        an array of indices of bad data points which comes from
+        the data on disk (buffer overruns etc) and not from
+        post-processing or applying speed filters etc.
     **kwargs:
         a dict[str, float] called 'tracker_params' is used to limit
         the range of valid xy positions - 'bad' positions are masked out
@@ -361,6 +365,7 @@ class PosCalcsGeneric(object):
         ppm: float,
         convert2cm: bool = True,
         jumpmax: float = 100,
+        bad_indices: np.ndarray | None = None,
         **kwargs,
     ):
         assert np.shape(x) == np.shape(y)
@@ -381,6 +386,8 @@ class PosCalcsGeneric(object):
         else:
             self.tracker_params = {}
         self._sample_rate = 30
+        self.bad_indices = bad_indices if bad_indices is not None else np.array([
+        ])
 
     def __add__(self, other):
         """
@@ -763,11 +770,15 @@ class PosCalcsGeneric(object):
         i.e. [(start1, end1), (start2, end2)]
         everything inside of these times is masked
         """
-        self.x.mask = mask
-        self.y.mask = mask
-        self.time.mask = mask
-        self.dir.mask = mask
-        self.speed.mask = mask
+        attrs = ["x", "y", "time", "dir", "speed"]
+        for attr in attrs:
+            if hasattr(self, attr):
+                att = getattr(self, attr)
+                if att is not None:
+                    att.mask = mask
+                    if hasattr(self, "bad_indices"):
+                        if len(self.bad_indices) > 0:
+                            att[self.bad_indices] = np.ma.masked
 
 
 """

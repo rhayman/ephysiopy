@@ -70,8 +70,7 @@ class LFPOscillations(object):
             sig = self.sig
         band2filter = np.array(band2filter, dtype=float)
 
-        b, a = signal.butter(ford, band2filter /
-                             (self.fs / 2), btype="bandpass")
+        b, a = signal.butter(ford, band2filter / (self.fs / 2), btype="bandpass")
 
         filt_sig = signal.filtfilt(b, a, sig, padtype="odd")
         hilbert_sig = signal.hilbert(filt_sig)
@@ -81,8 +80,7 @@ class LFPOscillations(object):
         inst_freq = self.fs / (2 * np.pi) * np.diff(np.unwrap(phase))
         inst_freq = np.insert(inst_freq, -1, inst_freq[-1])
         amplitude_filtered = signal.filtfilt(b, a, amplitude, padtype="odd")
-        F = FreqPhase(filt_sig, phase, amplitude,
-                      amplitude_filtered, inst_freq)
+        F = FreqPhase(filt_sig, phase, amplitude, amplitude_filtered, inst_freq)
         return F
 
     def plot_cwt(
@@ -113,7 +111,7 @@ class LFPOscillations(object):
         """
         wavelet = "cmor1.0-1.0"
         scales = np.geomspace(2, 140, num=100)
-        _sig = sig[int(start * self.fs): int(stop * self.fs)]
+        _sig = sig[int(start * self.fs) : int(stop * self.fs)]
         cwtmatr, freqs = pywt.cwt(
             _sig, scales, wavelet, sampling_period=1 / self.fs, method="fft"
         )
@@ -172,8 +170,8 @@ class LFPOscillations(object):
         fs = self.fs
         signal = self.sig
 
-        dar = DAR(ordar=20, ordriv=2, criterion="bic")
-        # method = kwargs.get("method", "duprelatour")
+        # method = DAR(ordar=20, ordriv=2, criterion="bic")
+        method = kwargs.get("method", "duprelatour")
 
         low_fq_width = 3.0  # Hz
 
@@ -183,7 +181,7 @@ class LFPOscillations(object):
             fs=fs,
             low_fq_range=low_fq_range,
             low_fq_width=low_fq_width,
-            method=dar,
+            method=method,
             progress_bar=True,
             random_state=0,
             n_surrogates=n_surrogates,
@@ -306,8 +304,7 @@ class LFPOscillations(object):
         # Jun et al define periods of high oscillatory power as those
         # over 2 SDs of the mean power
         threshold = np.std(mean_band_power) * sd_threshold
-        high_power_mask = mean_band_power > np.mean(
-            mean_band_power) + threshold
+        high_power_mask = mean_band_power > np.mean(mean_band_power) + threshold
         # find the runs of True's in the high_power_mask
         # these are epochs with high band power
         vals, run_starts, run_lens = find_runs(high_power_mask.astype(int))
@@ -333,7 +330,7 @@ class LFPOscillations(object):
             # breakpoint()
             slice_in_seconds = sig_slice.start / self.fs, sig_slice.stop / self.fs
             oscillatory_windows[slice_in_seconds] = F.filt_sig[
-                run_max_idx - dt: run_max_idx + dt
+                run_max_idx - dt : run_max_idx + dt
             ]
 
         return oscillatory_windows
@@ -391,7 +388,7 @@ class LFPOscillations(object):
         F = self.getFreqPhase(sig, gammaband, forder)
         highamp = F.amplitude
         inc = 2 * np.pi / nbins
-        a = np.arange(-np.pi + inc / 2, np.pi, inc)
+        a = np.arange(0, 2 * np.pi, inc)
         dt = np.array([-inc / 2, inc / 2])
         pbins = a[:, np.newaxis] + dt[np.newaxis, :]
         amp = np.zeros((nbins))
@@ -400,8 +397,9 @@ class LFPOscillations(object):
             pts = np.nonzero(
                 (lowphase >= pbins[i, 0]) * (lowphase < pbins[i, 1]) * phaselen
             )
-            amp[i] = np.mean(highamp[pts])
-        amp = amp / np.sum(amp)
+            amp[i] = np.ma.mean(highamp[pts])
+
+        amp = np.ma.divide(amp, np.ma.sum(amp))
         from ephysiopy.common.statscalcs import circ_r
 
         mi = circ_r(pbins[:, 1], amp)
@@ -646,8 +644,7 @@ class LFPOscillations(object):
         nbins = kwargs.pop("nbins", 13)
         # extract the mask from the eeg data
         mask = np.ma.getmask(lfp_data.sig)
-        F = self.getFreqPhase(lfp_data.sig, band2filter=[
-                              low_theta, high_theta])
+        F = self.getFreqPhase(lfp_data.sig, band2filter=[low_theta, high_theta])
         inst_freq = F.inst_freq
         # interpolate speed to match the frequency of the LFP data
         eeg_time = np.linspace(
@@ -696,8 +693,7 @@ class LFPOscillations(object):
         # mask the speed and lfp vectors so we can return these based
         # on the low/high bounds of speed & theta for doing correlations/
         # stats later
-        speed_masked = np.ma.masked_outside(
-            interpolated_speed, low_speed, high_speed)
+        speed_masked = np.ma.masked_outside(interpolated_speed, low_speed, high_speed)
         theta_masked = np.ma.masked_outside(inst_freq, low_theta, high_theta)
         # extract both masks, combine and re-apply
         mask = np.logical_or(speed_masked.mask, theta_masked.mask)
@@ -865,8 +861,7 @@ class LFPOscillations(object):
         cmap = matplotlib.colormaps["hsv"]
         fig, ax = plt.subplots()
         ax.plot(pos_data.xy[0], pos_data.xy[1], color="lightgrey", zorder=0)
-        ax.scatter(spike_xy[0], spike_xy[1],
-                   c=spike_phase, cmap=cmap, zorder=1)
+        ax.scatter(spike_xy[0], spike_xy[1], c=spike_phase, cmap=cmap, zorder=1)
         return ax
 
 
@@ -891,8 +886,7 @@ def get_cycle_labels(
     # force phase to lie between 0 and 2PI
     minSpikingPhase = get_phase_of_min_spiking(spike_phase)
     phaseAdj = fixAngle(
-        spike_phase - minSpikingPhase *
-        (np.pi / 180) + min_allowed_min_spike_phase
+        spike_phase - minSpikingPhase * (np.pi / 180) + min_allowed_min_spike_phase
     )
     isNegFreq = np.diff(np.unwrap(phaseAdj)) < 0
     isNegFreq = np.append(isNegFreq, isNegFreq[-1])
@@ -1155,8 +1149,7 @@ def detect_oscillation_episodes(lfp: np.ndarray, fs: float):
     power = np.abs(cwtmatr) ** 2
 
     freq_band = (20, 40)
-    freq_idx = np.where(np.logical_and(
-        freqs >= freq_band[0], freqs <= freq_band[1]))[0]
+    freq_idx = np.where(np.logical_and(freqs >= freq_band[0], freqs <= freq_band[1]))[0]
     mean_power = np.mean(power[freq_idx, :], axis=0)
     power_threshold = np.percentile(mean_power, 97.72)
 
@@ -1194,7 +1187,6 @@ def detect_oscillation_episodes(lfp: np.ndarray, fs: float):
     half_win = int(0.2 * fs)
     final_slices = []
     for pi in peak_indices:
-        final_slices.append(slice(max(0, pi - half_win),
-                            min(len(lfp), pi + half_win)))
+        final_slices.append(slice(max(0, pi - half_win), min(len(lfp), pi + half_win)))
 
     return final_slices, freqs

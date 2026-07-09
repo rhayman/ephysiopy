@@ -169,8 +169,8 @@ class IO(object):
             with redirect_stdout(f):
                 cut_header.print()
             print(cluster_entries, file=f)
-            print(
-                f"Exact_cut_for: {fpath.stem}    spikes: {len(cut_data)}", file=f)
+            print(f"Exact_cut_for: {fpath.stem}    spikes: {
+                  len(cut_data)}", file=f)
             for num in cut_data:
                 f.write(str(num))
                 f.write(" ")
@@ -297,10 +297,19 @@ class Pos(IO):
         if self.nLEDs == 2:
             self.led_pos = np.ma.MaskedArray(posData["pos"][:, 0:4])
             self.led_pix = np.ma.MaskedArray(posData["pos"][:, 4:6])
+        ts = np.array(posData["ts"])
+        # need to check if timestamps are in ascending order;
+        # there might be a buffer overrun or wtf at the end
+        # (usually only by one samples worth of data so an extra 50
+        # samples). check these and create masked arrays based on that
+        idx = np.where(np.diff(ts, prepend=ts[0] - 1) != 1)[0]
+        self.bad_idx = idx
         self.led_pos = np.ma.masked_equal(self.led_pos, 1023)
         self.led_pix = np.ma.masked_equal(self.led_pix, 1023)
-        self.ts = np.array(posData["ts"])
-        self.npos = len(self.led_pos[0])
+        self.led_pix[..., idx] = np.ma.masked
+        self.led_pos[idx, ...] = np.ma.masked
+        self.ts = np.array(posData["ts"][idx])
+        self.npos = len(self.led_pos)
         self.xy = np.ones([2, self.npos]) * np.nan
         self.dir = np.ones([self.npos]) * np.nan
         self.dir_disp = np.ones([self.npos]) * np.nan

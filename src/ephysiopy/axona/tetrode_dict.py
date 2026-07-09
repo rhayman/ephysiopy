@@ -41,6 +41,24 @@ class TetrodeDict(dict):
                 else:
                     warnings.warn(f"Tetrode {key} not available")
 
+    def apply_mask(self, mask):
+        """
+        Applies a mask to all tetrodes in the dictionary
+
+        Parameters
+        ----------
+        mask : np.ndarray
+            A boolean array of shape (n_samples,) where True indicates
+            that the sample should be masked
+
+        Returns
+        -------
+        None
+
+        """
+        for tetrode in self.values():
+            tetrode.apply_mask(mask)
+
     def get_spike_samples(self, tetrode: int, cluster: int) -> np.ndarray:
         """
         Returns spike times in seconds for given cluster from given

@@ -56,7 +56,7 @@ class KiloSortSession(object):
                         self.src_dir = d
         self.cluster_id = None
         self.spk_clusters = None
-        self.spike_times = None
+        self._spike_times = None  #  in samples
         self.amplitudes = None
         self.contamPct = None
         self.good_clusters = []
@@ -68,6 +68,24 @@ class KiloSortSession(object):
         self.templates_ind = None
         self.sparse_templates = None
         self.cluster_info = None
+        self.channels_clusters = None
+        self._recording_start_time = 0.0
+
+    @property
+    def spike_times(self):
+        return self._spike_times + int(self._recording_start_time * self.sample_rate)
+
+    @spike_times.setter
+    def spike_times(self, value):
+        self._spike_times = value
+
+    @property
+    def recording_start_time(self):
+        return self._recording_start_time
+
+    @recording_start_time.setter
+    def recording_start_time(self, value):
+        self._recording_start_time = value
 
     def load(self):
         """
@@ -100,8 +118,7 @@ class KiloSortSession(object):
                     elif line.startswith("n_channels_dat"):
                         self.n_channels_dat = int(line.split("=")[1].strip())
                     elif line.startswith("dtype"):
-                        self.dtype = line.split(
-                            "=")[1].strip().strip('"').strip("'")
+                        self.dtype = line.split("=")[1].strip().strip('"').strip("'")
 
         dtype = [("cluster_id", "i4"), ("group", "U20")]
         # One of these (cluster_groups.csv or cluster_group.tsv) is from
@@ -183,8 +200,7 @@ class KiloSortSession(object):
         # self.cluster_id has spikes
         # not sure why but some are of 0 length when loading
         # the KSLabel based stuff...
-        has_spikes = [len(self.get_cluster_spikes(c))
-                      > 0 for c in self.cluster_id]
+        has_spikes = [len(self.get_cluster_spikes(c)) > 0 for c in self.cluster_id]
         self.cluster_id = self.cluster_id[has_spikes]
         self.group = self.group[has_spikes]
 
@@ -339,15 +355,13 @@ class KiloSortSession(object):
         """
         Load the channel positions
         """
-        self.channel_positions = np.load(
-            self.src_dir / Path("channel_positions.npy"))
+        self.channel_positions = np.load(self.src_dir / Path("channel_positions.npy"))
 
     def _load_spike_clusters(self):
         """
         Load the spike clusters
         """
-        self.spike_clusters = np.load(
-            self.src_dir / Path("spike_clusters.npy"))
+        self.spike_clusters = np.load(self.src_dir / Path("spike_clusters.npy"))
 
     def _load_wmi(self):
         """
@@ -390,8 +404,7 @@ class KiloSortSession(object):
             return
 
         try:
-            cols = np.load(
-                self.src_dir / Path("template_ind.npy"), mmap_mode="r+")
+            cols = np.load(self.src_dir / Path("template_ind.npy"), mmap_mode="r+")
             cols = np.atleast_2d(cols)
 
             assert cols.shape == (
@@ -439,8 +452,7 @@ class KiloSortSession(object):
 
         template_w = self.sparse_templates.data[template_id, ...]
         template = (
-            self._unwhiten(template_w.astype(np.float32)
-                           ) if unwhiten else template_w
+            self._unwhiten(template_w.astype(np.float32)) if unwhiten else template_w
         )
         channel_ids, amplitude, best_channel = self._find_best_channels(
             template, amplitude_threshold
@@ -552,11 +564,9 @@ class KiloSortSession(object):
         best_channel = np.argmax(amplitude)
         max_amp = amplitude[best_channel]
 
-        amplitude_threshold = getattr(
-            self, "amplitude_threshold", amplitude_threshold)
+        amplitude_threshold = getattr(self, "amplitude_threshold", amplitude_threshold)
 
-        peak_channels = np.nonzero(
-            amplitude >= amplitude_threshold * max_amp)[0]
+        peak_channels = np.nonzero(amplitude >= amplitude_threshold * max_amp)[0]
 
         if not np.any(self.channel_positions):
             self._load_channel_positions()
@@ -613,5 +623,7 @@ class KiloSortSession(object):
 
         # sort by channel number
         all_channels = OrderedDict(sorted(all_channels.items()))
+
+        self.channels_clusters = all_channels
 
         return all_channels

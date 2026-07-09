@@ -124,6 +124,7 @@ class RateMap(object):
         self._binedges = None  # has setter and getter - see below
         self._x_lims = None
         self._y_lims = None
+        self._t_lims = None
         self._smooth_sz = smooth_sz
         self._smoothingType = "gaussian"  # 'boxcar' or 'gaussian'
         self.whenToSmooth = "before"  # or 'after'
@@ -219,6 +220,15 @@ class RateMap(object):
     @y_lims.setter
     def y_lims(self, value):
         self._y_lims = value
+
+    # temporal limits
+    @property
+    def t_lims(self):
+        return self._t_lims
+
+    @t_lims.setter
+    def t_lims(self, value):
+        self._t_lims = value
 
     @property
     def pos_weights(self):
@@ -370,6 +380,24 @@ class RateMap(object):
             _y = np.linspace(y_lims[0], y_lims[1], nybins)
             return _y, _x, self.pos_time_splits
 
+        def time_edges():
+            t_lims = self.t_lims
+            if t_lims is None:
+                return np.linspace(
+                    self.pos_times.compressed()[0],
+                    self.pos_times.compressed()[-1],
+                    int(
+                        (
+                            self.pos_times.compressed()[-1]
+                            - self.pos_times.compressed()[0]
+                        )
+                        / binsize
+                    ),
+                )
+            else:
+                ntbins = int(np.ceil(t_lims[1] - t_lims[0]) / binsize)
+                return np.linspace(t_lims[0], t_lims[-1], ntbins)
+
         def speed_dir_edges():
             maxspeed = np.nanmax(self.speed)
             if isinstance(binsize, int):
@@ -400,6 +428,7 @@ class RateMap(object):
             VariableToBin.PHI.value: phi_edges,
             VariableToBin.XY.value: xy_edges,
             VariableToBin.XY_TIME.value: xy_time_edges,
+            VariableToBin.TIME.value: time_edges,
             VariableToBin.SPEED_DIR.value: speed_dir_edges,
             VariableToBin.EGO_BOUNDARY.value: ego_boundary_edges,
         }
@@ -443,6 +472,7 @@ class RateMap(object):
                     ),
                     "extend",
                 ),
+                VariableToBin.TIME.value: (self.pos_times, "extend"),
                 VariableToBin.SPEED_DIR.value: (
                     np.concatenate(
                         (np.atleast_2d(self.dir), np.atleast_2d(self.speed))
@@ -474,7 +504,6 @@ class RateMap(object):
                 raise ValueError("Unrecognized variable to bin.")
 
         sample, boundary, spk_weights, pos_weights = get_sample_and_boundary()
-        # breakpoint()
         # self.pos_weights = np.ma.MaskedArray(pos_weights)
         self.spike_weights = np.ma.MaskedArray(spk_weights)
         self.sample_to_bin = sample

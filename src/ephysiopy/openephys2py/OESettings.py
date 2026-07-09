@@ -110,7 +110,10 @@ class IntConversion:
         """
         if value == "50.0":
             breakpoint()
-        setattr(obj, self._name, int(value))
+        try:
+            setattr(obj, self._name, int(value))
+        except Exception:
+            setattr(obj, self._name, value)
 
 
 class FloatConversion:
@@ -461,9 +464,23 @@ class OEPlugin(ABC):
     libraryVersion: str = field(default_factory=str)
     processorType: IntConversion = IntConversion(default=0)
     nodeId: IntConversion = IntConversion(default=0)
-    channel_count: IntConversion = IntConversion(default=0)
-    stream: Stream = field(default_factory=Stream)
-    sample_rate: FloatConversion = FloatConversion(default=0)
+    stream: list[Stream] = field(default_factory=list)
+
+    def get_stream(self, name: str) -> Stream:
+        """
+        Returns a Stream object from the list of stream in OEPlugin
+        """
+        for _stream in self.stream:
+            if name in _stream.name:
+                return _stream
+
+        return Stream()
+
+    def get_streams(self) -> list[Stream]:
+        """
+        Returns a list of Stream objects from the list of stream in OEPlugin
+        """
+        return self.stream
 
 
 @dataclass
@@ -750,7 +767,8 @@ class TrackMe(OEPlugin):
         """
         print("Loading TrackMe data...")
         mmap = memmapBinaryFile(
-            path2data / Path("continuous.dat"), self.channel_count)
+            path2data / Path("continuous.dat"), self.stream[0].channel_count
+        )
         return np.array(mmap[0:2, :]).T
 
     def load_times(self, path2data: Path) -> np.ndarray:
@@ -784,10 +802,47 @@ class TrackMe(OEPlugin):
         np.ndarray
             A numpy array containing the frame count data.
         """
-        data = memmapBinaryFile(
-            path2data / Path("data_array.npy"), self.channel_count)
+        data = memmapBinaryFile(path2data / Path("data_array.npy"), self.channel_count)
         # framecount data is always last column in continuous.dat file
         return np.array(data[-1, :]).T
+
+    def load_ttl_times(self, path2data: Path) -> np.ndarray:
+        """
+        Load TTL times from a specified path.
+
+        Parameters
+        ----------
+        path2data : Path
+            The path to the directory containing the timestamps
+            and states files.
+
+        Returns
+        -------
+        np.ndarray
+            A numpy array containing the TTL times.
+        """
+        ts = np.load(path2data / Path("timestamps.npy"))
+        states = np.load(path2data / Path("states.npy"))
+        return ts[states > 0]
+
+
+@dataclass
+class Trackerizer(OEPlugin):
+    """
+    Documents the Trackerizer plugin which is a modification
+    of the one you can download in the plugin installer in OE
+    """
+
+    def load(self, path2data: Path) -> np.ndarray:
+        print("Loading TrackMe data...")
+        mmap = memmapBinaryFile(
+            path2data / Path("continuous.dat"), self.stream[0].channel_count
+        )
+        return np.array(mmap[0:2, :]).T
+
+    def load_times(self, path2times: Path) -> np.ndarray:
+        ts = np.load(path2times / Path("timestamps.npy"))
+        return ts
 
     def load_ttl_times(self, path2data: Path) -> np.ndarray:
         """
@@ -839,8 +894,8 @@ class StimControl(OEPlugin):
     Interval: IntConversion = IntConversion(default=0)
     Gate: IntConversion = IntConversion(default=0)
     Output: IntConversion = IntConversion(default=0)
-    Start: IntConversion = IntConversion(default=0)
-    Stop: IntConversion = IntConversion(default=0)
+    Start: FloatConversion = FloatConversion(default=0)
+    Stop: FloatConversion = FloatConversion(default=0)
     Trigger: IntConversion = IntConversion(default=0)
 
 
@@ -969,8 +1024,7 @@ class RippleDetector(OEPlugin):
         dict
             A dictionary containing the TTL timestamps and other related data.
         """
-        timestamps = np.load(
-            path2TTL / Path("timestamps.npy")) - trial_start_time
+        timestamps = np.load(path2TTL / Path("timestamps.npy")) - trial_start_time
         states = np.load(path2TTL / Path("states.npy"))
         out = dict()
         out_ttl = self.Ripple_Out
@@ -1096,6 +1150,17 @@ class AbstractProcessorFactory:
         """
         return TrackMe()
 
+    def create_trackerizer(self):
+        """
+        Create a Trackerizer object.
+
+        Returns
+        -------
+        Trackerizer
+            A new Trackersizer object
+        """
+        return Trackerizer()
+
     def create_record_node(self):
         """
         Create a RecordNode object.
@@ -1197,6 +1262,8 @@ class ProcessorFactory:
             return self.factory.create_spike_sorter()
         elif "TrackMe" in proc_name:
             return self.factory.create_track_me()
+        elif "Trackerizer" in proc_name:
+            return self.factory.create_trackerizer()
         elif "Record Node" in proc_name:
             return self.factory.create_record_node()
         elif "StimControl" in proc_name:
@@ -1250,8 +1317,10 @@ def addValues2Class(node: ET.Element, cls: dataclass):
         cls.channel_info.append(chan)
     if hasattr(cls, "stream") and node.tag == "STREAM":
         if cls.stream is None:
-            cls.stream = Stream()
-        recurseNode(node, addValues2Class, cls.stream)
+            cls.stream = list()
+        stream = Stream()
+        recurseNode(node, addValues2Class, stream)
+        cls.stream.append(stream)
 
 
 class OEStructure(object):
@@ -1346,8 +1415,8 @@ class Settings(object):
 
     Attributes
     ----------
-    filename : str or None
-        The path to the settings.xml file.
+    filename : list of str or None
+        The path(s) to the settings.xml file.
     tree : ElementTree or None
         The parsed XML tree of the settings.xml file.
     processors : OrderedDict
@@ -1362,41 +1431,42 @@ class Settings(object):
     parse()
         Parses the basic information about the processors in the
         open-ephys signal chain as described in the settings.xml file(s).
-    get_processor(key: str)
+    get_plugin (key: str)
         Returns the information about the requested processor or an
         empty OEPlugin instance if it's not available.
     """
 
-    def __init__(self, pname: str | Path):
-        self.filename = None
-
-        for d, _, f in os.walk(pname):
-            for ff in f:
-                if "settings.xml" in ff:
-                    self.filename = os.path.join(d, "settings.xml")
+    def __init__(self, pname: str | Path | None):
+        self.filename = []
         self.tree = None
         self.processors = OrderedDict()
         self.record_nodes = OrderedDict()
-        self.load()
-        self.parse()
+
+        if pname is not None:
+            for d, _, f in os.walk(pname):
+                for ff in f:
+                    if "settings.xml" in ff:
+                        self.filename.append(os.path.join(d, "settings.xml"))
+
+            self.load()
 
     def load(self):
         """
         Creates a handle to the basic XML document.
         """
         if self.filename is not None:
-            self.tree = ET.parse(self.filename).getroot()
+            for f in self.filename:
+                tree = ET.parse(f).getroot()
+                self.parse(tree)
 
-    def parse(self):
+    def parse(self, tree):
         """
         Parses the basic information about the processors in the
         open-ephys signal chain as described in the settings.xml file(s).
         """
-        if self.tree is None:
-            self.load()
         processor_factory = ProcessorFactory()
-        if self.tree is not None:
-            for elem in self.tree.iter("PROCESSOR"):
+        if tree is not None:
+            for elem in tree.iter("PROCESSOR"):
                 i_proc = elem.get("name")
                 if i_proc is not None:
                     if "/" in i_proc:
@@ -1418,9 +1488,9 @@ class Settings(object):
                         else:
                             self.processors[i_proc] = new_processor
 
-    def get_processor(self, key: str):
+    def get_plugin(self, key: str):
         """
-        Returns the information about the requested processor or an
+        Returns the information about the requested plugin or an
         empty OEPlugin instance if it's not available.
 
         Parameters
@@ -1433,11 +1503,43 @@ class Settings(object):
         object
             The requested processor object or an empty OEPlugin instance.
         """
-        processor = [self.processors[k]
-                     for k in self.processors.keys() if key in k]
+        processor = [self.processors[k] for k in self.processors.keys() if key in k]
         if processor:
             if len(processor) == 1:
                 return processor[0]
             else:
                 return processor
         return OEPlugin()
+
+
+"""
+Made this class hashable for set operation niceness
+"""
+
+
+@dataclass
+class SyncMessages(object):
+    pluginName: str = field(default_factory=str)
+    streams: list[str] = field(default_factory=list)
+    sample_rates: list[int] = field(default_factory=list)
+    start_times: list[float] = field(default_factory=list)
+
+    def __eq__(self, other):
+        if not isinstance(other, SyncMessages):
+            return NotImplemented
+        return (
+            self.pluginName == other.pluginName
+            and self.streams == other.streams
+            and self.sample_rates == other.sample_rates
+            and self.start_times == other.start_times
+        )
+
+    def __hash__(self):
+        return hash(
+            (
+                self.pluginName,
+                tuple(self.streams),
+                tuple(self.sample_rates),
+                tuple(self.start_times),
+            )
+        )

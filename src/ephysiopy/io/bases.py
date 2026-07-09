@@ -1,9 +1,11 @@
 from pathlib import Path, PurePath
+from collections import OrderedDict
 import os
 import numpy as np
 from scipy.signal import argrelextrema
 from skimage.segmentation import watershed
 import abc
+from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.common.spikingcalcs import SpikeCalcsGeneric
 from ephysiopy.common.fieldcalcs import (
     skaggs_info,
@@ -14,6 +16,7 @@ from ephysiopy.common.fieldproperties import FieldProps, LFPSegment, fieldprops
 from ephysiopy.common.binning import RateMap
 from ephysiopy.visualise.plotting import FigureMaker
 from ephysiopy.common.utils import (
+    RecordingKind,
     TrialFilter,
     VariableToBin,
     MapType,
@@ -105,6 +108,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self._mask_array = None
         self._concatenated = False  # whether this is a concatenated trial
         self._concatenated_trials = None  # list of trials if a concatenated trial
+        self._rec_kind = kwargs.get("rec_kind", RecordingKind.UNKNOWN)
 
     @classmethod
     def __subclasshook__(cls, subclass):
@@ -115,8 +119,6 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             and callable(subclass.load_lfp)
             and hasattr(subclass, "load_pos")
             and callable(subclass.load_pos)
-            and hasattr(subclass, "load_cluster_data")
-            and callable(subclass.load_cluster_data)
             and hasattr(subclass, "load_settings")
             and callable(subclass.load_settings)
             and hasattr(subclass, "get_spike_times")
@@ -187,14 +189,6 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self._recording_start_time = val
 
     @property
-    def sync_message_file(self):
-        return self._sync_message_file
-
-    @sync_message_file.setter
-    def sync_message_file(self, val):
-        self._sync_message_file = val
-
-    @property
     def ttl_data(self):
         return self._ttl_data
 
@@ -217,6 +211,14 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
     @path2PosData.setter
     def path2PosData(self, val):
         self._path2PosData = val
+
+    @property
+    def rec_kind(self):
+        return self._rec_kind
+
+    @rec_kind.setter
+    def rec_kind(self, value):
+        self._rec_kind = value
 
     @property
     def mask_array(self):
@@ -300,11 +302,6 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             max jump in pixels between positions, more
             than this and the position is interpolated over
         """
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def load_cluster_data(self, *args, **kwargs) -> bool:
-        """Load the cluster data (Kilosort/ Axona cut/ whatever else"""
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -394,8 +391,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         partition = kwargs.pop("partition", "fancy")
         min_theta = kwargs.pop("min_theta", 6)
         max_theta = kwargs.pop("max_theta", 12)
-        min_power_percent_threshold = kwargs.pop(
-            "min_power_percent_threshold", 0)
+        min_power_percent_threshold = kwargs.pop("min_power_percent_threshold", 0)
 
         if not self.RateMap:
             self.initialise()
@@ -422,8 +418,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 
         L = LFPOscillations(self.EEGCalcs.sig, self.EEGCalcs.fs)
 
-        FreqPhase = L.getFreqPhase(
-            self.EEGCalcs.sig, [min_theta, max_theta], 2)
+        FreqPhase = L.getFreqPhase(self.EEGCalcs.sig, [min_theta, max_theta], 2)
 
         phase = FreqPhase.phase
 
@@ -543,6 +538,11 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             self.PosCalcs.apply_mask(mask)
         if self.RateMap:
             self.RateMap.apply_mask(mask)
+        if hasattr(self, "TETRODE"):
+            try:
+                self.TETRODE.apply_mask(mask)
+            except AttributeError:
+                pass
         if self.clusterData:
             self.clusterData.apply_mask(
                 mask,
@@ -556,7 +556,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self.RateMap = RateMap(self.PosCalcs)
         self.npos = self.PosCalcs.xy.shape[1]
 
-    def get_available_clusters_channels(self) -> dict:
+    def get_available_clusters_channels(self) -> OrderedDict | None:
         raise NotImplementedError
 
     def get_binned_spike_times(
@@ -593,8 +593,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             sample_rate = self.EEGCalcs.fs
         binned = np.zeros((n_clusters, n_pos))
         for i, t in enumerate(ts):
-            spk_binned = np.bincount(
-                (t * sample_rate).astype(int), minlength=n_pos)
+            spk_binned = np.bincount((t * sample_rate).astype(int), minlength=n_pos)
             if len(spk_binned) > n_pos:
                 spk_binned = spk_binned[:n_pos]
             binned[i, :] = spk_binned
@@ -633,7 +632,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             spk_times = self.get_spike_times(cluster[0], channel[0])
         elif isinstance(cluster, list) and len(cluster) > 1:
             if isinstance(channel, int):
-                channel = [channel for c in cluster]
+                channel = [channel for channel in cluster]
             spk_times = []
             for clust, chan in zip(cluster, channel):
                 spk_times.append(self.get_spike_times(clust, chan))
@@ -644,14 +643,13 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
                 _idx = np.searchsorted(pos_times, spk, side="right") - 1
                 if np.any(_idx >= self.PosCalcs.npos):
                     _idx = np.delete(
-                        _idx, np.s_[np.argmax(_idx >= self.PosCalcs.npos):]
+                        _idx, np.s_[np.argmax(_idx >= self.PosCalcs.npos) :]
                     )
                 idx.append(_idx)
         else:
             idx = np.searchsorted(pos_times, spk_times, side="right") - 1
             if np.any(idx >= self.PosCalcs.npos):
-                idx = np.delete(
-                    idx, np.s_[np.argmax(idx >= self.PosCalcs.npos):])
+                idx = np.delete(idx, np.s_[np.argmax(idx >= self.PosCalcs.npos) :])
 
         if kwargs.get("do_shuffle", False):
             n_shuffles = kwargs.get("n_shuffles", 100)
@@ -664,8 +662,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             )
             shifted_idx = []
             for shift in time_shifts:
-                shifted_idx.append(shift_vector(
-                    idx, shift, maxlen=self.PosCalcs.npos))
+                shifted_idx.append(shift_vector(idx, shift, maxlen=self.PosCalcs.npos))
             return shifted_idx
 
         if isinstance(idx, list):
@@ -733,8 +730,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         # TODO: _get_spike_pos_idx always returns a list now so this fcn needs
         # amending as will the get_map() one in binning.RateMap as it looks
         # like that expects a np.ndarray
-        spk_times_in_pos_samples = self._get_spike_pos_idx(
-            cluster, channel, **kwargs)
+        spk_times_in_pos_samples = self._get_spike_pos_idx(cluster, channel, **kwargs)
         npos = self._PosCalcs.npos
         # This conditional just picks out the right spk_weights
         # given the inputs
@@ -752,8 +748,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             # TODO: could be multiple clusters/ channels have been passed
             weights = []
             if isinstance(spk_times_in_pos_samples[0], list):
-                spk_times_in_pos_samples = flatten_list(
-                    spk_times_in_pos_samples)
+                spk_times_in_pos_samples = flatten_list(spk_times_in_pos_samples)
             for spk_idx in spk_times_in_pos_samples:
                 w = np.bincount(spk_idx, minlength=npos)
                 if len(w) > npos:
@@ -786,8 +781,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         np.ndarray
             The spike weights for the cluster(s) and channel(s)
         """
-        spk_times_in_pos_samples = self._get_spike_pos_idx(
-            cluster, channel, **kwargs)
+        spk_times_in_pos_samples = self._get_spike_pos_idx(cluster, channel, **kwargs)
         npos = self._PosCalcs.npos
 
         spk_weights = np.bincount(spk_times_in_pos_samples[0], minlength=npos)
@@ -921,6 +915,33 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         binsize = kwargs.get("binsize", (2.5, 3))
         return self._get_map(
             cluster, channel, VariableToBin.SPEED_DIR, **dict(kwargs, binsize=binsize)
+        )
+
+    def get_time_map(self, cluster: int | list, channel: int | list, **kwargs):
+        """
+        Generates a temporally binned up map for a given cluster and channel
+
+        Parameters
+        ----------
+        cluster : int or list
+            The cluster(s).
+        channel : int or list
+            The channel(s).
+        **kwargs : dict, optional
+            Additional keyword arguments passed to the autoCorr2D function.
+
+        Returns
+        -------
+        BinnedData
+            The grid map as a BinnedData object.
+
+        Notes
+        -----
+        Defaults to 1 second bins
+        """
+        binsize = kwargs.get("binsize", 1)
+        return self._get_map(
+            cluster, channel, VariableToBin.TIME, **dict(kwargs, binsize=binsize)
         )
 
     def get_grid_map(
@@ -1097,7 +1118,6 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         )
         result = []
         for rm in r_map:
-            result.append(skaggs_info(
-                rm.binned_data[0], pos_map.binned_data[0]))
+            result.append(skaggs_info(rm.binned_data[0], pos_map.binned_data[0]))
 
         return result

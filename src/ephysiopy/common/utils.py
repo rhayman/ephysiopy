@@ -44,10 +44,12 @@ class MapType(Enum):
 
 
 class RecordingKind(Enum):
-    FPGA = 1
-    NEUROPIXELS = 2
-    ACQUISITIONBOARD = 3
-    NWB = 4
+    AXONA = 1
+    FPGA = 2
+    NEUROPIXELS = 3
+    ACQUISITIONBOARD = 4
+    NWB = 5
+    UNKNOWN = 6
 
 
 Xml2RecordingKind = {
@@ -335,14 +337,12 @@ class BinnedData:
             self.__assert_equal_bin_edges__(other)
         if other is not None:
             result = np.reshape(
-                [corr_maps(a, b)
-                 for a in self.binned_data for b in other.binned_data],
+                [corr_maps(a, b) for a in self.binned_data for b in other.binned_data],
                 shape=(len(self.binned_data), len(other.binned_data)),
             )
         else:
             result = np.reshape(
-                [corr_maps(a, b)
-                 for a in self.binned_data for b in self.binned_data],
+                [corr_maps(a, b) for a in self.binned_data for b in self.binned_data],
                 shape=(len(self.binned_data), len(self.binned_data)),
             )
         if as_matrix:
@@ -575,7 +575,7 @@ class PowerSpectrumParams:
     pad_to_power: int = lambda: int(nextpow2(len(signal)))
 
 
-def memmapBinaryFile(path2file: Path, n_channels=384, **kwargs) -> np.ndarray:
+def memmapBinaryFile(path2file: Path | str, n_channels=384, **kwargs) -> np.ndarray:
     """
     Returns a numpy memmap of the int16 data in the
     file path2file, if present
@@ -602,7 +602,7 @@ def memmapBinaryFile(path2file: Path, n_channels=384, **kwargs) -> np.ndarray:
     else:
         data_type = np.int16
 
-    if os.path.exists(path2file):
+    if Path(path2file).exists():
         # make sure n_channels is int as could be str
         n_channels = int(n_channels)
         status = os.stat(path2file)

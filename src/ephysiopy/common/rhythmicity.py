@@ -89,7 +89,7 @@ def power_spectrum(
     # calculate freqs and crop spectrum to requested range
     freqs = nqLim * np.linspace(0, 1, fftHalfLen)
     freqs = freqs[freqs <= params.max_frequency].T
-    power = power[0: len(freqs)]
+    power = power[0 : len(freqs)]
 
     # smooth spectrum using gaussian kernel
     binsPerHz = (fftHalfLen - 1) / nqLim
@@ -133,8 +133,7 @@ def power_spectrum(
         ax.plot(freqs, power_sm, "k", lw=2)
         ax.axvline(params.theta_range[0], c="b", ls="--")
         ax.axvline(params.theta_range[1], c="b", ls="--")
-        _, stemlines, _ = ax.stem([freqAtBandMaxPower], [
-                                  bandMaxPower], linefmt="r")
+        _, stemlines, _ = ax.stem([freqAtBandMaxPower], [bandMaxPower], linefmt="r")
         # plt.setp(stemlines, 'linewidth', 2)
         ax.fill_between(
             freqs,
@@ -224,13 +223,12 @@ def intrinsic_freq_autoCorr(
         lenThisChunk = len(histChunks[i])
         chunkLens.append(lenThisChunk)
         tmp = np.zeros(lenThisChunk * 2)
-        tmp[lenThisChunk // 2: lenThisChunk // 2 + lenThisChunk] = histChunks[i]
+        tmp[lenThisChunk // 2 : lenThisChunk // 2 + lenThisChunk] = histChunks[i]
         tmp2 = signal.fftconvolve(
             tmp, histChunks[i][::-1], mode="valid"
         )  # the autocorrelation
         autoCorrGrid[:, i] = (
-            tmp2[lenThisChunk // 2: lenThisChunk //
-                 2 + int(acWindowSizeBins) + 1]
+            tmp2[lenThisChunk // 2 : lenThisChunk // 2 + int(acWindowSizeBins) + 1]
             / acBinsPerPos
         )
 
@@ -336,7 +334,7 @@ class Rippler(object):
         self.settings = trial.settings
         LFP = EEGCalcsGeneric(signal, fs)
         self.LFP = LFP
-        detector_settings = self.settings.get_processor("Ripple")
+        detector_settings = self.settings.get_plugin("Ripple")
         ttl_data = detector_settings.load_ttl(
             trial.path2RippleDetector, trial.recording_start_time
         )
@@ -411,8 +409,7 @@ class Rippler(object):
                 if "Start Time" in line:
                     tokens = line.split(":")
                     start_time = int(tokens[-1])
-                    sample_rate = int(tokens[0].split(
-                        "@")[-1].strip().split()[0])
+                    sample_rate = int(tokens[0].split("@")[-1].strip().split()[0])
                     recording_start_time = start_time / float(sample_rate)
         return recording_start_time
 
@@ -522,8 +519,7 @@ class Rippler(object):
         _, ax1 = plt.subplots(figsize=(6.0, 4.0))  # enlarge plot a bit
         ax1.plot(normed_time, eeg_chunk)
 
-        trans = transforms.blended_transform_factory(
-            ax1.transData, ax1.transAxes)
+        trans = transforms.blended_transform_factory(ax1.transData, ax1.transAxes)
         ax1.vlines(
             [0, int(self.post_ttl * 1000)],
             ymin=0,
@@ -580,8 +576,7 @@ class Rippler(object):
         ]
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        axTrans = transforms.blended_transform_factory(
-            ax.transData, ax.transData)
+        axTrans = transforms.blended_transform_factory(ax.transData, ax.transData)
         ax.plot(eeg_chunk_time, eeg_chunk)
         ax.add_patch(
             Rectangle(
@@ -618,10 +613,8 @@ class Rippler(object):
         figsize = kwargs.pop("figsize", (12.0, 4.0))
         fig = plt.figure(figsize=figsize)
         ax, ax1 = fig.subplots(1, 2)
-        fig, im, spec = self.plot_mean_spectrogram(
-            laser_on=False, ax=ax, **kwargs)
-        fig, im1, spec1 = self.plot_mean_spectrogram(
-            laser_on=True, ax=ax1, **kwargs)
+        fig, im, spec = self.plot_mean_spectrogram(laser_on=False, ax=ax, **kwargs)
+        fig, im1, spec1 = self.plot_mean_spectrogram(laser_on=True, ax=ax1, **kwargs)
         self.laser_off_spectrogram = spec
         self.laser_on_spectrogram = spec1
         spec = np.mean(spec, 0)
@@ -638,8 +631,7 @@ class Rippler(object):
         cb_ax = fig.add_axes([0.91, 0.124, 0.01, 0.754])
         fig.colorbar(
             im1,
-            label="Power Spectral Density " +
-            r"$20\,\log_{10}|S_x(t, f)|$ in dB",
+            label="Power Spectral Density " + r"$20\,\log_{10}|S_x(t, f)|$ in dB",
             cax=cb_ax,
         )
         return fig
@@ -666,8 +658,7 @@ class Rippler(object):
 
         if not laser_on:
             ttls = np.array(
-                [self.no_laser_on_ts, self.no_laser_on_ts +
-                    (self.ttl_duration)]
+                [self.no_laser_on_ts, self.no_laser_on_ts + (self.ttl_duration)]
             ).T
         # breakpoint()
         spectrograms = []
@@ -705,8 +696,7 @@ class Rippler(object):
             + rf"$\Delta f = {SFT.delta_f:g}\,$Hz)",
             xlim=(t_lo, t_hi),
         )
-        trans = transforms.blended_transform_factory(
-            ax1.transData, ax1.transAxes)
+        trans = transforms.blended_transform_factory(ax1.transData, ax1.transAxes)
         ax1.vlines(
             [
                 self.pre_ttl,
@@ -781,8 +771,7 @@ class Rippler(object):
         win = signal.windows.gaussian(
             self.gaussian_window, std=self.gaussian_std, sym=True
         )
-        SFT = signal.ShortTimeFFT(
-            win, hop=1, fs=self.fs, mfft=256, scale_to="psd")
+        SFT = signal.ShortTimeFFT(win, hop=1, fs=self.fs, mfft=256, scale_to="psd")
         Sx2 = SFT.spectrogram(eeg_chunk)
         N = len(eeg_chunk)
 
@@ -800,8 +789,7 @@ class Rippler(object):
                 + rf"$\Delta f = {SFT.delta_f:g}\,$Hz)",
                 xlim=(t_lo, t_hi),
             )
-            trans = transforms.blended_transform_factory(
-                ax1.transData, ax1.transAxes)
+            trans = transforms.blended_transform_factory(ax1.transData, ax1.transAxes)
             ax1.vlines(
                 [self.pre_ttl, self.pre_ttl + (start_time)],
                 ymin=0,
@@ -820,8 +808,7 @@ class Rippler(object):
             )
             fig1.colorbar(
                 im1,
-                label="Power Spectral Density " +
-                r"$20\,\log_{10}|S_x(t, f)|$ in dB",
+                label="Power Spectral Density " + r"$20\,\log_{10}|S_x(t, f)|$ in dB",
             )
             plt.show()
         return SFT, N, np.abs(Sx2)
@@ -847,12 +834,9 @@ class Rippler(object):
             freqs = np.linspace(
                 0, int(self.fs / 2), int(self.laser_off_spectrogram.shape[1])
             )
-            idx = np.logical_and(freqs >= self.low_band,
-                                 freqs <= self.high_band)
-            mean_power_on = np.mean(
-                self.laser_on_spectrogram[:, idx, :], axis=(0, 1))
-            mean_power_no = np.mean(
-                self.laser_off_spectrogram[:, idx, :], axis=(0, 1))
+            idx = np.logical_and(freqs >= self.low_band, freqs <= self.high_band)
+            mean_power_on = np.mean(self.laser_on_spectrogram[:, idx, :], axis=(0, 1))
+            mean_power_no = np.mean(self.laser_off_spectrogram[:, idx, :], axis=(0, 1))
             mean_power_on_time = np.linspace(
                 0 - self.pre_ttl, self.post_ttl, len(mean_power_on)
             )
@@ -878,10 +862,8 @@ class Rippler(object):
             ax = plt.gca()
             ax.set_xlabel("Time(s)")
             ax.set_ylabel("Power")
-            ax.set_title(f"Mean power between {
-                         self.low_band} - {self.high_band}Hz")
-            axTrans = transforms.blended_transform_factory(
-                ax.transData, ax.transAxes)
+            ax.set_title(f"Mean power between {self.low_band} - {self.high_band}Hz")
+            axTrans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
             ax.add_patch(
                 Rectangle(
                     (0, 0),
@@ -918,14 +900,6 @@ class Rippler(object):
 
         """
         pass
-        # get some detection parameters from the Ripple Detector plugin
-        # settings = Settings(self.pname_for_trial)
-        # proc = settings.get_processor("Ripple")
-        # rms_window = float(getattr(proc, "rms_samples"))
-        # ripple_detect_channel = int(getattr(proc, "Ripple_Input"))
-        # ripple_std = int(getattr(proc, "ripple_std"))
-        # time_thresh = int(getattr(proc, "time_thresh"))
-        # rms_sig = window_rms(self.filtered_eeg, rms_window)
 
     def filter_timestamps_for_real_ripples(self):
         """

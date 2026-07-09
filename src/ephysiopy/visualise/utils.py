@@ -118,11 +118,10 @@ def addClusterChannelToAxes(func):
                 if kwargs["add_cluster"] is True:
                     if "cluster" in argspec.args:
                         if len(args) == 3:
-                            T, clust, chan = args
+                            _, clust, chan = args
                         elif len(args) > 3:
-                            T, clust, chan, rest = args
-                        fig = ax.figure
-                        fig.suptitle(f"Cluster: {clust} - Channel: {chan}")
+                            _, clust, chan, _ = args
+                        ax.set_title(f"Cluster: {clust} - Channel: {chan}")
         return ax
 
     return wrapper
@@ -199,8 +198,7 @@ def colored_line(x, y, c, ax, **lc_kwargs):
         The generated line collection representing the colored line.
     """
     if "array" in lc_kwargs:
-        warnings.warn(
-            'The provided "array" keyword argument will be overridden')
+        warnings.warn('The provided "array" keyword argument will be overridden')
 
     # Default the capstyle to butt so that the line segments smoothly line up
     default_kwargs = {"capstyle": "butt"}
@@ -221,8 +219,7 @@ def colored_line(x, y, c, ax, **lc_kwargs):
     #   [(x2_start, y2_start), (x2_mid, y2_mid), (x2_end, y2_end)],
     #   ...
     # ]
-    coord_start = np.column_stack(
-        (x_midpts[:-1], y_midpts[:-1]))[:, np.newaxis, :]
+    coord_start = np.column_stack((x_midpts[:-1], y_midpts[:-1]))[:, np.newaxis, :]
     coord_mid = np.column_stack((x, y))[:, np.newaxis, :]
     coord_end = np.column_stack((x_midpts[1:], y_midpts[1:]))[:, np.newaxis, :]
     segments = np.concatenate((coord_start, coord_mid, coord_end), axis=1)

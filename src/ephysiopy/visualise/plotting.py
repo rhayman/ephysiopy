@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 import warnings
 import copy
 import matplotlib.pylab as plt
@@ -14,6 +16,7 @@ import seaborn as sns
 from ephysiopy.axona import tintcolours as tcols
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.utils import (
+    ClusterID,
     clean_kwargs,
     BinnedData,
     VariableToBin,
@@ -21,6 +24,7 @@ from ephysiopy.common.utils import (
     rect,
     flatten_list,
     repeat_ind,
+    memmapBinaryFile,
 )
 from ephysiopy.common import fieldcalcs as fc
 from ephysiopy.common.directionalcalcs import HeadDirectionCalcs
@@ -171,8 +175,7 @@ class FigureMaker(object):
             ax.set_xlabel("Position (cm)")
             ax.set_ylabel("Rate (Hz)")
             ax.set_xlim(
-                rmap.bin_edges[0][:-
-                                  1][~mask][0], rmap.bin_edges[0][:-1][~mask][-1]
+                rmap.bin_edges[0][:-1][~mask][0], rmap.bin_edges[0][:-1][~mask][-1]
             )
             return ax
 
@@ -526,8 +529,7 @@ class FigureMaker(object):
             measures = fc.grid_field_props(sac)
             Am = copy.deepcopy(sac)
             Am.binned_data[0][~measures["dist_to_centre"]] = np.nan
-            Am.binned_data[0] = np.ma.masked_invalid(
-                np.atleast_2d(Am.binned_data[0]))
+            Am.binned_data[0] = np.ma.masked_invalid(np.atleast_2d(Am.binned_data[0]))
             kwargs["cmap"] = jet_cmap
 
             cmap = copy.copy(jet_cmap)
@@ -576,6 +578,45 @@ class FigureMaker(object):
         # return fig
 
     @saveFigure
+    def plot_time_map(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
+        """
+        Plots the spikes binned in time for the specified cluster(s) and
+        channel.
+
+
+        Parameters
+        ----------
+        cluster : int
+            The cluster(s) to get the speed versus rate plot for.
+        channel : int
+            The channel number.
+        **kwargs : dict
+            Additional keyword arguments for the function.
+
+        Returns
+        -------
+        plt.Axes
+            The axes containing the time plot.
+
+        """
+        rmap = self.get_time_map(cluster, channel, **kwargs)
+
+        ax = kwargs.get("ax", None)
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+
+        kwargs = clean_kwargs(plt.plot, kwargs)
+
+        ax_colour = "cornflowerblue"
+        ax.plot(rmap.bin_edges[0][:-1], rmap.binned_data[0], color=ax_colour, **kwargs)
+
+        ax.set_xlabel("Time(s)")
+        ax.set_ylabel("Firing rate(Hz)")
+
+        return ax
+
+    @saveFigure
     def plot_speed_v_rate(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
         Plots the speed versus rate plot for the specified cluster(s) and
@@ -615,8 +656,7 @@ class FigureMaker(object):
             ax = fig.add_subplot(111)
         kwargs = clean_kwargs(plt.plot, kwargs)
         ax_colour = "cornflowerblue"
-        ax.plot(rmap.bin_edges[0][:-1],
-                rmap.binned_data[0], color=ax_colour, **kwargs)
+        ax.plot(rmap.bin_edges[0][:-1], rmap.binned_data[0], color=ax_colour, **kwargs)
         ax.set_xlabel("Speed (cm/s)")
         ax.set_ylabel("Rate (Hz)")
         if add_speed_hist:
@@ -660,8 +700,7 @@ class FigureMaker(object):
             The axes containing the speed versus head direction plot.
         """
         rmap = self.get_speed_v_hd_map(cluster, channel, **kwargs)
-        im = np.ma.MaskedArray(
-            rmap.binned_data[0], np.isnan(rmap.binned_data[0]))
+        im = np.ma.MaskedArray(rmap.binned_data[0], np.isnan(rmap.binned_data[0]))
         # mask low rates...
         # im = np.ma.masked_where(im <= 1, im)
         # ... and where less than 0.5% of data is accounted for
@@ -726,18 +765,16 @@ class FigureMaker(object):
         ax.bar(b[:-1], c, width=binsize, color=col, align="edge", zorder=3)
         ax.set_xlim(xrange)
         ax.set_xticks((xrange[0], 0, xrange[1]))
-        ax.set_xticklabels("")
-        ax.tick_params(
-            axis="both", which="both", left=False, right=False, bottom=False, top=False
-        )
-        ax.set_yticklabels("")
+        # ax.set_xticklabels("")
+        # ax.tick_params(
+        #     axis="both", which="both", left=False, right=False, bottom=False, top=False
+        # )
+        # ax.set_yticklabels("")
         ax.xaxis.set_ticks_position("bottom")
         if strip_axes:
             return stripAxes(ax)
-        axtrans = transforms.blended_transform_factory(
-            ax.transData, ax.transAxes)
-        ax.vlines(0, ymin=0, ymax=1, colors="lightgrey",
-                  transform=axtrans, zorder=1)
+        axtrans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
+        ax.vlines(0, ymin=0, ymax=1, colors="lightgrey", transform=axtrans, zorder=1)
 
         return ax
 
@@ -781,8 +818,9 @@ class FigureMaker(object):
         else:
             xrange = [-0.5, 0.5]
 
+        # breakpoint()
         xcorr_binned = self.get_xcorr(
-            cluster_a, channel_a, cluster_b, channel_b, Trange=xrange, binsize=binsize
+            cluster_a, cluster_b, channel_a, channel_b, Trange=xrange, binsize=binsize
         )
         c = xcorr_binned.binned_data[0]
         b = xcorr_binned.bin_edges[0]
@@ -797,11 +835,151 @@ class FigureMaker(object):
         ax.xaxis.set_ticks_position("bottom")
         if strip_axes:
             return stripAxes(ax)
-        axtrans = transforms.blended_transform_factory(
-            ax.transData, ax.transAxes)
-        ax.vlines(0, ymin=0, ymax=1, colors="lightgrey",
-                  transform=axtrans, zorder=1)
+        axtrans = transforms.blended_transform_factory(ax.transData, ax.transAxes)
+        ax.vlines(0, ymin=0, ymax=1, colors="lightgrey", transform=axtrans, zorder=1)
         return ax
+
+    def plot_xcorrs(self, ids: list[ClusterID], **kwargs) -> plt.Figure:
+        """
+        Given a list of clusters and channels in the form of a list of
+        ClusterID (see ephysiopy.common.utils), this plots all the pair-wise
+        comparisons as rows and columns and the diagonal is the
+        autocorrelogram.
+
+        Parameters
+        ----------
+        ids - list[ClusterID]
+            what to correlate
+        kwargs - dict
+            passed to plot_xcorr (see above)
+
+        Returns
+        -------
+        plt.Axes
+
+        """
+        n_rows = n_cols = len(ids)
+
+        fig = plt.figure(dpi=300)
+
+        upper_triangle = np.triu(np.ones((n_rows, n_cols)), k=0)
+        plot_idx = np.reshape(range(1, (n_rows * n_cols) + 1), (n_rows, n_cols))
+        upper_plots = plot_idx[upper_triangle == 1]
+
+        top_row = plot_idx[0, :]
+        right_col = plot_idx[:, -1]
+
+        i_plot = 1
+        for i_row in range(n_rows):
+            for i_col in range(n_cols):
+                if i_plot in upper_plots:
+                    kws = dict(
+                        {"ax": fig.add_subplot(n_rows, n_cols, i_plot)}, **kwargs
+                    )
+                    self.plot_xcorr(
+                        int(ids[i_row].Cluster),
+                        int(ids[i_row].Channel),
+                        int(ids[i_col].Cluster),
+                        int(ids[i_col].Channel),
+                        **kws,
+                    )
+                if i_plot in top_row:
+                    plt.title(
+                        f"Ch {ids[i_col].Channel} Cl {ids[i_col].Cluster}", fontsize=6
+                    )
+                if i_plot in right_col:
+                    plt.gca().yaxis.set_label_position("right")
+                    plt.ylabel(
+                        f"Ch {ids[i_row].Channel} Cl {ids[i_row].Cluster}",
+                        fontsize=6,
+                        rotation=0,
+                        horizontalalignment="left",
+                    )
+
+                i_plot += 1
+
+        return fig
+
+    @saveFigure
+    def plot_figure_grid(
+        self, clusters: list, channels: list, fn: str = "plot_rate_map", **kws
+    ) -> plt.Figure:
+        """
+        Plots a grid of figures for each cluster and channel combination.
+
+        Parameters
+        ----------
+        clusters : list
+            The clusters to plot.
+        channels : list
+            The channels to plot.
+        fn : str
+            The function to use to get the data for the plots. Defaults to 'get_rate_map
+        **kws : dict
+            Additional keyword arguments for the function.
+
+        Returns
+        -------
+        plt.Figure
+            The figure containing the grid of plots.
+
+        Notes
+        -----
+        Defaults to 3 columns, but can be changed by passing n_cols in kws.
+        """
+        n_cols = kws.get("n_cols", 3)
+        n_rows = int(np.ceil(len(clusters) / n_cols))
+
+        fig = plt.figure(dpi=300)
+
+        for i, (cluster, channel) in enumerate(zip(clusters, channels)):
+            ax = fig.add_subplot(n_rows, n_cols, i + 1)
+            kws["ax"] = ax
+            getattr(self, fn)(cluster=cluster, channel=channel, **kws)
+            ax.set_title(f"Ch {channel} Cl {cluster}", fontsize=6)
+
+        return fig
+
+    @saveFigure
+    @addClusterChannelToAxes
+    def plot_correlation_matrix(
+        self, clusters: list, channels: list, fn: str = "get_rate_map", **kws
+    ) -> plt.Figure:
+        """
+        Plots the correlation matrix for each cluster and channel combination.
+        By default uses the rate map (get_rate_map) but can be changed to any function
+        that returns a BinnedData object with the same shape for each cluster and channel.
+
+        Parameters
+        ----------
+        clusters : list
+            The clusters to get the correlation matrix for.
+        channels : list
+            The channels to get the correlation matrix for.
+        fn : str
+            The function to use to get the data for the correlation matrix. Defaults to 'get_rate_map'.
+
+        Returns
+        -------
+        plt.Figure
+            The figure containing the correlation matrix plot.
+        """
+        cmap = kws.get("cmap", "bone_r")
+        binned_data = getattr(self, fn)(clusters, channels, **kws)
+
+        corr_matrix = binned_data.correlate(as_matrix=True)
+        fig, ax = plt.subplots()
+        cax = ax.matshow(corr_matrix, cmap=cmap)
+        fig.colorbar(cax)
+        ax.set_xticks(range(len(clusters)))
+        ax.set_yticks(range(len(channels)))
+        ax.set_xticklabels(
+            [f"Ch {ch} Cl {c}" for c, ch in zip(clusters, channels)],
+            rotation=45,
+            horizontalalignment="left",
+        )
+        ax.set_yticklabels([f"Ch {ch} Cl {c}" for c, ch in zip(clusters, channels)])
+        return fig
 
     @saveFigure
     @addClusterChannelToAxes
@@ -830,8 +1008,7 @@ class FigureMaker(object):
         dt = kwargs.get("dt", [-0.05, 0.1])
         secs_per_bin = kwargs.get("secs_per_bin", 0.001)
         strip_axes = kwargs.pop("strip_axes", False)
-        histColor = kwargs.pop(
-            "hist_colour", [1 / 255.0, 1 / 255.0, 1 / 255.0])
+        histColor = kwargs.pop("hist_colour", [1 / 255.0, 1 / 255.0, 1 / 255.0])
         x, y = self.get_psth(cluster, channel, **kwargs)
         ax = kwargs.get("ax", None)
         if y:
@@ -840,8 +1017,7 @@ class FigureMaker(object):
                 axScatter = fig.add_subplot(111)
             else:
                 axScatter = ax
-            axScatter.scatter(x, y, marker=".", s=2,
-                              rasterized=False, color=histColor)
+            axScatter.scatter(x, y, marker=".", s=2, rasterized=False, color=histColor)
             divider = make_axes_locatable(axScatter)
             axHistx = divider.append_axes(
                 "top", 1.2, pad=0.2, sharex=axScatter, transform=axScatter.transAxes
@@ -884,8 +1060,7 @@ class FigureMaker(object):
             nStms = y[-1]
             axScatter.set_ylim(0, nStms)
             axScatter.set_yticks((0, nStms))
-            axScatter.set_yticklabels(
-                ("0", str(nStms + 1)), fontsize=ylabel_fs - 1)
+            axScatter.set_yticklabels(("0", str(nStms + 1)), fontsize=ylabel_fs - 1)
             axScatter.set_xlim(dt)
             axScatter.set_xlabel("Time to laser onset(s)", fontsize=xlabel_fs)
             axScatter.set_xticks((dt[0], 0, dt[1]))
@@ -914,11 +1089,9 @@ class FigureMaker(object):
             maxRate = int(np.ceil(np.max(h) / 10.0) * 10)
             axHistx.set_ylim(0, maxRate)
             axHistx.set_yticks((0, maxRate))
-            axHistx.set_yticklabels(
-                ("0", str(maxRate)), fontsize=ylabel_fs - 1)
+            axHistx.set_yticklabels(("0", str(maxRate)), fontsize=ylabel_fs - 1)
             axHistx.set_xlim(dt)
-            axHistx.set_ylabel("Firing rate(Hz)",
-                               labelpad=labelpad, fontsize=ylabel_fs)
+            axHistx.set_ylabel("Firing rate(Hz)", labelpad=labelpad, fontsize=ylabel_fs)
             fig = plt.gcf()
             fig.canvas.manager.set_window_title(f"Cluster {cluster}")
             if strip_axes:
@@ -973,8 +1146,7 @@ class FigureMaker(object):
 
         LFP = LFPOscillations(self.EEGCalcs.sig, self.EEGCalcs.fs)
 
-        _, _, _ = LFP.theta_running(
-            self.PosCalcs, self.EEGCalcs, plot=True, **kwargs)
+        _, _, _ = LFP.theta_running(self.PosCalcs, self.EEGCalcs, plot=True, **kwargs)
 
         ax = plt.gca()
 
@@ -1197,16 +1369,14 @@ class FigureMaker(object):
                     ax.set_xticklabels(["-200μs", "0", "800μs"])
                     ylim = ax.get_ylim()
                     ax.set_yticks([ylim[0], 0, ylim[1]])
-                    ax.set_yticklabels(
-                        [f"{int(ylim[0])}μV", "0", f"{int(ylim[1])}μV"])
+                    ax.set_yticklabels([f"{int(ylim[0])}μV", "0", f"{int(ylim[1])}μV"])
                 else:
                     ax.set_xlim(-dt, dt)
                     ax.set_xticks([-dt, 0, dt])
                     ax.set_xticklabels([f"{int(-dt)}μs", "0", f"{int(dt)}μs"])
                     ylim = ax.get_ylim()
                     ax.set_yticks([ylim[0], 0, ylim[1]])
-                    ax.set_yticklabels(
-                        [f"{int(ylim[0])}μV", "0", f"{int(ylim[1])}μV"])
+                    ax.set_yticklabels([f"{int(ylim[0])}μV", "0", f"{int(ylim[1])}μV"])
             else:
                 plt.setp(ax.get_xticklabels(), visible=False)
                 plt.setp(ax.get_yticklabels(), visible=False)
@@ -1300,14 +1470,15 @@ class FigureMaker(object):
             return stripAxes(ax)
         return ax
 
-    def plotSpectrogramByDepth(
+    def plot_depth_spectrogram(
         self,
+        path_to_lfp: Path,
         nchannels: int = 384,
         nseconds: int = 100,
         maxFreq: int = 125,
         channels: list = [],
         frequencies: list = [],
-        frequencyIncrement: int = 1,
+        frequency_increment: int = 1,
         **kwargs,
     ):
         """
@@ -1329,32 +1500,36 @@ class FigureMaker(object):
         frequencies : list
             The specific frequencies to examine across all channels. The mean from frequency:
             frequency+frequencyIncrement is calculated and plotted on the left hand side of the plot.
-        frequencyIncrement : int
+        frequency_increment : int
             The amount to add to each value of the frequencies list above.
         **kwargs : dict
             Additional keyword arguments for the function. Valid key value pairs:
+                "path_to_channel_map" - Path
+                    location of the channel_map.npy file
+                "lfp_sample_rate" - int
+                    the lfp sample rate
                 "saveas" - save the figure to this location, needs absolute path and filename.
 
         Notes
         -----
         Should also allow kwargs to specify exactly which channels and / or frequency bands to do the line plots for.
         """
-        if not self.path2LFPdata:
-            raise TypeError("Not a probe recording so not plotting")
-        import os
+        if not path_to_lfp.exists():
+            raise TypeError(f"{path_to_lfp} does not exist")
 
-        lfp_file = os.path.join(self.path2LFPdata, "continuous.dat")
-        status = os.stat(lfp_file)
-        nsamples = int(status.st_size / 2 / nchannels)
-        mmap = np.memmap(lfp_file, np.int16, "r", 0,
-                         (nchannels, nsamples), order="F")
-        # Load the channel map NB assumes this is in the AP data
-        # location and that kilosort was run there
-        channel_map = np.squeeze(
-            np.load(os.path.join(self.path2APdata, "channel_map.npy"))
-        )
-        lfp_sample_rate = 2500
-        data = np.array(mmap[channel_map, 0: nseconds * lfp_sample_rate])
+        mmap = memmapBinaryFile(path_to_lfp, nchannels)
+        # see if a path to a channel map has been provided...
+        cmap_path = kwargs.get("path_to_channel_map", None)
+        # ... if so load, if not assume contiguous channels from
+        # 0:n_channels-1
+        if cmap_path:
+            channel_map = np.squeeze(np.load(cmap_path / Path("channel_map.npy")))
+        else:
+            channel_map = np.arange(0, nchannels)
+
+        lfp_sample_rate = kwargs.get("lfp_sample_rate", 2500)
+        data = np.array(mmap[channel_map, 0 : nseconds * lfp_sample_rate])
+
         from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 
         E = EEGCalcsGeneric(data[0, :], lfp_sample_rate)
@@ -1379,10 +1554,8 @@ class FigureMaker(object):
         spectoAx.set_xlabel("Frequency (Hz)")
         spectoAx.set_ylabel("Channel")
         divider = make_axes_locatable(spectoAx)
-        channel_spectoAx = divider.append_axes(
-            "top", 1.2, pad=0.1, sharex=spectoAx)
-        meanfreq_powerAx = divider.append_axes(
-            "right", 1.2, pad=0.1, sharey=spectoAx)
+        channel_spectoAx = divider.append_axes("top", 1.2, pad=0.1, sharex=spectoAx)
+        meanfreq_powerAx = divider.append_axes("right", 1.2, pad=0.1, sharey=spectoAx)
         plt.setp(
             channel_spectoAx.get_xticklabels() + meanfreq_powerAx.get_yticklabels(),
             visible=False,
@@ -1391,7 +1564,7 @@ class FigureMaker(object):
         # plot mean power across some channels
         mn_power = np.mean(spec_data, 0)
         if not channels:
-            channels = range(1, nchannels, 60)
+            channels = list(range(1, nchannels, 60))
         cols = iter(cm.rainbow(np.linspace(0, 1, len(channels))))
         for chan in channels:
             c = next(cols)
@@ -1412,10 +1585,10 @@ class FigureMaker(object):
         )
 
         # plot mean frequencies across all channels
-        if not frequencyIncrement:
+        if not frequency_increment:
             freq_inc = 6
         else:
-            freq_inc = frequencyIncrement
+            freq_inc = frequency_increment
         if not frequencies:
             lower_freqs = np.arange(1, maxFreq - freq_inc, freq_inc)
         else:
@@ -1427,8 +1600,7 @@ class FigureMaker(object):
             freq_mask = np.logical_and(
                 E.freqs[0::50] > freqs[0], E.freqs[0::50] < freqs[1]
             )
-            mean_power = 10 * \
-                np.log10(np.mean(spec_data[:, freq_mask], 1) / mn_power)
+            mean_power = 10 * np.log10(np.mean(spec_data[:, freq_mask], 1) / mn_power)
             c = next(cols)
             meanfreq_powerAx.plot(
                 mean_power,

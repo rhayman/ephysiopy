@@ -277,12 +277,32 @@ wheels = [
 ]
 
 [[package]]
+name = "ephysiopandas"
+version = "0.1.0"
+source = { editable = "../ephysiopandas" }
+dependencies = [
+    { name = "ephysiopy" },
+    { name = "ipython" },
+    { name = "phylib" },
+    { name = "statannotations" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "ephysiopy", editable = "." },
+    { name = "ipython", specifier = ">=9.9.0" },
+    { name = "phylib", specifier = ">=2.7.0" },
+    { name = "statannotations", specifier = ">=0.7.2" },
+]
+
+[[package]]
 name = "ephysiopy"
 version = "2.0.73"
 source = { editable = "." }
 dependencies = [
     { name = "astropy" },
     { name = "boost-histogram" },
+    { name = "ephysiopandas" },
     { name = "h5py" },
     { name = "ipython" },
     { name = "mahotas" },
@@ -314,6 +334,7 @@ dev = [
 requires-dist = [
     { name = "astropy", specifier = ">=7.2.0" },
     { name = "boost-histogram", specifier = ">=1.6.1" },
+    { name = "ephysiopandas", editable = "../ephysiopandas" },
     { name = "h5py", specifier = ">=3.15.1" },
     { name = "ipython", specifier = ">=9.10.0" },
     { name = "mahotas", specifier = ">=1.4.18" },
@@ -1668,6 +1689,22 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/28/e3/55dcc2cfbc3ca9c29519eb6884dd1415ecb53b0e934862d3559ddcb7e20b/stack_data-0.6.3.tar.gz", hash = "sha256:836a778de4fec4dcd1dcd89ed8abff8a221f58308462e1c4aa2a3cf30148f0b9", size = 44707, upload-time = "2023-09-30T13:58:05.479Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f1/7b/ce1eafaf1a76852e2ec9b22edecf1daa58175c090266e9f6c64afcd81d91/stack_data-0.6.3-py3-none-any.whl", hash = "sha256:d5558e0c25a4cb0853cddad3d77da9891a08cb85dd9f9f91b9f8cd66e511e695", size = 24521, upload-time = "2023-09-30T13:58:03.53Z" },
+]
+
+[[package]]
+name = "statannotations"
+version = "0.7.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "matplotlib" },
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "scipy" },
+    { name = "seaborn" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/07/6d/9f851b0ca42eb429f1b044634d63ff07bc4f6bbfb52639ceb7e03a5a46eb/statannotations-0.7.2.tar.gz", hash = "sha256:a93e428682d66c9fca5a399d5bd3fe7c9cef0500f53840c6f5362526b4501e93", size = 46629, upload-time = "2025-03-22T13:27:14.706Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f1/ef/19390fa617d0417dd432d14a10eb5735a5513d7b6aebb357b10900d42af8/statannotations-0.7.2-py3-none-any.whl", hash = "sha256:61cd63c9bcdffe37dad30bb2a33aa6aa03f28df9636eda8deae1548f91be8580", size = 39684, upload-time = "2025-03-22T13:27:13.19Z" },
 ]
 
 [[package]]

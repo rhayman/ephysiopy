@@ -614,7 +614,7 @@ def get_phase_precession_results(
     return results
 
 
-def normalise_phase(phase, intercept):
+def __normalise_phase__(phase, intercept):
     """
     Normalises the phase values by setting the phase at position
     0 to be 180 (pi) and then adjusting the rest of the phase values accordingly
@@ -635,3 +635,26 @@ def normalise_phase(phase, intercept):
     phase_diff = np.pi - phase_at_pos_0
     normalised_phase = rotate_data(phase, phase_diff)
     return normalised_phase
+
+
+# operates on the output of the function above
+def get_normed_phase(results: list[dict]):
+    """
+    Gets the normalised phase values for all the results in the list of dicts
+    returned by get_phase_precession_results
+
+    Parameters
+    ----------
+    results : list of dicts
+        The list of dicts returned by get_phase_precession_results
+
+    Returns
+    -------
+    list of np.ndarray
+        A list of the normalised phase values for each result in the input list
+    """
+    normed_phases = []
+    for r in results:
+        normed_phase = __normalise_phase__(r["phase"], r["intercept"])
+        normed_phases.append(normed_phase)
+    return normed_phases
