@@ -5,7 +5,6 @@ import numpy as np
 from scipy.signal import argrelextrema
 from skimage.segmentation import watershed
 import abc
-from ephysiopy.openephys2py.OESettings import Settings
 from ephysiopy.common.spikingcalcs import SpikeCalcsGeneric
 from ephysiopy.common.fieldcalcs import (
     skaggs_info,
@@ -99,8 +98,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self._RateMap = None
         self._EEGCalcs = None
         self._sync_message_file = None
-        self._clusterData = None  # KiloSortSession
-        self._recording_start_time = None  # float
+        self._clusterData = None
+        self._recording_start_time = 0.0  # float
         self._ttl_data = None  # dict
         self._accelerometer_data = None
         self._path2PosData = None  # Path or str

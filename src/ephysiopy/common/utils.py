@@ -770,11 +770,26 @@ def remap_to_range(x: np.ndarray, new_min=0, new_max=1, axis=0) -> np.ndarray:
     np.ndarray
         The remapped values
     """
-    min = np.nanmin(x, axis)
-    max = np.nanmax(x, axis)
-    if axis == -1:
-        return np.array((x.T - min) / (max - min) * (new_max - new_min) + new_min).T
-    return (x - min) / (max - min) * (new_max - new_min) + new_min
+    array = np.asarray(x)
+
+    # Get min and max along specified axis
+    old_min = np.min(array, axis=axis, keepdims=True)
+    old_max = np.max(array, axis=axis, keepdims=True)
+
+    # Avoid division by zero
+    range_old = old_max - old_min
+    range_old[range_old == 0] = 1
+
+    # Normalize to [0, 1] then scale to [new_min, new_max]
+    normalized = (array - old_min) / range_old
+    scaled = normalized * (new_max - new_min) + new_min
+
+    return scaled
+    # min = np.nanmin(x, axis)
+    # max = np.nanmax(x, axis)
+    # if axis == -1:
+    #     return np.array((x.T - min) / (max - min) * (new_max - new_min) + new_min).T
+    # return (x - min) / (max - min) * (new_max - new_min) + new_min
 
 
 def flatten_list(list_to_flatten: list) -> list:

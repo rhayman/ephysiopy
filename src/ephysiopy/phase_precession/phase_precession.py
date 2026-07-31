@@ -143,8 +143,7 @@ class phasePrecessionND(object):
 
         # Some spiking params...
         spk_times_in_pos_samples = T.get_binned_spike_times(cluster, channel)
-        spk_times_in_pos_samples = np.ravel(
-            spk_times_in_pos_samples).astype(int)
+        spk_times_in_pos_samples = np.ravel(spk_times_in_pos_samples).astype(int)
         spk_weights = np.bincount(
             spk_times_in_pos_samples, minlength=len(T.PosCalcs.time)
         )
@@ -204,8 +203,7 @@ class phasePrecessionND(object):
             binned_data = kwargs.get("binned_data")
         else:
             if self.binning_var.value == VariableToBin.XY.value:
-                binned_data = self.trial.get_rate_map(
-                    self.cluster, self.channel)
+                binned_data = self.trial.get_rate_map(self.cluster, self.channel)
             elif self.binning_var.value == VariableToBin.X.value:
                 binned_data = self.trial.get_linear_rate_map(
                     self.cluster, self.channel, var_type=self.binning_var
@@ -213,8 +211,7 @@ class phasePrecessionND(object):
 
         # split into runs
         # method = kwargs.get("method", "field")
-        field_properties = self.get_pos_props(
-            binned_data, self.binning_var, **kwargs)
+        field_properties = self.get_pos_props(binned_data, self.binning_var, **kwargs)
 
         # get theta cycles, amplitudes, phase etc
         field_properties = self.get_theta_props(field_properties)
@@ -315,8 +312,7 @@ class phasePrecessionND(object):
             [np.greater, np.greater_equal],
             [self.minimum_allowed_run_duration, 2],
         )
-        field_props = filter_for_speed(
-            field_props, self.minimum_allowed_run_speed)
+        field_props = filter_for_speed(field_props, self.minimum_allowed_run_speed)
 
         # Smooth the runs before calculating other metrics
         [
@@ -445,8 +441,7 @@ class phasePrecessionND(object):
         for field in fp:
             results[field.label] = {}
             results[field.label]["phase"] = np.array(
-                flatten_list([run.lfp.mean_spiking_var().ravel()
-                             for run in field.runs])
+                flatten_list([run.lfp.mean_spiking_var().ravel() for run in field.runs])
             )
             for regressor in regressors:
                 match regressor:
@@ -463,8 +458,7 @@ class phasePrecessionND(object):
                     case "pos_exptdRate_cum":
                         vals = field.mean_spiking_var("expected_spikes")
                     case "pos_instFR":
-                        vals = field.mean_spiking_var(
-                            "instantaneous_firing_rate")
+                        vals = field.mean_spiking_var("instantaneous_firing_rate")
 
                 results[field.label][regressor] = vals
         return results
@@ -565,8 +559,7 @@ class phasePrecessionND(object):
         intercept = result.intercept
         mm = (0, -4 * np.pi, -2 * np.pi, 2 * np.pi, 4 * np.pi)
         for m in mm:
-            ax.plot((-1, 1), (-slope + intercept + m,
-                    slope + intercept + m), "r", lw=3)
+            ax.plot((-1, 1), (-slope + intercept + m, slope + intercept + m), "r", lw=3)
             ax.plot(vals, pha + m, "k.")
         ax.set_xlim(-1, 1)
         xtick_locs = np.linspace(-1, 1, 3)
@@ -581,6 +574,61 @@ class phasePrecessionND(object):
         ax.set_ylabel("Phase", fontsize=subaxis_title_fontsize)
         ax.set_xlabel("Normalised position", fontsize=subaxis_title_fontsize)
         return ax
+
+
+"""
+Need to calculate correlations on a load of shuffled data
+This function takes in an instance of RegressionResults and
+shuffles the phase values and recalculates the correlation coefficient
+"""
+
+
+def shuffle_regression(R: RegressionResults, **kws) -> list[RegressionResults]:
+    """
+    Shuffles the phase values and recalculates the correlation coefficient
+
+    Parameters
+    ----------
+    R : RegressionResults
+        The RegressionResults instance to shuffle
+
+    Returns
+    -------
+    list of RegressionResults
+        The shuffled RegressionResults
+    """
+    nshuffles = kws.get("nshuffles", 1000)
+    pshuffles = kws.get("pshuffles", 1000)
+    alpha = kws.get("alpha", 0.05)
+    hyp = kws.get("hyp", 0)
+    conf = kws.get("conf", True)
+
+    shuffled_phases = [np.random.permutation(R.phase) for _ in range(nshuffles)]
+
+    i_reg = R.regressor.copy()
+    mn_reg = np.mean(i_reg)
+    i_reg -= mn_reg
+    mxx = np.max(np.abs(i_reg)) + np.spacing(1)
+    i_reg /= mxx
+    theta = np.mod(np.abs(R.stats.slope) * i_reg, 2 * np.pi)
+
+    results = []
+
+    for shuffled_phase in shuffled_phases:
+        slope, intercept = circRegress(i_reg, shuffled_phase)
+        result = circCircCorrTLinear(
+            theta,
+            shuffled_phase,
+            pshuffles,
+            alpha,
+            hyp,
+            conf,
+        )
+        result.slope = slope
+        result.intercept = intercept
+        results.append(RegressionResults(R.name, shuffled_phase, R.regressor, result))
+
+    return results
 
 
 """

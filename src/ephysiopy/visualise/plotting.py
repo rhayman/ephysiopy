@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 import warnings
 import copy
@@ -1152,6 +1151,52 @@ class FigureMaker(object):
 
         return ax
 
+    def plot_theta_phase_ratemap(self, cluster: int, channel: int, **kws) -> plt.Axes:
+        """
+        Plots the theta phase by x-y position map for the given cluster
+        on the given channel
+
+        """
+
+        from ephysiopy.common.phasecoding import LFPOscillations
+
+        ax = kws.pop("ax", None)
+        if ax is None:
+            fig = plt.figure(figsize=(12, 10))
+            ax = fig.add_subplot(111)
+
+        L = LFPOscillations(self.EEGCalcs.sig, self.EEGCalcs.fs)
+        F = L.getFreqPhase(self.EEGCalcs.sig, [6, 12])
+        phase = F.phase
+
+        cluster_times = self.get_spike_times(cluster, channel)
+        phase_idx = None
+
+        if self.EEGCalcs.time is None:
+            phase_idx = np.array(cluster_times * self.fs, dtype=int)
+        else:
+            phase_idx = np.array(
+                np.searchsorted(self.EEGCalcs.time, cluster_times), dtype=int
+            )
+            bad_idx = np.nonzero(phase_idx >= len(phase))[0]
+            phase_idx[bad_idx] = len(phase) - 1
+
+        x, y = self.PosCalcs.xy[:, self._get_spike_pos_idx(cluster, channel)[0]]
+        phase = phase[phase_idx]
+
+        binned_phase = np.histogram(phase, bins=7)
+
+        binned_indices = np.digitize(phase, binned_phase[1]) - 1
+        phase_discretized = np.take(binned_phase[1], binned_indices)
+
+        cmap = plt.get_cmap("hsv")
+        ax = self.plot_spike_path(None, None, ax=ax)
+        sc = ax.scatter(x, y, c=phase_discretized, cmap=cmap, s=40, alpha=0.5)
+        cbar = plt.colorbar(sc, ax=ax)
+        cbar.set_label("Theta Phase (radians)")
+
+        return ax
+
     @addClusterChannelToAxes
     # @saveFigure
     def plot_clusters_theta_phase(
@@ -1175,14 +1220,13 @@ class FigureMaker(object):
             The axes containing the theta phase plot.
         """
 
-        from ephysiopy.common.phasecoding import LFPOscillations
-
         ax = kwargs.pop("ax", None)
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111, projection="polar")
         if "polar" not in ax.name:
             raise ValueError("Need a polar axis")
+
         L = LFPOscillations(self.EEGCalcs.sig, self.EEGCalcs.fs)
         ts = self.get_spike_times(cluster, channel)
         phase, x, y = L.get_theta_phase(ts, **kwargs)  # phase in radians
@@ -1534,13 +1578,13 @@ class FigureMaker(object):
 
         E = EEGCalcsGeneric(data[0, :], lfp_sample_rate)
         E.calcEEGPowerSpectrum()
-        spec_data = np.zeros(shape=(data.shape[0], len(E.sm_power[0::50])))
+        spec_data = np.zeros(shape=(data.shape[0], len(E.sm_power[1::50])))
         for chan in range(data.shape[0]):
             E = EEGCalcsGeneric(data[chan, :], lfp_sample_rate)
             E.calcEEGPowerSpectrum()
-            spec_data[chan, :] = E.sm_power[0::50]
+            spec_data[chan, :] = E.sm_power[1::50]
 
-        x, y = np.meshgrid(E.freqs[0::50], channel_map)
+        x, y = np.meshgrid(E.freqs[1::50], channel_map)
         import matplotlib.colors as colors
         from matplotlib.pyplot import cm
         from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -1598,7 +1642,7 @@ class FigureMaker(object):
         mn_power = np.mean(spec_data, 1)
         for freqs in zip(lower_freqs, upper_freqs):
             freq_mask = np.logical_and(
-                E.freqs[0::50] > freqs[0], E.freqs[0::50] < freqs[1]
+                E.freqs[1::50] > freqs[0], E.freqs[1::50] < freqs[1]
             )
             mean_power = 10 * np.log10(np.mean(spec_data[:, freq_mask], 1) / mn_power)
             c = next(cols)

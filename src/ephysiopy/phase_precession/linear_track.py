@@ -88,9 +88,7 @@ def run_phase_analysis(
         **kwargs,
     )
 
-    phase_pos, f_props, run_direction, n_fields, PP = fieldprops_phase_precession(
-        PP, **kwargs
-    )
+    phase_pos, f_props, run_direction, _, PP = fieldprops_phase_precession(PP, **kwargs)
     if phase_pos is None:
         return None
 

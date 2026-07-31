@@ -482,25 +482,41 @@ class OpenEphysBase(TrialInterface):
                         os.path.join(pname, "continuous.dat"), n_channels=n_chans
                     )
                     self.lfp_data_id = l_path
-                    return lfp
+
+                    lfp_times = None
+                    if Path(self.path2LFPdata[0] / Path("timestamps.npy")).exists():
+                        lfp_times = np.load(
+                            self.path2LFPdata[0] / Path("timestamps.npy")
+                        )
+
+                    return lfp, lfp_times
 
         lfp_data_id = kwargs.get("stream_name", None)
         channel = kwargs.get("channel", 0)
         target_sample_rate = kwargs.get("target_sample_rate", 250)
 
         lfp = None
+        times = None
 
         if lfp_data_id is None:
             n_chans = self.rec_plugin.get_streams()[0].channel_count
-            lfp = __load_memmap__(self.path2LFPdata[0], n_chans)
+            lfp, times = __load_memmap__(self.path2LFPdata[0], n_chans)
 
         elif lfp_data_id != self.lfp_data_id:
             n_chans = self.rec_plugin.get_stream(lfp_data_id).channel_count
             sample_rate = self.rec_plugin.get_stream(lfp_data_id).sample_rate
-            lfp = __load_memmap__(lfp_data_id, n_chans)
+            lfp, times = __load_memmap__(lfp_data_id, n_chans)
 
         elif lfp_data_id == self.lfp_data_id:
-            return self.EEGCalcs
+            if channel == self.lfp_channel:
+                return self.EEGCalcs
+            else:
+                n_chans = self.rec_plugin.get_stream(lfp_data_id).channel_count
+                sample_rate = self.rec_plugin.get_stream(lfp_data_id).sample_rate
+                lfp, times = __load_memmap__(lfp_data_id, n_chans)
+
+        self.lfp_channel = channel
+
         # set the target sample rate to 250Hz by default to match
         # Axona EEG data
         sample_rate = self.rec_plugin.get_stream(self.lfp_data_id).sample_rate
@@ -512,8 +528,13 @@ class OpenEphysBase(TrialInterface):
             sample_rate / denom,
             0,
         )
+        # resample times to match size of sig
+        if times is not None:
+            factor = np.round(times.shape[0] / sig.shape[0]).astype(int)
+            times = times[::factor]
 
         self.EEGCalcs = EEGCalcsGeneric(sig, target_sample_rate)
+        self.EEGCalcs.time = times
         return self.EEGCalcs
 
     def load_neural_data(self, *args, **kwargs):
@@ -588,7 +609,7 @@ class OpenEphysBase(TrialInterface):
             if stream_name:
                 start_time = self._get_start_time_from_stream_name_(stream_name)
             for ks_path in self.path2KiloSortData:
-                if s_name in str(ks_path):
+                if str(s_name) in str(ks_path):
                     print(f"Loading Kilosort data from: {ks_path}")
                     K = KiloSortSession(ks_path)
                     K.load()
@@ -604,10 +625,10 @@ class OpenEphysBase(TrialInterface):
         # If no stream name is provided, use the first KiloSort data path
         if cluster_data_id is None:
             cluster_data_id = self.path2KiloSortData[0]
-            __load_kilo__(cluster_data_id, **kws)
+            __load_kilo__(str(cluster_data_id), **kws)
 
         if self.cluster_data_id is None:
-            __load_kilo__(cluster_data_id, **kws)
+            __load_kilo__(str(cluster_data_id), **kws)
 
         if cluster_data_id == self.cluster_data_id:
             return self.clusterData.channels_clusters
@@ -755,15 +776,11 @@ class OpenEphysBase(TrialInterface):
         "TTL" and contains a full_words.npy file. Some of the files might be
         empty
         """
-        ttl_dict = {}
-
-        ttl_path_index = kwargs.get("ttl_path_index", 0)
 
         for ttl_path in self.path2EventsData:
             if ttl_path.exists():
                 ttl_ts = np.load(ttl_path / Path("timestamps.npy"))
                 states = np.load(ttl_path / Path("states.npy"))
-                key = ttl_path.parts[-2]
                 if len(ttl_ts) > 0:
                     if "StimControl_id" in kwargs.keys():
                         # TODO: I think this is mostly obsolete
@@ -772,22 +789,22 @@ class OpenEphysBase(TrialInterface):
                         stim_id = kwargs["StimControl_id"]
                         if stim_id in self.settings.processors.keys():
                             # returned in ms from the plugin so convert to seconds...
-                            duration = getattr(
-                                self.settings.processors[stim_id], "Duration"
-                            )
-                            duration = float(duration) / 1000.0  # in seconds
+                            plugin = self.settings.get_plugin(stim_id)
+                            duration = float(plugin.Duration) / 1000.0  # in seconds
                         else:
                             return False
-                        ttl_dict[key]["stim_duration"] = duration
+
+                        if not self.ttl_data:
+                            self.ttl_data = {}
+
+                        self.ttl_data["stim_duration"] = duration
 
                     # recording_start_time = self._get_recording_start_time()
                     if "TTL_channel_number" in kwargs.keys():
                         chan = kwargs["TTL_channel_number"]
                         high_ttl = ttl_ts[states == chan]
                         # get into seconds
-                        breakpoint()
-
-                        high_ttl = (high_ttl * 1000.0) - recording_start_time
+                        high_ttl = (high_ttl * 1000.0) - self.recording_start_time
                         self.ttl_data["ttl_timestamps"] = (
                             high_ttl / 1000.0
                         )  # in seconds now

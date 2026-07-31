@@ -401,7 +401,7 @@ class KiloSortSession(object):
             self.n_templates, _, self.n_channels_loc = data.shape
 
         except IOError:
-            return
+            data = None
 
         try:
             cols = np.load(self.src_dir / Path("template_ind.npy"), mmap_mode="r+")
