@@ -314,14 +314,13 @@ wheels = [
 
 [[package]]
 name = "ephysiopy"
-version = "2.0.76"
+version = "2.0.77"
 source = { editable = "." }
 dependencies = [
     { name = "astropy" },
     { name = "boost-histogram" },
     { name = "h5py" },
     { name = "ipython" },
-    { name = "mahotas" },
     { name = "matplotlib" },
     { name = "mkdocstrings-python" },
     { name = "numpy" },
@@ -352,7 +351,6 @@ requires-dist = [
     { name = "boost-histogram", specifier = ">=1.6.1" },
     { name = "h5py", specifier = ">=3.15.1" },
     { name = "ipython", specifier = ">=9.10.0" },
-    { name = "mahotas", specifier = ">=1.4.18" },
     { name = "matplotlib", specifier = ">=3.10.8" },
     { name = "mkdocstrings-python", specifier = ">=2.0.2" },
     { name = "numpy", specifier = ">=2.4.1" },
@@ -704,22 +702,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/2f/83/97b29fe05cb6ae28d2dbd30b81e2e402a3eed5f460c26e9eaa5895ceacf5/locket-1.0.0.tar.gz", hash = "sha256:5c0d4c052a8bbbf750e056a8e65ccd309086f4f0f18a2eac306a8dfa4112a632", size = 4350, upload-time = "2022-04-20T22:04:44.312Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/db/bc/83e112abc66cd466c6b83f99118035867cecd41802f8d044638aa78a106e/locket-1.0.0-py2.py3-none-any.whl", hash = "sha256:b6c819a722f7b6bd955b80781788e4a66a55628b858d347536b7e81325a3a5e3", size = 4398, upload-time = "2022-04-20T22:04:42.23Z" },
-]
-
-[[package]]
-name = "mahotas"
-version = "1.4.18"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "numpy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/f6/71/bf99df8458c0ca05cb9a16f400e66c09b37b15ea124aaa3becb577555cc5/mahotas-1.4.18.tar.gz", hash = "sha256:e6bd2eea4143a24f381b30c64078503cd8ffa20ca493e39ffa29f9d024d9cf8b", size = 1533222, upload-time = "2024-07-17T21:11:56.204Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/cb/78/07865c11f24f539e05ad951e261051d1177f8c4432fb1e230d9d8e9132a2/mahotas-1.4.18-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:5314778e8154fb69ddb299e07c48d1998eb3e9567724e93d5018940854975204", size = 1875870, upload-time = "2024-07-17T21:10:46.503Z" },
-    { url = "https://files.pythonhosted.org/packages/1d/84/d325af34ce1c977f71503d5bddb5798cfaddbcdd30047caafcf013b2daf2/mahotas-1.4.18-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:fe05bf5ee3498cd9411adf7c9fb8e6278194a04a1491c1a6d807658d4af36bb4", size = 1795431, upload-time = "2024-07-17T21:10:49.136Z" },
-    { url = "https://files.pythonhosted.org/packages/3b/04/ebfd6f54a5919a4f344e498a541c26ca1dbf5e7628f464cbf35ea580308a/mahotas-1.4.18-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:17b6a5420fd71227cd3e875e42a01818b3d94cacb075f93afed36fab63390b75", size = 5817840, upload-time = "2024-07-17T21:10:51.901Z" },
-    { url = "https://files.pythonhosted.org/packages/7e/7f/1b89107058873a36e0aa0edd03dbbc18c647c3b672f391270d8b7f056f37/mahotas-1.4.18-cp312-cp312-win32.whl", hash = "sha256:839787784f916c4f03a43e92bb22184920213e5ece0fa0c826f5bdf92eaaff4b", size = 1712598, upload-time = "2024-07-17T21:10:54.487Z" },
-    { url = "https://files.pythonhosted.org/packages/a7/93/8ab4c4e10235b0acef65561a33b303b66d2d1fd180545872798db05f0e09/mahotas-1.4.18-cp312-cp312-win_amd64.whl", hash = "sha256:579e6f48549b06eb32cfa9501e320194a9d8a97fe35a7832b6b1f3fa104cfb16", size = 1730892, upload-time = "2024-07-17T21:10:56.55Z" },
 ]
 
 [[package]]

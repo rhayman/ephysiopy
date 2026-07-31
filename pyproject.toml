@@ -1,6 +1,6 @@
 [project]
 name = "ephysiopy"
-version = "2.0.76"
+version = "2.0.77"
 description = "Analysis of electrophysiological data collected with Axona or OpenEphys"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -9,7 +9,6 @@ dependencies = [
     "boost-histogram>=1.6.1",
     "h5py>=3.15.1",
     "ipython>=9.10.0",
-    "mahotas>=1.4.18",
     "matplotlib>=3.10.8",
     "mkdocstrings-python>=2.0.2",
     "numpy>=2.4.1",
