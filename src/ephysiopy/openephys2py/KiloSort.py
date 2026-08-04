@@ -310,7 +310,7 @@ class KiloSortSession(object):
             return np.array([], dtype=int)
         return np.nonzero(np.isin(clusters, cluster_ids))[0]
 
-    def apply_mask(self, mask: np.ma.MaskedArray | bool, **kwargs):
+    def apply_mask(self, mask: np.ma.MaskedArray | bool | None, **kwargs):
         """
         Apply a mask to the data.
 
@@ -325,7 +325,7 @@ class KiloSortSession(object):
         # the xy times might not be equally sampled (indeed likely arent)
         # mask might be a single bool (False) to remove the masking
         # or an array of mask values to apply to the spike times and clusters
-        if isinstance(mask, np.ma.MaskedArray):
+        if np.any(mask):
             xy_ts = kwargs.get("xy_ts", None)  # in seconds to 2 decimal places
             # extract the masked times
             xy_ts = xy_ts.data[~xy_ts.mask]
@@ -338,18 +338,12 @@ class KiloSortSession(object):
 
             mask = np.ma.isin(indices_seconds, xy_ts, assume_unique=True)
 
-        if isinstance(self.spike_times, np.ma.MaskedArray):
-            self.spike_times.mask = mask
-        else:
-            self.spike_times = np.ma.MaskedArray(self.spike_times, mask)
-        if isinstance(self.spike_clusters, np.ma.MaskedArray):
-            self.spike_clusters.mask = mask
-        else:
-            self.spike_clusters = np.ma.MaskedArray(self.spike_clusters, mask)
-        if isinstance(self.amplitudes, np.ma.MaskedArray):
-            self.amplitudes.mask = mask
-        else:
-            self.amplitudes = np.ma.MaskedArray(self.amplitudes, mask)
+        elif mask is None:
+            mask = False
+
+        self.spike_times.mask = mask
+        self.spike_clusters.mask = mask
+        self.amplitudes.mask = mask
 
     def _load_channel_positions(self):
         """

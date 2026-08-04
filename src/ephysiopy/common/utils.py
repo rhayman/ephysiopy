@@ -437,9 +437,9 @@ class TrialFilter:
             "dir",
             "speed",
             "x",
-            "x",
+            "y",
             "phi",
-        ], "name must be one of 'time', 'dir', 'speed', 'x', 'x', 'phi'"
+        ], "name must be one of 'time', 'dir', 'speed', 'x', 'y', 'phi'"
         self.name = name
         self.start = start
         self.end = end

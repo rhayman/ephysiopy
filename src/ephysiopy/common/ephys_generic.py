@@ -746,7 +746,7 @@ class PosCalcsGeneric(object):
         new_y = signal.resample_poly(xy[1, :], upsample_rate / denom, 30 / denom)
         return np.array([new_x, new_y])
 
-    def apply_mask(self, mask: np.ndarray):
+    def apply_mask(self, mask: np.ndarray | bool | None) -> None:
         """
         Applies a mask to the position data
 
@@ -763,6 +763,8 @@ class PosCalcsGeneric(object):
         i.e. [(start1, end1), (start2, end2)]
         everything inside of these times is masked
         """
+        if mask is None:
+            mask = False
         attrs = ["x", "y", "time", "dir", "speed"]
         for attr in attrs:
             if hasattr(self, attr):
