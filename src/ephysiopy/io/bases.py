@@ -1088,6 +1088,33 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         S.event_window = np.array(dt)
         return S.psth()
 
+    def get_binned_psth(
+        self, cluster: int | list, channel: int | list, **kwargs
+    ) -> tuple[np.ndarray, tuple[np.ndarray, np.ndarray]]:
+        """
+        Computes the binned peri-stimulus time histogram (PSTH) for a given cluster and channel as an array that can be used for plt.imshow()
+
+        Parameters
+        ----------
+        cluster : int or list
+            The cluster(s).
+        channel : int or list
+            The channel(s).
+        **kwargs : dict, optional
+            Additional keyword arguments passed to the psth function.
+
+        Returns
+        -------
+        tuple of np.ndarray and list
+            The binned PSTH - the result of the call to np.histogramdd()
+
+        """
+        psth = self.get_psth(cluster, channel, **kwargs)
+        bins = kwargs.get("bins", (8000, 150))
+        ranges = kwargs.get("ranges", ((0, 8000), (-0.05, 0.1)))
+        h, e = np.histogramdd([psth[1], psth[0]], bins=bins, range=ranges)
+        return h, e
+
     def get_spatial_info_score(
         self, cluster: int | list, channel: int | list, **kwargs
     ) -> list[float]:

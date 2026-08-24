@@ -185,7 +185,9 @@ class KiloSortSession(object):
         ]
 
         def __get_KS_npy__(s):
-            a = np.ma.MaskedArray(np.load(self.src_dir / Path(s)))
+            _a = np.load(self.src_dir / Path(s))
+            a = np.ma.MaskedArray(_a)
+            _a.close()
             return np.squeeze(a)
 
         [

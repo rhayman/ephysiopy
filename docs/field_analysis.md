@@ -56,6 +56,8 @@ the [get_field_properties()](./io.md#ephysiopy.io.recording.TrialInterface.get_f
 
 ::: ephysiopy.common.fieldcalcs.spatial_sparsity
 
+::: ephysiopy.common.fieldcalcs.coherence
+
 ::: ephysiopy.common.fieldcalcs.kldiv_dir
 
 ::: ephysiopy.common.fieldcalcs.kldiv
