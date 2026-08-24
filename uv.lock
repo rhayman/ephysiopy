@@ -314,7 +314,7 @@ wheels = [
 
 [[package]]
 name = "ephysiopy"
-version = "2.0.78"
+version = "2.0.79"
 source = { editable = "." }
 dependencies = [
     { name = "astropy" },
