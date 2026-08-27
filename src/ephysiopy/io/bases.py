@@ -1080,6 +1080,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 
         """
         spike_times = self.get_spike_times(cluster, channel)
+        # TODO: Make this work with t x N dimensions
+        spike_times = np.ravel(spike_times)
         S = SpikeCalcsGeneric(spike_times, cluster=cluster)
         if self.ttl_data is None:
             self.load_ttl()
