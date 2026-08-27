@@ -60,12 +60,15 @@ class FigureMaker(object):
             self.npos = self.PosCalcs.xy.shape[1]
 
     @stripAxes
-    def _plot_path(self, ax: plt.Axes) -> plt.Axes:
+    def _plot_path(self, ax: plt.Axes, **kws) -> plt.Axes:
+        _kws = clean_kwargs(plt.Line2D, kws)
+        if "color" not in _kws:
+            _kws["color"] = tcols.colours[0]
         ax.plot(
             self.PosCalcs.xy[0, :],
             self.PosCalcs.xy[1, :],
-            color=tcols.colours[0],
             zorder=1,
+            **_kws,
         )
         return ax
 
@@ -358,7 +361,7 @@ class FigureMaker(object):
                             fig = plt.figure()
                             ax = fig.add_subplot(111)
                         else:
-                            ax = self._plot_path(ax)
+                            ax = self._plot_path(ax, **kws)
                             fig = plt.gcf()
                         _plot_patch_collection(idx, ax, **kws)
                     return ax
@@ -373,10 +376,10 @@ class FigureMaker(object):
             ax = fig.add_subplot(111)
 
         if cluster is None or channel is None:
-            ax = self._plot_path(ax)
+            ax = self._plot_path(ax, **kws)
             return ax
 
-        ax = self._plot_path(ax)
+        ax = self._plot_path(ax, **kws)
         spike_locations = self.PosCalcs.xy[:, pos_idx[0]]
         ax = _plot_patch_collection(spike_locations, ax, **kws)
         kws["save_as"] = save_as

@@ -8,6 +8,7 @@ import warnings
 import numpy as np
 import pandas as pd
 from collections import OrderedDict
+from contextlib import contextmanager
 from pathlib import Path
 from phylib.utils import Bunch
 from phylib.io.model import get_closest_channels
@@ -184,20 +185,23 @@ class KiloSortSession(object):
             "channel_positions.npy",
         ]
 
+        @contextmanager
         def __get_KS_npy__(s):
             _a = np.load(self.src_dir / Path(s))
-            a = np.ma.MaskedArray(_a)
-            _a.close()
-            return np.squeeze(a)
+            try:
+                yield np.ma.MaskedArray(_a)
+            except Exception as e:
+                raise e
+            finally:
+                del _a
 
-        [
-            setattr(
-                self,
-                s.split(".")[0],
-                __get_KS_npy__(s) if fileExists(self.src_dir, s) else None,
-            )
-            for s in files_to_load
-        ]
+        for s in files_to_load:
+            if fileExists(self.src_dir, s):
+                with __get_KS_npy__(s) as data:
+                    setattr(self, s.split(".")[0], data)
+            else:
+                setattr(self, s.split(".")[0], None)
+
         # iterate over self.cluster_id and self.group and make sure
         # self.cluster_id has spikes
         # not sure why but some are of 0 length when loading
@@ -336,7 +340,7 @@ class KiloSortSession(object):
                 self.spike_times / self.sample_rate, 2
             )  # in seconds to 2 decimal places
             indices = np.digitize(spike_times, xy_ts)
-            indices_seconds = np.round(indices / sample_rate, 2)
+            indices_seconds = np.ravel(np.round(indices / sample_rate, 2))
 
             mask = np.ma.isin(indices_seconds, xy_ts, assume_unique=True)
 
@@ -351,25 +355,31 @@ class KiloSortSession(object):
         """
         Load the channel positions
         """
-        self.channel_positions = np.load(self.src_dir / Path("channel_positions.npy"))
+        if not self.channel_positions:
+            self.channel_positions = np.load(
+                self.src_dir / Path("channel_positions.npy")
+            )
 
     def _load_spike_clusters(self):
         """
         Load the spike clusters
         """
-        self.spike_clusters = np.load(self.src_dir / Path("spike_clusters.npy"))
+        if not self.spike_clusters:
+            self.spike_clusters = np.load(self.src_dir / Path("spike_clusters.npy"))
 
     def _load_wmi(self):
         """
         Load the inverse whitening matrix
         """
-        self.wmi = np.load(self.src_dir / Path("whitening_mat_inv.npy"))
+        if not self.wmi:
+            self.wmi = np.load(self.src_dir / Path("whitening_mat_inv.npy"))
 
     def _load_wm(self):
         """
         Load the whitening matrix
         """
-        self.wm = np.load(self.src_dir / Path("whitening_mat.npy"))
+        if not self.wm:
+            self.wm = np.load(self.src_dir / Path("whitening_mat.npy"))
 
     def _load_templates(self) -> tuple | None:
         """
@@ -389,7 +399,7 @@ class KiloSortSession(object):
         assert fpath.exists(), f"{fpath} does not exist"
 
         try:
-            data = np.load(fpath, mmap_mode="r+")
+            data = np.load(fpath)
             data = np.atleast_3d(data)
 
             empty_templates = np.all(np.all(np.isnan(data), axis=1), axis=1)
@@ -400,7 +410,7 @@ class KiloSortSession(object):
             data = None
 
         try:
-            cols = np.load(self.src_dir / Path("template_ind.npy"), mmap_mode="r+")
+            cols = np.load(self.src_dir / Path("template_ind.npy"))
             cols = np.atleast_2d(cols)
 
             assert cols.shape == (

@@ -235,7 +235,7 @@ grey_cmap = matplotlib.colormaps["gray_r"]
 
 
 def _plot_multiple_clusters(
-    func: Callable[..., plt.Figure], rmap: BinnedData, *args, **kwargs
+    func: Callable[..., plt.Figure], rmap: BinnedData, **kwargs
 ) -> plt.Figure:
     """
     Plots multiple clusters.
