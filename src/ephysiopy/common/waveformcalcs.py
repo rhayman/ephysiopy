@@ -58,8 +58,7 @@ def peak_to_trough_time(
         search_end = min(trough_idx + search_window_samples, len(ap))
         if trough_idx >= search_end:
             raise ValueError(
-                f"Trough is at the very end of the snippet (idx={
-                    trough_idx}); "
+                f"Trough is at the very end of the snippet (idx={trough_idx}); "
                 "extend the waveform or reduce search_window_ms."
             )
         post_trough = ap[trough_idx:search_end]
@@ -124,7 +123,7 @@ def peak_local_max_time(
     from skimage.feature import peak_local_max
 
     # Find peaks (both positive and negative)
-    peaks = peak_local_max(np.abs(ap), min_distance=1, num_peaks=2).flatten()
+    peaks = peak_local_max(np.abs(ap), min_distance=2, num_peaks=2).flatten()
 
     if len(peaks) != 2:
         warnings.warn(
@@ -544,8 +543,7 @@ class WaveformCalcsGeneric(object):
         """
         if trial_filter:
             for i_filter in trial_filter:
-                assert isinstance(
-                    i_filter, TrialFilter), "Filter must be a TrialFilter"
+                assert isinstance(i_filter, TrialFilter), "Filter must be a TrialFilter"
                 assert i_filter.name == "time", "Only time filters are supported"
         self.spike_times.mask = False
         if np.any(self._waves) and self._waves is not None:
@@ -636,12 +634,10 @@ class WaveformCalcsGeneric(object):
         # get the times
         times = np.linspace(0, 1000, self.n_samples)  # in microseconds
         pre_spike = int(self.pre_spike_samples * (1000000 / self.sample_rate))
-        post_spike = int(self.post_spike_samples *
-                         (1000000 / self.sample_rate))
+        post_spike = int(self.post_spike_samples * (1000000 / self.sample_rate))
 
         f = interpolate.interp1d(
-            times, np.linspace(-(pre_spike), post_spike,
-                               self.n_samples), "nearest"
+            times, np.linspace(-(pre_spike), post_spike, self.n_samples), "nearest"
         )
         f_t = f(times)
 
@@ -707,8 +703,7 @@ class WaveformCalcsGeneric(object):
         for i in range(n_channels):
             axes[i].plot(self.waveforms()[:n_waveforms, i, :].T, c="gray")
             # plot mean waveform on top
-            axes[i].plot(np.mean(self.waveforms()[
-                         :n_waveforms, i, :], axis=0), c="red")
+            axes[i].plot(np.mean(self.waveforms()[:n_waveforms, i, :], axis=0), c="red")
             axes[i].set_title(f"Channel {i}")
             axes[i].set_xlabel("Time (ms)")
             axes[i].set_ylabel("Amplitude (uV)")

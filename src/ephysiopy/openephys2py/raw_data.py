@@ -74,6 +74,11 @@ def _extract_centered_slices(memmap_arr, row_indices, col_indices, width):
         width += 1  # Ensure width is even for symmetric padding
     half = width // 2
     slices = []
+    row_indices = np.asarray(row_indices)
+    col_indices = np.asarray(col_indices)
+    # flatten the row and column indices to ensure they are 1D arrays
+    row_indices = row_indices.flatten()
+    col_indices = col_indices.flatten()
     for r in row_indices:
         row_slices = []
         for c in col_indices:

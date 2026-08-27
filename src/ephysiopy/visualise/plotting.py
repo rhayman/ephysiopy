@@ -380,7 +380,7 @@ class FigureMaker(object):
             return ax
 
         ax = self._plot_path(ax, **kws)
-        spike_locations = self.PosCalcs.xy[:, pos_idx[0]]
+        spike_locations = self.PosCalcs.xy[:, np.ravel(pos_idx[0])]
         ax = _plot_patch_collection(spike_locations, ax, **kws)
         kws["save_as"] = save_as
 

@@ -449,7 +449,7 @@ class OpenEphysBase(TrialInterface):
                 mask = np.invert(self.clusterData.spike_clusters.mask)
                 idx = self.clusterData.spike_clusters == cluster
 
-                return (
+                return np.ravel(
                     self.clusterData.spike_times[np.ma.logical_and(mask, idx)]
                     / self.clusterData.sample_rate
                 )
@@ -458,7 +458,7 @@ class OpenEphysBase(TrialInterface):
             times = []
             for c in cluster:
                 if c in self.clusterData.cluster_id:
-                    t = (
+                    t = np.ravel(
                         self.clusterData.spike_times[
                             self.clusterData.spike_clusters == cluster
                         ]

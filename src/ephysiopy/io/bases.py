@@ -622,6 +622,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             The indices into the position data at which the spikes
             occurred.
         """
+        spk_times = []
         pos_times = getattr(self.PosCalcs, "time")
         if cluster is None:
             spk_times = getattr(self.PosCalcs, "time")
@@ -632,7 +633,6 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         elif isinstance(cluster, list) and len(cluster) > 1:
             if isinstance(channel, int):
                 channel = [channel for channel in cluster]
-            spk_times = []
             for clust, chan in zip(cluster, channel):
                 spk_times.append(self.get_spike_times(clust, chan))
 
@@ -1020,6 +1020,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         from ephysiopy.common.spikingcalcs import xcorr
 
         ts = self.get_spike_times(cluster, channel)
+        ts = np.ravel(ts)
         ids = make_cluster_ids(cluster, channel)
         kwargs["cluster_id"] = ids
         return xcorr(ts, **kwargs)
