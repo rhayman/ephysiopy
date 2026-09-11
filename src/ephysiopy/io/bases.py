@@ -616,6 +616,15 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         channel : int | list
             The channel identity. Ignored if cluster is None
 
+        **kwargs : dict, optional
+            Additional keyword arguments passed to the function. These include:
+            - do_shuffle (bool): If True, the rate map will be shuffled by
+                        n_shuffles
+            - n_shuffles (int): the number of shuffles for the rate map
+                                A list of shuffled rate maps will be returned.
+            - random_seed (int): The random seed to use for the shuffles.
+
+
         Returns
         -------
         list of np.ndarray

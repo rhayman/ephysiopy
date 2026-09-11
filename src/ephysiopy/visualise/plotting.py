@@ -87,11 +87,20 @@ class FigureMaker(object):
             The channel number.
         **kwargs : dict
             Additional keyword arguments for the function.
-            ax : plt.Axes, optional
+            - ax : plt.Axes, optional
                 The axes to plot on. If None, new axes are created.
-            separate_plots : bool, optional
+            - separate_plots : bool, optional
                 If True, each cluster will be plotted on a separate plot.
                 Defaults to False.
+            - do_shuffle (bool): If True, the rate map will be shuffled by
+                        n_shuffles
+            - map_type (MapType): the type of map to generate, default
+                        is MapType.POS but can be any of the options
+                        in MapType
+                                 the default number of shuffles (100).
+            - n_shuffles (int): the number of shuffles for the rate map
+                                A list of shuffled rate maps will be returned.
+            - random_seed (int): The random seed to use for the shuffles.
 
         Returns
         -------
@@ -999,7 +1008,7 @@ class FigureMaker(object):
             Additional keyword arguments for the function, including:
             dt : list
                 The range in seconds to plot data over either side of the TTL pulse.
-            seconds_per_bin : float
+            secs_per_bin : float
                 The number of seconds per bin.
 
         Returns
