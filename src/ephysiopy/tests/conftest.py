@@ -1,9 +1,11 @@
-import pytest
-import numpy as np
-from pathlib import Path
 import os
+from pathlib import Path
+
+import numpy as np
+import pytest
+
 from ephysiopy.common.ephys_generic import PosCalcsGeneric
-from ephysiopy.common.utils import BinnedData, VariableToBin, MapType, ClusterID
+from ephysiopy.common.utils import BinnedData, ClusterID, MapType, VariableToBin
 from ephysiopy.io.recording import AxonaTrial
 
 
@@ -86,18 +88,17 @@ def basic_spike_times_and_cluster_ids():
 
 @pytest.fixture
 def basic_ratemap():
-    x, y = np.ogrid[-np.pi: np.pi: 100j, -np.pi: np.pi: 100j]
+    x, y = np.ogrid[-np.pi : np.pi : 100j, -np.pi : np.pi : 100j]
     r = np.sin(np.exp((np.sin(x) ** 3 + np.cos(y) ** 2)))
     return r
 
 
 @pytest.fixture
 def basic_BinnedData():
-    x, y = np.ogrid[-np.pi: np.pi: 100j, -np.pi: np.pi: 100j]
+    x, y = np.ogrid[-np.pi : np.pi : 100j, -np.pi : np.pi : 100j]
     r = np.sin(np.exp((np.sin(x) ** 3 + np.cos(y) ** 2)))
     return BinnedData(
-        VariableToBin.XY, MapType.RATE, [r], [
-            np.ravel(x), np.ravel(y)], ClusterID(1, 1)
+        VariableToBin.XY, MapType.RATE, [r], [np.ravel(x), np.ravel(y)], ClusterID(1, 1)
     )
 
 

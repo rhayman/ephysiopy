@@ -1,25 +1,26 @@
+from typing import Callable
+
 import matplotlib
 import matplotlib.pylab as plt
 import numpy as np
-from typing import Callable
+import pycwt
+import pywt
+from pactools import Comodulogram
+from pactools.dar_model import DAR
+from pactools.delay_estimator import DelayEstimator
+from pycircstat2.utils import rotate_data
+from scipy import ndimage, signal, stats
+from scipy.special import i0
+
+from ephysiopy.common.ephys_generic import EEGCalcsGeneric, PosCalcsGeneric
+from ephysiopy.common.rhythmicity import power_spectrum
+from ephysiopy.common.statscalcs import mean_resultant_vector
 from ephysiopy.common.utils import (
-    fixAngle,
-    find_runs,
     FreqPhase,
     PowerSpectrumParams,
+    find_runs,
+    fixAngle,
 )
-from ephysiopy.common.ephys_generic import PosCalcsGeneric, EEGCalcsGeneric
-from ephysiopy.common.rhythmicity import power_spectrum
-from scipy import ndimage, signal
-import pywt
-import pycwt
-from pycircstat2.utils import rotate_data
-from pactools import Comodulogram
-from pactools.delay_estimator import DelayEstimator
-from pactools.dar_model import DAR
-from scipy import stats
-from scipy.special import i0
-from ephysiopy.common.statscalcs import mean_resultant_vector
 
 jet_cmap = matplotlib.colormaps["jet"]
 cbar_fontsize = 8

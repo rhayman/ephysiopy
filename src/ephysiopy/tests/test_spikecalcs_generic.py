@@ -7,7 +7,7 @@ All test data is generated synthetically; no file I/O.
 """
 
 import warnings
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -22,7 +22,6 @@ from ephysiopy.common.spikingcalcs import (
     xcorr,
 )
 from ephysiopy.common.utils import BinnedData
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

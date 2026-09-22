@@ -1,12 +1,13 @@
+import warnings
 from collections import namedtuple
 from collections.abc import Sequence
-import warnings
-from scipy import interpolate
+
 import numpy as np
+from scipy import interpolate
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
-from ephysiopy.common.utils import TrialFilter
 
+from ephysiopy.common.utils import TrialFilter
 
 # a namedtuple to hold some metrics from the KiloSort run
 KSMetaTuple = namedtuple("KSMeta", "Amplitude group KSLabel ContamPct ")

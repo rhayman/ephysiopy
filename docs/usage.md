@@ -91,11 +91,19 @@ We can get the spike times in seconds at which a cluster fired:
 
 ```python title="Spike times for cluster 2 on channel 3"
 trial.get_spike_times(2, 3)
-masked_array(data=[0.7710416666666666, 4.6870416666666666,
-                   4.693291666666667, ..., 2394.8471458333333,
-                   2394.8537291666667, 2394.860708333333],
-             mask=[False, False, False, ..., False, False, False],
-       fill_value=1e+20)
+masked_array(
+    data=[
+        0.7710416666666666,
+        4.6870416666666666,
+        4.693291666666667,
+        ...,
+        2394.8471458333333,
+        2394.8537291666667,
+        2394.860708333333,
+    ],
+    mask=[False, False, False, ..., False, False, False],
+    fill_value=1e20,
+)
 ```
 
 !!! note
@@ -232,6 +240,7 @@ You can plot the results of this image segmentation like so:
 
 ```python
 from ephysiopy.common.fieldcalcs import plot_field_props
+
 plot_field_props(field_props)
 plt.show()
 ```
@@ -252,7 +261,7 @@ There are two important options we can use to change how the extraction of field
 The partitioning of the rate map can be done in either a 'simple' or a 'fancy' way.
 
 ```python
-field_props = trial.get_field_properties(2, 3, partition='simple')
+field_props = trial.get_field_properties(2, 3, partition="simple")
 ```
 
 The [simple_parition](./field_analysis.md#ephysiopy.common.fieldcalcs.simple_partition) method essentially just returns the areas of the ratemap that are greater than some threshold
@@ -290,6 +299,7 @@ to contain enough data.
 
 ```python title="Sort fields by field size"
 from ephysiopy.common.fieldcalcs import sort_fields_by_attr
+
 sorted_fields = sort_fields_by_attr(field_props, "area")
 for field in sorted_fields:
     print(field.area)

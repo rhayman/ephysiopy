@@ -1,42 +1,43 @@
-from pathlib import Path
-import warnings
 import copy
+import warnings
+from pathlib import Path
+
 import matplotlib.pylab as plt
 import matplotlib.transforms as transforms
-from pycircstat2 import Circular
-from pycircstat2.utils import rotate_data
-from pycircstat2.descriptive import circ_mean_and_r
 import numpy as np
+import seaborn as sns
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-import seaborn as sns
+from pycircstat2 import Circular
+from pycircstat2.descriptive import circ_mean_and_r
+from pycircstat2.utils import rotate_data
 
 from ephysiopy.axona import tintcolours as tcols
-from ephysiopy.common.binning import RateMap
-from ephysiopy.common.utils import (
-    ClusterID,
-    clean_kwargs,
-    BinnedData,
-    VariableToBin,
-    MapType,
-    rect,
-    flatten_list,
-    repeat_ind,
-    memmapBinaryFile,
-)
 from ephysiopy.common import fieldcalcs as fc
+from ephysiopy.common.binning import RateMap
 from ephysiopy.common.directionalcalcs import HeadDirectionCalcs
+from ephysiopy.common.phasecoding import LFPOscillations
+from ephysiopy.common.utils import (
+    BinnedData,
+    ClusterID,
+    MapType,
+    VariableToBin,
+    clean_kwargs,
+    flatten_list,
+    memmapBinaryFile,
+    rect,
+    repeat_ind,
+)
 from ephysiopy.visualise.utils import (
-    saveFigure,
-    stripAxes,
-    jet_cmap,
-    grey_cmap,
-    addClusterChannelToAxes,
     _add_colour_wheel,
     _plot_multiple_clusters,
     _plot_patch_collection,
     _plot_pcolormesh,
+    addClusterChannelToAxes,
+    grey_cmap,
+    jet_cmap,
+    saveFigure,
+    stripAxes,
 )
 
 

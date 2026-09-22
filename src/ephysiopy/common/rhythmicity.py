@@ -1,17 +1,17 @@
 import os
 import warnings
-import matplotlib.pylab as plt
-import matplotlib.transforms as transforms
-from matplotlib.patches import Rectangle
-import numpy as np
 from pathlib import Path, PurePath
-from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 
-from ephysiopy.common.utils import PowerSpectrumParams, window_rms, find_runs, nextpow2
+import matplotlib.pylab as plt
+import numpy as np
+from matplotlib import transforms
+from matplotlib.patches import Rectangle
+from scipy import signal
+
+from ephysiopy.common.ephys_generic import EEGCalcsGeneric
+from ephysiopy.common.utils import PowerSpectrumParams, find_runs, nextpow2, window_rms
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
 from ephysiopy.visualise.plotting import FigureMaker, saveFigure
-
-from scipy import signal
 
 """
 Dataclass for collecting the results of frequency/ phase

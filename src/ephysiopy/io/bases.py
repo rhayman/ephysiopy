@@ -1,30 +1,32 @@
-from pathlib import Path, PurePath
-from collections import OrderedDict
+import abc
 import os
+from collections import OrderedDict
+from pathlib import Path, PurePath
+
 import numpy as np
 from scipy.signal import argrelextrema
 from skimage.segmentation import watershed
-import abc
-from ephysiopy.common.spikingcalcs import SpikeCalcsGeneric
+
+from ephysiopy.common.binning import RateMap
 from ephysiopy.common.fieldcalcs import (
-    skaggs_info,
     fancy_partition,
     simple_partition,
+    skaggs_info,
 )
 from ephysiopy.common.fieldproperties import FieldProps, LFPSegment, fieldprops
-from ephysiopy.common.binning import RateMap
-from ephysiopy.visualise.plotting import FigureMaker
+from ephysiopy.common.spikingcalcs import SpikeCalcsGeneric
 from ephysiopy.common.utils import (
+    BinnedData,
+    MapType,
     RecordingKind,
     TrialFilter,
     VariableToBin,
-    MapType,
-    BinnedData,
     filter_data,
-    shift_vector,
-    make_cluster_ids,
     flatten_list,
+    make_cluster_ids,
+    shift_vector,
 )
+from ephysiopy.visualise.plotting import FigureMaker
 
 
 def find_path_to_ripple_ttl(trial_root: Path, **kwargs) -> Path:
@@ -622,7 +624,9 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
                         n_shuffles
             - n_shuffles (int): the number of shuffles for the rate map
                                 A list of shuffled rate maps will be returned.
+                                Defaults to 100.
             - random_seed (int): The random seed to use for the shuffles.
+                                 Defaults to None.
 
 
         Returns

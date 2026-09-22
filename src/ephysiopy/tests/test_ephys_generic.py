@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from ephysiopy.common.ephys_generic import EEGCalcsGeneric
 from ephysiopy.common.spikingcalcs import SpikeCalcsGeneric
 from ephysiopy.common.utils import BinnedData
@@ -154,8 +155,7 @@ def test_calc_power_spectrum(basic_EEGCalcs):
 
 
 def test_ifft_filter(basic_EEGCalcs):
-    val = basic_EEGCalcs.ifftFilter(
-        basic_EEGCalcs.sig, [50, 60], basic_EEGCalcs.fs)
+    val = basic_EEGCalcs.ifftFilter(basic_EEGCalcs.sig, [50, 60], basic_EEGCalcs.fs)
     assert isinstance(val, np.ndarray)
 
 

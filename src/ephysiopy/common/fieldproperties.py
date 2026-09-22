@@ -1,31 +1,31 @@
+import weakref
+from functools import wraps
+
 import numpy as np
 import numpy.ma as ma
-from functools import wraps
-import weakref
-from scipy import signal
 from scipy import ndimage as ndi
-from scipy import stats
+from scipy import signal, stats
+from skimage.measure._regionprops import PROPS as _PROPS
 from skimage.measure._regionprops import (
     RegionProperties,
     _infer_number_of_required_args,
     _require_intensity_image,
 )
-from skimage.measure._regionprops import PROPS as _PROPS
+
 from ephysiopy.common.utils import (
     VariableToBin,
     bwperim,
-    circ_abs,
-    labelContigNonZeroRuns,
-    getLabelStarts,
-    getLabelEnds,
-    pol2cart,
     cart2pol,
-    repeat_ind,
-    min_max_norm,
-    flatten_list,
+    circ_abs,
     find_runs,
+    flatten_list,
+    getLabelEnds,
+    getLabelStarts,
+    labelContigNonZeroRuns,
+    min_max_norm,
+    pol2cart,
+    repeat_ind,
 )
-
 
 """
 An adaptation of code from skimage.measure.regionprops for receptive field

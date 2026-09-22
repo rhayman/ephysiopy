@@ -1,10 +1,11 @@
 import os
+from pathlib import Path, PurePath
+
 import numpy as np
 import pytest
-from ephysiopy.axona.axonaIO import IO
-from ephysiopy.axona.axonaIO import Tetrode
+
+from ephysiopy.axona.axonaIO import IO, Tetrode
 from ephysiopy.axona.file_headers import PosHeader
-from pathlib import Path, PurePath
 
 
 def test_io(path_to_axona_data):

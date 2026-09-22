@@ -6,7 +6,17 @@ OrderedDict of the Settings class.
 
 ```python
 trial.settings.processors.keys()
-odict_keys(['Acquisition Board 100', 'Bandpass Filter 107', 'LFP Viewer 102', 'TrackMe 103', 'Tracking Visual 105', 'StimControl 109', 'StimControl 110'])
+odict_keys(
+    [
+        "Acquisition Board 100",
+        "Bandpass Filter 107",
+        "LFP Viewer 102",
+        "TrackMe 103",
+        "Tracking Visual 105",
+        "StimControl 109",
+        "StimControl 110",
+    ]
+)
 ```
 
 The settings for each RecordNode is similarly avaialble as
@@ -14,7 +24,7 @@ an OrderedDict in the 'record_nodes' attribute:
 
 ```python
 trial.settings.record_nodes.keys()
-odict_keys(['Record Node 101', 'Record Node 104'])
+odict_keys(["Record Node 101", "Record Node 104"])
 ```
 
 ## Record nodes

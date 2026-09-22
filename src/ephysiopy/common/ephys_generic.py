@@ -4,10 +4,11 @@ format and encapsulate some generic mechanisms for producing
 things like spike timing autocorrelograms, power spectrum calculation and so on
 """
 
+import astropy.convolution as cnv
 import numpy as np
 from scipy import signal
 from scipy.interpolate import griddata
-import astropy.convolution as cnv
+
 from ephysiopy.common.utils import nextpow2
 
 
@@ -898,6 +899,7 @@ def find_high_amp_long_duration(
     doi: 10.1126/science.aay0616
     """
     from scipy.signal import detrend, hilbert
+
     from ephysiopy.common.utils import get_z_score
 
     E = EEGCalcsGeneric(raw_signal, fs)

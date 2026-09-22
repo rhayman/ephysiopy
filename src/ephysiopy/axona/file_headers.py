@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field, fields
 from abc import ABC
+from dataclasses import dataclass, field, fields
 
 """
 The only exception to lots of the common headers etc in 

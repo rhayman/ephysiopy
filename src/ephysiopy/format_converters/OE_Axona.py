@@ -173,8 +173,7 @@ class OE2Axona(object):
         self.path2APdata: Path = path2APData
         self.pos_sample_rate: int = pos_sample_rate
         # 'experiment_1.nwb'
-        self.experiment_name: Path = self.pname or Path(
-            kwargs["experiment_name"])
+        self.experiment_name: Path = self.pname or Path(kwargs["experiment_name"])
         self.recording_name = None  # will become 'recording1' etc
         self.OE_data = None  # becomes instance of io.recording.OpenEphysBase
         self._settings = None  # will become an instance of OESettings.Settings
@@ -226,8 +225,7 @@ class OE2Axona(object):
 
         """
         denom = np.gcd(dst_rate, src_rate)
-        new_data = signal.resample_poly(
-            data, dst_rate / denom, src_rate / denom, axis)
+        new_data = signal.resample_poly(data, dst_rate / denom, src_rate / denom, axis)
         return new_data
 
     @property
@@ -331,8 +329,7 @@ class OE2Axona(object):
         print("Post-processing position data...")
         self.OE_data.PosCalcs.jumpmax = jumpmax
         self.OE_data.PosCalcs.tracker_params["AxonaBadValue"] = 1023
-        self.OE_data.PosCalcs.postprocesspos(
-            self.OE_data.PosCalcs.tracker_params)
+        self.OE_data.PosCalcs.postprocesspos(self.OE_data.PosCalcs.tracker_params)
         xy = self.OE_data.PosCalcs.xy.T
         time = self.OE_data.PosCalcs.time  # in seconds
         time = time * self.pos_sample_rate
@@ -351,7 +348,7 @@ class OE2Axona(object):
         axona_pos_data = self.convertPosData(xy, time)
         # make sure pos data length is same as duration * num_samples
         axona_pos_data = axona_pos_data[
-            0: int(self.last_pos_ts - self.first_pos_ts) * self.pos_sample_rate
+            0 : int(self.last_pos_ts - self.first_pos_ts) * self.pos_sample_rate
         ]
         # Create an empty header for the pos data
         from ephysiopy.axona.file_headers import PosHeader
@@ -380,8 +377,7 @@ class OE2Axona(object):
             if "BottomBorder" in tracker_params.keys()
             else str(max_xy[1])
         )
-        pos_header.common["duration"] = str(
-            int(self.last_pos_ts - self.first_pos_ts))
+        pos_header.common["duration"] = str(int(self.last_pos_ts - self.first_pos_ts))
         pos_header.pos["pixels_per_metre"] = str(ppm)
         pos_header.pos["num_pos_samples"] = str(len(axona_pos_data))
         pos_header.pos["pixels_per_metre"] = str(ppm)
@@ -464,8 +460,7 @@ class OE2Axona(object):
         columns into the position array to match the Axona format.
         """
         n_new_pts = int(
-            np.floor((self.last_pos_ts - self.first_pos_ts)
-                     * self.pos_sample_rate)
+            np.floor((self.last_pos_ts - self.first_pos_ts) * self.pos_sample_rate)
         )
         t = xy_ts - self.first_pos_ts
         new_ts = np.linspace(t[0], t[-1], n_new_pts)
@@ -666,8 +661,7 @@ class OE2Axona(object):
         # ... and a basic header for the tetrode file that use for each
         # tetrode file, changing only the num_spikes value
         header = TetrodeHeader()
-        header.common["duration"] = str(
-            int(self.last_pos_ts - self.first_pos_ts))
+        header.common["duration"] = str(int(self.last_pos_ts - self.first_pos_ts))
 
         for key in hdf5_tetrode_data.keys():
             spiking_data = np.array(hdf5_tetrode_data[key].get("data"))
@@ -694,14 +688,12 @@ class OE2Axona(object):
             new_spiking_data = self.resample(new_spiking_data, 4, 5, -1)
             # ... and scale appropriately for Axona and invert as
             # OE seems to be inverted wrt Axona
-            new_spiking_data = new_spiking_data / \
-                (self.hp_gain / 4 / 128.0) * (-1)
+            new_spiking_data = new_spiking_data / (self.hp_gain / 4 / 128.0) * (-1)
             # ... scale them to the gains specified somewhere
             #  (not sure where / how to do this yet)
             shp = new_spiking_data.shape
             # then reshape them as Axona wants them a bit differently
-            new_spiking_data = np.reshape(
-                new_spiking_data, [shp[0] * shp[1], shp[2]])
+            new_spiking_data = np.reshape(new_spiking_data, [shp[0] * shp[1], shp[2]])
             # Cap any values outside the range of int8
             new_spiking_data[new_spiking_data < -128] = -128
             new_spiking_data[new_spiking_data > 127] = 127
@@ -743,8 +735,7 @@ class OE2Axona(object):
 
             header = EGFHeader()
             dst_rate = 4800
-        header.common["duration"] = str(
-            int(self.last_pos_ts - self.first_pos_ts))
+        header.common["duration"] = str(int(self.last_pos_ts - self.first_pos_ts))
         print(f"header.common[duration] = {header.common['duration']}")
         _lfp_data = self.resample(data.astype(float), 30000, dst_rate, -1)
         # make sure data is same length as sample_rate * duration
@@ -753,7 +744,7 @@ class OE2Axona(object):
         # remaining values with zeros
         if len(_lfp_data) < nsamples:
             lfp_data = np.zeros(nsamples)
-            lfp_data[0: len(_lfp_data)] = _lfp_data
+            lfp_data[0 : len(_lfp_data)] = _lfp_data
         else:
             lfp_data = _lfp_data[0:nsamples]
         lfp_data = self.__filterLFP__(lfp_data, dst_rate)
@@ -846,8 +837,7 @@ class OE2Axona(object):
         header.set_entries["colactive_3"] = "0"
         header.set_entries["colactive_4"] = "0"
         header.set_entries["colmap_algorithm"] = "1"
-        header.set_entries["duration"] = str(
-            int(self.last_pos_ts - self.first_pos_ts))
+        header.set_entries["duration"] = str(int(self.last_pos_ts - self.first_pos_ts))
         self.writeSetData(header)
 
     def __filterLFP__(self, data: np.array, sample_rate: int):
@@ -891,8 +881,7 @@ class OE2Axona(object):
             highcut = 1.0 - np.finfo(float).eps
         if lowcut <= 0.0:
             lowcut = np.finfo(float).eps
-        b = firwin(sample_rate + 1, [lowcut, highcut],
-                   window="black", pass_zero=False)
+        b = firwin(sample_rate + 1, [lowcut, highcut], window="black", pass_zero=False)
         y = filtfilt(b, [1], data.ravel(), padtype="odd")
         return y
 
@@ -913,10 +902,8 @@ class OE2Axona(object):
         -----
         Writes the LFP data and header to the Axona format.
         """
-        self.AxonaData.setHeader(
-            str(self.axona_root_name) + "." + eeg_type, header)
-        self.AxonaData.setData(
-            str(self.axona_root_name) + "." + eeg_type, data)
+        self.AxonaData.setHeader(str(self.axona_root_name) + "." + eeg_type, header)
+        self.AxonaData.setData(str(self.axona_root_name) + "." + eeg_type, data)
 
     def writePos2AxonaFormat(self, header: dataclass, data: np.array):
         self.AxonaData.setHeader(str(self.axona_root_name) + ".pos", header)
@@ -939,8 +926,7 @@ class OE2Axona(object):
         -----
         Writes the tetrode data and header to the Axona format.
         """
-        self.AxonaData.setHeader(
-            str(self.axona_root_name) + "." + itet, header)
+        self.AxonaData.setHeader(str(self.axona_root_name) + "." + itet, header)
         self.AxonaData.setData(str(self.axona_root_name) + "." + itet, data)
 
     def writeSetData(self, header: dataclass):

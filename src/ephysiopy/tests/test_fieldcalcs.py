@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from ephysiopy.common import fieldcalcs
 from ephysiopy.common.utils import corr_maps
 

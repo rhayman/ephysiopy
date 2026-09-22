@@ -324,7 +324,7 @@ correlate():
 
 ```python
 data.correlate()
-array([0.1179206 , 0.14373477, 0.04730432])
+array([0.1179206, 0.14373477, 0.04730432])
 ```
 
 This is showing the Pearson Product Moment Correlation Coefficent between the pairs of rate maps in data i.e. map1 correlated with map2 and then map3 and map2 correlated with 
@@ -332,20 +332,21 @@ map3 (so three correlation values in total). You can also get the correlation ma
 
 ```python
 data.correlate(as_matrix=True)
-array([[1.        , 0.1179206 , 0.14373477],
-       [0.1179206 , 1.        , 0.04730432],
-       [0.14373477, 0.04730432, 1.        ]])
-
+array(
+    [
+        [1.0, 0.1179206, 0.14373477],
+        [0.1179206, 1.0, 0.04730432],
+        [0.14373477, 0.04730432, 1.0],
+    ]
+)
 ```
 
 You can also correlate one BinnedData instance with another BinnedData instance:
 
 ```python
-data1 = trial.get_rate_map([109,110],[36,36])
+data1 = trial.get_rate_map([109, 110], [36, 36])
 data.correlate(data1, as_matrix=True)
-array([[ 0.21015777,  0.16216187],
-       [ 0.0269544 , -0.00144629],
-       [ 0.13845497, -0.01680002]])
+array([[0.21015777, 0.16216187], [0.0269544, -0.00144629], [0.13845497, -0.01680002]])
 ```
 
 The output is hopefully fairly self-explanatory given its shape...
@@ -381,7 +382,7 @@ all_maps is an instance of BinnedData, the VariableToBin is XY with MapType of R
 
 ```python
 for i_map in all_maps:
-  print(f"{i_map.cluster_id}")
+    print(f"{i_map.cluster_id}")
 ClusterID(Cluster=8, Channel=7)
 ClusterID(Cluster=4, Channel=8)
 ...

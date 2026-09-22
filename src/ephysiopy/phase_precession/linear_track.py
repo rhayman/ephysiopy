@@ -8,23 +8,24 @@ the euclidean distance along the linear track
 
 """
 
-import numpy as np
-import matplotlib.pyplot as plt
 import copy
+
+import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
+import numpy as np
 from matplotlib.patches import Rectangle
-from ephysiopy.common.utils import (
-    VariableToBin,
-    TrialFilter,
-)
-from ephysiopy.io.recording import AxonaTrial
+
 from ephysiopy.common.fieldproperties import (
     FieldProps,
     RunProps,
 )
-from ephysiopy.phase_precession.phase_precession import phasePrecessionND
 from ephysiopy.common.statscalcs import RegressionResults
-
+from ephysiopy.common.utils import (
+    TrialFilter,
+    VariableToBin,
+)
+from ephysiopy.io.recording import AxonaTrial
+from ephysiopy.phase_precession.phase_precession import phasePrecessionND
 
 MIN_THETA = 6
 MAX_THETA = 10

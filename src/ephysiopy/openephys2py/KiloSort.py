@@ -5,13 +5,14 @@
 
 import os
 import warnings
-import numpy as np
-import pandas as pd
 from collections import OrderedDict
 from contextlib import contextmanager
 from pathlib import Path
-from phylib.utils import Bunch
+
+import numpy as np
+import pandas as pd
 from phylib.io.model import get_closest_channels
+from phylib.utils import Bunch
 
 
 def fileExists(pname, fname) -> bool:

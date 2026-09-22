@@ -3,10 +3,11 @@ import os
 import re
 from contextlib import redirect_stdout
 from dataclasses import dataclass
-import numpy as np
 from pathlib import Path
-from ephysiopy.axona.file_headers import make_cluster_cut_entries
 
+import numpy as np
+
+from ephysiopy.axona.file_headers import make_cluster_cut_entries
 
 MAXSPEED = 4.0  # pos data speed filter in m/s
 BOXCAR = 20  # this gives a 400ms smoothing window for pos averaging

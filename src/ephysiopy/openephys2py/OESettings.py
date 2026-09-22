@@ -8,14 +8,16 @@ try:
 except ImportError:
     import xml.etree.ElementTree as ET
 
-import os
 import json
-from pathlib import Path
+import os
 from abc import ABC
 from collections import OrderedDict
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Callable
+
 import numpy as np
+
 from ephysiopy.common.utils import memmapBinaryFile
 
 """

@@ -1,8 +1,10 @@
-import numpy as np
 import os
-from ephysiopy.openephys2py import OESettings
-from ephysiopy.io.recording import OpenEphysNWB
+
+import numpy as np
 from scipy import signal
+
+from ephysiopy.io.recording import OpenEphysNWB
+from ephysiopy.openephys2py import OESettings
 
 
 class OE2Numpy(object):
@@ -47,8 +49,7 @@ class OE2Numpy(object):
             The resampled data.
         """
         denom = np.gcd(dst_rate, src_rate)
-        new_data = signal.resample_poly(
-            data, dst_rate / denom, src_rate / denom, axis)
+        new_data = signal.resample_poly(data, dst_rate / denom, src_rate / denom, axis)
         return new_data
 
     @property
@@ -166,7 +167,7 @@ class OE2Numpy(object):
                 )
             )
             new_data = self.resample(
-                self.OE_data.rawData[:, channels[0]: channels[-1]],
+                self.OE_data.rawData[:, channels[0] : channels[-1]],
                 self.settings.fpga_sample_rate,
                 output_freq,
             )

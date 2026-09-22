@@ -1,26 +1,26 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from pycircstat2.utils import rotate_data
 from scipy import ndimage
 from scipy.signal import argrelextrema
 from skimage.segmentation import watershed
-from pycircstat2.utils import rotate_data
-from ephysiopy.io.recording import AxonaTrial
-from ephysiopy.common.phasecoding import LFPOscillations
-from ephysiopy.common.phasecoding import get_bad_cycles
-from ephysiopy.common.statscalcs import (
-    CircStatsResults,
-    circCircCorrTLinear,
-    circRegress,
-    RegressionResults,
-)
-from ephysiopy.common.utils import VariableToBin, BinnedData, flatten_list
+
 from ephysiopy.common.fieldcalcs import (
+    fancy_partition,
     filter_for_speed,
     filter_runs,
-    fancy_partition,
     simple_partition,
 )
-from ephysiopy.common.fieldproperties import fieldprops, LFPSegment, FieldProps
+from ephysiopy.common.fieldproperties import FieldProps, LFPSegment, fieldprops
+from ephysiopy.common.phasecoding import LFPOscillations, get_bad_cycles
+from ephysiopy.common.statscalcs import (
+    CircStatsResults,
+    RegressionResults,
+    circCircCorrTLinear,
+    circRegress,
+)
+from ephysiopy.common.utils import BinnedData, VariableToBin, flatten_list
+from ephysiopy.io.recording import AxonaTrial
 from ephysiopy.phase_precession.config import phase_precession_config
 
 subaxis_title_fontsize = 10

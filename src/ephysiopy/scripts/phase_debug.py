@@ -1,10 +1,12 @@
 from pathlib import Path
+
 import matplotlib.pylab as plt
+
+from ephysiopy.common.fieldcalcs import fancy_partition
 from ephysiopy.common.phasecoding import (
     phase_precession_config,
     phasePrecession2D,
 )
-from ephysiopy.common.fieldcalcs import fancy_partition
 from ephysiopy.io.recording import AxonaTrial
 
 T = AxonaTrial(

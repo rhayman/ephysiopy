@@ -1,12 +1,12 @@
 import numpy as np
 from pycircstat2 import Circular, circ_plot
 from pycircstat2.descriptive import (
-    circ_mean,
-    circ_std,
     circ_dispersion,
     circ_kurtosis,
+    circ_mean,
+    circ_std,
 )
-from pycircstat2.hypothesis import rayleigh_test, omnibus_test
+from pycircstat2.hypothesis import omnibus_test, rayleigh_test
 
 
 class HeadDirectionCalcs:
@@ -75,8 +75,7 @@ class HeadDirectionCalcs:
 
         plt.figure(figsize=(6, 6))
         ax = plt.subplot(111, projection="polar")
-        circ_plot(self.head_directions, ax=ax, config={
-                  "median": False, "mean": False})
+        circ_plot(self.head_directions, ax=ax, config={"median": False, "mean": False})
         ax.set_xticklabels([])
 
         return ax

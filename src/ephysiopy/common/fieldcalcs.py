@@ -1,20 +1,20 @@
-import numpy as np
+import copy
+import warnings
+
 import matplotlib
 import matplotlib.pylab as plt
-from matplotlib.collections import RegularPolyCollection
-import warnings
-import skimage
-import copy
-from scipy import ndimage
-from skimage.segmentation import watershed
-from scipy import ndimage as ndi
-from scipy import spatial
-from scipy import stats
-import skimage.filters as skifilters
+import numpy as np
 import scipy.signal as signal
+import skimage
+import skimage.filters as skifilters
 from astropy.convolution import Gaussian1DKernel as gk1d
 from astropy.convolution import Gaussian2DKernel as gk2d
 from astropy.convolution import interpolate_replace_nans
+from matplotlib.collections import RegularPolyCollection
+from scipy import ndimage, spatial, stats
+from scipy import ndimage as ndi
+from skimage.segmentation import watershed
+
 from ephysiopy.common.fieldproperties import FieldProps, RunProps
 from ephysiopy.common.utils import (
     BinnedData,
@@ -23,7 +23,6 @@ from ephysiopy.common.utils import (
     blur_image,
     bwperim,
 )
-
 
 # Some functions to extract and filter runs from field properties
 

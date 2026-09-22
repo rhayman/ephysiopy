@@ -1,19 +1,21 @@
-import matplotlib
-import warnings
 import functools
-import matplotlib.pylab as plt
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from matplotlib.projections import get_projection_class
-from matplotlib.collections import PatchCollection, LineCollection
+import warnings
 from collections.abc import Callable
 from inspect import getfullargspec
-from matplotlib.patches import Rectangle
+
+import matplotlib
+import matplotlib.pylab as plt
 import numpy as np
 import seaborn as sns
+from matplotlib.collections import LineCollection, PatchCollection
+from matplotlib.patches import Rectangle
+from matplotlib.projections import get_projection_class
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
 from ephysiopy.axona import tintcolours as tcols
 from ephysiopy.common.utils import (
-    clean_kwargs,
     BinnedData,
+    clean_kwargs,
 )
 
 """

@@ -1,15 +1,16 @@
-from dataclasses import dataclass, field
-from skimage.measure import points_in_poly, CircleModel
-import numpy as np
-import astropy.convolution as cnv
-import skimage
-from collections import defaultdict, namedtuple
-import inspect
-from enum import Enum
 import copy
-from pathlib import Path
+import inspect
 import os
+from collections import defaultdict, namedtuple
+from dataclasses import dataclass, field
+from enum import Enum
+from pathlib import Path
 from typing import List
+
+import astropy.convolution as cnv
+import numpy as np
+import skimage
+from skimage.measure import CircleModel, points_in_poly
 
 
 class VariableToBin(Enum):

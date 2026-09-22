@@ -1,22 +1,24 @@
 # TODO: these plotting fncs needed finishing
 import warnings
+
 import matplotlib
+import matplotlib.colors as colours
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
 import numpy as np
-from ephysiopy.common.utils import flatten_list, BinnedData, repeat_ind
-from ephysiopy.visualise.plotting import _add_colour_wheel
-from ephysiopy.visualise.utils import colored_line
-from ephysiopy.io.recording import AxonaTrial
+from matplotlib.colors import ListedColormap
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 from ephysiopy.common.fieldcalcs import (
     FieldProps,
     RunProps,
     filter_runs,
 )
 from ephysiopy.common.fieldproperties import fieldprops
-import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-import matplotlib.colors as colours
-import matplotlib.patches as mpatches
-from matplotlib.colors import ListedColormap
+from ephysiopy.common.utils import BinnedData, flatten_list, repeat_ind
+from ephysiopy.io.recording import AxonaTrial
+from ephysiopy.visualise.plotting import _add_colour_wheel
+from ephysiopy.visualise.utils import colored_line
 
 
 def plot_phase_precession(

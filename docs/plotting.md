@@ -26,7 +26,9 @@ data = Path("/path/to/data/M851_140908t2rh.set")
 trial = AxonaTrial(data)
 trial.load_pos_data()
 
-trial.plot_rate_map([2,5],[3,3],separate_plots=True,cmap=matplotlib.colormaps['bone'])
+trial.plot_rate_map(
+    [2, 5], [3, 3], separate_plots=True, cmap=matplotlib.colormaps["bone"]
+)
 plt.show()
 ```
 ![plasma_rate_map1](rate_map1_plasma.png){width='400px'}

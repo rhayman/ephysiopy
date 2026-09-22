@@ -1,6 +1,8 @@
-from ephysiopy.axona import axonaIO
-import numpy as np
 import warnings
+
+import numpy as np
+
+from ephysiopy.axona import axonaIO
 
 
 class TetrodeDict(dict):

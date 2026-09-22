@@ -12,8 +12,7 @@ import numpy as np
 import pytest
 
 from ephysiopy.common.binning import RateMap
-from ephysiopy.common.utils import BinnedData, VariableToBin, MapType
-
+from ephysiopy.common.utils import BinnedData, MapType, VariableToBin
 
 # ---------------------------------------------------------------------------
 # Extra fixtures

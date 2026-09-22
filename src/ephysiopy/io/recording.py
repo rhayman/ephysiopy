@@ -1,11 +1,12 @@
 import os
 import re
-from typing import OrderedDict, override
 import warnings
 from pathlib import Path, PurePath
+from typing import OrderedDict, override
+
 import numpy as np
-from scipy import signal
 from phylib.io.model import TemplateModel
+from scipy import signal
 
 from ephysiopy.axona.axonaIO import IO, Pos
 from ephysiopy.axona.tetrode_dict import TetrodeDict
@@ -13,16 +14,16 @@ from ephysiopy.common.ephys_generic import (
     EEGCalcsGeneric,
     PosCalcsGeneric,
 )
-from ephysiopy.openephys2py.OESettings import Settings, SyncMessages
-from ephysiopy.openephys2py.KiloSort import KiloSortSession
 from ephysiopy.common.utils import (
-    TrialFilter,
-    memmapBinaryFile,
-    fileContainsString,
     RecordingKind,
+    TrialFilter,
     Xml2RecordingKind,
+    fileContainsString,
+    memmapBinaryFile,
 )
 from ephysiopy.io.bases import TrialInterface
+from ephysiopy.openephys2py.KiloSort import KiloSortSession
+from ephysiopy.openephys2py.OESettings import Settings, SyncMessages
 from ephysiopy.openephys2py.raw_data import get_raw_cluster_spikes
 
 
@@ -839,8 +840,8 @@ class OpenEphysBase(TrialInterface):
         bool
             whether the data was loaded or not
         """
-        from ephysiopy.openephys2py.OESettings import OEStructure
         from ephysiopy.common.ephys_generic import downsample_aux
+        from ephysiopy.openephys2py.OESettings import OEStructure
 
         oebin = OEStructure(self.pname)
         aux_chan_nums = []

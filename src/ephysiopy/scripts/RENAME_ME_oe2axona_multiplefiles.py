@@ -1,5 +1,6 @@
-import os
 import argparse
+import os
+
 from ephysiopy.format_converters import OE_Axona
 
 
@@ -7,30 +8,51 @@ def printNwbFiles(mydir):
     list_of_dirs = []
     for root, dirs, files in os.walk(mydir):
         for file in files:
-            if 'nwb' in file:
+            if "nwb" in file:
                 list_of_dirs.append(root)
     for nwbfile in list_of_dirs:
         print(nwbfile)
     return list_of_dirs
 
 
-parser = argparse.ArgumentParser(description='Process some data.')
-parser.add_argument('-d', '--directory', type=str, default='.', help='the directory to look in')
-parser.add_argument("-p", "--pos", action='store_true', help="Export position data")
-parser.add_argument("-t", "--tetrodes", action='store_true', help="Export tetrode data")
-parser.add_argument("--ntetrodes", nargs="+", default=['1', '2', '3', '4'], type=str, help="The tetrodes to use")
-parser.add_argument("-l", "--lfp", type=str, default="egf", help="The type of LFP to save.")
+parser = argparse.ArgumentParser(description="Process some data.")
+parser.add_argument(
+    "-d", "--directory", type=str, default=".", help="the directory to look in"
+)
+parser.add_argument("-p", "--pos", action="store_true", help="Export position data")
+parser.add_argument("-t", "--tetrodes", action="store_true", help="Export tetrode data")
+parser.add_argument(
+    "--ntetrodes",
+    nargs="+",
+    default=["1", "2", "3", "4"],
+    type=str,
+    help="The tetrodes to use",
+)
+parser.add_argument(
+    "-l", "--lfp", type=str, default="egf", help="The type of LFP to save."
+)
 parser.add_argument("--ppm", type=int, default=462, help="Pixels per metre")
-parser.add_argument("-c", "--channel", type=int, default=0, help="The LFP channel to export")
-parser.add_argument("-g", "--gain", type=int, default=5000, help="The gain applied to the LFP channel")
-parser.add_argument("-s", "--set", action='store_true', help="Whether to export the set file")
-parser.add_argument("-A", "--all", action='store_true', help="Export the everything to give a 'full' Axona data set.")
+parser.add_argument(
+    "-c", "--channel", type=int, default=0, help="The LFP channel to export"
+)
+parser.add_argument(
+    "-g", "--gain", type=int, default=5000, help="The gain applied to the LFP channel"
+)
+parser.add_argument(
+    "-s", "--set", action="store_true", help="Whether to export the set file"
+)
+parser.add_argument(
+    "-A",
+    "--all",
+    action="store_true",
+    help="Export the everything to give a 'full' Axona data set.",
+)
 args = parser.parse_args()
 
 dirs2use = printNwbFiles(args.directory)
 
 for idx in dirs2use:
-    file_name = os.path.join(idx, 'experiment_1.nwb')
+    file_name = os.path.join(idx, "experiment_1.nwb")
     oe = OE_Axona.OE2Axona(file_name)
     oe.tetrodes = args.ntetrodes
 
@@ -42,7 +64,7 @@ for idx in dirs2use:
         oe.exportPos(ppm=ppm)
         oe.exportSpikes()
         oe.exportLFP(args.channel, args.lfp, args.gain)
-        oe.makeSetData(args.channel) # can take **kwargs
+        oe.makeSetData(args.channel)  # can take **kwargs
 
     if args.pos:
         oe.exportPos(ppm=ppm)

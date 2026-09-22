@@ -1,6 +1,5 @@
-from ephysiopy.io.recording import AxonaTrial
 from ephysiopy.common.phasecoding import LFPOscillations
-
+from ephysiopy.io.recording import AxonaTrial
 
 # def test_cosine_init(path_to_axona_data):
 #     T = AxonaTrial(path_to_axona_data)

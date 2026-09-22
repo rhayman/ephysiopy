@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+
 from ephysiopy.format_converters.OE_numpy import OE2Numpy
 
 parser = argparse.ArgumentParser(

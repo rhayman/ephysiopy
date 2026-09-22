@@ -97,7 +97,7 @@
 # #     plt.close('all')
 # #     T._getRasterPlot(ts, histtype='rate')
 # #     fig = plt.gcf()
-    
+
 # #     return fig
 
 

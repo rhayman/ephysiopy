@@ -1,8 +1,9 @@
+from dataclasses import dataclass
+
 import numpy as np
+from astropy.stats.circstats import rayleightest
 from scipy import optimize
 from scipy.stats import norm
-from astropy.stats.circstats import rayleightest
-from dataclasses import dataclass
 
 
 def circ_r(alpha, w=None, d=0, axis=0):
@@ -218,8 +219,7 @@ def watsonsU2n(angles):
     Ci = (2 * np.arange(1, n + 1)) - 1
     sum_Ci_Vi_ov_n = np.sum(Ci * Vi / n)
     V_bar = (1 / float(n)) * sum_Vi
-    U2n = sum_sq_Vi - sum_Ci_Vi_ov_n + \
-        (n * (1 / float(3) - (V_bar - 0.5) ** 2))
+    U2n = sum_sq_Vi - sum_Ci_Vi_ov_n + (n * (1 / float(3) - (V_bar - 0.5) ** 2))
     test_vals = {
         "0.1": 0.152,
         "0.05": 0.187,
@@ -231,16 +231,12 @@ def watsonsU2n(angles):
         if U2n > val:
             print(
                 "The Watsons U2 statistic is {0} which is \
-                greater than\n the critical value of {1} at p={2}".format(
-                    U2n, val, key
-                )
+                greater than\n the critical value of {1} at p={2}".format(U2n, val, key)
             )
         else:
             print(
                 "The Watsons U2 statistic is not \
-                significant at p={0}".format(
-                    key
-                )
+                significant at p={0}".format(key)
             )
     return U2n
 
@@ -356,8 +352,7 @@ def ccc(t, p):
     F = np.sum(np.sin(2 * t))
     G = np.sum(np.cos(2 * p))
     H = np.sum(np.sin(2 * p))
-    rho = 4 * (A * B - C * D) / \
-        np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
+    rho = 4 * (A * B - C * D) / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
     return rho
 
 
@@ -395,8 +390,7 @@ def ccc_jack(t, p):
     G = np.sum(G) - G
     H = np.sin(2 * p)
     H = np.sum(H) - H
-    rho = 4 * (A * B - C * D) / \
-        np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
+    rho = 4 * (A * B - C * D) / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
     return rho
 
 
@@ -455,10 +449,8 @@ def circCircCorrTLinear(theta, phi, regressor=1000, alpha=0.05, hyp=0, conf=True
         rho_boot = np.mean(rho_jack)
         rho_jack_std = np.std(rho_jack)
         ci = (
-            rho_boot - (1 / np.sqrt(n)) * rho_jack_std *
-            norm.ppf(alpha / 2, (0, 1))[0],
-            rho_boot + (1 / np.sqrt(n)) * rho_jack_std *
-            norm.ppf(alpha / 2, (0, 1))[0],
+            rho_boot - (1 / np.sqrt(n)) * rho_jack_std * norm.ppf(alpha / 2, (0, 1))[0],
+            rho_boot + (1 / np.sqrt(n)) * rho_jack_std * norm.ppf(alpha / 2, (0, 1))[0],
         )
     elif conf and regressor and n < 25 and n > 4:
         from sklearn.utils import resample
@@ -519,8 +511,7 @@ def shuffledPVal(theta, phi, rho, regressor, hyp):
     G = np.sum(np.cos(2 * phi))
     H = np.sum(np.sin(2 * phi))
 
-    rho_sim = 4 * (A * B - C * D) / \
-        np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
+    rho_sim = 4 * (A * B - C * D) / np.sqrt((n**2 - E**2 - F**2) * (n**2 - G**2 - H**2))
 
     if hyp == 1:
         p_shuff = np.sum(rho_sim >= rho) / float(regressor)
@@ -568,8 +559,7 @@ def circRegress(x, t):
         return -np.abs(np.sum(np.exp(1j * (t - m * x)))) / len(t - m * x)
 
     try:
-        slope = optimize.fminbound(
-            _cost, -1 * max_slope, max_slope, args=(xn, tn))
+        slope = optimize.fminbound(_cost, -1 * max_slope, max_slope, args=(xn, tn))
     except ValueError:
         return np.nan, np.nan
     intercept = np.arctan2(
