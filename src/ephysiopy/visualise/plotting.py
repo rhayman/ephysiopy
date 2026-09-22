@@ -16,7 +16,6 @@ from ephysiopy.axona import tintcolours as tcols
 from ephysiopy.common import fieldcalcs as fc
 from ephysiopy.common.binning import RateMap
 from ephysiopy.common.directionalcalcs import HeadDirectionCalcs
-from ephysiopy.common.phasecoding import LFPOscillations
 from ephysiopy.common.utils import (
     BinnedData,
     ClusterID,
@@ -1232,6 +1231,8 @@ class FigureMaker(object):
         plt.Axes
             The axes containing the theta phase plot.
         """
+
+        from ephysiopy.common.phasecoding import LFPOscillations
 
         ax = kwargs.pop("ax", None)
         if ax is None:
