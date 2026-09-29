@@ -264,7 +264,7 @@ def add_normalised_run_position(f_props: list[FieldProps]) -> list[FieldProps]:
     return f_props
 
 
-def plot_linear_runs(f_props: list[FieldProps], var: str = "speed", **kwargs):
+def plot_linear_runs(f_props: list[FieldProps], var: str = "xy", **kwargs):
     """
     Plots the runs through the field(s) on a linear track
     as a sort of raster plot with each run as a separate line on
@@ -299,7 +299,7 @@ def plot_linear_runs(f_props: list[FieldProps], var: str = "speed", **kwargs):
 
         inc = 1 / len(f.runs)
         for i, r in enumerate(f.runs):
-            spike_x = np.ma.compressed(r.spiking_var("xy"))
+            spike_x = np.ma.compressed(r.spiking_var(var))
             spike_ymax = np.ones_like(spike_x) * (inc * (i + 1))
             spike_ymin = np.zeros_like(spike_x) * (inc * (i + 1))
             ax.vlines(

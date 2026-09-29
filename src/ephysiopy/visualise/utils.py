@@ -18,6 +18,29 @@ from ephysiopy.common.utils import (
     clean_kwargs,
 )
 
+# params for use with plt.rc_context()
+figure_params = {
+    "pdf.fonttype": 42,
+    "ps.fonttype": 42,
+    "font.family": "Arial",
+    "axes.grid": False,
+    "font.size": 8,
+    "axes.labelsize": 14,
+    "axes.titlesize": 16,
+    "xtick.labelsize": 10,
+    "ytick.labelsize": 10,
+    "legend.fontsize": 10,
+    "axes.linewidth": 0.8,
+    "xtick.major.width": 0.8,
+    "ytick.major.width": 0.8,
+    "xtick.major.size": 3,
+    "ytick.major.size": 3,
+    "ytick.left": True,
+    "ytick.direction": "in",
+    "savefig.transparent": True,
+    "savefig.bbox": "tight",
+}
+
 """
 This one allows us to save the
 returned matplotlib Axis object to a location and name specified by the
@@ -229,7 +252,11 @@ def colored_line(x, y, c, ax, **lc_kwargs):
     lc = LineCollection(segments, **default_kwargs)
     lc.set_array(c)  # set the colors of each segment
 
-    return ax.add_collection(lc)
+    ax = ax or plt.gca()
+
+    ax.add_collection(lc)
+
+    return lc
 
 
 jet_cmap = matplotlib.colormaps["jet"]

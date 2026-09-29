@@ -3,9 +3,9 @@ import warnings
 from pathlib import Path
 
 import matplotlib.pylab as plt
-import matplotlib.transforms as transforms
 import numpy as np
 import seaborn as sns
+from matplotlib import transforms
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pycircstat2 import Circular
@@ -24,6 +24,7 @@ from ephysiopy.common.utils import (
     clean_kwargs,
     flatten_list,
     memmapBinaryFile,
+    print_cluster_channel,
     rect,
     repeat_ind,
 )
@@ -40,7 +41,7 @@ from ephysiopy.visualise.utils import (
 )
 
 
-class FigureMaker(object):
+class FigureMaker:
     """
     A mixin class for TrialInterface that deals solely with
     producing graphical output.
@@ -146,6 +147,7 @@ class FigureMaker(object):
         ax.set_aspect("equal")
         return fig
 
+    @print_cluster_channel
     def plot_linear_rate_map(
         self, cluster: int | list, channel: int | list, **kwargs
     ) -> plt.Figure:
@@ -211,6 +213,7 @@ class FigureMaker(object):
         return _plot_map(rmap, ax, **kwargs)
 
     @saveFigure
+    @print_cluster_channel
     def plot_pycircstat_hd(self, cluster: int, channel: int, **kws) -> plt.Axes:
         """
         Plot the head direction response using pycircstat2 which
@@ -238,6 +241,7 @@ class FigureMaker(object):
         return hd.plot()
 
     @saveFigure
+    @print_cluster_channel
     def plot_hd_map(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
         Gets the head direction map for the specified cluster(s) and channel.
@@ -330,6 +334,7 @@ class FigureMaker(object):
         return _plot_single_map(rmap, ax, **kwargs)
 
     # @saveFigure
+    @print_cluster_channel
     def plot_spike_path(self, cluster=None, channel=None, **kws) -> plt.Axes:
         """
         Plots the spikes on the path for the specified cluster(s) and channel.
@@ -395,6 +400,7 @@ class FigureMaker(object):
 
         return ax
 
+    @print_cluster_channel
     def plot_eb_map(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
         Plots the ego-centric boundary map for the specified cluster(s) and
@@ -442,6 +448,7 @@ class FigureMaker(object):
         return fig
 
     @saveFigure
+    @print_cluster_channel
     def plot_eb_spikes(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
         Plots the ego-centric boundary spikes for the specified cluster(s)
@@ -513,6 +520,7 @@ class FigureMaker(object):
         return fig
 
     @saveFigure
+    @print_cluster_channel
     def plot_sac(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
         Plots the spatial autocorrelation for the specified cluster(s) and channel.
@@ -589,6 +597,7 @@ class FigureMaker(object):
         # return fig
 
     @saveFigure
+    @print_cluster_channel
     def plot_time_map(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
         Plots the spikes binned in time for the specified cluster(s) and
@@ -628,6 +637,7 @@ class FigureMaker(object):
         return ax
 
     @saveFigure
+    @print_cluster_channel
     def plot_speed_v_rate(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
         Plots the speed versus rate plot for the specified cluster(s) and
@@ -692,6 +702,7 @@ class FigureMaker(object):
         return ax
 
     @saveFigure
+    @print_cluster_channel
     def plot_speed_v_hd(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
         Plots the speed versus head direction plot for the specified cluster(s) and channel.
@@ -738,6 +749,7 @@ class FigureMaker(object):
 
     @saveFigure
     @addClusterChannelToAxes
+    @print_cluster_channel
     def plot_acorr(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
         Plots the autocorrelogram for the specified cluster(s) and channel.
@@ -790,6 +802,7 @@ class FigureMaker(object):
         return ax
 
     @saveFigure
+    @print_cluster_channel
     def plot_xcorr(
         self, cluster_a: int, channel_a: int, cluster_b: int, channel_b: int, **kwargs
     ) -> plt.Axes:
@@ -850,6 +863,7 @@ class FigureMaker(object):
         ax.vlines(0, ymin=0, ymax=1, colors="lightgrey", transform=axtrans, zorder=1)
         return ax
 
+    @print_cluster_channel
     def plot_xcorrs(self, ids: list[ClusterID], **kwargs) -> plt.Figure:
         """
         Given a list of clusters and channels in the form of a list of
@@ -912,6 +926,7 @@ class FigureMaker(object):
         return fig
 
     @saveFigure
+    @print_cluster_channel
     def plot_figure_grid(
         self, clusters: list, channels: list, fn: str = "plot_rate_map", **kws
     ) -> plt.Figure:
@@ -953,6 +968,7 @@ class FigureMaker(object):
 
     @saveFigure
     @addClusterChannelToAxes
+    @print_cluster_channel
     def plot_correlation_matrix(
         self, clusters: list, channels: list, fn: str = "get_rate_map", **kws
     ) -> plt.Figure:
@@ -994,6 +1010,7 @@ class FigureMaker(object):
 
     @saveFigure
     @addClusterChannelToAxes
+    @print_cluster_channel
     def plot_raster(self, cluster: int, channel: int, **kwargs) -> plt.Axes:
         """
         Plots the raster plot for the specified cluster(s) and channel.
@@ -1117,6 +1134,7 @@ class FigureMaker(object):
             return
 
     @saveFigure
+    @print_cluster_channel
     def plot_power_spectrum(self, **kwargs) -> plt.Axes:
         """
         Plots the power spectrum.
@@ -1131,6 +1149,7 @@ class FigureMaker(object):
         return ax
 
     @saveFigure
+    @print_cluster_channel
     def plot_theta_vs_running_speed(self, **kwargs) -> plt.Axes:
         """
         Plots theta frequency versus running speed.
@@ -1163,6 +1182,7 @@ class FigureMaker(object):
 
         return ax
 
+    @print_cluster_channel
     def plot_theta_phase_ratemap(self, cluster: int, channel: int, **kws) -> plt.Axes:
         """
         Plots the theta phase by x-y position map for the given cluster
@@ -1210,6 +1230,7 @@ class FigureMaker(object):
         return ax
 
     @addClusterChannelToAxes
+    @print_cluster_channel
     # @saveFigure
     def plot_clusters_theta_phase(
         self, cluster: int, channel: int, **kwargs
@@ -1243,14 +1264,22 @@ class FigureMaker(object):
 
         L = LFPOscillations(self.EEGCalcs.sig, self.EEGCalcs.fs)
         ts = self.get_spike_times(cluster, channel)
-        phase, x, y = L.get_theta_phase(ts, **kwargs)  # phase in radians
+        phase, _, _ = L.get_theta_phase(ts, **kwargs)  # phase in radians
 
         phase = rotate_data(phase, np.pi)
-        data = Circular(
-            phase,
-            unit="radian",
-            kwargs_median={"method": "deviation", "average_method": "unique"},
-        )
+        try:
+            data = Circular(
+                phase,
+                unit="radian",
+                kwargs_median={"method": "deviation", "average_method": "unique"},
+            )
+        except Exception as e:
+            data = Circular(
+                np.atleast_2d(phase),
+                unit="radian",
+                kwargs_median={"method": "deviation", "average_method": "unique"},
+            )
+
         data.plot(
             ax=ax,
             config={
@@ -1271,6 +1300,7 @@ class FigureMaker(object):
 
         return ax
 
+    @print_cluster_channel
     def plot_phase_precession(
         self,
         cluster: int,
@@ -1353,6 +1383,7 @@ class FigureMaker(object):
     # @saveFigure
     # @stripAxes
 
+    @print_cluster_channel
     def plot_waveforms(self, cluster: int, channel: int, **kws) -> list[plt.Axes]:
         """
         Plot the waveforms for the selected cluster on the channel (tetrode)
@@ -1528,6 +1559,7 @@ class FigureMaker(object):
             return stripAxes(ax)
         return ax
 
+    @print_cluster_channel
     def plot_depth_spectrogram(
         self,
         path_to_lfp: Path,

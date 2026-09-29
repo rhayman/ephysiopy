@@ -1,4 +1,5 @@
 import copy
+import functools
 import inspect
 import os
 from collections import defaultdict, namedtuple
@@ -643,6 +644,27 @@ def fileContainsString(pname: str, searchStr: str) -> bool:
         return found
     else:
         return False
+
+
+def print_cluster_channel(func):
+    """
+    Decorator to print out cluster and channel info for a
+    function
+    """
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        trial = args[0]
+        cluster = args[1]
+        channel = args[2]
+        print(
+            f"Calculating {func.__name__} for {trial.pname}, cluster {
+                cluster
+            }, channel {channel}"
+        )
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
 def clean_kwargs(func, kwargs):
@@ -1566,3 +1588,24 @@ def get_environment_shape(xy: np.ndarray) -> tuple:
         return "circle", perimeter_points
     else:
         return "square", perimeter_points
+
+
+def is_slice_in_slice(small_slice: slice, big_slice: slice) -> bool:
+    """
+    Check if a smaller slice is completely contained within a larger slice.
+
+    Parameters
+    ----------
+    small_slice : slice
+        The smaller slice to check.
+    big_slice : slice
+        The larger slice to check against.
+
+    Returns
+    -------
+    bool
+        True if the smaller slice is completely contained within the larger slice, False otherwise.
+    """
+    return (small_slice.start >= big_slice.start) and (
+        small_slice.stop <= big_slice.stop
+    )

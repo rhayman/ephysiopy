@@ -1071,7 +1071,7 @@ class FieldProps(RegionProperties):
         """
         The phases of the LFP signal for all runs through this field
         """
-        phases = [r.lfp.phase for r in self.runs if r.lfp]
+        phases = [np.ravel(r.lfp.phase) for r in self.runs if r.lfp]
         if len(phases) == 0:
             return None
         return phases

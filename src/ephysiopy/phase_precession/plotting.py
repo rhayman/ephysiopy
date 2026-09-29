@@ -2,19 +2,19 @@
 import warnings
 
 import matplotlib
+import matplotlib as mpl
 import matplotlib.colors as colours
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import ListedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from scipy.signal import argrelextrema
 
 from ephysiopy.common.fieldcalcs import (
     FieldProps,
     RunProps,
-    filter_runs,
 )
-from ephysiopy.common.fieldproperties import fieldprops
 from ephysiopy.common.utils import BinnedData, flatten_list, repeat_ind
 from ephysiopy.io.recording import AxonaTrial
 from ephysiopy.visualise.plotting import _add_colour_wheel
@@ -44,11 +44,8 @@ def plot_phase_precession(
 
     """
 
-    phase = phase
-    normalised_position = normalised_position
-
     if ax is None:
-        fig, ax = plt.subplots()
+        _, ax = plt.subplots()
 
     # scatter plot of phase vs normalised position
     # repeat the y-axis values for clarity
@@ -150,14 +147,14 @@ def imshow_phase_precession(
     return ax
 
 
-def plot_runs_and_precession(
-    trial: AxonaTrial, cluster: int, channel: int, field_props: list[FieldProps]
-):
+# TODO: This is a mess
+def plot_runs_and_precession(trial: AxonaTrial, fp: list[FieldProps]):
     """
     Plot runs versus time where the colour of the line indicates
     directional heading. The field limits are also plotted and spikes are
     overlaid on the runs. Boxes delineate the runs that have been identified
     in field_props. Also plots phase precession for each field.
+    Yeah it doesn't do almost any of the above..
     """
     # warn if the trial has not been masked/ filtered
     if trial.filter is None:
@@ -165,26 +162,6 @@ def plot_runs_and_precession(
             "Trial has not been filtered. "
             "Consider applying a position filter before plotting runs."
         )
-
-    # need to clearly pull out the runs along the linear track
-    # so use fieldprops to do this using a unitary label image
-    # as input and some other params that the input
-    # field_props would have been generated with
-    label_image = np.ones_like(field_props[0]._intensity_image, dtype=int)
-    # smooth xy quite a bit as we just want runs going smoothly
-    # from one end of the track to the other
-    xy = trial.PosCalcs.smoothPos(trial.PosCalcs.xy, window_len=31)
-
-    fp = fieldprops(
-        label_image,
-        xy=xy[0],
-        binned_data=field_props[0].binned_data,
-        spike_times=trial.get_spike_times(cluster, channel),
-        method="clump_runs",
-    )
-    # filter out the short duration runs
-    fp = filter_runs(fp, ["min_speed", "duration"], [np.greater, np.greater], [0, 0.1])
-    # filter for distance traversed
 
     plt.figure(constrained_layout=True)
 
@@ -199,6 +176,7 @@ def plot_runs_and_precession(
     plt.show()
 
 
+# TODO: This is unfinished and needs to be completed...
 def plot_field_and_runs(trial: AxonaTrial, field_props: list[FieldProps]):
     """
     Parameters
@@ -319,9 +297,9 @@ def plot_phase_v_position(
 
     for field in field_props:
         fig, ax = plt.subplots()
-        runs_pos = flatten_list(field.runs_normalized_position)
+        runs_pos = flatten_list(field.normalized_position)
         runs_phase = flatten_list(field.phase)
-        runs_spikes = flatten_list(field.runs_observed_spikes)
+        runs_spikes = flatten_list(field.observed_spikes)
         idx = np.nonzero(np.array(runs_spikes))[0]
         ax.scatter(np.array(runs_pos)[idx], np.array(runs_phase)[idx], **kwargs)
 
@@ -449,9 +427,7 @@ def plot_lfp_segment(field: FieldProps, lfp_sample_rate: int = 250):
     plt.show()
 
 
-def plot_lfp_run(
-    run: RunProps, cycle_labels: np.ndarray = None, lfp_sample_rate: int = 250, **kwargs
-):
+def plot_lfp_run(run: RunProps, **kwargs):
     """
     Plot the lfp segment for a single run through a field including
     the spikes emitted by the cell.
@@ -482,6 +458,57 @@ def plot_lfp_run(
     spike_amp = np.take(sig, inds)
     spike_times = np.take(t, inds)
     ax.plot(spike_times, spike_amp, "ro")
+    return ax
+
+
+def plot_lfp_and_mean_spiking_phase(run: RunProps, **kwargs):
+    """
+    Plot the lfp segment for a single run through a field including
+    the spikes emitted by the cell and the mean spiking phase for each cycle.
+
+    Parameters
+    ----------
+    run : RunProps
+        The run to plot.
+    **kwargs : dict
+        Additional keyword arguments for plotting."""
+
+    assert hasattr(run, "lfp")
+    cmap = kwargs.get("cmap", "tab10")
+    fig, ax = plt.subplots()
+    # ax = fig.add_subplot(111)
+    # cycle labels are plotting weird so lets
+    # calculate the cycles from the phase data and use that instead
+    _phase = np.ravel(run.lfp.phase)
+    minima = argrelextrema(_phase, np.less, order=3)[0]
+    dfs = np.diff(minima, prepend=0, append=len(_phase))
+    # will need more than the default 10 colours if there are more than 10 cycles in the run
+    # and generate runs of numbers from 1 to n depending on the number of cycles
+    # colours = np.linspace(0, 1, len(minima) + 1)
+    colours = np.repeat(np.arange(0, len(minima) + 1), dfs)
+    sig = run.lfp.filtered_signal[0]
+    t = run.lfp.time
+    # breakpoint()
+    colours = colours % 10
+    colored_line(t, sig, colours, ax=ax, cmap=cmap, lw=3)
+    ax.set_title(f"Run {run.label} LFP and mean spiking phase")
+    # Set the x limit to the bounds of where the spikes occur
+    # breakpoint()
+    ax.set_xlim(run.spike_times[0], run.spike_times[-1])
+    ax.set_ylim(np.nanmin(sig), np.nanmax(sig))
+    inds = repeat_ind(run.lfp.spike_count.ravel().data)
+    spike_amp = np.take(sig, inds)
+    spike_times = np.take(t, inds)
+    ax.plot(spike_times, spike_amp, "ro", alpha=0.5)
+    # mean_phase = run.lfp.mean_spiking_var("phase")
+    mean_phase_time = run.lfp.mean_spiking_var("time")
+    # these times are means based on spiking events and so
+    # may not have a direct corresponding value in the time array
+    # t so lets figure out which index is the closest
+    nearest_times_idx = np.argmin(np.abs(t - mean_phase_time.T), axis=1)
+    # and calculate the amplitude at that time
+    nearest_amp = np.take(sig, np.ravel(nearest_times_idx))
+    ax.plot(np.ravel(mean_phase_time), nearest_amp, "go", ms=12)
     return ax
 
 

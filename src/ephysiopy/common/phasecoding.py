@@ -44,6 +44,7 @@ class LFPOscillations(object):
         self.smthKernelSigma = 0.1875
         self.sn2Width = 2
         self.thetaRange = [6, 12]
+        self.gammaRange = [20, 90]
         self.xmax = 11
 
     def getFreqPhase(self, sig, band2filter: list, ford=3) -> FreqPhase:
@@ -91,9 +92,7 @@ class LFPOscillations(object):
         pos_sample_rate: float,
         start: float,
         stop: float,
-        FREQ_BAND=(20, 90),
-        **kwargs,
-    ):
+    ) -> tuple[plt.Figure, plt.Axes]:
         """
         Plots the continuous wavelet transform of the signal
 
@@ -110,6 +109,13 @@ class LFPOscillations(object):
         FREQ_BAND : tuple, optional
             The frequency band to be highlighted (default is (20, 90)).
         """
+        # ---- START TEMP TESTING -------
+        theta = self.getFreqPhase(sig, band2filter=[6, 12])
+        gamma = self.getFreqPhase(sig, band2filter=[20, 90])
+        theta = theta.filt_sig[int(start * self.fs) : int(stop * self.fs)]
+        gamma = gamma.filt_sig[int(start * self.fs) : int(stop * self.fs)]
+
+        # ---- END TEMP TESTING -------
         wavelet = "cmor1.0-1.0"
         scales = np.geomspace(2, 140, num=100)
         _sig = sig[int(start * self.fs) : int(stop * self.fs)]
@@ -123,14 +129,16 @@ class LFPOscillations(object):
             t,
             freqs,
             power,
-            # norm="log",
-            vmax=np.percentile(power, 99),
-            vmin=0,
+            norm="log",
+            # vmax=np.percentile(power, 99),
+            # vmin=0,
             cmap="jet",
         )
         ax[0].set_yscale("log")
         # fig.colorbar(im, ax=ax[0], label="Power")
-        ax[1].plot(t, _sig, "k")
+        ax[1].plot(t, _sig, "lightgrey")
+        ax[1].plot(t, theta, "b", label="Theta")
+        ax[1].plot(t, gamma, "r", label="Gamma")
         ax[1].set_ylabel("LFP (a.u.)")
         # plot speed
         s = slice(int(start * pos_sample_rate), int(stop * pos_sample_rate))
@@ -243,8 +251,9 @@ class LFPOscillations(object):
             20,
             90,
         ),
+        as_slices: bool = False,
         **kwargs,
-    ) -> np.ndarray:
+    ) -> dict:
         """
         Uses the continuous wavelet transform to find epochs
         of high oscillatory power in the LFP
@@ -256,6 +265,9 @@ class LFPOscillations(object):
 
         FREQ_BAND : tuple, optional
             The frequency band to look for oscillations in (default is (20, 90)).
+
+        as_slices : bool, optional
+            Whether to return the oscillatory epochs as slices (default is False).
 
         **kwargs : dict
             Additional keyword arguments:
@@ -329,10 +341,13 @@ class LFPOscillations(object):
             run_max_idx = np.argmax(amplitude_filtered[s], 0) + run_start
             sig_slice = slice(run_max_idx - dt, run_max_idx + dt)
             # breakpoint()
-            slice_in_seconds = sig_slice.start / self.fs, sig_slice.stop / self.fs
-            oscillatory_windows[slice_in_seconds] = F.filt_sig[
-                run_max_idx - dt : run_max_idx + dt
-            ]
+            if as_slices:
+                oscillatory_windows[sig_slice] = F.filt_sig[sig_slice]
+            else:
+                slice_in_seconds = sig_slice.start / self.fs, sig_slice.stop / self.fs
+                oscillatory_windows[slice_in_seconds] = F.filt_sig[
+                    run_max_idx - dt : run_max_idx + dt
+                ]
 
         return oscillatory_windows
 
@@ -404,12 +419,14 @@ class LFPOscillations(object):
         from ephysiopy.common.statscalcs import circ_r
 
         mi = circ_r(pbins[:, 1], amp)
+
         if plot:
             fig = plt.figure()
             ax = fig.add_subplot(111, polar=True)
             w = np.pi / (nbins / 2)
             ax.bar(pbins[:, 1], amp, width=w)
             ax.set_title("Modulation index={0:.5f}".format(mi))
+
         return mi
 
     def power_spectrum(
@@ -478,7 +495,7 @@ class LFPOscillations(object):
         gammaband=[30, 80],
         plot=True,
         **kwargs,
-    ):
+    ) -> tuple:
         """
         Computes the phase-amplitude coupling (PAC) of nested oscillations.
         More specifically this is the phase-locking value (PLV) between two
@@ -505,8 +522,9 @@ class LFPOscillations(object):
 
         Returns
         -------
-        float
-            The value of the phase-amplitude coupling (PLV).
+        tuple
+            A tuple containing the phase-amplitude coupling (PLV), the
+            phase bins, and the histogram of the phase differences.
 
         """
 
@@ -864,6 +882,61 @@ class LFPOscillations(object):
         ax.plot(pos_data.xy[0], pos_data.xy[1], color="lightgrey", zorder=0)
         ax.scatter(spike_xy[0], spike_xy[1], c=spike_phase, cmap=cmap, zorder=1)
         return ax
+
+
+def get_slice_modulation_index(
+    theta_sig: FreqPhase,
+    gamma_sig: FreqPhase,
+    slice: slice,
+    nbins: int = 20,
+):
+    """
+    Calculates the modulation index of theta and gamma oscillations
+    for a given slice of data. Specifically, this is the circular correlation
+    between the phase of theta and the power of gamma.
+    """
+    phase = theta_sig.phase[slice]
+    amp = gamma_sig.amplitude_filtered[slice]
+    inc = 2 * np.pi / nbins
+    a = np.arange(0, 2 * np.pi, inc)
+    dt = np.array([-inc / 2, inc / 2])
+    pbins = a[:, np.newaxis] + dt[np.newaxis, :]
+    amp_hist = np.zeros(nbins)
+    phase_len = np.arange(len(phase))
+    for i in range(nbins):
+        pts = np.nonzero((phase >= pbins[i, 0]) * (phase < pbins[i, 1]) * phase_len)
+        amp_hist[i] = np.ma.mean(amp[pts])
+
+    amp_hist = np.ma.divide(amp_hist, np.ma.sum(amp_hist))
+    from ephysiopy.common.statscalcs import circ_r
+
+    mi = circ_r(pbins[:, 1], amp_hist)
+    return mi
+
+
+def get_slice_plv(
+    theta_sig: FreqPhase,
+    gamma_sig: FreqPhase,
+    slice: slice,
+    nbins: int = 20,
+):
+    """
+    Calculates the phase locking value (plv) for a slice of two nested
+    signals in the LFP data. A PLV of unity indicates perfect phase
+    locking (here PAC) and a value of zero indicates no locking (no PAC).
+
+    """
+
+    phase = theta_sig.phase[slice]
+    amp = gamma_sig.amplitude_filtered[slice]
+
+    highampphase = np.angle(signal.hilbert(amp))
+    phasedf = highampphase - phase
+    phasedf = np.exp(1j * phasedf)
+    phasedf = np.angle(phasedf)
+    from ephysiopy.common.statscalcs import circ_r
+
+    return circ_r(phasedf)
 
 
 def get_cycle_labels(
