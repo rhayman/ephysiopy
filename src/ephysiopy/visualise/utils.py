@@ -393,3 +393,52 @@ def _plot_patch_collection(xy: np.ma.MaskedArray, ax: plt.Axes, **kws) -> plt.Ax
         ax.set_ylim(np.ma.min(xy[1, :]), np.ma.max(xy[1, :]))
 
     return ax
+
+
+def zoom_effect(ax_main, ax_zoom, x_range: tuple, **kwargs):
+    """
+    Draw a zoom effect (as in matplotlib's axes_zoom_effect example) between
+    two axes whose y-axes can have different units (e.g. distance in cm in
+    ax_main and LFP/time in ax_zoom).
+
+    Only the x-values are used to link the axes so the y-units are irrelevant.
+    The x-values in ax_main (x_range) are highlighted and connected to the
+    full x-extent of ax_zoom. ax_zoom's xlim is set to x_range, so both axes
+    must share the same x-units (e.g. seconds), or ax_zoom's x-limits can be
+    set beforehand by passing set_xlim=False.
+
+    Parameters
+    ----------
+    ax_main : matplotlib.axes.Axes
+        The axes containing the whole data, a section of which is highlighted.
+    ax_zoom : matplotlib.axes.Axes
+        The axes showing the zoomed section. Should be below ax_main.
+    x_range : tuple
+        (xmin, xmax) of the section to highlight, in ax_main's x data units.
+    **kwargs
+        set_xlim (bool, default True), colour (default 'k'), alpha (0.2)
+    """
+    from matplotlib.patches import ConnectionPatch
+
+    set_xlim = kwargs.pop("set_xlim", True)
+    colour = kwargs.pop("colour", "k")
+    alpha = kwargs.pop("alpha", 0.2)
+    x0, x1 = x_range
+    if set_xlim:
+        ax_zoom.set_xlim(x0, x1)
+    z0, z1 = ax_zoom.get_xlim()
+
+    ax_main.axvspan(x0, x1, color=colour, alpha=alpha)
+    patches = []
+    for xm, xz in ((x0, z0), (x1, z1)):
+        con = ConnectionPatch(
+            xyA=(xm, 0),
+            coordsA=ax_main.get_xaxis_transform(),
+            xyB=(xz, 1),
+            coordsB=ax_zoom.get_xaxis_transform(),
+            color=colour,
+            alpha=alpha * 2,
+        )
+        ax_zoom.figure.add_artist(con)
+        patches.append(con)
+    return patches
