@@ -395,37 +395,38 @@ def _plot_patch_collection(xy: np.ma.MaskedArray, ax: plt.Axes, **kws) -> plt.Ax
     return ax
 
 
-def zoom_effect(ax_main, ax_zoom, x_range: tuple, **kwargs):
+def zoom_effect(ax_main, ax_zoom, main_range: tuple, zoom_range: tuple = None, **kwargs):
     """
     Draw a zoom effect (as in matplotlib's axes_zoom_effect example) between
-    two axes whose y-axes can have different units (e.g. distance in cm in
-    ax_main and LFP/time in ax_zoom).
+    the x-axes of two axes that have different x-units, e.g. distance in cm
+    on ax_main and time in seconds (LFP) on ax_zoom.
 
-    Only the x-values are used to link the axes so the y-units are irrelevant.
-    The x-values in ax_main (x_range) are highlighted and connected to the
-    full x-extent of ax_zoom. ax_zoom's xlim is set to x_range, so both axes
-    must share the same x-units (e.g. seconds), or ax_zoom's x-limits can be
-    set beforehand by passing set_xlim=False.
+    The region main_range (in ax_main x-units) is highlighted and its edges
+    are connected to the edges of zoom_range (in ax_zoom x-units).
 
     Parameters
     ----------
     ax_main : matplotlib.axes.Axes
-        The axes containing the whole data, a section of which is highlighted.
+        Axes with the full data (x in e.g. cm).
     ax_zoom : matplotlib.axes.Axes
-        The axes showing the zoomed section. Should be below ax_main.
-    x_range : tuple
-        (xmin, xmax) of the section to highlight, in ax_main's x data units.
+        Axes showing the zoomed section (x in e.g. seconds). Should be below
+        ax_main.
+    main_range : tuple
+        (xmin, xmax) in ax_main's x-units to highlight.
+    zoom_range : tuple, optional
+        (xmin, xmax) in ax_zoom's x-units that corresponds to main_range.
+        If None (default) the current x-limits of ax_zoom are used. If given,
+        ax_zoom's x-limits are set to it.
     **kwargs
-        set_xlim (bool, default True), colour (default 'k'), alpha (0.2)
+        colour (default 'k'), alpha (default 0.2)
     """
     from matplotlib.patches import ConnectionPatch
 
-    set_xlim = kwargs.pop("set_xlim", True)
     colour = kwargs.pop("colour", "k")
     alpha = kwargs.pop("alpha", 0.2)
-    x0, x1 = x_range
-    if set_xlim:
-        ax_zoom.set_xlim(x0, x1)
+    x0, x1 = main_range
+    if zoom_range is not None:
+        ax_zoom.set_xlim(*zoom_range)
     z0, z1 = ax_zoom.get_xlim()
 
     ax_main.axvspan(x0, x1, color=colour, alpha=alpha)
