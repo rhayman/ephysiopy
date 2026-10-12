@@ -112,7 +112,7 @@ class EventsGeneric(object):
             self._event_dict["stim_params"][k] = dict.fromkeys(level_three_keys)
 
 
-class EEGCalcsGeneric(object):
+class EEGCalcsGeneric:
     """
     Generic class for processing and analysis of EEG data
 
@@ -127,6 +127,7 @@ class EEGCalcsGeneric(object):
     def __init__(self, sig, fs):
         self.sig = np.ma.MaskedArray(sig)
         self.fs = fs
+        self.time = None
         self.thetaRange = [6, 12]
         self.outsideRange = [3, 125]
         # for smoothing and plotting of power spectrum
@@ -135,6 +136,9 @@ class EEGCalcsGeneric(object):
         self.sn2Width = 2
         self.maxFreq = 125
         self.maxPow = None
+
+        sig_len = len(self.sig)
+        self.time = np.linspace(0, sig_len / fs, sig_len)
 
     def __add__(self, other):
         """
@@ -300,7 +304,7 @@ class EEGCalcsGeneric(object):
         return fftRes
 
 
-class PosCalcsGeneric(object):
+class PosCalcsGeneric:
     """
     Generic class for post-processing of position data
     Uses numpys masked arrays for dealing with bad positions, filtering etc
@@ -372,7 +376,7 @@ class PosCalcsGeneric(object):
         self._y = np.ma.MaskedArray(y)
         self.orig_xy: np.ma.MaskedArray = np.ma.MaskedArray([x, y])
         self._xy = np.ma.MaskedArray(np.zeros(shape=[2, len(x)]))
-        self._time = None
+        self._time = None | np.ndarray
         self._dir = np.ma.MaskedArray(np.zeros_like(x))
         self._phi = np.ma.MaskedArray(np.zeros_like(x))
         self._speed = np.ma.MaskedArray(np.zeros_like(x))
@@ -380,10 +384,7 @@ class PosCalcsGeneric(object):
         self._convert2cm = convert2cm
         self._jumpmax = jumpmax
         self.nleds = np.ndim(x)
-        if "tracker_params" in kwargs:
-            self.tracker_params = kwargs["tracker_params"]
-        else:
-            self.tracker_params = {}
+        self.tracker_params = kwargs.get("tracker_params", {})
         self._sample_rate = 30
         self.bad_indices = bad_indices if bad_indices is not None else np.array([])
 

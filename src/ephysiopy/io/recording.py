@@ -235,6 +235,13 @@ class AxonaTrial(TrialInterface):
         print("Loaded ttl data")
         return True
 
+    def get_pos_at_spike_times(
+        self, cluster: int | list, channel: int | list, *args, **kwargs
+    ) -> list | np.ndarray:
+        ts = self.get_spike_times(cluster, channel, **kwargs)
+        idx = np.searchsorted(self.PosCalcs.time, ts, side="left")
+        return self.PosCalcs.xy[:, idx]
+
     def get_spike_times(
         self, cluster: int | list = None, tetrode: int | list = None, *args, **kwargs
     ) -> list | np.ndarray:
@@ -438,6 +445,14 @@ class OpenEphysBase(TrialInterface):
                     return ts[states == 1]
         return np.array([])
 
+    def get_pos_at_spike_times(
+        self, cluster: int | list, channel: int | list, *args, **kwargs
+    ) -> list | np.ndarray:
+
+        ts = self.get_spike_times(cluster, channel, **kwargs)
+        idx = np.searchsorted(self.PosCalcs.time, ts, side="left")
+        return self.PosCalcs.xy[:, idx]
+
     def get_spike_times(
         self,
         cluster: int | list | None = None,
@@ -473,6 +488,24 @@ class OpenEphysBase(TrialInterface):
         return []
 
     def load_lfp(self, *args, **kwargs):
+        """
+        Load the LFP data from the OpenEphys recording.
+
+        Parameters
+        ----------
+        stream_name - str, optional
+            The name of the stream to load. If not provided, the first stream
+            in self.rec_plugin is used.
+        channel - int, optional
+            The channel to load. Default is 0.
+        target_sample_rate - int, optional
+            The target sample rate for resampling the LFP data. Default is 250 Hz.
+
+        Returns
+        -------
+        EEGCalcsGeneric
+            An instance of EEGCalcsGeneric containing the loaded LFP data.
+        """
 
         def __load_memmap__(l_path: Path | None, n_chans: int):
             if l_path is None:
@@ -541,7 +574,7 @@ class OpenEphysBase(TrialInterface):
     def load_neural_data(self, *args, **kwargs):
         # match to rec_kind and get the channel count from the stream
         # check kwargs for which probe to load
-        if "path2APdata" in kwargs.keys():
+        if "path2APdata" in kwargs:
             self.path2APdata: Path = Path(kwargs["path2APdata"])
         n_channels: int = self.channel_count or kwargs["nChannels"]
         kilo_index = kwargs.get("kilo_index", 0)

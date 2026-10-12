@@ -28,7 +28,7 @@ warnings.filterwarnings("ignore", message="divide by zero encountered in true_di
 np.seterr(divide="ignore", invalid="ignore")
 
 
-class RateMap(object):
+class RateMap:
     """
     Bins up positional data (xy, head direction etc) and produces rate maps
     of the relevant kind. This is a generic class meant to be independent of

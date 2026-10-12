@@ -2,7 +2,6 @@
 import warnings
 
 import matplotlib
-import matplotlib as mpl
 import matplotlib.colors as colours
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
@@ -18,7 +17,10 @@ from ephysiopy.common.fieldcalcs import (
 from ephysiopy.common.utils import BinnedData, flatten_list, repeat_ind
 from ephysiopy.io.recording import AxonaTrial
 from ephysiopy.visualise.plotting import _add_colour_wheel
-from ephysiopy.visualise.utils import colored_line
+from ephysiopy.visualise.utils import (
+    colored_line,
+    zoom_effect,
+)
 
 
 def plot_phase_precession(
@@ -474,33 +476,49 @@ def plot_lfp_and_mean_spiking_phase(run: RunProps, **kwargs):
         Additional keyword arguments for plotting."""
 
     assert hasattr(run, "lfp")
-    cmap = kwargs.get("cmap", "tab10")
-    fig, ax = plt.subplots()
-    # ax = fig.add_subplot(111)
-    # cycle labels are plotting weird so lets
-    # calculate the cycles from the phase data and use that instead
-    _phase = np.ravel(run.lfp.phase)
-    minima = argrelextrema(_phase, np.less, order=3)[0]
-    dfs = np.diff(minima, prepend=0, append=len(_phase))
-    # will need more than the default 10 colours if there are more than 10 cycles in the run
-    # and generate runs of numbers from 1 to n depending on the number of cycles
-    # colours = np.linspace(0, 1, len(minima) + 1)
-    colours = np.repeat(np.arange(0, len(minima) + 1), dfs)
+    _, (ax0, ax) = plt.subplots(2, 1, figsize=(12, 12))
+    ax0.plot(
+        run.parent.binned_data.bin_edges[0][:-1],
+        run.parent.binned_data.binned_data[0],
+        lw=3,
+        c="k",
+    )
+    ax0.set_xticklabels([])
+    ax0.spines["left"].set_visible(False)
+    ax0.spines["top"].set_visible(False)
+    ax0.spines["right"].set_visible(False)
+    ax0.set_yticklabels([])
+    ax0.set_yticks([])
+
     sig = run.lfp.filtered_signal[0]
     t = run.lfp.time
-    # breakpoint()
-    colours = colours % 10
-    colored_line(t, sig, colours, ax=ax, cmap=cmap, lw=3)
-    ax.set_title(f"Run {run.label} LFP and mean spiking phase")
+    ax.plot(t, sig.data, color="lightgrey", lw=4, zorder=0)
+    # colored_line(
+    #     t,
+    #     sig,
+    #     np.ravel(run.lfp.phase + np.pi),
+    #     ax=ax,
+    #     cmap="hsv",
+    #     alpha=0.4,
+    #     lw=4,
+    #     zorder=0,
+    # )
+    # get the minima of the filtered signal to show where theta cycles begin/ end
+    minima = argrelextrema(run.lfp.filtered_signal.ravel(), np.less)[0]
+    ax.vlines(
+        run.lfp.time[minima],
+        np.nanmin(run.lfp.filtered_signal),
+        np.nanmax(run.lfp.filtered_signal),
+        color="k",
+        alpha=0.2,
+    )
     # Set the x limit to the bounds of where the spikes occur
-    # breakpoint()
-    ax.set_xlim(run.spike_times[0], run.spike_times[-1])
-    ax.set_ylim(np.nanmin(sig), np.nanmax(sig))
-    inds = repeat_ind(run.lfp.spike_count.ravel().data)
-    spike_amp = np.take(sig, inds)
-    spike_times = np.take(t, inds)
-    ax.plot(spike_times, spike_amp, "ro", alpha=0.5)
-    # mean_phase = run.lfp.mean_spiking_var("phase")
+    spike_times = run.lfp.spiking_var("time")
+    spike_amp = run.lfp.spiking_var("filtered_signal")
+    ax.scatter(
+        spike_times, spike_amp, color="k", marker="|", s=250, alpha=1.0, zorder=2
+    )
+    mean_phase = run.lfp.mean_spiking_var("phase")
     mean_phase_time = run.lfp.mean_spiking_var("time")
     # these times are means based on spiking events and so
     # may not have a direct corresponding value in the time array
@@ -508,7 +526,38 @@ def plot_lfp_and_mean_spiking_phase(run: RunProps, **kwargs):
     nearest_times_idx = np.argmin(np.abs(t - mean_phase_time.T), axis=1)
     # and calculate the amplitude at that time
     nearest_amp = np.take(sig, np.ravel(nearest_times_idx))
-    ax.plot(np.ravel(mean_phase_time), nearest_amp, "go", ms=12)
+    circ_cmap = kwargs.get("circ_cmap", "hsv")
+    scat = ax.scatter(
+        x=np.ravel(mean_phase_time),
+        y=nearest_amp,
+        c=np.ravel(mean_phase),
+        s=220,
+        cmap=circ_cmap,
+        zorder=3,
+        norm=colours.Normalize(-np.pi, np.pi, False),
+    )
+    cbar = plt.colorbar(
+        scat,
+        ax=ax,
+        orientation="horizontal",
+        pad=0.2,
+        ticks=[-np.pi, 0, np.pi],
+        shrink=0.8,
+    )
+    cbar.set_label("Mean spiking phase (radians)", fontsize=18)
+    cbar.ax.set_xticklabels(["-π", "0", "π"])
+    ax.set_yticks([])
+    min_run = np.min(run.xy[0, :])
+    max_run = np.max(run.xy[0, :])
+    zoom_effect(
+        ax0,
+        ax,
+        (min_run, max_run),
+        (run.spike_times[0], run.spike_times[-1]),
+    )
+    ax.set_xlim(run.spike_times[0], run.spike_times[-1])
+    ax.set_xlabel("Time (s)", fontsize=18)
+
     return ax
 
 

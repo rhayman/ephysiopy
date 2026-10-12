@@ -2,6 +2,7 @@ import copy
 import warnings
 from pathlib import Path
 
+import matplotlib.colors as colours
 import matplotlib.pylab as plt
 import numpy as np
 import seaborn as sns
@@ -23,7 +24,6 @@ from ephysiopy.common.utils import (
     VariableToBin,
     clean_kwargs,
     flatten_list,
-    memmapBinaryFile,
     print_cluster_channel,
     rect,
     repeat_ind,
@@ -1134,7 +1134,6 @@ class FigureMaker:
             return
 
     @saveFigure
-    @print_cluster_channel
     def plot_power_spectrum(self, **kwargs) -> plt.Axes:
         """
         Plots the power spectrum.
@@ -1188,44 +1187,103 @@ class FigureMaker:
         Plots the theta phase by x-y position map for the given cluster
         on the given channel
 
+        Parameters
+        ----------
+        cluster : int
+            The cluster to get the spike times for.
+        channel : int
+            The channel to get the spike times for.
+        kws : dict
+            Keyword arguments
+            Valid:
+                ax : matplotlib.axes.Axes, optional
+                    The axes to plot on. If None, a new figure and axes will be created.
+                cmap : str, optional
+                    The colormap to use for the plot. Default is 'hsv'.
+                theta_band : tuple
+                    The theta band to filter the LFP for. Default 6-12Hz
+
+        Returns
+        -------
+        plt.Axes
+            The axes containing the theta phase by x-y position plot.
+
+        Notes
+        -----
+        Needs to have some LFP data loaded to get the theta phase. If no LFP data is loaded, a warning will be issued and the function will return None.
+
         """
 
         from ephysiopy.common.phasecoding import LFPOscillations
 
+        if not self.EEGCalcs:
+            warnings.warn("No LFP data loaded")
+            return
+
         ax = kws.pop("ax", None)
+        cmap = kws.pop("cmap", "hsv")
+        theta_band = kws.pop("theta_band", (6, 12))
+
         if ax is None:
             fig = plt.figure(figsize=(12, 10))
             ax = fig.add_subplot(111)
 
         L = LFPOscillations(self.EEGCalcs.sig, self.EEGCalcs.fs)
-        F = L.getFreqPhase(self.EEGCalcs.sig, [6, 12])
+        F = L.getFreqPhase(self.EEGCalcs.sig, theta_band)
         phase = F.phase
 
         cluster_times = self.get_spike_times(cluster, channel)
         phase_idx = None
 
-        if self.EEGCalcs.time is None:
-            phase_idx = np.array(cluster_times * self.fs, dtype=int)
-        else:
-            phase_idx = np.array(
-                np.searchsorted(self.EEGCalcs.time, cluster_times), dtype=int
-            )
-            bad_idx = np.nonzero(phase_idx >= len(phase))[0]
-            phase_idx[bad_idx] = len(phase) - 1
+        phase_idx = np.array(
+            np.searchsorted(self.EEGCalcs.time, cluster_times), dtype=int
+        )
+        bad_idx = np.nonzero(phase_idx >= len(phase))[0]
+        phase_idx[bad_idx] = len(phase) - 1
 
-        x, y = self.PosCalcs.xy[:, self._get_spike_pos_idx(cluster, channel)[0]]
+        ph_x, ph_y = self.get_pos_at_spike_times(cluster, channel)
         phase = phase[phase_idx]
 
-        binned_phase = np.histogram(phase, bins=7)
+        counts, _, _ = np.histogram2d(
+            ph_x,
+            ph_y,
+            range=(self.RateMap.x_lims, self.RateMap.y_lims),
+        )
 
-        binned_indices = np.digitize(phase, binned_phase[1]) - 1
-        phase_discretized = np.take(binned_phase[1], binned_indices)
+        cos_sum, _, _ = np.histogram2d(
+            ph_x,
+            ph_y,
+            range=(self.RateMap.x_lims, self.RateMap.y_lims),
+            weights=np.cos(phase),
+        )
+        sin_sum, _, _ = np.histogram2d(
+            ph_x,
+            ph_y,
+            range=(self.RateMap.x_lims, self.RateMap.y_lims),
+            weights=np.sin(phase),
+        )
 
-        cmap = plt.get_cmap("hsv")
-        ax = self.plot_spike_path(None, None, ax=ax)
-        sc = ax.scatter(x, y, c=phase_discretized, cmap=cmap, s=40, alpha=0.5)
-        cbar = plt.colorbar(sc, ax=ax)
-        cbar.set_label("Theta Phase (radians)")
+        with np.errstate(invalid="ignore", divide="ignore"):
+            mean_phase = np.arctan2(sin_sum, cos_sum)  # circular mean
+
+        mean_phase[counts == 0] = np.nan  # mask out bins with no spikes
+        mean_phase = np.ma.masked_invalid(mean_phase)
+        # and plot the image
+        ext = (
+            self.RateMap.x_lims[0],
+            self.RateMap.x_lims[1],
+            self.RateMap.y_lims[0],
+            self.RateMap.y_lims[1],
+        )
+
+        im = ax.imshow(
+            mean_phase,
+            cmap=cmap,
+            norm=colours.Normalize(-np.pi, np.pi, False),
+            origin="lower",
+            extent=ext,
+        )
+        plt.colorbar(im)
 
         return ax
 
@@ -1517,8 +1575,12 @@ class FigureMaker:
         plt.Axes
             The axes with the plot.
         """
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+
         min_freq = kwargs.pop("min_freq", 0)
-        if "strip_axes" in kwargs.keys():
+        if "strip_axes" in kwargs:
             strip_axes = kwargs.pop("strip_axes")
         else:
             strip_axes = False
@@ -1526,13 +1588,10 @@ class FigureMaker:
         freqs = freqs[0::50]
         power = power[0::50]
         sm_power = sm_power[0::50]
-        if ax is None:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
         ax.plot(freqs, power, alpha=0.5, color=[0.8627, 0.8627, 0.8627])
         ax.plot(freqs, sm_power)
         ax.set_xlim(min_freq, max_freq)
-        ylim = [0, np.max(sm_power[freqs < max_freq])]
+        ylim = [0, np.max(sm_power[np.logical_and(freqs > min_freq, freqs < max_freq)])]
         if "ylim" in kwargs:
             ylim = kwargs["ylim"]
         ax.set_ylim(ylim)
@@ -1559,12 +1618,11 @@ class FigureMaker:
             return stripAxes(ax)
         return ax
 
-    @print_cluster_channel
+    # @print_cluster_channel
     def plot_depth_spectrogram(
         self,
-        path_to_lfp: Path,
+        stream_name: str,
         nchannels: int = 384,
-        nseconds: int = 100,
         maxFreq: int = 125,
         channels: list = [],
         frequencies: list = [],
@@ -1578,6 +1636,8 @@ class FigureMaker:
 
         Parameters
         ----------
+        stream_name : str
+            The name of the stream to plot the spectrogram for.
         nchannels : int
             The number of channels on the probe.
         nseconds : int, optional
@@ -1604,40 +1664,49 @@ class FigureMaker:
         -----
         Should also allow kwargs to specify exactly which channels and / or frequency bands to do the line plots for.
         """
-        if not path_to_lfp.exists():
-            raise TypeError(f"{path_to_lfp} does not exist")
-
-        mmap = memmapBinaryFile(path_to_lfp, nchannels)
         # see if a path to a channel map has been provided...
         cmap_path = kwargs.get("path_to_channel_map", None)
         # ... if so load, if not assume contiguous channels from
         # 0:n_channels-1
+
+        channel_map = np.arange(0, nchannels)
+
         if cmap_path:
             channel_map = np.squeeze(np.load(cmap_path / Path("channel_map.npy")))
-        else:
-            channel_map = np.arange(0, nchannels)
 
-        lfp_sample_rate = kwargs.get("lfp_sample_rate", 2500)
-        data = np.array(mmap[channel_map, 0 : nseconds * lfp_sample_rate])
+        lfp_sample_rate = kwargs.get("lfp_sample_rate", 250)
 
-        from ephysiopy.common.ephys_generic import EEGCalcsGeneric
+        if not channels:
+            channels = channel_map[::50]
 
-        E = EEGCalcsGeneric(data[0, :], lfp_sample_rate)
+        E = self.load_lfp(stream_name=stream_name, target_sample_rate=lfp_sample_rate)
         E.calcEEGPowerSpectrum()
-        spec_data = np.zeros(shape=(data.shape[0], len(E.sm_power[1::50])))
-        for chan in range(data.shape[0]):
-            E = EEGCalcsGeneric(data[chan, :], lfp_sample_rate)
-            E.calcEEGPowerSpectrum()
-            spec_data[chan, :] = E.sm_power[1::50]
 
-        x, y = np.meshgrid(E.freqs[1::50], channel_map)
-        import matplotlib.colors as colors
+        spec_data = np.zeros(shape=(len(channel_map), len(E.sm_power[::500])))
+
+        for idx, chan in enumerate(channel_map):
+            E = self.load_lfp(
+                stream_name=stream_name,
+                target_sample_rate=lfp_sample_rate,
+                channel=chan,
+            )
+            E.calcEEGPowerSpectrum()
+            spec_data[idx, :] = E.sm_power[::500]
+
+        from matplotlib import colors
         from matplotlib.pyplot import cm
         from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+        x, y = np.meshgrid(E.freqs[::500], channel_map)
+
         _, spectoAx = plt.subplots()
         spectoAx.pcolormesh(
-            x, y, spec_data, edgecolors="face", cmap="bone", norm=colors.LogNorm()
+            x,
+            y,
+            spec_data,
+            edgecolors="face",
+            cmap="bone",
+            norm=colors.LogNorm(),
         )
         spectoAx.set_xlim(0, maxFreq)
         spectoAx.set_ylim(channel_map[0], channel_map[-1])
@@ -1653,13 +1722,12 @@ class FigureMaker:
 
         # plot mean power across some channels
         mn_power = np.mean(spec_data, 0)
-        if not channels:
-            channels = list(range(1, nchannels, 60))
+
         cols = iter(cm.rainbow(np.linspace(0, 1, len(channels))))
         for chan in channels:
             c = next(cols)
             channel_spectoAx.plot(
-                E.freqs[0::50],
+                E.freqs[::500],
                 10 * np.log10(spec_data[chan, :] / mn_power),
                 c=c,
                 label=str(chan),
@@ -1686,9 +1754,10 @@ class FigureMaker:
         upper_freqs = [f + freq_inc for f in lower_freqs]
         cols = iter(cm.nipy_spectral(np.linspace(0, 1, len(upper_freqs))))
         mn_power = np.mean(spec_data, 1)
+
         for freqs in zip(lower_freqs, upper_freqs):
             freq_mask = np.logical_and(
-                E.freqs[1::50] > freqs[0], E.freqs[1::50] < freqs[1]
+                E.freqs[::500] > freqs[0], E.freqs[::500] < freqs[1]
             )
             mean_power = 10 * np.log10(np.mean(spec_data[:, freq_mask], 1) / mn_power)
             c = next(cols)

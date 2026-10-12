@@ -8,7 +8,6 @@ import pywt
 from pactools import Comodulogram
 from pactools.dar_model import DAR
 from pactools.delay_estimator import DelayEstimator
-from pycircstat2.utils import rotate_data
 from scipy import ndimage, signal, stats
 from scipy.special import i0
 
@@ -27,7 +26,7 @@ cbar_fontsize = 8
 cbar_tick_fontsize = 6
 
 
-class LFPOscillations(object):
+class LFPOscillations:
     """
     Does stuff with the LFP such as looking at nested oscillations
     (theta/ gamma coupling), the modulation index of such phenomena,
@@ -77,7 +76,6 @@ class LFPOscillations(object):
         filt_sig = signal.filtfilt(b, a, sig, padtype="odd")
         hilbert_sig = signal.hilbert(filt_sig)
         phase = np.angle(hilbert_sig)
-        phase = rotate_data(phase, np.pi)
         amplitude = np.abs(hilbert_sig)
         inst_freq = self.fs / (2 * np.pi) * np.diff(np.unwrap(phase))
         inst_freq = np.insert(inst_freq, -1, inst_freq[-1])
@@ -433,8 +431,6 @@ class LFPOscillations(object):
         self,
         eeg=None,
         plot=True,
-        binWidthSecs=(1 / 250),
-        maxFreq=25,
         pad2pow=None,
         ymax=None,
         **kwargs,
@@ -494,7 +490,6 @@ class LFPOscillations(object):
         thetaband=[4, 8],
         gammaband=[30, 80],
         plot=True,
-        **kwargs,
     ) -> tuple:
         """
         Computes the phase-amplitude coupling (PAC) of nested oscillations.
@@ -833,7 +828,6 @@ class LFPOscillations(object):
 
     def spike_xy_phase_plot(
         self,
-        cluster: int,
         pos_data: PosCalcsGeneric,
         lfp_data: EEGCalcsGeneric,
         cluster_times: np.ndarray,
@@ -878,7 +872,7 @@ class LFPOscillations(object):
         spike_xy = pos_data.xy[:, pos_idx]
         spike_phase = phase[phase_idx]
         cmap = matplotlib.colormaps["hsv"]
-        fig, ax = plt.subplots()
+        _, ax = plt.subplots()
         ax.plot(pos_data.xy[0], pos_data.xy[1], color="lightgrey", zorder=0)
         ax.scatter(spike_xy[0], spike_xy[1], c=spike_phase, cmap=cmap, zorder=1)
         return ax
@@ -918,7 +912,6 @@ def get_slice_plv(
     theta_sig: FreqPhase,
     gamma_sig: FreqPhase,
     slice: slice,
-    nbins: int = 20,
 ):
     """
     Calculates the phase locking value (plv) for a slice of two nested
@@ -1007,7 +1000,7 @@ def get_phase_of_min_spiking(spkPhase: np.ndarray) -> float:
 def get_bad_cycles(
     filtered_eeg: np.ndarray,
     negative_freqs: np.ndarray,
-    cycle_labels: np.array,
+    cycle_labels: np.ndarray,
     min_power_percent_threshold: float,
     min_theta: float,
     max_theta: float,
@@ -1170,8 +1163,6 @@ def get_cross_wavelet(
 
 def get_theta_cycle_spectogram(
     phase: np.ndarray,
-    cycle_label: np.ndarray,
-    filt_lfp: np.ndarray,
     lfp: np.ndarray,
     fs: float,
     **kwargs,

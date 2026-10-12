@@ -360,7 +360,9 @@ class LFPSegment(SpikingProperty, object):
         Get the mean value of a variable at the posiition of
         the spikes for all runs through this field when multiple spikes
         occur in a single theta cycle
+
         """
+        # TODO: Not sure the range of input phase are between -pi and +pi or 0 and 2pi, so need to check this
         labels = ma.compressed(self.spiking_var("cycle_label"))
         if len(labels) == 1:
             # return the value directly
@@ -380,7 +382,7 @@ class LFPSegment(SpikingProperty, object):
             return np.atleast_2d(out)
 
 
-class RunProps(SpikingProperty, object):
+class RunProps(SpikingProperty):
     """
     A custom class for holding information about runs through a receptive field
 

@@ -10,7 +10,9 @@ import seaborn as sns
 from matplotlib.collections import LineCollection, PatchCollection
 from matplotlib.patches import Rectangle
 from matplotlib.projections import get_projection_class
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from mpl_toolkits.axes_grid1.inset_locator import (
+    inset_axes,
+)
 
 from ephysiopy.axona import tintcolours as tcols
 from ephysiopy.common.utils import (
@@ -393,3 +395,150 @@ def _plot_patch_collection(xy: np.ma.MaskedArray, ax: plt.Axes, **kws) -> plt.Ax
         ax.set_ylim(np.ma.min(xy[1, :]), np.ma.max(xy[1, :]))
 
     return ax
+
+
+def add_tick_collection(
+    ax, x_positions, y_positions, width=0.02, height=0.1, color="black", **kwargs
+):
+    """
+    Add a collection of vertical tick marks to a matplotlib axes.
+
+    Parameters:
+    -----------
+    ax : matplotlib.axes.Axes
+        The axes to add the tick marks to
+    x_positions : array-like
+        X coordinates for tick mark centers
+    y_positions : array-like
+        Y coordinates for tick mark centers
+    width : float, default=0.02
+        Width of each tick mark
+    height : float, default=0.1
+        Height of each tick mark
+    color : str, default='black'
+        Color of the tick marks
+    **kwargs : dict
+        Additional keyword arguments passed to PatchCollection
+        (e.g., linewidth, edgecolor, alpha, zorder)
+
+    Returns:
+    --------
+    collection : PatchCollection
+        The patch collection added to the axes
+    """
+    patches = []
+
+    # Create Rectangle patches centered at each position
+    for x, y in zip(x_positions, y_positions):
+        # Rectangle is defined by lower-left corner, so offset by half width/height
+        rect = Rectangle((x - width / 2, y - height / 2), width, height)
+        patches.append(rect)
+
+    # Create and add the collection
+    collection = PatchCollection(patches, facecolor=color, edgecolor="none", **kwargs)
+    ax.add_collection(collection)
+
+    return collection
+
+
+def zoom_effect(
+    ax_main, ax_zoom, main_range: tuple, zoom_range: tuple | None, **kwargs
+):
+    """
+    Draw a zoom effect (as in matplotlib's axes_zoom_effect example) between
+    the x-axes of two axes that have different x-units, e.g. distance in cm
+    on ax_main and time in seconds (LFP) on ax_zoom.
+    The region main_range (in ax_main x-units) is highlighted and its edges
+    are connected to the edges of zoom_range (in ax_zoom x-units).
+    Parameters
+    ----------
+    ax_main : matplotlib.axes.Axes
+        Axes with the full data (x in e.g. cm).
+    ax_zoom : matplotlib.axes.Axes
+        Axes showing the zoomed section (x in e.g. seconds). Should be below
+        ax_main.
+    main_range : tuple
+        (xmin, xmax) in ax_main's x-units to highlight.
+    zoom_range : tuple, optional
+        (xmin, xmax) in ax_zoom's x-units that corresponds to main_range.
+        If None (default) the current x-limits of ax_zoom are used. If given,
+        ax_zoom's x-limits are set to it.
+    **kwargs
+        colour (default 'k'), alpha (default 0.2)
+    """
+    from matplotlib.patches import ConnectionPatch
+
+    colour = kwargs.pop("colour", "k")
+    alpha = kwargs.pop("alpha", 0.2)
+    x0, x1 = main_range
+    if zoom_range is not None:
+        ax_zoom.set_xlim(*zoom_range)
+    z0, z1 = ax_zoom.get_xlim()
+
+    ax_main.axvspan(x0, x1, color=colour, alpha=alpha)
+    patches = []
+    for xm, xz in ((x0, z0), (x1, z1)):
+        con = ConnectionPatch(
+            xyA=(xm, 0),
+            coordsA=ax_main.get_xaxis_transform(),
+            xyB=(xz, 1),
+            coordsB=ax_zoom.get_xaxis_transform(),
+            color=colour,
+            alpha=alpha * 2,
+        )
+        ax_zoom.figure.add_artist(con)
+        patches.append(con)
+    return patches
+
+
+def add_scaled_ticks(ax, x, y, width=0.0, height=0.06, **kwargs):
+    """
+    Add ticks centered at exact data-coordinate (x, y) positions, while the
+    tick size scales with the axes.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Target axes.
+    x, y : array-like
+        Tick center positions in data units.
+    width, height : float
+        Tick extent as a fraction of the axes width / height.
+        width=0 gives vertical ticks.
+    **kwargs
+        Passed through to LineCollection (e.g. colors, linewidths, alpha,
+        linestyle, zorder, label).
+
+    Returns
+    -------
+    matplotlib.collections.LineCollection
+    """
+    x = np.atleast_1d(np.asarray(x, dtype=float))
+    y = np.atleast_1d(np.asarray(y, dtype=float))
+
+    if x.shape != y.shape:
+        raise ValueError("x and y must have the same shape")
+
+    hw = width / 2.0
+    hh = height / 2.0
+
+    # Segment geometry in axes-fraction coordinates
+    if width == 0:
+        segment = [(0.0, -hh), (0.0, hh)]
+    else:
+        segment = [(-hw, -hh), (hw, hh)]
+
+    segments = [segment] * len(x)
+
+    kwargs.setdefault("colors", "k")
+    kwargs.setdefault("linewidths", 1)
+
+    lc = LineCollection(
+        segments,
+        offsets=np.column_stack([x, y]),
+        offset_transform=ax.transData,
+        transform=ax.transAxes,
+        **kwargs,
+    )
+    ax.add_collection(lc)
+    return lc

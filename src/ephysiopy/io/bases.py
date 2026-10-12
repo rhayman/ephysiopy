@@ -352,6 +352,27 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def get_pos_at_spike_times(
+        self, cluster: int | list, channel: int | list, *args, **kwargs
+    ) -> list | np.ndarray:
+        """
+        Returns the position at the times of an individual cluster's spikes
+
+        Parameters
+        ----------
+        cluster : int | list
+            The cluster(s) to get the spike times for
+        channel : int | list
+            The channel(s) to get the spike times for
+
+        Returns
+        -------
+        list | np.ndarray
+            the spike times
+        """
+        raise NotImplementedError
+
     def get_field_properties(
         self, cluster: int | list, channel: int | list, **kwargs
     ) -> list[FieldProps]:
@@ -636,9 +657,9 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             occurred.
         """
         spk_times = []
-        pos_times = getattr(self.PosCalcs, "time")
+        pos_times = self.PosCalcs.time
         if cluster is None:
-            spk_times = getattr(self.PosCalcs, "time")
+            spk_times = self.PosCalcs.time
         elif isinstance(cluster, int):
             spk_times = self.get_spike_times(cluster, channel)
         elif isinstance(cluster, list) and len(cluster) == 1:

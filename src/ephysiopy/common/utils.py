@@ -68,7 +68,7 @@ Xml2RecordingKind = {
 ClusterID = namedtuple("ClusterID", ["Cluster", "Channel"])
 
 
-def make_cluster_ids(cluster: int | list, channel: int | list) -> list:
+def make_cluster_ids(cluster: int | list | None, channel: int | list | None) -> list:
     # add the cluster and channel id to the rate map
     # I assume this will be in the same order as they are added...
     ids = []
