@@ -26,7 +26,7 @@ from ephysiopy.phase_precession.config import phase_precession_config
 subaxis_title_fontsize = 10
 
 
-class phasePrecessionND(object):
+class phasePrecessionND:
     """
     Performs phase precession analysis for single unit data
 
@@ -199,7 +199,7 @@ class phasePrecessionND(object):
         do_plot = kwargs.get("plot", False)
         ax = kwargs.get("ax", None)
 
-        if "binned_data" in kwargs.keys():
+        if "binned_data" in kwargs:
             binned_data = kwargs.get("binned_data")
         else:
             if self.binning_var.value == VariableToBin.XY.value:
@@ -533,6 +533,7 @@ class phasePrecessionND(object):
         pha: np.ndarray,
         result: CircStatsResults,
         ax=None,
+        **kwargs,
     ):
         """
         Plot the regressor against the phase
@@ -550,6 +551,8 @@ class phasePrecessionND(object):
             The axes with the plot
         """
         assert regressor in self.regressors
+        col = kwargs.get("col", "k")
+        ms = kwargs.get("ms", 3)
         if ax is None:
             fig = plt.figure(figsize=(3, 5))
             ax = fig.add_subplot(111)
@@ -560,7 +563,7 @@ class phasePrecessionND(object):
         mm = (0, -4 * np.pi, -2 * np.pi, 2 * np.pi, 4 * np.pi)
         for m in mm:
             ax.plot((-1, 1), (-slope + intercept + m, slope + intercept + m), "r", lw=3)
-            ax.plot(vals, pha + m, "k.")
+            ax.plot(vals, pha + m, ".", c=col, ms=ms)
         ax.set_xlim(-1, 1)
         xtick_locs = np.linspace(-1, 1, 3)
         ax.set_xticks(xtick_locs, list(map(str, xtick_locs)))

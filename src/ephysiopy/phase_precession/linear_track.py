@@ -23,6 +23,7 @@ from ephysiopy.common.statscalcs import RegressionResults
 from ephysiopy.common.utils import (
     TrialFilter,
     VariableToBin,
+    flatten_list,
 )
 from ephysiopy.io.recording import AxonaTrial
 from ephysiopy.phase_precession.phase_precession import phasePrecessionND
@@ -76,6 +77,7 @@ def run_phase_analysis(
     """
     run_direction = kwargs.get("run_direction", "e")
     track_end_size = kwargs.get("track_end_size", 6)
+    add_runs_to_plot = kwargs.get("add_runs_to_plot", None)
 
     trial = apply_linear_track_filter(
         trial, run_direction=run_direction, track_end_size=track_end_size
@@ -96,6 +98,26 @@ def run_phase_analysis(
     plot = kwargs.get("plot", False)
     try:
         results = PP.do_correlation(phase_pos, plot=plot)
+        # this is kind of temporary...
+        if plot and add_runs_to_plot is not None:
+            for _run in add_runs_to_plot:
+                ax = plt.gca()
+                rr = f_props[0].runs[_run]
+                # these phase values likely need to be normalised
+                vals = rr.mean_spiking_var("normed_x")
+                pha = rr.lfp.mean_spiking_var()
+                result = results[0]
+
+                PP.plot_regressor(
+                    "pos_d_normed_x",
+                    vals.ravel(),
+                    pha.ravel(),
+                    result=result.stats,
+                    ax=ax,
+                    col="r",
+                    ms=8,
+                )
+
     except Exception:
         results = None
 
@@ -311,19 +333,53 @@ def plot_linear_runs(f_props: list[FieldProps], var: str = "xy", **kwargs):
             )
 
 
-def normalise_phase(phase: np.ndarray, intercept: float) -> np.ndarray:
+def get_normed_data_for_run(
+    f_props: FieldProps, run_id: int, **kwargs
+) -> tuple[np.ndarray, ...]:
     """
-    Normalise phase with respect to the centre of the firing field
-    so that cells can be combined for population level analysis
+    Runs the same code as in phasePrecessionND.do_correlation by normalising regressor values to lie between -1 and +1 (plus some extra i.e. np.spacing(1))
 
-    Notes
-    -----
-    Assume that the centre of the firing field is at position 0
+    The normalisation needs the whole set of runs to do the normalisation but only
+    returns the normalised data for the run given in run_id. The main purpose
+    is to be able to annotate the trial level phase precession plot with data
+    from a single run through the receptive field
+
+    Parameters
+    ----------
+    f_props : FieldProps
+        The fieldproperties object containing the field(s)
+        NB Only the first field is examined
+    run_id : int
+        The run to look at
+        NB this is the run label as extracted from the whole set of potential
+        runs through the field and so the list of run_labels (i.e. f_props[0].run_labels) will likely not be monotonically increasing
+    **kwargs : dict
+        keyword arguments
+        Valid keys:
+
+    Returns
+    -------
+    tuple[np.ndarray, ...]
+        The normed pos values and the phase values for run run_id
+
     """
-    from pycircstat2.utils import rotate_data
+    run_labels = f_props.run_labels
+    assert run_id in run_labels
 
-    # pos should lie between -1 and +1
-    # phase should lie between -pi and +pi
-    phase_at_0 = intercept
-    phase_df = np.pi - phase_at_0
-    return rotate_data(phase, phase_df)
+    pos_vals = f_props.mean_spiking_var("normed_x")
+    pos_vals -= np.mean(pos_vals)
+    mxx = np.max(np.abs(pos_vals)) + np.spacing(1)
+    pos_vals /= mxx
+
+    labels = []
+
+    for run in f_props.runs:
+        labels.append(
+            np.repeat(run.label, np.shape(run.mean_spiking_var("normed_x"))[1])
+        )
+
+    labels = np.array(flatten_list(labels))
+
+    return pos_vals[0, labels == run_id], f_props.mean_spiking_var()[
+        0, labels == run_id
+    ]

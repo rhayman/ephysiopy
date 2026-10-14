@@ -178,6 +178,10 @@ class RateMap:
         self._ppm = self.PosCalcs.ppm = value
 
     @property
+    def phase(self):
+        return self.phase
+
+    @property
     def var2Bin(self):
         return self._var2Bin
 
@@ -283,6 +287,18 @@ class RateMap:
 
     def apply_mask(self, mask):
         self.pos_weights.mask = mask
+
+    def smooth(self, data, map_type, boundary="extend", nans=None, **kwargs):
+        smoothed = blur_image(
+            data,
+            self.smooth_sz,
+            ftype=self.smoothingType,
+            boundary=boundary,
+            **kwargs,
+        )
+        smoothed.set_nan_indices(nans)
+        smoothed.map_type = map_type
+        return smoothed
 
     def get_samples_when_spiking(self):
         """
@@ -515,20 +531,8 @@ class RateMap:
         nanIdx = binned_pos == 0
         pos = BinnedData(var_type, MapType.POS, [binned_pos], binned_pos_edges)
 
-        def smooth(data, map_type):
-            smoothed = blur_image(
-                data,
-                self.smooth_sz,
-                ftype=self.smoothingType,
-                boundary=boundary,
-                **kwargs,
-            )
-            smoothed.set_nan_indices(nanIdx)
-            smoothed.map_type = map_type
-            return smoothed
-
         if map_type.value == MapType.POS.value:
-            return smooth(pos, MapType.POS) if smoothing else pos
+            return self.smooth(pos, MapType.POS) if smoothing else pos
 
         # Bin the spike data
         binned_spk, _ = self._bin_data(sample, bin_edges, spk_weights)
@@ -538,7 +542,11 @@ class RateMap:
         spk = BinnedData(var_type, MapType.SPK, binned_spk, binned_pos_edges)
 
         if map_type.value == MapType.SPK.value:
-            return smooth(spk, MapType.SPK) if smoothing else spk
+            return (
+                self.smooth(spk, MapType.SPK, boundary=boundary, nans=nanIdx, **kwargs)
+                if smoothing
+                else spk
+            )
 
         if map_type.value == MapType.ADAPTIVE.value:
             alpha = kwargs.pop("adaptive_alpha", 4)
@@ -555,10 +563,14 @@ class RateMap:
 
         if "after" in self.whenToSmooth:
             rmap = spk / pos
-            rmap = smooth(rmap, MapType.RATE)
+            rmap = self.smooth(
+                rmap, MapType.RATE, boundary=boundary, nans=nanIdx, **kwargs
+            )
         else:
-            sm_pos = smooth(pos, MapType.POS)
-            sm_spk = smooth(spk, MapType.SPK)
+            sm_pos = self.smooth(
+                pos, MapType.POS, boundary=boundary, nans=nanIdx, **kwargs
+            )
+            sm_spk = self.smooth(spk, MapType.SPK)
             rmap = sm_spk / sm_pos
         rmap.set_nan_indices(nanIdx)
         return rmap
@@ -1199,3 +1211,56 @@ class RateMap:
         # ego_angles in range [0-2PI]
         # and with size arena_xy_ncoords x npos
         return ego_angles, arena_xy
+
+    def get_theta_phase_pos_map(self, x, y, phase, **kwargs):
+        """
+        Returns the theta-phase by position map
+
+        Parameters
+        ----------
+        x : np.ndarray or array-like
+            The x positions at which the spiking occurred
+        y : np.ndarray or array-like
+            The y positions at which the spiking occurred
+        phase : np.ndarray or array-like
+            The phases in radians at which the spiking occurred
+
+        Notes
+        -----
+        It's too awkward to shoe-horn this into the call to _bin_data() etc
+        above so it needs it's own function
+
+        The x, y and phase samples are not like the other samples in this class
+        that are equal to the number of position samples recorded. Rather they
+        are the positions at which the spiking occurred and so may be more or
+        less than the number of samples.
+        """
+        assert x.shape == y.shape == phase.shape
+
+        binsize = kwargs.get("binsize", self.binsize)
+        n_phase_bins = kwargs.get("n_phase_bins", 7)
+
+        phase_bins = np.linspace(-np.pi, np.pi, n_phase_bins + 1)
+
+        phase_idx = np.digitize(phase, phase_bins) - 1
+        phase = phase_bins[phase_idx] + np.mean(np.diff(phase_bins)) / 2  # bin center
+
+        xy = np.array([x, y])
+
+        bin_edges = self._calc_bin_edges(binsize)
+        counts, _ = self._bin_data(xy, bin_edges, np.ones_like(phase))
+        sin_sum, _ = self._bin_data(xy, bin_edges, np.sin(phase))
+        cos_sum, _ = self._bin_data(xy, bin_edges, np.cos(phase))
+
+        with np.errstate(invalid="ignore", divide="ignore"):
+            mean_phase = np.arctan2(sin_sum, cos_sum)  # circular mean
+
+        mean_phase[counts == 0] = np.nan
+        mean_phase = np.ma.masked_invalid(mean_phase)
+
+        pos = BinnedData(VariableToBin.PHASE, MapType.POS, [counts], bin_edges)
+        spk = BinnedData(VariableToBin.PHASE, MapType.SPK, [mean_phase], bin_edges)
+
+        spk_sm = self.smooth(spk, MapType.SPK, **kwargs)
+
+        return spk_sm  # / pos

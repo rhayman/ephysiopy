@@ -1,5 +1,6 @@
 import abc
 import os
+import warnings
 from collections import OrderedDict
 from pathlib import Path, PurePath
 
@@ -14,6 +15,7 @@ from ephysiopy.common.fieldcalcs import (
     skaggs_info,
 )
 from ephysiopy.common.fieldproperties import FieldProps, LFPSegment, fieldprops
+from ephysiopy.common.phasecoding import LFPOscillations
 from ephysiopy.common.spikingcalcs import SpikeCalcsGeneric
 from ephysiopy.common.utils import (
     BinnedData,
@@ -764,6 +766,11 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         # amending as will the get_map() one in binning.RateMap as it looks
         # like that expects a np.ndarray
         spk_times_in_pos_samples = self._get_spike_pos_idx(cluster, channel, **kwargs)
+        # set times less than zero to zero, this is a hack to deal with the fact that the
+        # spike times are not always in the same range as the position times
+        for i, spk in enumerate(spk_times_in_pos_samples):
+            spk[spk < 0] = 0
+            spk_times_in_pos_samples[i] = spk
         npos = self._PosCalcs.npos
         # This conditional just picks out the right spk_weights
         # given the inputs
@@ -1184,3 +1191,47 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             result.append(skaggs_info(rm.binned_data[0], pos_map.binned_data[0]))
 
         return result
+
+    def get_phase_pos_rate_map(
+        self, cluster: int | list, channel: int | list, **kwargs
+    ) -> BinnedData | None:
+        """
+        Plot a theta-phase x position rate map
+
+        Parameters
+        ----------
+        cluster : int or list
+            The cluster(s).
+        channel : int or list
+            The channel(s).
+        **kwargs : dict, optional
+            Additional keyword arguments passed to the binning function.
+
+        """
+        if not self.EEGCalcs:
+            warnings.warn("No LFP data loaded")
+            return None
+
+        theta_band = kwargs.pop("theta_band", (6, 12))
+
+        # Calculate the phase of theta_band and set the phase property
+        # on self.RateMap
+        L = LFPOscillations(self.EEGCalcs.sig, self.EEGCalcs.fs)
+        F = L.getFreqPhase(self.EEGCalcs.sig, theta_band)
+        phase = F.phase
+
+        cluster_times = self.get_spike_times(cluster, channel)
+        phase_idx = None
+
+        phase_idx = np.array(
+            np.searchsorted(self.EEGCalcs.time, cluster_times), dtype=int
+        )
+        bad_idx = np.nonzero(phase_idx >= len(phase))[0]
+        phase_idx[bad_idx] = len(phase) - 1
+
+        ph_x, ph_y = self.get_pos_at_spike_times(cluster, channel)
+        phase = phase[phase_idx]
+
+        rmap = self.RateMap.get_theta_phase_pos_map(ph_x, ph_y, phase, **kwargs)
+
+        return rmap

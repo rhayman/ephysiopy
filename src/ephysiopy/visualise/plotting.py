@@ -108,7 +108,7 @@ class FigureMaker:
         plt.Axes
             The axes containing the rate map plot.
         """
-        if "var_type" in kwargs.keys():
+        if "var_type" in kwargs:
             if (
                 kwargs["var_type"] == VariableToBin.X.value
                 or kwargs["var_type"] == VariableToBin.Y.value
@@ -1181,8 +1181,13 @@ class FigureMaker:
 
         return ax
 
+    # TODO: implememnt the logic in plot_rate_map for multiple clusters in single
+    # or multiple figure windows here by calling _plot_patch_collection or
+    # _plot_pcolormesh as appropriate
     @print_cluster_channel
-    def plot_theta_phase_ratemap(self, cluster: int, channel: int, **kws) -> plt.Axes:
+    def plot_theta_phase_ratemap(
+        self, cluster: int, channel: int, **kwargs
+    ) -> plt.Axes | None:
         """
         Plots the theta phase by x-y position map for the given cluster
         on the given channel
@@ -1213,79 +1218,37 @@ class FigureMaker:
         Needs to have some LFP data loaded to get the theta phase. If no LFP data is loaded, a warning will be issued and the function will return None.
 
         """
-
-        from ephysiopy.common.phasecoding import LFPOscillations
-
-        if not self.EEGCalcs:
-            warnings.warn("No LFP data loaded")
-            return
-
-        ax = kws.pop("ax", None)
-        cmap = kws.pop("cmap", "hsv")
-        theta_band = kws.pop("theta_band", (6, 12))
+        ax = kwargs.pop("ax", None)
+        separate_plots = kwargs.pop("separate_plots", False)
 
         if ax is None:
             fig = plt.figure(figsize=(12, 10))
             ax = fig.add_subplot(111)
 
-        L = LFPOscillations(self.EEGCalcs.sig, self.EEGCalcs.fs)
-        F = L.getFreqPhase(self.EEGCalcs.sig, theta_band)
-        phase = F.phase
+        rmap = self.get_phase_pos_rate_map(cluster, channel, **kwargs)
 
-        cluster_times = self.get_spike_times(cluster, channel)
-        phase_idx = None
+        # multiple clusters have been passed in so plot either in
+        # one window  or one per cluster
+        if len(rmap.binned_data) > 1 and separate_plots:
+            for imap in rmap:
+                fig = plt.figure()
+                ax = fig.add_subplot(111)
+                ax = _plot_pcolormesh(imap, ax, **kwargs)
+                ax.set_aspect("equal")
+            return fig
+        elif len(rmap.binned_data) > 1 and not separate_plots:
+            return _plot_multiple_clusters(_plot_pcolormesh, rmap, **kwargs)
+        # plot a single cluster in an individual window
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+        else:
+            fig = plt.gcf()
 
-        phase_idx = np.array(
-            np.searchsorted(self.EEGCalcs.time, cluster_times), dtype=int
-        )
-        bad_idx = np.nonzero(phase_idx >= len(phase))[0]
-        phase_idx[bad_idx] = len(phase) - 1
-
-        ph_x, ph_y = self.get_pos_at_spike_times(cluster, channel)
-        phase = phase[phase_idx]
-
-        counts, _, _ = np.histogram2d(
-            ph_x,
-            ph_y,
-            range=(self.RateMap.x_lims, self.RateMap.y_lims),
-        )
-
-        cos_sum, _, _ = np.histogram2d(
-            ph_x,
-            ph_y,
-            range=(self.RateMap.x_lims, self.RateMap.y_lims),
-            weights=np.cos(phase),
-        )
-        sin_sum, _, _ = np.histogram2d(
-            ph_x,
-            ph_y,
-            range=(self.RateMap.x_lims, self.RateMap.y_lims),
-            weights=np.sin(phase),
-        )
-
-        with np.errstate(invalid="ignore", divide="ignore"):
-            mean_phase = np.arctan2(sin_sum, cos_sum)  # circular mean
-
-        mean_phase[counts == 0] = np.nan  # mask out bins with no spikes
-        mean_phase = np.ma.masked_invalid(mean_phase)
-        # and plot the image
-        ext = (
-            self.RateMap.x_lims[0],
-            self.RateMap.x_lims[1],
-            self.RateMap.y_lims[0],
-            self.RateMap.y_lims[1],
-        )
-
-        im = ax.imshow(
-            mean_phase,
-            cmap=cmap,
-            norm=colours.Normalize(-np.pi, np.pi, False),
-            origin="lower",
-            extent=ext,
-        )
-        plt.colorbar(im)
-
-        return ax
+        kwargs = clean_kwargs(plt.pcolormesh, kwargs)
+        ax = _plot_pcolormesh(rmap, ax, **kwargs)
+        ax.set_aspect("equal")
+        return fig
 
     @addClusterChannelToAxes
     @print_cluster_channel

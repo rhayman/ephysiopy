@@ -30,6 +30,7 @@ class VariableToBin(Enum):
     X = 8  # linear track
     Y = 9  # linear track
     PHI = 10  # linear track sqrt(x^2 + y^2)
+    PHASE = 11  # LFP theta phase
 
 
 class MapType(Enum):
@@ -299,8 +300,9 @@ class BinnedData:
         indices : np.ndarray
             The indices to convert to NaN
         """
-        for i in range(len(self.binned_data)):
-            self.binned_data[i].mask[indices] = True
+        if indices is not None:
+            for i in range(len(self.binned_data)):
+                self.binned_data[i].mask[indices] = True
 
     def T(self):
         return BinnedData(

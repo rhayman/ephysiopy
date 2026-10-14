@@ -303,10 +303,12 @@ def _plot_multiple_clusters(
         ax = fig.add_subplot(nrows, ncols, i + 1, projection=proj)
         # copy kwargs so that we don't modify the original
         kws = kwargs.copy()
-        if "c" in kwargs.keys():
+        if "ax" in kws:
+            kws.pop("ax")
+        if "c" in kwargs:
             kws["c"] = kwargs["c"][i]
         if func2:
-            func2(imap, ax=ax, **kws)
+            func2(ax=ax, **kws)
         ax = func(imap, ax=ax, **kws)
 
         if equal_axes:

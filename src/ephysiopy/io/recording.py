@@ -450,7 +450,7 @@ class OpenEphysBase(TrialInterface):
     ) -> list | np.ndarray:
 
         ts = self.get_spike_times(cluster, channel, **kwargs)
-        idx = np.searchsorted(self.PosCalcs.time, ts, side="left")
+        idx = np.searchsorted(self.PosCalcs.time, ts, side="left") - 1
         return self.PosCalcs.xy[:, idx]
 
     def get_spike_times(
@@ -660,14 +660,17 @@ class OpenEphysBase(TrialInterface):
         if cluster_data_id is None:
             cluster_data_id = self.path2KiloSortData[0]
             __load_kilo__(str(cluster_data_id), **kws)
+            return self.clusterData.channels_clusters
 
         if self.cluster_data_id is None:
             __load_kilo__(str(cluster_data_id), **kws)
+            return self.clusterData.channels_clusters
 
         if cluster_data_id == self.cluster_data_id:
             return self.clusterData.channels_clusters
         else:
             __load_kilo__(cluster_data_id, **kws)
+            return self.clusterData.channels_clusters
 
     def load_pos_data(
         self, ppm: int = 300, jumpmax: int = 100, *args, **kwargs
@@ -753,8 +756,15 @@ class OpenEphysBase(TrialInterface):
                     time = pos_ts
             else:
                 time = pos_ts
+
             if self.path2SyncMessages is not None:
-                recording_start_time = time[0]
+                if "Trackerizer" in pos_plugin_name:
+                    recording_start_time = self._get_start_time_from_stream_name_(
+                        "Tracking"
+                    )
+                    # time -= recording_start_time
+                else:
+                    recording_start_time = time[0]
 
             # This is the gateway to all the position processing so if you want
             # to load your own pos data you'll need to create an instance of
@@ -929,6 +939,8 @@ class OpenEphysBase(TrialInterface):
         if not self.template_model:
             self.load_neural_data()
 
+        # not sure about how the recording "Start Time" value in the
+        # sync_messages.txt file should be used here for the raw data access
         if "from_raw" in kwargs.keys() and kwargs["from_raw"]:
             waveforms = get_raw_cluster_spikes(self, cluster, **kwargs)
             # axis 0 and 1 need swapping to get into
