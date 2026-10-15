@@ -2,7 +2,6 @@ import copy
 import warnings
 from pathlib import Path
 
-import matplotlib.colors as colours
 import matplotlib.pylab as plt
 import numpy as np
 import seaborn as sns
@@ -1173,7 +1172,7 @@ class FigureMaker:
         """
         from ephysiopy.common.phasecoding import LFPOscillations
 
-        LFP = LFPOscillations(self.EEGCalcs.sig, self.EEGCalcs.fs)
+        LFP = LFPOscillations(self.EEGCalcs)
 
         _, _, _ = LFP.theta_running(self.PosCalcs, self.EEGCalcs, plot=True, **kwargs)
 
@@ -1181,16 +1180,61 @@ class FigureMaker:
 
         return ax
 
-    # TODO: implememnt the logic in plot_rate_map for multiple clusters in single
-    # or multiple figure windows here by calling _plot_patch_collection or
-    # _plot_pcolormesh as appropriate
+    @print_cluster_channel
+    def plot_theta_phase_spike_path(
+        self, cluster: int, channel: int, **kwargs
+    ) -> plt.Axes:
+        """
+        Plots the theta phase by x-y position for the given cluster
+        on the given channel. Spikes are coloured by theta phase
+
+        Parameters
+        ----------
+        cluster : int
+            The cluster to get the spike times for.
+        channel : int
+            The channel to get the spike times for.
+        kws : dict
+            Keyword arguments
+            Valid:
+                ax : matplotlib.axes.Axes, optional
+                    The axes to plot on. If None, a new figure and axes will be created.
+                cmap : str, optional
+                    The colormap to use for the plot. Default is 'hsv'.
+                theta_band : tuple
+                    The theta band to filter the LFP for. Default 6-12Hz
+        """
+        if not self.RateMap:
+            self.initialise()
+
+        ax = kwargs.pop("ax", None)
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+
+        x, y = self.get_pos_at_spike_times(cluster, channel)
+        ph = self.get_phase_at_spike_times(cluster, channel)
+        # extract out the colours for the spikes based on the phase
+        cmap = plt.get_cmap(kwargs.get("cmap", "hsv"))
+        norm = plt.Normalize(vmin=-np.pi, vmax=np.pi)
+
+        cols = [cmap(norm(p)) for p in ph]
+
+        ax = self._plot_path(ax, **kwargs)
+        _plot_patch_collection(
+            np.array([x, y]), ax, **kwargs | {"cmap": cmap, "norm": norm, "c": cols}
+        )
+        ax.set_aspect("equal")
+        return ax
+
     @print_cluster_channel
     def plot_theta_phase_ratemap(
         self, cluster: int, channel: int, **kwargs
     ) -> plt.Axes | None:
         """
         Plots the theta phase by x-y position map for the given cluster
-        on the given channel
+        on the given channel. Bins are coloured according to the mean
+        phase of theta of the spikes occurring in that bin.
 
         Parameters
         ----------
@@ -1218,6 +1262,9 @@ class FigureMaker:
         Needs to have some LFP data loaded to get the theta phase. If no LFP data is loaded, a warning will be issued and the function will return None.
 
         """
+        if not self.RateMap:
+            self.initialise()
+
         ax = kwargs.pop("ax", None)
         separate_plots = kwargs.pop("separate_plots", False)
 
@@ -1283,7 +1330,7 @@ class FigureMaker:
         if "polar" not in ax.name:
             raise ValueError("Need a polar axis")
 
-        L = LFPOscillations(self.EEGCalcs.sig, self.EEGCalcs.fs)
+        L = LFPOscillations(self.EEGCalcs)
         ts = self.get_spike_times(cluster, channel)
         phase, _, _ = L.get_theta_phase(ts, **kwargs)  # phase in radians
 

@@ -51,6 +51,8 @@ plt.show()
         - plot_raster
         - plot_speed_v_rate
         - plot_power_spectrum
+        - plot_theta_phase_spike_path
+        - plot_theta_phase_ratemap
         - plot_theta_vs_running_speed
         - plot_clusters_theta_phase
         - plot_waveforms

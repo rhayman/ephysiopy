@@ -371,6 +371,8 @@ def _plot_patch_collection(xy: np.ma.MaskedArray, ax: plt.Axes, **kws) -> plt.Ax
     tight_axes = kws.pop("tight_axes", False)
     rect_size = kws.pop("ms", 1)
     col = kws.pop("c", tcols.colours[1])
+    cmap = kws.pop("cmap", None)
+    norm = kws.pop("norm", None)
     col = np.array(col)
     if len(col) == 3:  # a singular value
         col = [col for _ in range(xy.shape[1])]
@@ -388,7 +390,8 @@ def _plot_patch_collection(xy: np.ma.MaskedArray, ax: plt.Axes, **kws) -> plt.Ax
         )
         for _xy, _col in zip(xy.T, col)
     ]
-    ax.add_collection(PatchCollection(rects, match_original=True))
+    _kws = {"cmap": cmap, "norm": norm}
+    ax.add_collection(PatchCollection(rects, match_original=True, **_kws))
     if equal_axes:
         ax.set_aspect("equal")
 

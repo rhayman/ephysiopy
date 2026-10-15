@@ -1,5 +1,3 @@
-from typing import Callable
-
 import matplotlib
 import matplotlib.pylab as plt
 import numpy as np
@@ -35,9 +33,10 @@ class LFPOscillations:
 
     """
 
-    def __init__(self, sig, fs):
-        self.sig = sig
-        self.fs = fs
+    def __init__(self, lfp: EEGCalcsGeneric):
+        self.sig = lfp.sig
+        self.fs = lfp.fs
+        self.time = lfp.time
         # these member variables are used in power_spectrum()
         self.smthKernelWidth = 2
         self.smthKernelSigma = 0.1875
@@ -46,7 +45,7 @@ class LFPOscillations:
         self.gammaRange = [20, 90]
         self.xmax = 11
 
-    def getFreqPhase(self, sig, band2filter: list, ford=3) -> FreqPhase:
+    def getFreqPhase(self, band2filter: list, ford=3) -> FreqPhase:
         """
         Uses the Hilbert transform to calculate the instantaneous phase and
         amplitude of the time series in sig.
@@ -67,13 +66,11 @@ class LFPOscillations:
             amplitude filtered, and instantaneous frequency.
 
         """
-        if sig is None:
-            sig = self.sig
         band2filter = np.array(band2filter, dtype=float)
 
         b, a = signal.butter(ford, band2filter / (self.fs / 2), btype="bandpass")
 
-        filt_sig = signal.filtfilt(b, a, sig, padtype="odd")
+        filt_sig = signal.filtfilt(b, a, self.sig, padtype="odd")
         hilbert_sig = signal.hilbert(filt_sig)
         phase = np.angle(hilbert_sig)
         amplitude = np.abs(hilbert_sig)
@@ -85,7 +82,6 @@ class LFPOscillations:
 
     def plot_cwt(
         self,
-        sig: np.ndarray,
         speed: np.ndarray,
         pos_sample_rate: float,
         start: float,
@@ -108,8 +104,9 @@ class LFPOscillations:
             The frequency band to be highlighted (default is (20, 90)).
         """
         # ---- START TEMP TESTING -------
-        theta = self.getFreqPhase(sig, band2filter=[6, 12])
-        gamma = self.getFreqPhase(sig, band2filter=[20, 90])
+        sig = self.sig
+        theta = self.getFreqPhase(band2filter=[6, 12])
+        gamma = self.getFreqPhase(band2filter=[20, 90])
         theta = theta.filt_sig[int(start * self.fs) : int(stop * self.fs)]
         gamma = gamma.filt_sig[int(start * self.fs) : int(stop * self.fs)]
 
@@ -148,7 +145,7 @@ class LFPOscillations:
         plt.tight_layout()
         return fig, ax
 
-    def get_comodulogram(self, low_freq_band=[1, 12], **kwargs):
+    def get_comodulogram(self, low_freq_band=None, **kwargs):
         """
         Computes the comodulogram of phase-amplitude coupling
         between different frequency bands.
@@ -170,6 +167,8 @@ class LFPOscillations:
         -----
         This method is a placeholder and needs to be implemented.
         """
+        if low_freq_band is None:
+            low_freq_band = [1, 12]
 
         n_surrogates = kwargs.get("n_surrogates", 200)
         n_jobs = kwargs.get("n_jobs", 1)
@@ -201,7 +200,7 @@ class LFPOscillations:
             if kwargs.get("ax", None):
                 ax = kwargs.get("ax")
             else:
-                fig, ax = plt.subplots(figsize=(4, 3))
+                _, ax = plt.subplots(figsize=(4, 3))
 
             if n_surrogates > 1:
                 p_value = 10 / n_surrogates
@@ -321,7 +320,7 @@ class LFPOscillations:
         vals, run_starts, run_lens = find_runs(high_power_mask.astype(int))
         # calculate the maxima of the amplitude for each segment
         # of the frequency band pass version of the LFP
-        F = self.getFreqPhase(self.sig, band2filter=list(FREQ_BAND))
+        F = self.getFreqPhase(band2filter=list(FREQ_BAND))
         amplitude_filtered = F.amplitude_filtered
         good_runs = np.nonzero(vals == 1)[0]
 
@@ -351,7 +350,6 @@ class LFPOscillations:
 
     def modulationindex(
         self,
-        sig=None,
         nbins=20,
         forder=2,
         thetaband=[6, 12],
@@ -392,14 +390,13 @@ class LFPOscillations:
         coupling between theta and gamma oscillations.
 
         """
-        if sig is None:
-            sig = self.sig
+        sig = self.sig
         sig = sig - np.ma.mean(sig)
         if np.ma.is_masked(sig):
             sig = np.ma.compressed(sig)
-        F = self.getFreqPhase(sig, thetaband, forder)
+        F = self.getFreqPhase(thetaband, forder)
         lowphase = F.phase
-        F = self.getFreqPhase(sig, gammaband, forder)
+        F = self.getFreqPhase(gammaband, forder)
         highamp = F.amplitude
         inc = 2 * np.pi / nbins
         a = np.arange(0, 2 * np.pi, inc)
@@ -429,7 +426,6 @@ class LFPOscillations:
 
     def power_spectrum(
         self,
-        eeg=None,
         plot=True,
         pad2pow=None,
         ymax=None,
@@ -477,15 +473,11 @@ class LFPOscillations:
 
 
         """
-        if eeg is None:
-            eeg = self.sig
-
-        P = PowerSpectrumParams(eeg)
+        P = PowerSpectrumParams(self.sig)
         return power_spectrum(P, plot, pad2pow, ymax, **kwargs)
 
     def plv(
         self,
-        sig=None,
         forder=2,
         thetaband=[4, 8],
         gammaband=[30, 80],
@@ -500,8 +492,6 @@ class LFPOscillations:
 
         Parameters
         ----------
-        sig : np.array, optional
-            The LFP signal. If None, uses the signal provided during initialization.
         forder : int, optional
             The order of the Butterworth filter (default is 2).
         thetaband : list, optional
@@ -523,15 +513,14 @@ class LFPOscillations:
 
         """
 
-        if sig is None:
-            sig = self.sig
+        sig = self.sig
         sig = sig - np.ma.mean(sig)
         if np.ma.is_masked(sig):
             sig = np.ma.compressed(sig)
 
-        F = self.getFreqPhase(sig, thetaband, forder)
+        F = self.getFreqPhase(thetaband, forder)
         lowphase = F.phase
-        F = self.getFreqPhase(sig, gammaband, forder)
+        F = self.getFreqPhase(gammaband, forder)
         highamp_f = F.amplitude_filtered
 
         highampphase = np.angle(signal.hilbert(highamp_f))
@@ -552,15 +541,13 @@ class LFPOscillations:
             ax.bar(th, h, width=w, bottom=0.0)
         return plv, th, h
 
-    def filterForLaser(self, sig=None, width=0.125, dip=15.0, stimFreq=6.66):
+    def filterForLaser(self, width=0.125, dip=15.0, stimFreq=6.66):
         """
         Attempts to filter out frequencies from optogenetic experiments where
         the frequency of laser stimulation was at 6.66Hz.
 
         Parameters
         ----------
-        sig : np.array, optional
-            The signal to be filtered. If None, uses the signal provided during initialization.
         width : float, optional
             The width of the filter (default is 0.125).
         dip : float, optional
@@ -589,8 +576,7 @@ class LFPOscillations:
         cutoff_hz.sort()
         cutoff_hz_nyq = cutoff_hz / nyq
         taps = firwin(N, cutoff_hz_nyq, window=("kaiser", beta))
-        if sig is None:
-            sig = self.sig
+        sig = self.sig
         fx = filtfilt(taps, [1.0], sig)
         return fx
 
@@ -658,7 +644,7 @@ class LFPOscillations:
         nbins = kwargs.pop("nbins", 13)
         # extract the mask from the eeg data
         mask = np.ma.getmask(lfp_data.sig)
-        F = self.getFreqPhase(lfp_data.sig, band2filter=[low_theta, high_theta])
+        F = self.getFreqPhase(band2filter=[low_theta, high_theta])
         inst_freq = F.inst_freq
         # interpolate speed to match the frequency of the LFP data
         eeg_time = np.linspace(
@@ -778,9 +764,9 @@ class LFPOscillations:
         MIN_THETA = kws.get("min_theta", 6)
         MAX_THETA = kws.get("max_theta", 12)
 
-        F = self.getFreqPhase(self.sig, [MIN_THETA, MAX_THETA], 2)
+        F = self.getFreqPhase([MIN_THETA, MAX_THETA], 2)
         phase = F.phase
-        idx = (spike_times * self.fs).astype(int)
+        idx = np.searchsorted(self.time, spike_times).astype(int)
 
         return mean_resultant_vector(phase[idx])
 
@@ -812,10 +798,10 @@ class LFPOscillations:
         """
         low_theta = kwargs.pop("low_theta", 6)
         high_theta = kwargs.pop("high_theta", 12)
-        F = self.getFreqPhase(self.sig, [low_theta, high_theta])
+        F = self.getFreqPhase([low_theta, high_theta])
         phase = F.phase
         # get indices into the phase vector
-        phase_idx = np.array(cluster_times * self.fs, dtype=int)
+        phase_idx = np.searchsorted(self.time, cluster_times, side="left").astype(int)
         # It's possible that there are indices higher than the length of
         # the phase vector so lets set them to the last index
         bad_idx = np.nonzero(phase_idx > len(phase))[0]
@@ -829,7 +815,6 @@ class LFPOscillations:
     def spike_xy_phase_plot(
         self,
         pos_data: PosCalcsGeneric,
-        lfp_data: EEGCalcsGeneric,
         cluster_times: np.ndarray,
     ) -> plt.Axes:
         """
@@ -854,20 +839,19 @@ class LFPOscillations:
         plt.Axes
             The matplotlib axes object with the plot.
         """
-        F = self.getFreqPhase(lfp_data.sig, [6, 12])
+        F = self.getFreqPhase([6, 12])
         phase = F.phase
         # get indices into the phase vector
-        phase_idx = np.array(cluster_times * self.fs, dtype=int)
+        phase_idx = np.searchsorted(self.time, cluster_times, side="left").astype(int)
         # It's possible that there are indices higher than the length of
         # the phase vector so lets set them to the last index
         bad_idx = np.nonzero(phase_idx > len(phase))[0]
         phase_idx[bad_idx] = len(phase) - 1
-        # get indices into the position data
-        pos_idx = np.array(cluster_times * pos_data.sample_rate, dtype=int)
-        bad_idx = np.nonzero(pos_idx >= len(pos_data.time))[0]
-        pos_idx[bad_idx] = len(pos_data.time) - 1
-        # add PI to phases to remove negativity
-        # cluster_phases = phase[phase_idx]
+        # get the position data at the spike times
+        pos_idx = np.searchsorted(pos_data.time, cluster_times, side="left").astype(int)
+        bad_idx = np.nonzero(pos_idx >= pos_data.npos)[0]
+        pos_idx[bad_idx] = pos_data.npos - 1
+
         # TODO: create the colour map for phase and plot
         spike_xy = pos_data.xy[:, pos_idx]
         spike_phase = phase[phase_idx]
@@ -1071,7 +1055,7 @@ def get_bad_cycles(
 # relation to the LFP
 
 
-def theta_filter_lfp(lfp: np.ndarray, fs: float, **kwargs):
+def theta_filter_lfp(lfp: EEGCalcsGeneric, **kwargs):
     """
     Processes an LFP signal for theta cycles, filtering
     out bad cycles (low power, too long/ short etc) and
@@ -1082,8 +1066,9 @@ def theta_filter_lfp(lfp: np.ndarray, fs: float, **kwargs):
     min_theta = kwargs.pop("min_theta", 6)
     max_theta = kwargs.pop("max_theta", 12)
 
-    L = LFPOscillations(lfp, fs)
-    freq_phase = L.getFreqPhase(lfp, (6, 12))
+    L = LFPOscillations(lfp)
+    fs = lfp.fs
+    freq_phase = L.getFreqPhase([6, 12])
     phase = freq_phase.phase
 
     is_neg_freq = np.diff(np.unwrap(phase)) < 0

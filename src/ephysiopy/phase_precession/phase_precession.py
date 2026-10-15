@@ -133,10 +133,10 @@ class phasePrecessionND:
         # LFP params...
         self.eeg = T.EEGCalcs.sig
         self.lfp_fs = T.EEGCalcs.fs
-        L = LFPOscillations(self.eeg, self.lfp_fs)
+        L = LFPOscillations(T.EEGCalcs)
         self.min_theta = pp_config["min_theta"]
         self.max_theta = pp_config["max_theta"]
-        FP = L.getFreqPhase(self.eeg, [self.min_theta, self.max_theta], 2)
+        FP = L.getFreqPhase([self.min_theta, self.max_theta], 2)
         self.filteredEEG = FP.filt_sig
         self.phase = FP.phase
         self.phaseAdj = np.ma.MaskedArray

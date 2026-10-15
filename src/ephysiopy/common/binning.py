@@ -1263,4 +1263,5 @@ class RateMap:
 
         spk_sm = self.smooth(spk, MapType.SPK, **kwargs)
 
+        # TODO: I'm unsure whether this should be normalized by pos or not. I think it should be, but the original code didn't do this. So for now I'm leaving it as is.
         return spk_sm  # / pos

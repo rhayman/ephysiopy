@@ -23,7 +23,7 @@ from ephysiopy.common.utils import (
 )
 from ephysiopy.io.bases import TrialInterface
 from ephysiopy.openephys2py.KiloSort import KiloSortSession
-from ephysiopy.openephys2py.OESettings import Settings, SyncMessages
+from ephysiopy.openephys2py.OESettings import Settings, SyncMessages, get_datastreams
 from ephysiopy.openephys2py.raw_data import get_raw_cluster_spikes
 
 
@@ -235,13 +235,6 @@ class AxonaTrial(TrialInterface):
         print("Loaded ttl data")
         return True
 
-    def get_pos_at_spike_times(
-        self, cluster: int | list, channel: int | list, *args, **kwargs
-    ) -> list | np.ndarray:
-        ts = self.get_spike_times(cluster, channel, **kwargs)
-        idx = np.searchsorted(self.PosCalcs.time, ts, side="left")
-        return self.PosCalcs.xy[:, idx]
-
     def get_spike_times(
         self, cluster: int | list = None, tetrode: int | list = None, *args, **kwargs
     ) -> list | np.ndarray:
@@ -353,6 +346,17 @@ class OpenEphysBase(TrialInterface):
         self.cluster_data_id = None
         self.lfp_data_id = None
 
+    def get_datastreams(self) -> list[str]:
+        """
+        Get the available data streams from the recording plugin.
+
+        Returns
+        -------
+        list[str]
+            A list of available data streams.
+        """
+        return get_datastreams(self.settings)
+
     def _get_sync_message_info_(self, sync_message_file: str) -> list[SyncMessages]:
         """
         Extract plugin information from the sync_message_file.txt.
@@ -444,14 +448,6 @@ class OpenEphysBase(TrialInterface):
                     states = np.load(ev / Path("states.npy"))
                     return ts[states == 1]
         return np.array([])
-
-    def get_pos_at_spike_times(
-        self, cluster: int | list, channel: int | list, *args, **kwargs
-    ) -> list | np.ndarray:
-
-        ts = self.get_spike_times(cluster, channel, **kwargs)
-        idx = np.searchsorted(self.PosCalcs.time, ts, side="left") - 1
-        return self.PosCalcs.xy[:, idx]
 
     def get_spike_times(
         self,

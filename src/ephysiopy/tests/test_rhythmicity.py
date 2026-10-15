@@ -47,8 +47,8 @@ def test_LFP_oscillations(path_to_axona_data):
     T.load_lfp(path_to_axona_data)
     sig = T.EEGCalcs.sig
     fs = T.EEGCalcs.fs
-    LFP_Osc = LFPOscillations(sig, fs)
-    LFP_Osc.getFreqPhase(sig, [6, 12])
-    LFP_Osc.modulationindex(sig)
-    LFP_Osc.plv(sig)
-    LFP_Osc.filterForLaser(sig)
+    LFP_Osc = LFPOscillations(T.EEGCalcs)
+    LFP_Osc.getFreqPhase([6, 12])
+    LFP_Osc.modulationindex()
+    LFP_Osc.plv()
+    LFP_Osc.filterForLaser()

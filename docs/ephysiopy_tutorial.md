@@ -183,7 +183,25 @@ Similarly if we want to look at the LFP data then we need to load the raw data a
 trial.load_lfp()
 ```
 
-This will take a while as we need to load the data and filter it. For now, all you need to know is that you can call this load_lfp() methods with different frequency bands. We'll come back to this...
+This will take a while as we need to load the data and filter it. For now, all you need to know is that you can call this load_lfp() methods with different frequency bands. 
+
+When recording with more than one probe / DataStream (see openephys documentation) it is possible to specify which datastream to load the data from. By default the first one is used. To specify which one to load provide the load_lfp() or load_cluster_data() methods with the stream name. You can get a list of the available streams by calling get_datastreams():
+
+```python
+trial.get_datastreams()
+```
+
+To load a specific stream you can call the load_lfp() or load_cluster_data() methods with the stream_name argument:
+
+```python
+trial.load_lfp(stream_name="ProbeA-LFP")
+```
+
+or,
+
+```python
+trial.load_cluster_data(stream_name="ProbeA-AP")
+```
 
 ## Plotting data
 

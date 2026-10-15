@@ -354,7 +354,6 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         raise NotImplementedError
 
-    @abc.abstractmethod
     def get_pos_at_spike_times(
         self, cluster: int | list, channel: int | list, *args, **kwargs
     ) -> list | np.ndarray:
@@ -373,7 +372,39 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         list | np.ndarray
             the spike times
         """
-        raise NotImplementedError
+        ts = self.get_spike_times(cluster, channel, **kwargs)
+        idx = np.searchsorted(self.PosCalcs.time, ts, side="left")
+        bad_idx = idx >= self.PosCalcs.npos
+        idx[bad_idx] = -1
+        return self.PosCalcs.xy[:, idx]
+
+    def get_phase_at_spike_times(
+        self, cluster: int | list, channel: int | list, **kwargs
+    ) -> list | np.ndarray:
+        """
+        Returns the phase at the times of an individual cluster's spikes
+
+        Parameters
+        ----------
+        cluster : int | list
+            The cluster(s) to get the spike times for
+        channel : int | list
+            The channel(s) to get the spike times for
+
+        Returns
+        -------
+        list | np.ndarray
+            the spike times
+        """
+        freq_band = kwargs.get("freq_band", [6, 12])
+        ts = self.get_spike_times(cluster, channel, **kwargs)
+        idx = np.searchsorted(self.EEGCalcs.time, ts, side="left").astype(int)
+        bad_idx = idx >= self.EEGCalcs.sig.shape[0]
+        idx[bad_idx] = -1
+
+        L = LFPOscillations(self.EEGCalcs)
+        F = L.getFreqPhase(freq_band, 2)
+        return F.phase[idx]
 
     def get_field_properties(
         self, cluster: int | list, channel: int | list, **kwargs
@@ -440,9 +471,9 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         if not self.EEGCalcs:
             self.load_lfp()
 
-        L = LFPOscillations(self.EEGCalcs.sig, self.EEGCalcs.fs)
+        L = LFPOscillations(self.EEGCalcs)
 
-        FreqPhase = L.getFreqPhase(self.EEGCalcs.sig, [min_theta, max_theta], 2)
+        FreqPhase = L.getFreqPhase([min_theta, max_theta], 2)
 
         phase = FreqPhase.phase
 
@@ -1214,23 +1245,8 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 
         theta_band = kwargs.pop("theta_band", (6, 12))
 
-        # Calculate the phase of theta_band and set the phase property
-        # on self.RateMap
-        L = LFPOscillations(self.EEGCalcs.sig, self.EEGCalcs.fs)
-        F = L.getFreqPhase(self.EEGCalcs.sig, theta_band)
-        phase = F.phase
-
-        cluster_times = self.get_spike_times(cluster, channel)
-        phase_idx = None
-
-        phase_idx = np.array(
-            np.searchsorted(self.EEGCalcs.time, cluster_times), dtype=int
-        )
-        bad_idx = np.nonzero(phase_idx >= len(phase))[0]
-        phase_idx[bad_idx] = len(phase) - 1
-
         ph_x, ph_y = self.get_pos_at_spike_times(cluster, channel)
-        phase = phase[phase_idx]
+        phase = self.get_phase_at_spike_times(cluster, channel, freq_band=theta_band)
 
         rmap = self.RateMap.get_theta_phase_pos_map(ph_x, ph_y, phase, **kwargs)
 

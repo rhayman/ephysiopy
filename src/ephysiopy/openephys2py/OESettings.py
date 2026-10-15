@@ -1,24 +1,14 @@
-"""
-Classes for parsing information contained in the settings.xml
-file that is saved when recording with the openephys system.
-"""
-
-try:
-    import xml.etree.cElementTree as ET
-except ImportError:
-    import xml.etree.ElementTree as ET
-
 import json
 import os
+import xml.etree.ElementTree as ET
 from abc import ABC
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
 
 import numpy as np
 
-from ephysiopy.common.utils import memmapBinaryFile
+from ephysiopy.common.utils import memmapBinaryFile, flatten_list
 
 """
 Some conversion classes used in the dataclasses below.
@@ -1512,6 +1502,36 @@ class Settings(object):
             else:
                 return processor
         return OEPlugin()
+
+
+def get_datastreams(settings: Settings) -> list[str]:
+    """
+    Returns a list of Stream objects from the settings.
+
+    Parameters
+    ----------
+    settings : Settings
+        The Settings object containing the processors.
+
+    Returns
+    -------
+    list[Stream]
+        A list of Stream objects.
+    """
+    streams = []
+    for proc in settings.processors.values():
+        stream = proc.get_streams()
+        if stream:
+            streams.extend([s.name for s in stream])
+
+    streams = flatten_list(streams)
+
+    streams = list(set(streams))  # Remove duplicates
+
+    # remove empty strings from the list
+    streams = [s for s in streams if s]
+
+    return streams
 
 
 """
