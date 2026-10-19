@@ -649,6 +649,16 @@ class OpenEphysBase(TrialInterface):
                     K.recording_start_time = start_time
                     self.clusterData = K
                     self.cluster_data_id = s_name
+                    print(f"Creating template model for {ks_path}")
+                    plugin = self.settings.get_plugin("Neuropix")[0]
+                    channel_count = plugin.get_stream(s_name).channel_count
+                    sample_rate = plugin.get_stream(s_name).sample_rate
+                    self.template_model = TemplateModel(
+                        dir_path=ks_path,
+                        sample_rate=sample_rate,
+                        dat_path=Path(ks_path).joinpath("continuous.dat"),
+                        n_channels_dat=int(channel_count),
+                    )
                     return self.clusterData.channels_clusters
             return None
 

@@ -93,10 +93,10 @@ class LFPOscillations:
 
         Parameters
         ----------
-        sig : np.ndarray
-            The signal to be analysed.
-        Pos : PosCalcsGeneric
-            The position object containing speed and time information.
+        speed : np.ndarray
+            The whole of the speed data for the trial
+        pos_sample_rate : float
+            The pos sample rate
         start : float
             The start time for the plot (in seconds).
         stop : float
