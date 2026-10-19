@@ -86,6 +86,7 @@ class LFPOscillations:
         pos_sample_rate: float,
         start: float,
         stop: float,
+        **kwargs,
     ) -> tuple[plt.Figure, plt.Axes]:
         """
         Plots the continuous wavelet transform of the signal
@@ -102,13 +103,18 @@ class LFPOscillations:
             The stop time for the plot (in seconds).
         FREQ_BAND : tuple, optional
             The frequency band to be highlighted (default is (20, 90)).
+        **kwargs : dict
+            Additional keyword arguments.
+            Valid kwargs include:
+                add_plv (bool) - whether to add the phase locking value to the plot (default is False).
         """
         # ---- START TEMP TESTING -------
         sig = self.sig
-        theta = self.getFreqPhase(band2filter=[6, 12])
-        gamma = self.getFreqPhase(band2filter=[20, 90])
-        theta = theta.filt_sig[int(start * self.fs) : int(stop * self.fs)]
-        gamma = gamma.filt_sig[int(start * self.fs) : int(stop * self.fs)]
+        F_theta = self.getFreqPhase(band2filter=[6, 12])
+        F_gamma = self.getFreqPhase(band2filter=[20, 90])
+        sig_slice = slice(int(start * self.fs), int(stop * self.fs))
+        theta = F_theta.filt_sig[sig_slice]
+        gamma = F_gamma.filt_sig[sig_slice]
 
         # ---- END TEMP TESTING -------
         wavelet = "cmor1.0-1.0"
@@ -130,11 +136,23 @@ class LFPOscillations:
             cmap="jet",
         )
         ax[0].set_yscale("log")
+        if kwargs.get("add_plv", False):
+            plv = get_slice_plv(F_theta, F_gamma, sig_slice)
+            ax[0].text(
+                0.02,
+                0.85,
+                f"PLV: {plv:.2f}",
+                transform=ax[0].transAxes,
+                color="k",
+                weight="bold",
+                fontsize=12,
+            )
         # fig.colorbar(im, ax=ax[0], label="Power")
         ax[1].plot(t, _sig, "lightgrey")
         ax[1].plot(t, theta, "b", label="Theta")
         ax[1].plot(t, gamma, "r", label="Gamma")
         ax[1].set_ylabel("LFP (a.u.)")
+        ax[1].legend(prop={"weight": "bold", "size": 14})
         # plot speed
         s = slice(int(start * pos_sample_rate), int(stop * pos_sample_rate))
         speed = speed[s]
@@ -812,75 +830,31 @@ class LFPOscillations:
         y = np.exp(kappa * np.cos(x - loc)) / (2 * np.pi * i0(kappa))
         return phase[phase_idx], x, y
 
-    def spike_xy_phase_plot(
-        self,
-        pos_data: PosCalcsGeneric,
-        cluster_times: np.ndarray,
-    ) -> plt.Axes:
-        """
-        Produces a plot of the phase of theta at which each spike was
-        emitted. Each spike is plotted according to the x-y location the
-        animal was in when it was fired and the colour of the marker
-        corresponds to the phase of theta at which it fired.
-
-        Parameters
-        ----------
-        cluster : int
-            The cluster number.
-        pos_data : PosCalcsGeneric
-            Position data object containing position and speed information.
-        phy_data : TemplateModel
-            Phy data object containing spike times and clusters.
-        lfp_data : EEGCalcsGeneric
-            LFP data object containing the LFP signal and sampling rate.
-
-        Returns
-        -------
-        plt.Axes
-            The matplotlib axes object with the plot.
-        """
-        F = self.getFreqPhase([6, 12])
-        phase = F.phase
-        # get indices into the phase vector
-        phase_idx = np.searchsorted(self.time, cluster_times, side="left").astype(int)
-        # It's possible that there are indices higher than the length of
-        # the phase vector so lets set them to the last index
-        bad_idx = np.nonzero(phase_idx > len(phase))[0]
-        phase_idx[bad_idx] = len(phase) - 1
-        # get the position data at the spike times
-        pos_idx = np.searchsorted(pos_data.time, cluster_times, side="left").astype(int)
-        bad_idx = np.nonzero(pos_idx >= pos_data.npos)[0]
-        pos_idx[bad_idx] = pos_data.npos - 1
-
-        # TODO: create the colour map for phase and plot
-        spike_xy = pos_data.xy[:, pos_idx]
-        spike_phase = phase[phase_idx]
-        cmap = matplotlib.colormaps["hsv"]
-        _, ax = plt.subplots()
-        ax.plot(pos_data.xy[0], pos_data.xy[1], color="lightgrey", zorder=0)
-        ax.scatter(spike_xy[0], spike_xy[1], c=spike_phase, cmap=cmap, zorder=1)
-        return ax
-
 
 def get_slice_modulation_index(
     theta_sig: FreqPhase,
     gamma_sig: FreqPhase,
     slice: slice,
     nbins: int = 20,
-):
+) -> float:
     """
     Calculates the modulation index of theta and gamma oscillations
     for a given slice of data. Specifically, this is the circular correlation
     between the phase of theta and the power of gamma.
+
+    Notes
+    -----
+    Doens't seem to scale down very well to small sample sizes, so use with caution.
+    For small sample sizes, consider using the get_slice_plv function instead.
     """
     phase = theta_sig.phase[slice]
     amp = gamma_sig.amplitude_filtered[slice]
     inc = 2 * np.pi / nbins
-    a = np.arange(0, 2 * np.pi, inc)
+    a = np.arange(-np.pi, np.pi, inc)
     dt = np.array([-inc / 2, inc / 2])
     pbins = a[:, np.newaxis] + dt[np.newaxis, :]
     amp_hist = np.zeros(nbins)
-    phase_len = np.arange(len(phase))
+    phase_len = np.arange(1, len(phase) + 1)
     for i in range(nbins):
         pts = np.nonzero((phase >= pbins[i, 0]) * (phase < pbins[i, 1]) * phase_len)
         amp_hist[i] = np.ma.mean(amp[pts])

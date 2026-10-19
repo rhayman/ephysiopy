@@ -1847,9 +1847,6 @@ def fieldprops(
 
     # remove runs that aren't in any field
     run_slices = [rs for rs in all_run_slices if np.any(xy_field_label[rs] != 0)]
-    # TODO: try getting run starts and stops via np.ma.clump_unmasked
-    # Need to add a method argument to this function that determines
-    # whether to use ma.clump_unmasked or the old "field"-based method
 
     pos_sample_rate = kwargs.get("pos_sample_rate", 50)
 

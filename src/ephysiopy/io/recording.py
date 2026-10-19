@@ -565,6 +565,8 @@ class OpenEphysBase(TrialInterface):
 
         self.EEGCalcs = EEGCalcsGeneric(sig, target_sample_rate)
         self.EEGCalcs.time = times
+        self.EEGCalcs.channel = channel
+        self.EEGCalcs.stream_name = lfp_data_id
         return self.EEGCalcs
 
     def load_neural_data(self, *args, **kwargs):

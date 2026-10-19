@@ -48,8 +48,6 @@ This one allows us to save the
 returned matplotlib Axis object to a location and name specified by the
 user in the decorated function.
 
-TODO: This should take in an axes which should gcf() and then save
-as Axes are the thing that's returned from most of the functions below
 """
 
 

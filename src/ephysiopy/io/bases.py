@@ -522,7 +522,7 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
 
         return fp
 
-    def apply_filter(self, *trial_filter: TrialFilter) -> np.ndarray:
+    def apply_filter(self, *trial_filter: TrialFilter, **kwargs) -> np.ndarray:
         """
         Apply a mask to the recorded data. This will mask all the currently
         loaded data (LFP, position etc)
@@ -550,6 +550,10 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
             from the namedtuple TrialFilter that has fields 'start' and 'end'
             where 'start' and 'end' are the ranges to filter for
 
+            kwargs : dict
+                This is here solely (atm) to catch the circular data filter
+                argument "min_run_length" (default 50 samples)
+
         Returns
         -------
         np.ndarray
@@ -566,16 +570,10 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         self.__apply_mask_to_subcls__(mask)
         self._update_filter(None)
 
-        legal_filters = ["dir", "time", "speed", "x", "y", "phi"]
-
-        assert all([f.name in legal_filters for f in trial_filter]), (
-            f"Invalid filter name, must be one of {legal_filters}"
-        )
-
         for i_filter in trial_filter:
             self._update_filter(i_filter)
             data = getattr(self.PosCalcs, i_filter.name)
-            mask = filter_data(data, i_filter)
+            mask = filter_data(data, i_filter, **kwargs)
             self.mask_array = np.ma.logical_or(self.mask_array, mask)
 
         mask = np.expand_dims(np.any(self.mask_array, axis=0), 0)
@@ -793,9 +791,6 @@ class TrialInterface(FigureMaker, metaclass=abc.ABCMeta):
         """
         if not self.RateMap:
             self.initialise()
-        # TODO: _get_spike_pos_idx always returns a list now so this fcn needs
-        # amending as will the get_map() one in binning.RateMap as it looks
-        # like that expects a np.ndarray
         spk_times_in_pos_samples = self._get_spike_pos_idx(cluster, channel, **kwargs)
         # set times less than zero to zero, this is a hack to deal with the fact that the
         # spike times are not always in the same range as the position times

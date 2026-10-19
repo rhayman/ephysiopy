@@ -6,7 +6,6 @@ from collections import defaultdict, namedtuple
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import List
 
 import astropy.convolution as cnv
 import numpy as np
@@ -120,11 +119,10 @@ class BinnedData:
         map_type: MapType,
         binned_data: list[np.ma.MaskedArray],
         bin_edges: list[np.ndarray],
-        cluster_id: list[ClusterID] = [ClusterID(0, 0)],
+        cluster_id=None,
     ):
-        if isinstance(binned_data, np.ndarray) or isinstance(
-            binned_data, np.ma.MaskedArray
-        ):
+        cluster_id = [ClusterID(0, 0)]
+        if isinstance(binned_data, (np.ndarray, np.ma.MaskedArray)):
             binned_data = [binned_data]
 
         if isinstance(bin_edges, np.ndarray):
@@ -193,22 +191,21 @@ class BinnedData:
         """
         if isinstance(other, BinnedData):
             self.__assert_equal_bin_edges__(other)
-            if len(self.binned_data) > len(other.binned_data):
-                if (other.map_type.value == MapType.POS.value) and (
-                    self.map_type.value == MapType.SPK.value
-                ):
-                    if len(other.binned_data) == 1:
-                        return BinnedData(
-                            variable=self.variable,
-                            map_type=MapType.RATE,
-                            binned_data=[
-                                a / b
-                                for a in self.binned_data
-                                for b in other.binned_data
-                            ],
-                            bin_edges=self.bin_edges,
-                            cluster_id=self.cluster_id,
-                        )
+            if (
+                len(self.binned_data) > len(other.binned_data)
+                and (other.map_type.value == MapType.POS.value)
+                and (self.map_type.value == MapType.SPK.value)
+                and len(other.binned_data) == 1
+            ):
+                return BinnedData(
+                    variable=self.variable,
+                    map_type=MapType.RATE,
+                    binned_data=[
+                        a / b for a in self.binned_data for b in other.binned_data
+                    ],
+                    bin_edges=self.bin_edges,
+                    cluster_id=self.cluster_id,
+                )
 
             return BinnedData(
                 variable=self.variable,
@@ -241,29 +238,24 @@ class BinnedData:
                 cluster_id=self.cluster_id + other.cluster_id,
             )
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other) -> np.ndarray | bool:
         """
         Checks for equality of two instances of BinnedData
         """
-        assert isinstance(other, BinnedData)
+        if not isinstance(other, BinnedData):
+            return False
         self.__assert_equal_bin_edges__(other)
-        if np.all(
+        return np.all(
             [
                 np.all(np.isfinite(sbd) == np.isfinite(obd))
                 for sbd, obd in zip(self.binned_data, other.binned_data)
             ]
-        ):
-            if np.all(
-                [
-                    np.all(sbd[np.isfinite(sbd)] == obd[np.isfinite(obd)])
-                    for sbd, obd in zip(self.binned_data, other.binned_data)
-                ]
-            ):
-                return True
-            else:
-                return False
-        else:
-            return False
+        ) and np.all(
+            [
+                np.all(sbd[np.isfinite(sbd)] == obd[np.isfinite(obd)])
+                for sbd, obd in zip(self.binned_data, other.binned_data)
+            ]
+        )
 
     def get_cluster(self, id: ClusterID):
         """
@@ -416,6 +408,7 @@ class TrialFilter:
     Units:
         time: seconds
         dir: degrees
+        circ_dir: cw or ccw
         speed: cm/s
         x/ x: cm
 
@@ -423,9 +416,9 @@ class TrialFilter:
 
     name: str
     start: float | str
-    end: float | str
+    end: float | str | None
 
-    def __init__(self, name: str, start: float | str, end: float | str = None):
+    def __init__(self, name: str, start: float | str, end: float | str | None = None):
         """
         Parameters
         ----------
@@ -439,17 +432,18 @@ class TrialFilter:
         assert name in [
             "time",
             "dir",
+            "circ_dir",
             "speed",
             "x",
             "y",
             "phi",
-        ], "name must be one of 'time', 'dir', 'speed', 'x', 'y', 'phi'"
+        ], "name must be one of 'time', 'dir', 'circ_dir', speed', 'x', 'y', 'phi'"
         self.name = name
         self.start = start
         self.end = end
 
 
-def filter_data(data: np.ma.MaskedArray, f: TrialFilter) -> np.ma.MaskedArray:
+def filter_data(data: np.ma.MaskedArray, f: TrialFilter, **kwargs) -> np.ndarray | bool:
     """
     Filters the input data based on the specified TrialFilter.
 
@@ -496,12 +490,14 @@ def filter_data(data: np.ma.MaskedArray, f: TrialFilter) -> np.ma.MaskedArray:
         else:
             # Handle the case where the direction wraps around
             return np.ma.logical_or(data >= f.start, data <= f.end)
+    elif f.name == "circ_dir":
+        return filter_trial_by_circular_direction(data, f.start, **kwargs)
     else:
         return np.ma.logical_and(data >= f.start, data <= f.end)
 
 
 def filter_trial_by_time(
-    duration: int | float, how: str = "in_half"
+    duration: float, how: str = "in_half"
 ) -> tuple[list[TrialFilter], ...]:
     """
     Filters the data in trial by time
@@ -536,6 +532,51 @@ def filter_trial_by_time(
         odd_filters = [TrialFilter("time", s, e) for s, e in odds]
 
         return list(even_filters), list(odd_filters)
+
+
+def filter_trial_by_circular_direction(
+    xy: np.ndarray, direction: str = "cw", **kwargs
+) -> np.ndarray | bool:
+    """
+    Filter a trial by circular direction. Meant for filtering trials
+    recorded in a circular track.
+
+    Parameters
+    ----------
+    xy : np.ndarray
+        The position data to filter
+    str : direction
+        The direction to filter by. Legal values: "cw" or "ccw"
+
+    Returns
+    -------
+    np.ma.MaskedArray
+
+    """
+    from ephysiopy.common.utils import cart2pol
+
+    min_run_length = kwargs.pop("min_run_length", 50)  # in samples
+    # find centre and normalise ready to turn into angles
+    centre = np.min(xy, -1) + np.ptp(xy, -1) / 2
+    xy = xy - centre[:, None]
+    _, th = cart2pol(xy[0], xy[1])
+    th_df = np.diff(th, prepend=th[0])
+    sign = np.sign(th_df)
+
+    th_m = np.ma.masked_where(sign <= 0, th)
+
+    if direction == "cw":
+        clumps = np.ma.clump_masked(th_m)
+    else:
+        clumps = np.ma.clump_unmasked(th_m)
+
+    # filter out clumps that are too short
+    good_clumps = [c for c in clumps if (c.stop - c.start) >= min_run_length]
+
+    mask = np.ones(th.shape, dtype=bool)
+    [mask.__setitem__(slice(c.start, c.stop), False) for c in good_clumps]
+
+    return np.ma.MaskedArray(mask)
 
 
 def nextpow2(val: int):
@@ -573,7 +614,7 @@ class PowerSpectrumParams:
     smoothing_kernel_width: float = 2
     smoothing_kernel_sigma: float = 0.1875
     signal_to_noise_width: float = 2
-    theta_range: List = field(default_factory=lambda: [6, 12])
+    theta_range: list = field(default_factory=lambda: [6, 12])
     max_frequency: float = 25
     bin_width_in_secs: float = 1 / 250
     pad_to_power: int = lambda: int(nextpow2(len(signal)))

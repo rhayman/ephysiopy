@@ -471,6 +471,18 @@ class PosCalcsGeneric:
         self._dir: np.ma.MaskedArray = value
 
     @property
+    def circ_dir(self) -> np.ma.MaskedArray:
+        """
+        This is a special case only really for use with when
+        you want to filter data that has been recorded in a
+        circular track. See the ephysiopy.common.utils.filter_trial_by_circular_direction
+        function for more details.
+        The idea is that "circ_dir" is the name of the filter and that is used in
+        ephysiopy.io.bases.apply_filter for more details
+        """
+        return np.ma.MaskedArray([self._x, self._y])
+
+    @property
     def phi(self) -> np.ma.MaskedArray:
         return self._phi
 

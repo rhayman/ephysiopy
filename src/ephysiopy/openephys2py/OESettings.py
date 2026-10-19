@@ -5,6 +5,7 @@ from abc import ABC
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
+from collections.abc import Callable
 
 import numpy as np
 

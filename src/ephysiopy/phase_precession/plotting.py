@@ -1,4 +1,3 @@
-# TODO: these plotting fncs needed finishing
 import warnings
 
 import matplotlib

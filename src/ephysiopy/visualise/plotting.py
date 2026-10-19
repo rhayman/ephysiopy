@@ -73,6 +73,7 @@ class FigureMaker:
         return ax
 
     @saveFigure
+    @print_cluster_channel
     def plot_rate_map(
         self, cluster: int | list, channel: int | list, **kwargs
     ) -> plt.Figure:
@@ -477,7 +478,6 @@ class FigureMaker:
         spike_locations = [self.PosCalcs.xy[:, idx] for idx in pos_idx]
         # Parse kwargs
         num_dir_bins = kwargs.get("dir_bins", 60)
-        # TODO: add colour wheel?
         add_colour_wheel = kwargs.get("add_colour_wheel", False)
         dir_colours = np.array(sns.color_palette("hls", num_dir_bins))
         # Process dirrectional data into colours for pathces
@@ -1295,7 +1295,7 @@ class FigureMaker:
         kwargs = clean_kwargs(plt.pcolormesh, kwargs)
         ax = _plot_pcolormesh(rmap, ax, **kwargs)
         ax.set_aspect("equal")
-        return fig
+        return ax
 
     @addClusterChannelToAxes
     @print_cluster_channel
@@ -1363,6 +1363,19 @@ class FigureMaker:
                 # "radius": {"ticks": [0]},
             },
         )
+        # add the phase-locking value if asked for
+        if kwargs.get("add_plv", None):
+            plv, _, _ = L.plv(plot=False)
+            _t = "$\\bf{PLV}$"
+            ax.text(
+                0.5,
+                -0.05,
+                f"{_t}: {plv:.2f}",
+                transform=ax.transAxes,
+                fontsize=14,
+                ha="center",
+                va="center",
+            )
         ax = plt.gca()
         ax.legend().remove()
 
