@@ -121,7 +121,8 @@ class BinnedData:
         bin_edges: list[np.ndarray],
         cluster_id=None,
     ):
-        cluster_id = [ClusterID(0, 0)]
+        if cluster_id is None:
+            cluster_id = [ClusterID(0, 0)]
         if isinstance(binned_data, (np.ndarray, np.ma.MaskedArray)):
             binned_data = [binned_data]
 
