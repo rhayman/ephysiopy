@@ -599,7 +599,7 @@ class OpenEphysBase(TrialInterface):
             self.settings = Settings(self.pname)
             print("Loaded settings data\n")
 
-    def load_cluster_data(self, **kws) -> OrderedDict | None:
+    def load_cluster_data(self, **kws):
         """
         Load the cluster data ideally for a probe specified by
         its stream name/ identity
@@ -613,9 +613,9 @@ class OpenEphysBase(TrialInterface):
         This is mainly here to maintain function name consistency
         with the other load_* methods in this class
         """
-        return self.get_available_clusters_channels(**kws)
+        self.get_available_clusters_channels(**kws)
 
-    def get_available_clusters_channels(self, **kws) -> OrderedDict | None:
+    def get_available_clusters_channels(self, **kws):
         """
         Get available clusters and their corresponding channels.
 
@@ -629,10 +629,6 @@ class OpenEphysBase(TrialInterface):
                     If not available then the first stream
                     in self.rec_plugin is taken
 
-        Returns
-        -------
-        dict
-            A dict where keys are channels and values are lists of clusters
         """
 
         def __load_kilo__(s_name, **kws) -> OrderedDict | None:
@@ -659,8 +655,6 @@ class OpenEphysBase(TrialInterface):
                         dat_path=Path(ks_path).joinpath("continuous.dat"),
                         n_channels_dat=int(channel_count),
                     )
-                    return self.clusterData.channels_clusters
-            return None
 
         cluster_data_id = kws.get("stream_name", None)
 
@@ -668,17 +662,12 @@ class OpenEphysBase(TrialInterface):
         if cluster_data_id is None:
             cluster_data_id = self.path2KiloSortData[0]
             __load_kilo__(str(cluster_data_id), **kws)
-            return self.clusterData.channels_clusters
 
         if self.cluster_data_id is None:
             __load_kilo__(str(cluster_data_id), **kws)
-            return self.clusterData.channels_clusters
 
-        if cluster_data_id == self.cluster_data_id:
-            return self.clusterData.channels_clusters
-        else:
+        if cluster_data_id != self.cluster_data_id:
             __load_kilo__(cluster_data_id, **kws)
-            return self.clusterData.channels_clusters
 
     def load_pos_data(
         self, ppm: int = 300, jumpmax: int = 100, *args, **kwargs
@@ -941,7 +930,29 @@ class OpenEphysBase(TrialInterface):
         Gets the waveforms for the specified cluster(s).
         Ignores the channel input and instead returns the waveforms
         for the four "best" channels for the cluster.
+
+        Parameters
+        ----------
+        cluster : int or list
+            The cluster ID(s) for which to retrieve waveforms.
+        channel : int or list
+            Ignored in this implementation. Included for compatibility.
+        kwargs : dict
+            Optional keyword arguments:
+            - n_waves : int
+                The number of waveforms to retrieve. Default is 1000.
+
+        Returns
+        -------
+        np.ndarray or list
+            If a single cluster is specified, returns a numpy array of shape
+            (n_spikes, n_channels, n_samples) containing the waveforms.
+            If multiple clusters are specified, returns a list of numpy arrays,
+            each corresponding to the waveforms of a cluster.
+
         """
+        n_waves = kwargs.get("n_waves", 1000)
+
         self.bit_volts = 0.1949999928474426  # hard-coded for now
 
         if not self.template_model:
@@ -957,6 +968,11 @@ class OpenEphysBase(TrialInterface):
 
         if isinstance(cluster, int):
             spike_ids = self.template_model.get_cluster_spikes(int(cluster))
+            if len(spike_ids) > n_waves:
+                warnings.warn(
+                    f"Cluster {cluster} has {len(spike_ids)} spikes, but only {n_waves} waveforms will be returned."
+                )
+                spike_ids = np.random.choice(spike_ids, n_waves, replace=False)
             channels = self.template_model.get_cluster_channels(int(cluster))
             channels = channels[0:4]  # get the top 4 channels
             w = self.template_model.get_waveforms(spike_ids, channels) * self.bit_volts
@@ -966,6 +982,11 @@ class OpenEphysBase(TrialInterface):
             waveforms = []
             for c in cluster:
                 spike_ids = self.template_model.get_cluster_spikes(int(cluster))
+                if len(spike_ids) > n_waves:
+                    warnings.warn(
+                        f"Cluster {c} has {len(spike_ids)} spikes, but only {n_waves} waveforms will be returned."
+                    )
+                    spike_ids = np.random.choice(spike_ids, n_waves, replace=False)
                 channels = self.template_model.get_cluster_channels(int(cluster))
                 channels = channels[0:4]  # get the top 4 channels
                 w = (

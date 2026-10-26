@@ -1299,7 +1299,6 @@ class FigureMaker:
 
     @addClusterChannelToAxes
     @print_cluster_channel
-    # @saveFigure
     def plot_clusters_theta_phase(
         self, cluster: int, channel: int, **kwargs
     ) -> plt.Axes:
@@ -1314,6 +1313,9 @@ class FigureMaker:
             The channel number.
         **kwargs : dict
             Additional keyword arguments for the function.
+            Valid keys:
+                add_mrv : bool
+                    Whether to add the mean resultant vector (MRV) length to the plot. Defaults to False.
 
         Returns
         -------
@@ -1341,36 +1343,48 @@ class FigureMaker:
                 unit="radian",
                 kwargs_median={"method": "deviation", "average_method": "unique"},
             )
-        except Exception as e:
+            data.plot(
+                ax=ax,
+                config={
+                    "axis": False,
+                    "spine": True,
+                    "zero_location": "E",
+                    "clockwise": 1,
+                    "rose": {"bins": 36},
+                    "mean": {"color": "r"},
+                    "median": True,
+                    "density": False,
+                },
+            )
+        except Exception as _:
+            # sometimes with very small numbers of spikes the median calculation fails, so just plot the data
             data = Circular(
                 np.atleast_2d(phase),
                 unit="radian",
-                kwargs_median={"method": "deviation", "average_method": "unique"},
+                # kwargs_median={"method": "deviation", "average_method": "unique"},
             )
 
-        data.plot(
-            ax=ax,
-            config={
-                "axis": False,
-                "spine": True,
-                "zero_location": "E",
-                "clockwise": 1,
-                "rose": {"bins": 36},
-                "mean": {"color": "r"},  # , "linestyle": "<->"},
-                "median": True,
-                "density": False,
-                # "scatter": {"size": 20},
-                # "radius": {"ticks": [0]},
-            },
-        )
+            data.plot(
+                ax=ax,
+                config={
+                    "axis": False,
+                    "spine": True,
+                    "zero_location": "E",
+                    "clockwise": 1,
+                    "rose": {"bins": 36},
+                    "mean": {"color": "r"},
+                    "median": False,
+                    "density": False,
+                },
+            )
         # add the phase-locking value if asked for
-        if kwargs.get("add_plv", None):
-            plv, _, _ = L.plv(plot=False)
-            _t = "$\\bf{PLV}$"
+        if kwargs.get("add_mrv", None):
+            mrv_len, _ = L.get_mean_resultant_vector(ts)
+            _t = "$\\bf{MRV}$"
             ax.text(
                 0.5,
                 -0.05,
-                f"{_t}: {plv:.2f}",
+                f"{_t}: {mrv_len:.2f}",
                 transform=ax.transAxes,
                 fontsize=14,
                 ha="center",
@@ -1483,7 +1497,7 @@ class FigureMaker:
         """
         # waves should be n_spikes x n_channels x n_samples
         waves = self.get_waveforms(cluster, channel, **kws)
-        n_spikes, n_channels, n_samples = waves.shape
+        _, _, n_samples = waves.shape
         if n_samples == 50:
             waves *= 1e6  # to get microvolts
             time = np.linspace(-200, 800, n_samples)  # Axona
@@ -1497,7 +1511,7 @@ class FigureMaker:
         axes_labels = kws.get("axes_labels", False)
 
         if axs is None:
-            fig, axs = plt.subplots(2, 2, sharey=True)
+            _, axs = plt.subplots(2, 2, sharey=True)
             axs = flatten_list(axs)
             mn_cols = ["r"] * 4
             alpha = 0.5
@@ -1508,10 +1522,9 @@ class FigureMaker:
 
         col = [0.8627, 0.8627, 0.8627]
 
-        max_wave = np.max(waves)
-        min_wave = np.min(waves)
-
         mean_waves = np.mean(waves, 0)
+        max_wave = np.max(mean_waves)
+        min_wave = np.min(mean_waves)
         std_waves = np.std(waves, 0) * 3
 
         for i, ax in enumerate(axs):

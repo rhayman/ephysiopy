@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 import matplotlib
 import matplotlib.pylab as plt
 import numpy as np
@@ -660,6 +662,9 @@ class LFPOscillations:
         low_speed = kwargs.pop("low_speed_threshold", 2)
         high_speed = kwargs.pop("high_speed_threshold", 35)
         nbins = kwargs.pop("nbins", 13)
+        heat_map = kwargs.pop("heat_map", False)
+        line_colour = kwargs.pop("line_colour", "r")
+        line_width = kwargs.pop("line_width", 2)
         # extract the mask from the eeg data
         mask = np.ma.getmask(lfp_data.sig)
         F = self.getFreqPhase(band2filter=[low_theta, high_theta])
@@ -730,18 +735,23 @@ class LFPOscillations:
                 fig = plt.figure()
                 ax = fig.add_subplot(111)
 
-            pcm = ax.pcolormesh(
-                e[1],
-                e[0],
-                h,
-                cmap=matplotlib.colormaps["bone_r"],
-                norm=matplotlib.colors.LogNorm(),
-                alpha=0.7,
-            )
-            plt.colorbar(pcm, ax=ax)
-            ax.errorbar(
-                x=spd_bins[1:] - low_speed, y=mean_freqs, yerr=std_freqs, fmt="r."
-            )
+            if heat_map:
+                pcm = ax.pcolormesh(
+                    e[1],
+                    e[0],
+                    h,
+                    cmap=matplotlib.colormaps["bone_r"],
+                    norm=matplotlib.colors.LogNorm(),
+                    alpha=0.7,
+                )
+                plt.colorbar(pcm, ax=ax)
+            # ax.errorbar(
+            #     x=spd_bins[1:] - low_speed,
+            #     y=mean_freqs,
+            #     yerr=std_freqs,
+            #     linestyle="-",
+            #     color=line_colour,
+            # )
             ax.set_ylim((low_theta, high_theta))
             ax.set_xlim((low_speed, high_speed))
             ax.set_ylabel("Frequency (Hz)")
@@ -749,7 +759,9 @@ class LFPOscillations:
             ax.plot(
                 spd_bins[1:] - low_speed,
                 res.intercept + res.slope * (spd_bins[1:] - low_speed),
-                "r--",
+                linestyle="-",
+                color=line_colour,
+                linewidth=line_width,
             )
             ax.set_title(
                 f"""r = {res.rvalue:.2f}, p = {res.pvalue:.3f}, intercept = {

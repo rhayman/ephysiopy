@@ -1,6 +1,7 @@
 import warnings
 from collections import namedtuple
 
+import boost_histogram as bh
 import matplotlib.pylab as plt
 import matplotlib.transforms as transforms
 import numpy as np
@@ -364,7 +365,7 @@ def cluster_quality(
 def xcorr(
     x1: np.ndarray,
     x2: np.ndarray | None = None,
-    Trange: np.ndarray | list = np.array([-0.5, 0.5]),
+    Trange: np.ndarray | list | None = None,
     binsize: float = 0.001,
     normed=False,
     **kwargs,
@@ -396,6 +397,9 @@ def xcorr(
     if x2 is None:
         x2 = x1.copy()
 
+    if Trange is None:
+        Trange = np.array([-0.5, 0.5])
+
     if isinstance(Trange, list):
         Trange = np.array(Trange)
 
@@ -403,13 +407,29 @@ def xcorr(
     irange = x2[:, np.newaxis] + Trange[np.newaxis, :]
     dts = np.searchsorted(x1, irange)
 
-    for i, t in enumerate(dts):
-        y.extend((x1[t[0] : t[1]] - x2[i]))
+    mask = np.zeros(len(x1), dtype=bool)
+    for i in range(len(x2)):
+        mask[dts[i, 0] : dts[i, 1]] = True
+
+    y = np.concatenate([x1[dts[i, 0] : dts[i, 1]] - x2[i] for i in range(len(x2))])
     y = np.array(y, dtype=float)
 
-    counts, bins = np.histogram(
-        y[y != 0], bins=int(np.ptp(Trange) / binsize) + 1, range=(Trange[0], Trange[1])
-    )
+    if kwargs.get("use_boost", False):
+        hist = bh.Histogram(
+            bh.axis.Regular(
+                int(np.ptp(Trange) / binsize) + 1, Trange[0], Trange[1], underflow=False
+            )
+        )
+        hist.fill(y[y != 0])
+        counts = hist.values()
+        bins = hist.axes.edges
+
+    else:
+        counts, bins = np.histogram(
+            y[y != 0],
+            bins=int(np.ptp(Trange) / binsize) + 1,
+            range=(Trange[0], Trange[1]),
+        )
 
     if normed:
         counts = counts / len(x1)

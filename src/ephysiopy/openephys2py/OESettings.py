@@ -3,13 +3,13 @@ import os
 import xml.etree.ElementTree as ET
 from abc import ABC
 from collections import OrderedDict
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from collections.abc import Callable
 
 import numpy as np
 
-from ephysiopy.common.utils import memmapBinaryFile, flatten_list
+from ephysiopy.common.utils import flatten_list, memmapBinaryFile
 
 """
 Some conversion classes used in the dataclasses below.
